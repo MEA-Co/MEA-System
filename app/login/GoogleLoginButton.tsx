@@ -42,9 +42,14 @@ export function GoogleLoginButton() {
         {isLoading ? (
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
         ) : (
-          <span className="font-bold" aria-hidden="true">
-            G
-          </span>
+          <span
+            className="size-5 shrink-0 bg-contain bg-center bg-no-repeat"
+            style={{
+              backgroundImage:
+                "url('https://developers.google.com/static/identity/images/g-logo.png')",
+            }}
+            aria-hidden="true"
+          />
         )}
         Google로 계속하기
       </Button>
