@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { isProfileComplete, type Profile } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
 
-import { GoogleLoginButton } from './google-login-button';
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 export const dynamic = 'force-dynamic';
 
