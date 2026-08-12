@@ -35,7 +35,7 @@ export function GoogleLoginButton() {
       <Button
         type="button"
         size="lg"
-        className="h-11 w-full font-semibold bg-white text-black shadow-sm hover:bg-zinc-50 border border-zinc-100"
+        className="h-11 w-full gap-3 font-semibold bg-white text-black shadow-sm hover:bg-zinc-50 border border-zinc-100"
         onClick={signInWithGoogle}
         disabled={isLoading}
       >
@@ -51,7 +51,7 @@ export function GoogleLoginButton() {
             aria-hidden="true"
           />
         )}
-        Google로 계속하기
+        <p>Google로 계속하기</p>
       </Button>
       {errorMessage ? (
         <p role="alert" className="text-center text-sm text-destructive">
