@@ -1,3 +1,4 @@
+import { UserRoundCog } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -37,34 +38,34 @@ export default async function OnboardingPage() {
       : '';
 
   return (
-    <main className="min-h-svh bg-white px-5 py-8 md:px-8 md:py-12 lg:px-12 lg:py-16">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-8 border-b border-neutral-200 pb-6">
-          <p className="mb-6 text-sm font-semibold tracking-wide text-black">
-            MEA
+    <main className="flex min-h-svh items-center bg-white px-5 py-10 md:px-8 lg:px-12">
+      <section className="mx-auto w-full max-w-2xl">
+        <div className="mb-10">
+          <p className="text-2xl font-semibold tracking-wide text-black">
+            MEA System
           </p>
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] text-black md:text-4xl">
-            회원 정보 설정
-          </h1>
-          <p className="mt-3 text-[15px] leading-6 text-neutral-600">
-            서비스 이용에 필요한 기본 정보를 입력해 주세요.
+          <p className="mt-1 text-sm text-neutral-500">
+            입시의 처음부터 끝까지
           </p>
         </div>
 
-        <Card className="gap-0 rounded-lg border border-neutral-200 bg-white py-0 shadow-none ring-0">
-          <CardHeader className="border-b border-neutral-200 px-5 py-5 md:px-8">
-            <CardTitle className="text-lg font-semibold text-black">
-              회원 정보
+        <Card>
+          <CardHeader className="gap-2 pb-8">
+            <CardTitle className="text-xl font-semibold">
+              <div className="flex w-full items-center justify-between">
+                <p>회원 정보 설정</p>
+                <UserRoundCog className="text-muted-foreground" />
+              </div>
             </CardTitle>
-            <CardDescription className="text-neutral-500">
-              한 번만 설정하면 되고, 이름은 나중에도 바꿀 수 있어요.
+            <CardDescription>
+              서비스 이용에 필요한 기본 정보를 입력해 주세요.
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-5 py-6 md:px-8 md:py-8">
+          <CardContent>
             <OnboardingForm defaultName={googleName} />
           </CardContent>
         </Card>
-      </div>
+      </section>
     </main>
   );
 }
