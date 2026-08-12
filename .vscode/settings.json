@@ -1,0 +1,17 @@
+{
+  // --- 포맷 ---
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // --- ESLint: 저장 시 자동 수정 ---
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // --- TypeScript: 워크스페이스 버전 강제 사용 ---
+  // node_modules/typescript/lib를 명시하고, 한 번은 "TypeScript: Select TypeScript Version" 명령으로 'Use Workspace Version' 선택
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+
+  // --- 터미널 ---
+  "terminal.integrated.defaultProfile.osx": "zsh"
+}
