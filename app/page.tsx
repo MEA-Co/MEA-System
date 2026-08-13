@@ -1,7 +1,11 @@
 import { LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 
+import {
+  AdminDashboard,
+  type ManagedMember,
+} from '@/app/_components/AdminDashboard';
+import { signOut } from '@/app/_lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireUserAccess } from '@/lib/auth';
@@ -9,22 +13,46 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-async function signOut() {
-  'use server';
+type HomeProps = {
+  searchParams: Promise<{
+    view?: string | string[];
+  }>;
+};
 
-  const supabase = createClient(await cookies());
-  await supabase.auth.signOut();
-  redirect('/login');
-}
-
-export default async function Home() {
+export default async function Home({ searchParams }: HomeProps) {
   const { profile, role } = await requireUserAccess();
+
+  if (role === 'admin') {
+    const supabase = createClient(await cookies());
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, role, name, student_period, created_at')
+      .in('role', ['student', 'consultant'])
+      .order('created_at', { ascending: false })
+      .returns<ManagedMember[]>();
+
+    if (error) {
+      throw new Error('Failed to load managed member profiles.', {
+        cause: error,
+      });
+    }
+
+    const { view: requestedView } = await searchParams;
+    const view = requestedView === 'consultants' ? 'consultants' : 'students';
+
+    return (
+      <AdminDashboard
+        adminName={profile.name}
+        members={data ?? []}
+        view={view}
+      />
+    );
+  }
 
   const isStudent = role === 'student';
   const roleLabel = {
     student: '학생',
     consultant: '컨설턴트',
-    admin: '관리자',
   }[role];
 
   return (
