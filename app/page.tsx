@@ -3,12 +3,14 @@ import { cookies } from 'next/headers';
 
 import {
   AdminDashboard,
+  type AdminView,
   type ManagedMember,
 } from '@/app/_components/AdminDashboard';
 import { signOut } from '@/app/_lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireUserAccess } from '@/lib/auth';
+import type { Quest } from '@/lib/quest';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -23,27 +25,42 @@ export default async function Home({ searchParams }: HomeProps) {
   const { profile, role } = await requireUserAccess();
 
   if (role === 'admin') {
+    const { view: requestedView } = await searchParams;
+    const view: AdminView =
+      requestedView === 'consultants' || requestedView === 'quests'
+        ? requestedView
+        : 'students';
     const supabase = createClient(await cookies());
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, role, name, student_period, created_at')
-      .in('role', ['student', 'consultant', 'admin'])
-      .order('created_at', { ascending: false })
-      .overrideTypes<ManagedMember[], { merge: false }>();
+    const [memberResult, questResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, role, name, student_period, created_at')
+        .in('role', ['student', 'consultant', 'admin'])
+        .order('created_at', { ascending: false })
+        .overrideTypes<ManagedMember[], { merge: false }>(),
+      supabase
+        .from('quests')
+        .select(
+          'id, student_period, question, answer_type, table_columns, created_at',
+        )
+        .order('created_at', { ascending: false })
+        .overrideTypes<Quest[], { merge: false }>(),
+    ]);
 
-    if (error) {
+    if (memberResult.error) {
       throw new Error('Failed to load managed member profiles.', {
-        cause: error,
+        cause: memberResult.error,
       });
     }
-
-    const { view: requestedView } = await searchParams;
-    const view = requestedView === 'consultants' ? 'consultants' : 'students';
+    if (questResult.error) {
+      throw new Error('Failed to load quests.', { cause: questResult.error });
+    }
 
     return (
       <AdminDashboard
         adminName={profile.name}
-        members={data ?? []}
+        members={memberResult.data ?? []}
+        quests={questResult.data ?? []}
         view={view}
       />
     );

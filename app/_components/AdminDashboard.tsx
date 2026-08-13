@@ -1,6 +1,7 @@
 import { LayoutDashboard, LogOut } from 'lucide-react';
 
 import { AdminNavigation } from '@/app/_components/AdminNavigation';
+import { QuestManagement } from '@/app/_components/QuestManagement';
 import { signOut } from '@/app/_lib/actions';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,9 +18,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
@@ -34,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { StudentPeriod } from '@/lib/profile';
+import type { Quest } from '@/lib/quest';
 
 export type ManagedMember = {
   id: string;
@@ -43,11 +42,12 @@ export type ManagedMember = {
   created_at: string;
 };
 
-type AdminView = 'students' | 'consultants';
+export type AdminView = 'students' | 'consultants' | 'quests';
 
 type AdminDashboardProps = {
   adminName: string;
   members: ManagedMember[];
+  quests: Quest[];
   view: AdminView;
 };
 
@@ -127,12 +127,18 @@ function MemberTable({
 export function AdminDashboard({
   adminName,
   members,
+  quests,
   view,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
   const consultants = members.filter((member) => member.role !== 'student');
   const selectedMembers = view === 'students' ? students : consultants;
-  const title = view === 'students' ? '학생 관리' : '컨설턴트 관리';
+  const title =
+    view === 'students'
+      ? '학생 관리'
+      : view === 'consultants'
+        ? '컨설턴트 관리'
+        : '목표 관리';
 
   return (
     <SidebarProvider>
@@ -152,16 +158,12 @@ export function AdminDashboard({
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>회원 관리</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <AdminNavigation
-                consultantCount={consultants.length}
-                studentCount={students.length}
-                view={view}
-              />
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <AdminNavigation
+            consultantCount={consultants.length}
+            questCount={quests.length}
+            studentCount={students.length}
+            view={view}
+          />
         </SidebarContent>
 
         <SidebarFooter className="border-t p-3">
@@ -196,26 +198,32 @@ export function AdminDashboard({
 
         <div className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                회원 관리
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
-                {title}
-              </h1>
-            </div>
+            {view === 'quests' ? (
+              <QuestManagement quests={quests} />
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    회원 관리
+                  </p>
+                  <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+                    {title}
+                  </h1>
+                </div>
 
-            <Card className="mt-6 gap-0 rounded-lg border shadow-none ring-0">
-              <CardHeader className="pb-5">
-                <CardTitle>{title} 목록</CardTitle>
-                <CardDescription>
-                  총 {selectedMembers.length}명의 회원이 있습니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-0">
-                <MemberTable members={selectedMembers} view={view} />
-              </CardContent>
-            </Card>
+                <Card className="mt-6 gap-0 rounded-lg border shadow-none ring-0">
+                  <CardHeader className="pb-5">
+                    <CardTitle>{title} 목록</CardTitle>
+                    <CardDescription>
+                      총 {selectedMembers.length}명의 회원이 있습니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <MemberTable members={selectedMembers} view={view} />
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         </div>
       </SidebarInset>
