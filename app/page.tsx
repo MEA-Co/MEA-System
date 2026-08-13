@@ -2,12 +2,14 @@ import { LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 
 import { AdminDashboard } from '@/app/_components/AdminDashboard';
+import { StudentDashboard } from '@/app/_components/StudentDashboard';
 import { signOut } from '@/app/_lib/actions';
 import type { AdminView, ManagedMember } from '@/app/_lib/admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireUserAccess } from '@/lib/auth';
-import type { Quest } from '@/lib/quest';
+import type { StudentPeriod } from '@/lib/profile';
+import { isQuestAnswer, type Quest, type QuestResponse } from '@/lib/quest';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +21,7 @@ type HomeProps = {
 };
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { profile, role } = await requireUserAccess();
+  const { profile, role, user } = await requireUserAccess();
 
   if (role === 'admin') {
     const { view: requestedView } = await searchParams;
@@ -63,11 +65,57 @@ export default async function Home({ searchParams }: HomeProps) {
     );
   }
 
-  const isStudent = role === 'student';
-  const roleLabel = {
-    student: '학생',
-    consultant: '컨설턴트',
-  }[role];
+  if (role === 'student') {
+    const studentPeriod = profile.student_period as StudentPeriod;
+    const supabase = createClient(await cookies());
+    const [questResult, responseResult] = await Promise.all([
+      supabase
+        .from('quests')
+        .select(
+          'id, student_period, question, answer_type, table_columns, created_at',
+        )
+        .eq('student_period', studentPeriod)
+        .order('created_at', { ascending: true })
+        .overrideTypes<Quest[], { merge: false }>(),
+      supabase
+        .from('quest_responses')
+        .select('quest_id, answer, updated_at')
+        .eq('student_id', user.id)
+        .overrideTypes<
+          Array<Omit<QuestResponse, 'answer'> & { answer: unknown }>,
+          { merge: false }
+        >(),
+    ]);
+
+    if (questResult.error) {
+      throw new Error('Failed to load student quests.', {
+        cause: questResult.error,
+      });
+    }
+    if (responseResult.error) {
+      throw new Error('Failed to load quest responses.', {
+        cause: responseResult.error,
+      });
+    }
+
+    const responses: QuestResponse[] = (responseResult.data ?? []).flatMap(
+      (response) =>
+        isQuestAnswer(response.answer)
+          ? [{ ...response, answer: response.answer }]
+          : [],
+    );
+
+    return (
+      <StudentDashboard
+        studentName={profile.name}
+        studentPeriod={studentPeriod}
+        quests={questResult.data ?? []}
+        responses={responses}
+      />
+    );
+  }
+
+  const roleLabel = '컨설턴트';
 
   return (
     <main className="min-h-svh bg-white">
@@ -96,11 +144,7 @@ export default async function Home({ searchParams }: HomeProps) {
           {profile.name}님, 반가워요.
         </h1>
         <p className="mt-3 text-base text-neutral-600">
-          {isStudent
-            ? '지금의 목표와 할 일을 하나씩 정리해 볼까요?'
-            : role === 'consultant'
-              ? '학생들의 목표와 상담 일정을 확인해 보세요.'
-              : '시스템 운영 현황을 확인해 보세요.'}
+          학생들의 목표와 상담 일정을 확인해 보세요.
         </p>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-12">
@@ -113,11 +157,9 @@ export default async function Home({ searchParams }: HomeProps) {
           <Card className="rounded-lg border border-neutral-200 bg-white shadow-none ring-0">
             <CardContent>
               <p className="text-xs font-medium text-neutral-500">
-                {isStudent ? '현재 시기' : '시스템 상태'}
+                시스템 상태
               </p>
-              <p className="mt-2 font-semibold text-black">
-                {profile.student_period ?? '상담 준비 완료'}
-              </p>
+              <p className="mt-2 font-semibold text-black">상담 준비 완료</p>
             </CardContent>
           </Card>
         </div>

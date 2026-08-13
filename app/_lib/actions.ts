@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 
 import { requireUserAccess } from '@/lib/auth';
 import { STUDENT_PERIODS, type StudentPeriod } from '@/lib/profile';
-import { isQuestAnswerType } from '@/lib/quest';
+import { isQuestAnswerType, type QuestAnswer } from '@/lib/quest';
 import { createClient } from '@/lib/supabase/server';
 
 export async function signOut() {
@@ -81,6 +81,110 @@ export async function createQuest(
   if (error) {
     return {
       error: 'Quest를 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    };
+  }
+
+  revalidatePath('/');
+  return { success: true };
+}
+
+export type SaveQuestResponseResult = {
+  error?: string;
+  success?: true;
+};
+
+type AnswerableQuest = {
+  id: string;
+  answer_type: 'text' | 'table';
+  table_columns: string[];
+};
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function saveQuestResponse(
+  _state: SaveQuestResponseResult,
+  formData: FormData,
+): Promise<SaveQuestResponseResult> {
+  const { user, profile } = await requireUserAccess({
+    allowedRoles: ['student'],
+  });
+
+  const questId = String(formData.get('quest_id') ?? '').trim();
+  const answerType = String(formData.get('answer_type') ?? '').trim();
+
+  if (!UUID_PATTERN.test(questId) || !isQuestAnswerType(answerType)) {
+    return { error: '올바르지 않은 Quest입니다.' };
+  }
+
+  const supabase = createClient(await cookies());
+  const { data: quest, error: questError } = await supabase
+    .from('quests')
+    .select('id, answer_type, table_columns')
+    .eq('id', questId)
+    .eq('student_period', profile.student_period)
+    .maybeSingle<AnswerableQuest>();
+
+  if (questError || !quest || quest.answer_type !== answerType) {
+    return { error: '이 Quest에 답변할 수 없습니다.' };
+  }
+
+  let answer: QuestAnswer;
+
+  if (answerType === 'text') {
+    const value = String(formData.get('text_answer') ?? '');
+
+    if (!value.trim()) return { error: '답변을 입력해 주세요.' };
+    if (value.length > 10000) {
+      return { error: '답변은 10,000자 이내로 입력해 주세요.' };
+    }
+
+    answer = { type: 'text', value };
+  } else {
+    const rawRows = String(formData.get('table_rows') ?? '');
+    let rows: unknown;
+
+    try {
+      rows = JSON.parse(rawRows);
+    } catch {
+      return { error: '표 답변을 확인해 주세요.' };
+    }
+
+    if (
+      !Array.isArray(rows) ||
+      rows.length === 0 ||
+      rows.length > 50 ||
+      rows.some(
+        (row) =>
+          !Array.isArray(row) ||
+          row.length !== quest.table_columns.length ||
+          row.some((cell) => typeof cell !== 'string' || cell.length > 1000),
+      )
+    ) {
+      return { error: '표 답변의 행과 입력값을 확인해 주세요.' };
+    }
+
+    const tableRows = rows as string[][];
+    if (!tableRows.some((row) => row.some((cell) => cell.trim()))) {
+      return { error: '표에 답변을 입력해 주세요.' };
+    }
+
+    answer = { type: 'table', rows: tableRows };
+  }
+
+  const { error } = await supabase.from('quest_responses').upsert(
+    {
+      quest_id: quest.id,
+      student_id: user.id,
+      answer,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'quest_id,student_id' },
+  );
+
+  if (error) {
+    return {
+      error: '답변을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
     };
   }
 
