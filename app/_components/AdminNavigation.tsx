@@ -3,6 +3,7 @@
 import { BriefcaseBusiness, GraduationCap, Target } from 'lucide-react';
 import Link from 'next/link';
 
+import type { AdminView } from '@/app/_lib/admin';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -18,7 +19,7 @@ type AdminNavigationProps = {
   consultantCount: number;
   questCount: number;
   studentCount: number;
-  view: 'students' | 'consultants' | 'quests';
+  view: AdminView;
 };
 
 export function AdminNavigation({

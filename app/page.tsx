@@ -1,12 +1,9 @@
 import { LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 
-import {
-  AdminDashboard,
-  type AdminView,
-  type ManagedMember,
-} from '@/app/_components/AdminDashboard';
+import { AdminDashboard } from '@/app/_components/AdminDashboard';
 import { signOut } from '@/app/_lib/actions';
+import type { AdminView, ManagedMember } from '@/app/_lib/admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireUserAccess } from '@/lib/auth';

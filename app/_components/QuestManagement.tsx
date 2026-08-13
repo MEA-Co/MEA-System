@@ -66,7 +66,7 @@ export function QuestManagement({ quests }: QuestManagementProps) {
     <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">목표 설정</p>
+          <p className="text-sm font-medium text-muted-foreground">운영 관리</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
             목표 관리
           </h1>
