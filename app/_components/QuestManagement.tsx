@@ -70,9 +70,6 @@ export function QuestManagement({ quests }: QuestManagementProps) {
           <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
             목표 관리
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            학생의 시기별 질문과 답변 형식을 구성합니다.
-          </p>
         </div>
         <QuestFormDialog />
       </div>

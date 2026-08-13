@@ -108,11 +108,7 @@ export function QuestFormDialog() {
         if (nextOpen) setError(null);
       }}
     >
-      <DialogTrigger
-        render={
-          <Button className="rounded-md bg-blue-600 text-white hover:bg-blue-700" />
-        }
-      >
+      <DialogTrigger render={<Button />}>
         <Plus />
         Quest 추가
       </DialogTrigger>
@@ -155,7 +151,6 @@ export function QuestFormDialog() {
               id="quest-question"
               name="question"
               placeholder="학생에게 물어볼 질문을 입력해 주세요"
-              required
               maxLength={500}
               className="min-h-28 resize-y"
             />
@@ -269,11 +264,7 @@ export function QuestFormDialog() {
             >
               취소
             </Button>
-            <Button
-              type="submit"
-              className="rounded-md bg-blue-600 text-white hover:bg-blue-700"
-              disabled={isPending}
-            >
+            <Button type="submit" className="rounded-md" disabled={isPending}>
               {isPending ? <LoaderCircle className="animate-spin" /> : null}
               {isPending ? '추가 중...' : 'Quest 추가'}
             </Button>
