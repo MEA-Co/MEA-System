@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import {
-  type MemberRole,
+  isOnboardingRole,
   STUDENT_PERIODS,
   type StudentPeriod,
 } from '@/lib/profile';
@@ -28,14 +28,14 @@ export async function completeOnboarding(
   }
 
   const name = String(formData.get('name') ?? '').trim();
-  const role = String(formData.get('role') ?? '') as MemberRole;
+  const role = String(formData.get('role') ?? '');
   const periodValue = String(formData.get('student_period') ?? '');
 
   if (!name || name.length > 50) {
     return { error: '이름은 1자 이상 50자 이하로 입력해 주세요.' };
   }
 
-  if (role !== 'student' && role !== 'consultant') {
+  if (!isOnboardingRole(role)) {
     return { error: '회원 유형을 선택해 주세요.' };
   }
 
@@ -44,16 +44,13 @@ export async function completeOnboarding(
     return { error: '현재 시기를 선택해 주세요.' };
   }
 
-  const { error } = await supabase.from('profiles').upsert(
-    {
-      id: user.id,
-      name,
-      role,
-      student_period: role === 'student' ? periodValue : null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'id' },
-  );
+  const { error } = await supabase.from('profiles').insert({
+    id: user.id,
+    name,
+    role,
+    student_period: role === 'student' ? periodValue : null,
+    updated_at: new Date().toISOString(),
+  });
 
   if (error) {
     return {

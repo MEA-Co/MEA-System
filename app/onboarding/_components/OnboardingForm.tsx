@@ -15,19 +15,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  type MemberRole,
+  type OnboardingRole,
   STUDENT_PERIODS,
   type StudentPeriod,
 } from '@/lib/profile';
 
-import { completeOnboarding } from './actions';
+import { completeOnboarding } from '../actions';
 
 type OnboardingFormProps = {
   defaultName: string;
 };
 
 export function OnboardingForm({ defaultName }: OnboardingFormProps) {
-  const [role, setRole] = useState<MemberRole>('student');
+  const [role, setRole] = useState<OnboardingRole>('student');
   const [studentPeriod, setStudentPeriod] = useState<StudentPeriod | null>(
     null,
   );
@@ -46,7 +46,7 @@ export function OnboardingForm({ defaultName }: OnboardingFormProps) {
         <Label>회원 유형</Label>
         <RadioGroup
           value={role}
-          onValueChange={(value) => setRole(value as MemberRole)}
+          onValueChange={(value) => setRole(value as OnboardingRole)}
           className="grid gap-3 md:grid-cols-2"
         >
           <Label

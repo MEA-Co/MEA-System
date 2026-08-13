@@ -1,29 +1,18 @@
 import { LogInIcon } from 'lucide-react';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { isProfileComplete, type Profile } from '@/lib/profile';
-import { createClient } from '@/lib/supabase/server';
+import { getUserAccess } from '@/lib/auth';
 
-import { GoogleLoginButton } from './GoogleLoginButton';
+import { GoogleLoginButton } from './_components/GoogleLoginButton';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, isOnboarded } = await getUserAccess();
 
   if (user) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, role, name, student_period')
-      .eq('id', user.id)
-      .maybeSingle<Profile>();
-
-    redirect(isProfileComplete(data) ? '/' : '/onboarding');
+    redirect(isOnboarded ? '/' : '/onboarding');
   }
 
   return (

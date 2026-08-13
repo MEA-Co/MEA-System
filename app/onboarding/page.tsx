@@ -1,5 +1,4 @@
 import { UserRoundCog } from 'lucide-react';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import {
@@ -9,28 +8,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { isProfileComplete, type Profile } from '@/lib/profile';
-import { createClient } from '@/lib/supabase/server';
+import { getUserAccess } from '@/lib/auth';
 
-import { OnboardingForm } from './onboarding-form';
+import { OnboardingForm } from './_components/OnboardingForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OnboardingPage() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, isOnboarded } = await getUserAccess();
 
   if (!user) redirect('/login');
-
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, role, name, student_period')
-    .eq('id', user.id)
-    .maybeSingle<Profile>();
-
-  if (isProfileComplete(data)) redirect('/');
+  if (isOnboarded) redirect('/');
 
   const googleName =
     typeof user.user_metadata?.full_name === 'string'

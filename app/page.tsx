@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { isProfileComplete, type Profile } from '@/lib/profile';
+import { requireUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -18,22 +18,14 @@ async function signOut() {
 }
 
 export default async function Home() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { profile, role } = await requireUserAccess();
 
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, name, student_period')
-    .eq('id', user.id)
-    .maybeSingle<Profile>();
-
-  if (!isProfileComplete(profile)) redirect('/onboarding');
-
-  const isStudent = profile.role === 'student';
+  const isStudent = role === 'student';
+  const roleLabel = {
+    student: '학생',
+    consultant: '컨설턴트',
+    admin: '관리자',
+  }[role];
 
   return (
     <main className="min-h-svh bg-white">
@@ -57,25 +49,23 @@ export default async function Home() {
       </header>
 
       <section className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-14 lg:px-10 lg:py-16">
-        <p className="text-sm font-medium text-neutral-500">
-          {isStudent ? '학생' : '컨설턴트'}
-        </p>
+        <p className="text-sm font-medium text-neutral-500">{roleLabel}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-black md:text-4xl">
           {profile.name}님, 반가워요.
         </h1>
         <p className="mt-3 text-base text-neutral-600">
           {isStudent
             ? '지금의 목표와 할 일을 하나씩 정리해 볼까요?'
-            : '학생들의 목표와 상담 일정을 확인해 보세요.'}
+            : role === 'consultant'
+              ? '학생들의 목표와 상담 일정을 확인해 보세요.'
+              : '시스템 운영 현황을 확인해 보세요.'}
         </p>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-12">
           <Card className="rounded-lg border border-neutral-200 bg-white shadow-none ring-0">
             <CardContent>
               <p className="text-xs font-medium text-neutral-500">회원 유형</p>
-              <p className="mt-2 font-semibold text-black">
-                {isStudent ? '학생' : '컨설턴트'}
-              </p>
+              <p className="mt-2 font-semibold text-black">{roleLabel}</p>
             </CardContent>
           </Card>
           <Card className="rounded-lg border border-neutral-200 bg-white shadow-none ring-0">

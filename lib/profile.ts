@@ -14,7 +14,11 @@ export const STUDENT_PERIODS = [
   '3학년 겨울방학',
 ] as const;
 
-export type MemberRole = 'student' | 'consultant';
+export const MEMBER_ROLES = ['student', 'consultant', 'admin'] as const;
+export const ONBOARDING_ROLES = ['student', 'consultant'] as const;
+
+export type MemberRole = (typeof MEMBER_ROLES)[number];
+export type OnboardingRole = (typeof ONBOARDING_ROLES)[number];
 export type StudentPeriod = (typeof STUDENT_PERIODS)[number];
 
 export type Profile = {
@@ -27,9 +31,13 @@ export type Profile = {
 export function isProfileComplete(profile: Profile | null): profile is Profile {
   if (!profile?.name?.trim()) return false;
 
-  if (profile.role === 'consultant') {
+  if (profile.role === 'consultant' || profile.role === 'admin') {
     return profile.student_period === null;
   }
 
   return STUDENT_PERIODS.includes(profile.student_period as StudentPeriod);
+}
+
+export function isOnboardingRole(value: string): value is OnboardingRole {
+  return ONBOARDING_ROLES.some((role) => role === value);
 }
