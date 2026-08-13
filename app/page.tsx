@@ -27,9 +27,9 @@ export default async function Home({ searchParams }: HomeProps) {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, role, name, student_period, created_at')
-      .in('role', ['student', 'consultant'])
+      .in('role', ['student', 'consultant', 'admin'])
       .order('created_at', { ascending: false })
-      .returns<ManagedMember[]>();
+      .overrideTypes<ManagedMember[], { merge: false }>();
 
     if (error) {
       throw new Error('Failed to load managed member profiles.', {

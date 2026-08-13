@@ -37,7 +37,7 @@ import type { StudentPeriod } from '@/lib/profile';
 
 export type ManagedMember = {
   id: string;
-  role: 'student' | 'consultant';
+  role: 'student' | 'consultant' | 'admin';
   name: string;
   student_period: StudentPeriod | null;
   created_at: string;
@@ -109,7 +109,9 @@ function MemberTable({
               <Badge variant="secondary">
                 {isStudentView
                   ? (member.student_period ?? '미입력')
-                  : '컨설턴트'}
+                  : member.role === 'admin'
+                    ? '관리자'
+                    : '컨설턴트'}
               </Badge>
             </TableCell>
             <TableCell className="hidden text-right text-muted-foreground md:table-cell">
@@ -128,7 +130,7 @@ export function AdminDashboard({
   view,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
-  const consultants = members.filter((member) => member.role === 'consultant');
+  const consultants = members.filter((member) => member.role !== 'student');
   const selectedMembers = view === 'students' ? students : consultants;
   const title = view === 'students' ? '학생 관리' : '컨설턴트 관리';
 
