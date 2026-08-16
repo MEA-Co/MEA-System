@@ -9,7 +9,6 @@ import type {
   MaterialBoxScreen,
 } from '@/app/consulting/material-box/_lib/materialBoxConsulting';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +26,7 @@ type PreferenceValidationResult =
 
 const emptyPreferences: Array<MajorPreference> = Array.from(
   { length: 3 },
-  () => ({ major: '', reason: '' }),
+  () => ({ major: '' }),
 );
 
 const animationDurations: Record<
@@ -35,7 +34,6 @@ const animationDurations: Record<
   number
 > = {
   'major-one': 450,
-  'major-one-with-reason': 500,
   'three-majors': 1_250,
 };
 
@@ -43,27 +41,13 @@ function validatePreferences(
   preferences: Array<MajorPreference>,
 ): PreferenceValidationResult {
   const startedPreferences = preferences
-    .map((preference) => ({
-      major: preference.major.trim(),
-      reason: preference.reason.trim(),
-    }))
-    .filter((preference) => preference.major || preference.reason);
+    .map((preference) => ({ major: preference.major.trim() }))
+    .filter((preference) => preference.major);
 
   if (startedPreferences.length === 0) {
     return {
       success: false,
-      message: '희망 전공과 희망 이유를 한 세트 이상 작성해 주세요.',
-    };
-  }
-
-  if (
-    startedPreferences.some(
-      (preference) => !preference.major || !preference.reason,
-    )
-  ) {
-    return {
-      success: false,
-      message: '작성 중인 항목에는 희망 전공과 희망 이유를 모두 입력해 주세요.',
+      message: '희망 전공을 한 개 이상 작성해 주세요.',
     };
   }
 
@@ -87,15 +71,10 @@ export function MajorPreferencesScreen({
     !isInteractive &&
     submittedPreferences.length > 0;
   const visibleCount =
-    screen === 'major-one' || screen === 'major-one-with-reason'
-      ? 1
-      : isReviewing
-        ? submittedPreferences.length
-        : 3;
+    screen === 'major-one' ? 1 : isReviewing ? submittedPreferences.length : 3;
   const visiblePreferences = isReviewing
     ? submittedPreferences
     : preferences.slice(0, visibleCount);
-  const showReasons = screen !== 'major-one';
   const showPriorities = screen === 'three-majors' || screen === 'major-input';
   const showInputs = screen === 'major-input';
 
@@ -109,17 +88,11 @@ export function MajorPreferencesScreen({
     return () => window.clearTimeout(completionTimer);
   }, [onAnimationComplete, screen, shouldReduceMotion]);
 
-  const updatePreference = (
-    index: number,
-    field: keyof MajorPreference,
-    value: string,
-  ) => {
+  const updatePreference = (index: number, value: string) => {
     setValidationMessage(null);
     setPreferences((current) =>
       current.map((preference, preferenceIndex) =>
-        preferenceIndex === index
-          ? { ...preference, [field]: value }
-          : preference,
+        preferenceIndex === index ? { major: value } : preference,
       ),
     );
   };
@@ -217,7 +190,7 @@ export function MajorPreferencesScreen({
                     value={preference.major}
                     readOnly={!isInteractive}
                     onChange={(event) =>
-                      updatePreference(index, 'major', event.target.value)
+                      updatePreference(index, event.target.value)
                     }
                     placeholder="예: 심리학과"
                   />
@@ -228,42 +201,6 @@ export function MajorPreferencesScreen({
                   />
                 )}
               </div>
-
-              <AnimatePresence initial={false}>
-                {showReasons && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0, y: 8 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: shouldReduceMotion ? 0 : 0.35 }}
-                    className="mt-5 space-y-2 overflow-hidden"
-                  >
-                    <label
-                      htmlFor={`reason-${index}`}
-                      className="text-sm font-semibold"
-                    >
-                      희망 이유
-                    </label>
-                    {showInputs ? (
-                      <Textarea
-                        id={`reason-${index}`}
-                        value={preference.reason}
-                        readOnly={!isInteractive}
-                        onChange={(event) =>
-                          updatePreference(index, 'reason', event.target.value)
-                        }
-                        className="min-h-24 resize-y"
-                        placeholder="이 전공을 희망하는 이유를 적어 주세요."
-                      />
-                    ) : (
-                      <div
-                        className="h-24 rounded-xl border border-dashed bg-muted/30"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.section>
           ))}
         </AnimatePresence>

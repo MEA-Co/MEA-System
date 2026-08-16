@@ -5,7 +5,6 @@ import {
 
 export type MajorPreference = {
   major: string;
-  reason: string;
 };
 
 export type MaterialBoxContext = {
@@ -16,8 +15,7 @@ export type MaterialBoxMemory = {
   majorPreferences: Array<MajorPreference>;
 };
 
-export type MaterialBoxScreen =
-  'major-one' | 'major-one-with-reason' | 'three-majors' | 'major-input';
+export type MaterialBoxScreen = 'major-one' | 'three-majors' | 'major-input';
 
 const action = createConsultingActions<
   MaterialBoxContext,
@@ -70,15 +68,6 @@ export const materialBoxConsulting = defineConsulting<
     }),
     action.prompter({
       message: '우선 여러분이 가고 싶은 학과가 필요해요.',
-      waitFor: 'typing',
-    }),
-    action.screen({
-      screen: 'major-one-with-reason',
-      waitFor: 'animation',
-    }),
-    action.prompter({
-      message:
-        '그 전공을 공부하고 싶은 여러분만의 이유도 필요합니다. 구체적인 이유가 있을 수도 있고, 막연하게 멋있어서 희망할 수도 있어요. 무엇이든 편하게 알려주시면 됩니다.',
       waitFor: 'typing',
     }),
     action.screen({
