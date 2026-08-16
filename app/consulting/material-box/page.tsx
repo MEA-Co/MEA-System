@@ -1,10 +1,9 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { MaterialBoxFlow } from '@/app/consulting/material-box/_components/MaterialBoxFlow';
 import { Button } from '@/components/ui/button';
 import { ConsultingAdvice } from '@/features/consulting/components/ConsultingAdvice';
-import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
-import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
 import { requireUserAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -35,8 +34,7 @@ export default async function MaterialBoxConsultingPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 md:px-6 md:py-7 lg:px-8">
-        <ConsultingMain />
-        <ConsultingPrompter />
+        <MaterialBoxFlow />
       </div>
     </main>
   );
