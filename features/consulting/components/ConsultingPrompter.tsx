@@ -137,7 +137,7 @@ function TypewriterMessage({
     };
   }, [characters, finishTyping, reduceMotion]);
 
-  const skipTyping = () => {
+  const skipTyping = useCallback(() => {
     if (timeoutIdRef.current !== null) {
       window.clearTimeout(timeoutIdRef.current);
       timeoutIdRef.current = null;
@@ -145,7 +145,41 @@ function TypewriterMessage({
 
     setVisibleCount(characters.length);
     finishTyping();
-  };
+  }, [characters.length, finishTyping]);
+
+  useEffect(() => {
+    if (!isTyping) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.code !== 'Space' ||
+        event.repeat ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      skipTyping();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTyping, skipTyping]);
 
   return (
     <>
@@ -160,6 +194,7 @@ function TypewriterMessage({
             onClick={skipTyping}
             className="absolute top-5 right-5 z-10 inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[0.7rem] font-medium tracking-wide text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:top-7 md:right-7"
             aria-label="타이핑 애니메이션 건너뛰기"
+            aria-keyshortcuts="Space"
           >
             <SkipForward className="size-3" aria-hidden="true" />
             skip
