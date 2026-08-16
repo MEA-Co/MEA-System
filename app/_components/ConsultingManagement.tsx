@@ -12,9 +12,6 @@ export function ConsultingManagement() {
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           컨설팅 관리
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          학생에게 제공할 컨설팅을 확인하고 저장 없이 미리 체험할 수 있습니다.
-        </p>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
