@@ -41,7 +41,7 @@ export function ConsultingMain({
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <Card className="relative isolate min-h-136 gap-0 overflow-hidden rounded-2xl border-border/80 bg-background py-0 shadow-sm ring-0 md:min-h-[38rem]">
+    <Card className="relative isolate min-h-136 gap-0 overflow-hidden rounded-2xl border-border/80 bg-background py-0 shadow-sm ring-0 md:min-h-152">
       <div
         className="absolute inset-0 -z-20 bg-linear-to-br from-muted/65 via-background to-muted/20"
         aria-hidden="true"
@@ -57,7 +57,7 @@ export function ConsultingMain({
           aria-hidden="true"
         />
         <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground">
-          메인 화면
+          main
         </p>
       </div>
 

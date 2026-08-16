@@ -106,7 +106,7 @@ export function ConsultingPrompter({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
     >
-      <Card className="relative gap-0 overflow-hidden rounded-xl border bg-card/95 py-0 shadow-xl ring-0 backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
+      <Card className="relative gap-0 overflow-hidden rounded-xl border bg-card/95 py-0 shadow-xl ring-0 backdrop-blur-md supports-backdrop-filter:bg-card/90">
         <div
           className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-primary via-primary/60 to-transparent"
           aria-hidden="true"
@@ -115,7 +115,7 @@ export function ConsultingPrompter({
           <div className="mb-4 flex items-center gap-2.5">
             <span className="h-px w-6 bg-primary/70" aria-hidden="true" />
             <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">
-              진행 안내
+              메아 (MEA)
             </p>
           </div>
 
