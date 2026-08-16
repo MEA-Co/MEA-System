@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, FileText, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, FileText, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import {
@@ -37,7 +37,17 @@ export function MaterialBoxFlow() {
           onTypingComplete={consulting.completePrompterTyping}
         >
           {canContinue && (
-            <Button onClick={consulting.continueSequence}>다음</Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={consulting.continueSequence}
+              className="group/progress h-11 border-border/80 bg-background/90 pr-2 pl-5 text-foreground shadow-sm hover:border-foreground/20 hover:bg-muted"
+            >
+              진행하기
+              <span className="ml-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover/progress:translate-x-0.5">
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </span>
+            </Button>
           )}
         </ConsultingPrompter>
       }
