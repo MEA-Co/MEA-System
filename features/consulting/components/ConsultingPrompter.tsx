@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 type ConsultingPrompterProps = {
   message: string;
   children?: ReactNode;
+  onTypingComplete?: () => void;
 };
 
 type TypewriterMessageProps = ConsultingPrompterProps & {
@@ -25,6 +26,7 @@ function TypewriterMessage({
   message,
   children,
   reduceMotion,
+  onTypingComplete,
 }: TypewriterMessageProps) {
   const characters = useMemo(() => Array.from(message), [message]);
   const [visibleCount, setVisibleCount] = useState(
@@ -33,7 +35,11 @@ function TypewriterMessage({
   const isTyping = visibleCount < characters.length;
 
   useEffect(() => {
-    if (reduceMotion || characters.length === 0) return;
+    if (reduceMotion || characters.length === 0) {
+      const completionTimer = window.setTimeout(() => onTypingComplete?.(), 0);
+
+      return () => window.clearTimeout(completionTimer);
+    }
 
     let nextIndex = 0;
     let timeoutId: number;
@@ -47,13 +53,15 @@ function TypewriterMessage({
           typeNextCharacter,
           getTypingDelay(characters[nextIndex - 1]),
         );
+      } else {
+        onTypingComplete?.();
       }
     };
 
     timeoutId = window.setTimeout(typeNextCharacter, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [characters, reduceMotion]);
+  }, [characters, onTypingComplete, reduceMotion]);
 
   return (
     <>
@@ -96,6 +104,7 @@ function TypewriterMessage({
 export function ConsultingPrompter({
   message,
   children,
+  onTypingComplete,
 }: ConsultingPrompterProps) {
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = Boolean(shouldReduceMotion);
@@ -123,6 +132,7 @@ export function ConsultingPrompter({
             key={`${message}-${reduceMotion}`}
             message={message}
             reduceMotion={reduceMotion}
+            onTypingComplete={onTypingComplete}
           >
             {children}
           </TypewriterMessage>

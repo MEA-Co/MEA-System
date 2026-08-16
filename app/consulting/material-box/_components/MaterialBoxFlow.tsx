@@ -1,63 +1,117 @@
 'use client';
 
+import { CheckCircle2, FileText, XCircle } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+
+import {
+  type MaterialBoxAnswer,
+  materialBoxConsulting,
+} from '@/app/consulting/material-box/_lib/materialBoxConsulting';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
 import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
-import { useConsultingTurn } from '@/features/consulting/hooks/useConsultingTurn';
+import { useConsultingSequence } from '@/features/consulting/hooks/useConsultingSequence';
+import { cn } from '@/lib/utils';
 
-const openingMessage =
-  '안녕하세요. 지금부터 생활기록부 브랜딩에 활용할 재료함을 함께 만들어 볼게요. 먼저 최근 학교생활에서 가장 기억에 남는 경험 하나를 떠올려 주세요.';
+const choices: Array<{ answer: MaterialBoxAnswer; label: string }> = [
+  { answer: 'well-written', label: '잘쓴 글' },
+  { answer: 'poorly-written', label: '못쓴 글' },
+];
 
 export function MaterialBoxFlow() {
-  const { turn, startUserTurn } = useConsultingTurn();
-
-  if (turn === 'service') {
-    return (
-      <ConsultingMain
-        prompterPlacement="bottom"
-        prompterSize="wide"
-        prompter={
-          <ConsultingPrompter message={openingMessage}>
-            <Button onClick={startUserTurn}>답변 시작하기</Button>
-          </ConsultingPrompter>
-        }
-      >
-        <div className="flex min-h-96 items-center justify-center pb-48 md:pb-44">
-          <div className="max-w-md space-y-2 text-center">
-            <p className="text-lg font-semibold">재료함 설계를 시작합니다</p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              화면 아래의 안내를 읽고 준비가 되면 답변을 시작해 주세요.
-            </p>
-          </div>
-        </div>
-      </ConsultingMain>
-    );
-  }
+  const consulting = useConsultingSequence(materialBoxConsulting);
+  const showChoices = consulting.view.screen === 'writing-comparison';
+  const selectedAnswer = consulting.context.answer;
+  const canContinue =
+    consulting.currentAction?.type === 'prompter' &&
+    consulting.currentAction.waitFor === 'continue';
 
   return (
     <ConsultingMain
-      prompterPlacement="bottom"
-      prompterSize="wide"
+      prompterPlacement={consulting.view.prompterPlacement}
+      prompterSize={consulting.view.prompterSize}
+      onPrompterTransitionComplete={consulting.completePrompterLayout}
       prompter={
-        <ConsultingPrompter message="잘 정리된 문장이 아니어도 괜찮아요. 어떤 일이었는지, 내가 무엇을 했는지부터 편하게 적어 보세요." />
+        <ConsultingPrompter
+          message={consulting.view.message}
+          onTypingComplete={consulting.completePrompterTyping}
+        >
+          {canContinue && (
+            <Button onClick={consulting.continueSequence}>다음</Button>
+          )}
+        </ConsultingPrompter>
       }
     >
-      <div className="mx-auto flex min-h-96 w-full max-w-2xl flex-col justify-start gap-3 pt-14 pb-48 md:pt-20 md:pb-44">
-        <label
-          htmlFor="memorable-experience"
-          className="text-base font-semibold"
-        >
-          가장 기억에 남는 경험은 무엇인가요?
-        </label>
-        <Textarea
-          id="memorable-experience"
-          name="memorableExperience"
-          className="min-h-40 resize-y"
-          placeholder="떠오르는 경험을 자유롭게 적어 주세요."
-          autoFocus
-        />
-      </div>
+      <AnimatePresence initial={false}>
+        {showChoices && (
+          <motion.div
+            key="writing-comparison"
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="mx-auto grid min-h-96 w-full max-w-3xl grid-cols-1 content-start gap-4 pt-10 pb-52 md:grid-cols-2 md:gap-5 md:pt-14 md:pb-44"
+          >
+            {choices.map((choice, index) => {
+              const isSelected = selectedAnswer === choice.answer;
+              const isCorrect = choice.answer === 'well-written';
+
+              return (
+                <motion.button
+                  key={choice.answer}
+                  type="button"
+                  disabled={consulting.turn !== 'user'}
+                  aria-pressed={isSelected}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.08 }}
+                  whileHover={
+                    consulting.turn === 'user' ? { y: -4 } : undefined
+                  }
+                  whileTap={
+                    consulting.turn === 'user' ? { scale: 0.985 } : undefined
+                  }
+                  onClick={() =>
+                    consulting.completeScreen({ answer: choice.answer })
+                  }
+                  className={cn(
+                    'group relative flex min-h-40 cursor-pointer flex-col items-start justify-between overflow-hidden rounded-2xl border bg-background/85 p-5 text-left shadow-sm transition-[border-color,background-color,box-shadow,opacity] outline-none hover:border-foreground/25 hover:shadow-md focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-default md:min-h-48 md:p-6',
+                    consulting.turn !== 'user' && !isSelected && 'opacity-50',
+                    isSelected &&
+                      isCorrect &&
+                      'border-emerald-500/60 bg-emerald-500/10 shadow-md',
+                    isSelected &&
+                      !isCorrect &&
+                      'border-destructive/60 bg-destructive/10 shadow-md',
+                  )}
+                >
+                  <div className="flex w-full items-start justify-between gap-4">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <FileText className="size-5" />
+                    </div>
+
+                    {isSelected &&
+                      (isCorrect ? (
+                        <CheckCircle2 className="size-6 text-emerald-600" />
+                      ) : (
+                        <XCircle className="size-6 text-destructive" />
+                      ))}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      선택지 {index + 1}
+                    </p>
+                    <p className="mt-1 text-xl font-semibold tracking-tight">
+                      {choice.label}
+                    </p>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ConsultingMain>
   );
 }

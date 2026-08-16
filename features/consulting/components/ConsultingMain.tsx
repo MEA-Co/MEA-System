@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ type ConsultingMainProps = {
   prompter?: ReactNode;
   prompterPlacement?: ConsultingPrompterPlacement;
   prompterSize?: ConsultingPrompterSize;
+  onPrompterTransitionComplete?: () => void;
 };
 
 const placementClassNames: Record<ConsultingPrompterPlacement, string> = {
@@ -37,8 +38,21 @@ export function ConsultingMain({
   prompter,
   prompterPlacement = 'bottom',
   prompterSize = 'wide',
+  onPrompterTransitionComplete,
 }: ConsultingMainProps) {
   const shouldReduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!shouldReduceMotion || !onPrompterTransitionComplete) return;
+
+    const completionTimer = window.setTimeout(onPrompterTransitionComplete, 0);
+    return () => window.clearTimeout(completionTimer);
+  }, [
+    onPrompterTransitionComplete,
+    prompterPlacement,
+    prompterSize,
+    shouldReduceMotion,
+  ]);
 
   return (
     <Card className="relative isolate min-h-136 gap-0 overflow-hidden rounded-2xl border-border/80 bg-background py-0 shadow-sm ring-0 md:min-h-152">
@@ -74,6 +88,7 @@ export function ConsultingMain({
         >
           <motion.div
             layout={!shouldReduceMotion}
+            onLayoutAnimationComplete={onPrompterTransitionComplete}
             transition={{
               layout: {
                 type: 'spring',
