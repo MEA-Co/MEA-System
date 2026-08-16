@@ -60,7 +60,7 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            'pointer-events-auto relative flex max-h-[85svh] w-full flex-col rounded-t-2xl border-t bg-popover text-popover-foreground shadow-xl transition-transform duration-300 ease-out data-[swipe-direction=down]:translate-y-[var(--drawer-swipe-movement-y)] data-[swipe-direction=right]:translate-x-[var(--drawer-swipe-movement-x)] data-ending-style:data-[swipe-direction=down]:translate-y-full data-ending-style:data-[swipe-direction=right]:translate-x-full data-starting-style:data-[swipe-direction=down]:translate-y-full data-starting-style:data-[swipe-direction=right]:translate-x-full data-swiping:transition-none md:h-full md:max-h-none md:max-w-sm md:rounded-none md:border-t-0 md:border-l',
+            'pointer-events-auto relative flex max-h-[85svh] w-full flex-col rounded-t-2xl border-t bg-popover text-popover-foreground shadow-xl transition-transform duration-300 ease-out data-[swipe-direction=down]:translate-y-(--drawer-swipe-movement-y) data-[swipe-direction=right]:translate-x-(--drawer-swipe-movement-x) data-ending-style:data-[swipe-direction=down]:translate-y-full data-ending-style:data-[swipe-direction=right]:translate-x-full data-starting-style:data-[swipe-direction=down]:translate-y-full data-starting-style:data-[swipe-direction=right]:translate-x-full data-swiping:transition-none md:h-full md:max-h-none md:max-w-sm md:rounded-none md:border-t-0 md:border-l',
             className,
           )}
           {...props}
