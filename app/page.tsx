@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireUserAccess } from '@/lib/auth';
 import type { StudentPeriod } from '@/lib/profile';
-import { isQuestAnswer, type Quest, type QuestResponse } from '@/lib/quest';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -21,45 +20,32 @@ type HomeProps = {
 };
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { profile, role, user } = await requireUserAccess();
+  const { profile, role } = await requireUserAccess();
 
   if (role === 'admin') {
     const { view: requestedView } = await searchParams;
     const view: AdminView =
-      requestedView === 'consultants' || requestedView === 'quests'
+      requestedView === 'consultants' || requestedView === 'consulting'
         ? requestedView
         : 'students';
     const supabase = createClient(await cookies());
-    const [memberResult, questResult] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, role, name, student_period, created_at')
-        .in('role', ['student', 'consultant', 'admin'])
-        .order('created_at', { ascending: false })
-        .overrideTypes<ManagedMember[], { merge: false }>(),
-      supabase
-        .from('quests')
-        .select(
-          'id, student_period, question, answer_type, table_columns, created_at',
-        )
-        .order('created_at', { ascending: false })
-        .overrideTypes<Quest[], { merge: false }>(),
-    ]);
+    const memberResult = await supabase
+      .from('profiles')
+      .select('id, role, name, student_period, created_at')
+      .in('role', ['student', 'consultant', 'admin'])
+      .order('created_at', { ascending: false })
+      .overrideTypes<ManagedMember[], { merge: false }>();
 
     if (memberResult.error) {
       throw new Error('Failed to load managed member profiles.', {
         cause: memberResult.error,
       });
     }
-    if (questResult.error) {
-      throw new Error('Failed to load quests.', { cause: questResult.error });
-    }
 
     return (
       <AdminDashboard
         adminName={profile.name}
         members={memberResult.data ?? []}
-        quests={questResult.data ?? []}
         view={view}
       />
     );
@@ -67,50 +53,10 @@ export default async function Home({ searchParams }: HomeProps) {
 
   if (role === 'student') {
     const studentPeriod = profile.student_period as StudentPeriod;
-    const supabase = createClient(await cookies());
-    const [questResult, responseResult] = await Promise.all([
-      supabase
-        .from('quests')
-        .select(
-          'id, student_period, question, answer_type, table_columns, created_at',
-        )
-        .eq('student_period', studentPeriod)
-        .order('created_at', { ascending: true })
-        .overrideTypes<Quest[], { merge: false }>(),
-      supabase
-        .from('quest_responses')
-        .select('quest_id, answer, updated_at')
-        .eq('student_id', user.id)
-        .overrideTypes<
-          Array<Omit<QuestResponse, 'answer'> & { answer: unknown }>,
-          { merge: false }
-        >(),
-    ]);
-
-    if (questResult.error) {
-      throw new Error('Failed to load student quests.', {
-        cause: questResult.error,
-      });
-    }
-    if (responseResult.error) {
-      throw new Error('Failed to load quest responses.', {
-        cause: responseResult.error,
-      });
-    }
-
-    const responses: QuestResponse[] = (responseResult.data ?? []).flatMap(
-      (response) =>
-        isQuestAnswer(response.answer)
-          ? [{ ...response, answer: response.answer }]
-          : [],
-    );
-
     return (
       <StudentDashboard
         studentName={profile.name}
         studentPeriod={studentPeriod}
-        quests={questResult.data ?? []}
-        responses={responses}
       />
     );
   }

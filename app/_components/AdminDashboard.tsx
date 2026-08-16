@@ -2,7 +2,7 @@ import { LayoutDashboard, LogOut } from 'lucide-react';
 
 import { AdminNavigation } from '@/app/_components/AdminNavigation';
 import { ConsultantManagement } from '@/app/_components/ConsultantManagement';
-import { QuestManagement } from '@/app/_components/QuestManagement';
+import { ConsultingManagement } from '@/app/_components/ConsultingManagement';
 import { StudentManagement } from '@/app/_components/StudentManagement';
 import { signOut } from '@/app/_lib/actions';
 import type { AdminView, ManagedMember } from '@/app/_lib/admin';
@@ -17,19 +17,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import type { Quest } from '@/lib/quest';
 
 type AdminDashboardProps = {
   adminName: string;
   members: ManagedMember[];
-  quests: Quest[];
   view: AdminView;
 };
 
 export function AdminDashboard({
   adminName,
   members,
-  quests,
   view,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
@@ -55,7 +52,6 @@ export function AdminDashboard({
         <SidebarContent>
           <AdminNavigation
             consultantCount={consultants.length}
-            questCount={quests.length}
             studentCount={students.length}
             view={view}
           />
@@ -96,7 +92,7 @@ export function AdminDashboard({
             ) : view === 'consultants' ? (
               <ConsultantManagement consultants={consultants} />
             ) : (
-              <QuestManagement quests={quests} />
+              <ConsultingManagement />
             )}
           </div>
         </div>

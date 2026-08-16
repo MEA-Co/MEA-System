@@ -1,6 +1,6 @@
 'use client';
 
-import { BriefcaseBusiness, GraduationCap, Target } from 'lucide-react';
+import { BriefcaseBusiness, GraduationCap, MessagesSquare } from 'lucide-react';
 import Link from 'next/link';
 
 import type { AdminView } from '@/app/_lib/admin';
@@ -17,14 +17,12 @@ import {
 
 type AdminNavigationProps = {
   consultantCount: number;
-  questCount: number;
   studentCount: number;
   view: AdminView;
 };
 
 export function AdminNavigation({
   consultantCount,
-  questCount,
   studentCount,
   view,
 }: AdminNavigationProps) {
@@ -78,16 +76,15 @@ export function AdminNavigation({
               <SidebarMenuButton
                 render={
                   <Link
-                    href="/?view=quests"
+                    href="/?view=consulting"
                     onClick={() => setOpenMobile(false)}
                   />
                 }
-                isActive={view === 'quests'}
+                isActive={view === 'consulting'}
               >
-                <Target />
-                <span>목표 관리</span>
+                <MessagesSquare />
+                <span>컨설팅 관리</span>
               </SidebarMenuButton>
-              <SidebarMenuBadge>{questCount}</SidebarMenuBadge>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
