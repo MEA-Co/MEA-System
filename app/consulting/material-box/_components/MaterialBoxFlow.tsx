@@ -34,10 +34,9 @@ export function MaterialBoxFlow() {
         <MajorPreferencesScreen
           screen={currentScreen}
           isInteractive={consulting.turn === 'user'}
+          submittedPreferences={consulting.context.preferences}
           onAnimationComplete={consulting.completeScreenAnimation}
-          onSubmit={(preferences) =>
-            consulting.completeScreen({ preferences })
-          }
+          onSubmit={(preferences) => consulting.completeScreen({ preferences })}
         />
       )}
     </ConsultingMain>
