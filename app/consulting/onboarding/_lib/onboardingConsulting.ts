@@ -19,6 +19,7 @@ export const onboardingConsulting = defineConsulting<
   initialContext: {
     answer: null,
   },
+  initialMemory: {},
   sequence: [
     action.prompter({
       message:

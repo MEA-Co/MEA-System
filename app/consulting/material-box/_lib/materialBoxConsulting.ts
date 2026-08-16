@@ -12,20 +12,31 @@ export type MaterialBoxContext = {
   preferences: Array<MajorPreference>;
 };
 
-export type MaterialBoxScreen =
-  | 'major-one'
-  | 'major-one-with-reason'
-  | 'three-majors'
-  | 'major-input';
+export type MaterialBoxMemory = {
+  majorPreferences: Array<MajorPreference>;
+};
 
-const action = createConsultingActions<MaterialBoxContext, MaterialBoxScreen>();
+export type MaterialBoxScreen =
+  'major-one' | 'major-one-with-reason' | 'three-majors' | 'major-input';
+
+const action = createConsultingActions<
+  MaterialBoxContext,
+  MaterialBoxScreen,
+  never,
+  MaterialBoxMemory
+>();
 
 export const materialBoxConsulting = defineConsulting<
   MaterialBoxContext,
-  MaterialBoxScreen
+  MaterialBoxScreen,
+  never,
+  MaterialBoxMemory
 >({
   initialContext: {
     preferences: [],
+  },
+  initialMemory: {
+    majorPreferences: [],
   },
   sequence: [
     action.prompter({
@@ -86,6 +97,15 @@ export const materialBoxConsulting = defineConsulting<
     action.prompter({
       message:
         '잘 작성했나요? 희망 전공은 나중에 얼마든지 달라질 수 있습니다. 희망 전공이 달라지면 어떻게 해야하는지는 나중에 알려드릴게요.',
+      waitFor: 'continue',
+    }),
+    action.memory({
+      update: ({ preferences }) => ({
+        majorPreferences: preferences.map((preference) => ({ ...preference })),
+      }),
+    }),
+    action.prompter({
+      message: '이제 희망 전공을 바탕으로 여러분만의 이야기를 찾아볼게요.',
       waitFor: 'typing',
     }),
   ],
