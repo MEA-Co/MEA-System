@@ -1,18 +1,133 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 
 type ConsultingPrompterProps = {
+  message: string;
   children?: ReactNode;
 };
 
-export function ConsultingPrompter({ children }: ConsultingPrompterProps) {
+type TypewriterMessageProps = ConsultingPrompterProps & {
+  reduceMotion: boolean;
+};
+
+function getTypingDelay(character: string) {
+  if (/[.!?。！？]/.test(character)) return 180;
+  if (/[,，]/.test(character)) return 90;
+  if (character === ' ') return 30;
+  return 24;
+}
+
+function TypewriterMessage({
+  message,
+  children,
+  reduceMotion,
+}: TypewriterMessageProps) {
+  const characters = useMemo(() => Array.from(message), [message]);
+  const [visibleCount, setVisibleCount] = useState(
+    reduceMotion ? characters.length : 0,
+  );
+  const isTyping = visibleCount < characters.length;
+
+  useEffect(() => {
+    if (reduceMotion || characters.length === 0) return;
+
+    let nextIndex = 0;
+    let timeoutId: number;
+
+    const typeNextCharacter = () => {
+      nextIndex += 1;
+      setVisibleCount(nextIndex);
+
+      if (nextIndex < characters.length) {
+        timeoutId = window.setTimeout(
+          typeNextCharacter,
+          getTypingDelay(characters[nextIndex - 1]),
+        );
+      }
+    };
+
+    timeoutId = window.setTimeout(typeNextCharacter, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [characters, reduceMotion]);
+
   return (
-    <Card className="min-h-32 gap-0 rounded-xl border py-0 shadow-none ring-0">
-      <CardContent className="p-5 md:p-6">
-        <p className="text-sm font-medium">프롬프터</p>
-        {children}
-      </CardContent>
-    </Card>
+    <>
+      <div className="min-h-14 max-w-4xl">
+        <p className="sr-only" aria-live="polite">
+          {message}
+        </p>
+        <p
+          aria-hidden="true"
+          className="text-[1.05rem] font-medium leading-8 tracking-[-0.01em] text-foreground md:text-lg md:leading-8"
+        >
+          {characters.slice(0, visibleCount).join('')}
+          {isTyping && (
+            <motion.span
+              className="ml-0.5 inline-block h-[1.05em] w-0.5 translate-y-0.5 rounded-full bg-primary"
+              animate={{ opacity: [1, 0.2, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity }}
+            />
+          )}
+        </p>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {!isTyping && children && (
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.25 }}
+            className="pt-5"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+export function ConsultingPrompter({
+  message,
+  children,
+}: ConsultingPrompterProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const reduceMotion = Boolean(shouldReduceMotion);
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      <Card className="relative gap-0 overflow-hidden rounded-xl border bg-card py-0 shadow-sm ring-0">
+        <div
+          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-primary via-primary/60 to-transparent"
+          aria-hidden="true"
+        />
+        <CardContent className="p-5 md:p-7">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="h-px w-6 bg-primary/70" aria-hidden="true" />
+            <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">
+              진행 안내
+            </p>
+          </div>
+
+          <TypewriterMessage
+            key={`${message}-${reduceMotion}`}
+            message={message}
+            reduceMotion={reduceMotion}
+          >
+            {children}
+          </TypewriterMessage>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

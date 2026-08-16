@@ -26,11 +26,8 @@ export function MaterialBoxFlow() {
           </div>
         </ConsultingMain>
 
-        <ConsultingPrompter>
-          <div className="mt-3 space-y-4">
-            <p className="max-w-3xl text-base leading-7">{openingMessage}</p>
-            <Button onClick={startUserTurn}>답변 시작하기</Button>
-          </div>
+        <ConsultingPrompter message={openingMessage}>
+          <Button onClick={startUserTurn}>답변 시작하기</Button>
         </ConsultingPrompter>
       </div>
     );
@@ -56,12 +53,7 @@ export function MaterialBoxFlow() {
         </div>
       </ConsultingMain>
 
-      <ConsultingPrompter>
-        <p className="mt-3 max-w-3xl text-base leading-7">
-          잘 정리된 문장이 아니어도 괜찮아요. 어떤 일이었는지, 내가 무엇을
-          했는지부터 편하게 적어 보세요.
-        </p>
-      </ConsultingPrompter>
+      <ConsultingPrompter message="잘 정리된 문장이 아니어도 괜찮아요. 어떤 일이었는지, 내가 무엇을 했는지부터 편하게 적어 보세요." />
     </div>
   );
 }
