@@ -170,6 +170,24 @@ export function useConsultingSequence<
     () => completeWaitingAction('animation'),
     [completeWaitingAction],
   );
+  const returnToPreviousUserAction = useCallback(() => {
+    const currentIndex = actionIndexRef.current;
+
+    for (let index = currentIndex - 1; index >= 0; index -= 1) {
+      const action = sequenceRef.current[index];
+      const isUserAction =
+        action.type === 'screen' && (action.waitFor ?? 'none') === 'user';
+
+      if (!isUserAction) continue;
+
+      actionIndexRef.current = index;
+      externalExecutionRef.current = null;
+      memoryExecutionRef.current = null;
+      setExternalError(null);
+      setActionIndex(index);
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentAction || getActionWait(currentAction) !== 'none') return;
@@ -268,6 +286,7 @@ export function useConsultingSequence<
     completeScreen,
     completeScreenAnimation,
     continueSequence,
+    returnToPreviousUserAction,
     retryExternalAction,
   };
 }
