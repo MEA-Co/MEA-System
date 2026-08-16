@@ -3,7 +3,6 @@ import Link from 'next/link';
 
 import { MaterialBoxFlow } from '@/app/consulting/material-box/_components/MaterialBoxFlow';
 import { Button } from '@/components/ui/button';
-import { ConsultingAdvice } from '@/features/consulting/components/ConsultingAdvice';
 import { requireUserAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +28,6 @@ export default async function MaterialBoxConsultingPage() {
               생활기록부 브랜딩 컨설팅 [재료함 설계]
             </p>
           </div>
-          <ConsultingAdvice />
         </div>
       </header>
 

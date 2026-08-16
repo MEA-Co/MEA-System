@@ -6,14 +6,14 @@ import { type FormEvent, useEffect, useState } from 'react';
 
 import type {
   MajorPreference,
-  MaterialBoxScreen,
+  MajorPreferenceScreen,
 } from '@/app/consulting/material-box/_lib/materialBoxConsulting';
 import { Input } from '@/components/ui/input';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { cn } from '@/lib/utils';
 
 type MajorPreferencesScreenProps = {
-  screen: MaterialBoxScreen;
+  screen: MajorPreferenceScreen;
   isInteractive: boolean;
   submittedPreferences: Array<MajorPreference>;
   onAnimationComplete: () => void;
@@ -30,7 +30,7 @@ const emptyPreferences: Array<MajorPreference> = Array.from(
 );
 
 const animationDurations: Record<
-  Exclude<MaterialBoxScreen, 'major-input'>,
+  Exclude<MajorPreferenceScreen, 'major-input'>,
   number
 > = {
   'major-one': 450,

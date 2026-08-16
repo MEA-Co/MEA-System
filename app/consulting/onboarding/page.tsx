@@ -3,7 +3,6 @@ import Link from 'next/link';
 
 import { OnboardingFlow } from '@/app/consulting/onboarding/_components/OnboardingFlow';
 import { Button } from '@/components/ui/button';
-import { ConsultingAdvice } from '@/features/consulting/components/ConsultingAdvice';
 import { requireUserAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +26,6 @@ export default async function OnboardingConsultingPage() {
             </Button>
             <p className="truncate text-sm font-semibold">메아 온보딩</p>
           </div>
-          <ConsultingAdvice />
         </div>
       </header>
 

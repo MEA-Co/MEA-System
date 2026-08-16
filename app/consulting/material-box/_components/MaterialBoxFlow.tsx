@@ -2,21 +2,43 @@
 
 import { Undo2 } from 'lucide-react';
 
+import { KeywordExamplesScreen } from '@/app/consulting/material-box/_components/KeywordExamplesScreen';
+import { KeywordExplorationScreen } from '@/app/consulting/material-box/_components/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/app/consulting/material-box/_components/MajorPreferencesScreen';
-import { materialBoxConsulting } from '@/app/consulting/material-box/_lib/materialBoxConsulting';
+import {
+  executeMaterialBoxExternalAction,
+  type MajorPreferenceScreen,
+  materialBoxConsulting,
+  type MaterialBoxScreen,
+} from '@/app/consulting/material-box/_lib/materialBoxConsulting';
 import { Button } from '@/components/ui/button';
 import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
 import { useConsultingSequence } from '@/features/consulting/hooks/useConsultingSequence';
 
+function isMajorPreferenceScreen(
+  screen: MaterialBoxScreen | null,
+): screen is MajorPreferenceScreen {
+  return (
+    screen === 'major-one' ||
+    screen === 'three-majors' ||
+    screen === 'major-input'
+  );
+}
+
 export function MaterialBoxFlow() {
-  const consulting = useConsultingSequence(materialBoxConsulting);
+  const consulting = useConsultingSequence(materialBoxConsulting, {
+    executeExternalAction: executeMaterialBoxExternalAction,
+  });
   const currentScreen = consulting.view.screen;
   const canContinue =
     consulting.currentAction?.type === 'prompter' &&
     consulting.currentAction.waitFor === 'continue';
-  const isReviewingPreferences = canContinue && currentScreen === 'major-input';
+  const isReviewingPreferences =
+    canContinue &&
+    currentScreen === 'major-input' &&
+    consulting.memory.majorPreferences.length === 0;
 
   return (
     <ConsultingMain
@@ -52,13 +74,28 @@ export function MaterialBoxFlow() {
         </ConsultingPrompter>
       }
     >
-      {currentScreen && (
+      {isMajorPreferenceScreen(currentScreen) && (
         <MajorPreferencesScreen
           screen={currentScreen}
           isInteractive={consulting.turn === 'user'}
           submittedPreferences={consulting.context.preferences}
           onAnimationComplete={consulting.completeScreenAnimation}
           onSubmit={(preferences) => consulting.completeScreen({ preferences })}
+        />
+      )}
+
+      {currentScreen === 'keyword-examples' && (
+        <KeywordExamplesScreen
+          onAnimationComplete={consulting.completeScreenAnimation}
+        />
+      )}
+
+      {currentScreen === 'keyword-exploration' && (
+        <KeywordExplorationScreen
+          advice={consulting.context.mentorAdvice}
+          isInteractive={consulting.turn === 'user'}
+          submittedKeyword={consulting.context.keyword}
+          onSubmit={(keyword) => consulting.completeScreen({ keyword })}
         />
       )}
     </ConsultingMain>
