@@ -2,6 +2,7 @@ import type {
   ConsultingPrompterPlacement,
   ConsultingPrompterSize,
 } from '@/features/consulting/components/ConsultingMain';
+import type { ConsultingMessage } from '@/features/consulting/types';
 
 export type ConsultingValue<T, Context> =
   T | ((context: Readonly<Context>) => T);
@@ -10,7 +11,7 @@ export type PrompterWait = 'none' | 'typing' | 'continue' | 'layout';
 
 export type PrompterAction<Context> = {
   type: 'prompter';
-  message?: ConsultingValue<string, Context>;
+  message?: ConsultingValue<ConsultingMessage, Context>;
   placement?: ConsultingPrompterPlacement;
   size?: ConsultingPrompterSize;
   waitFor?: PrompterWait;
@@ -57,7 +58,7 @@ export type ExternalActionExecutor<
 ) => Promise<Partial<Context> | void>;
 
 export type ConsultingView<Screen extends string> = {
-  message: string;
+  message: ConsultingMessage;
   prompterPlacement: ConsultingPrompterPlacement;
   prompterSize: ConsultingPrompterSize;
   screen: Screen | null;

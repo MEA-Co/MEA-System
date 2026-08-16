@@ -15,8 +15,13 @@ export const materialBoxConsulting = defineConsulting<
   initialContext: {},
   sequence: [
     action.prompter({
-      message:
-        '앞서 여러분은 생활기록부 브랜딩이란 무엇이며, 브랜딩을 하기 위해서 재료함이라는 것이 필요하다는 걸 확인했어요. ',
+      message: [
+        {
+          text: '앞서 여러분은 생활기록부 브랜딩이란 무엇이며, 브랜딩을 하기 위해서 ',
+        },
+        { text: '재료함', emphasis: 'accent' },
+        { text: '이라는 것이 필요하다는 걸 확인했어요.' },
+      ],
       placement: 'center',
       size: 'default',
       waitFor: 'typing',

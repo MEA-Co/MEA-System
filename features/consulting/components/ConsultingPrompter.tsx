@@ -12,12 +12,55 @@ import {
 } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
+import type {
+  ConsultingMessage,
+  ConsultingMessageEmphasis,
+  ConsultingMessageSegment,
+} from '@/features/consulting/types';
+import { cn } from '@/lib/utils';
 
 type ConsultingPrompterProps = {
-  message: string;
+  message: ConsultingMessage;
   children?: ReactNode;
   onTypingComplete?: () => void;
 };
+
+const emphasisClassNames: Record<ConsultingMessageEmphasis, string> = {
+  strong: 'font-bold',
+  accent: 'font-bold text-blue-600 dark:text-blue-400',
+  muted: 'text-muted-foreground',
+};
+
+function FormattedMessage({
+  segments,
+  visibleCount,
+}: {
+  segments: ReadonlyArray<ConsultingMessageSegment>;
+  visibleCount: number;
+}) {
+  let remainingCharacters = visibleCount;
+
+  return segments.map((segment, index) => {
+    const characters = Array.from(segment.text);
+    const visibleText = characters
+      .slice(0, Math.max(remainingCharacters, 0))
+      .join('');
+    remainingCharacters -= characters.length;
+
+    if (!visibleText) return null;
+
+    return (
+      <span
+        key={`${index}-${segment.text}`}
+        className={cn(
+          segment.emphasis && emphasisClassNames[segment.emphasis],
+        )}
+      >
+        {visibleText}
+      </span>
+    );
+  });
+}
 
 type TypewriterMessageProps = ConsultingPrompterProps & {
   reduceMotion: boolean;
@@ -36,7 +79,15 @@ function TypewriterMessage({
   reduceMotion,
   onTypingComplete,
 }: TypewriterMessageProps) {
-  const characters = useMemo(() => Array.from(message), [message]);
+  const segments = useMemo<ReadonlyArray<ConsultingMessageSegment>>(
+    () => (typeof message === 'string' ? [{ text: message }] : message),
+    [message],
+  );
+  const plainMessage = useMemo(
+    () => segments.map((segment) => segment.text).join(''),
+    [segments],
+  );
+  const characters = useMemo(() => Array.from(plainMessage), [plainMessage]);
   const [visibleCount, setVisibleCount] = useState(
     reduceMotion ? characters.length : 0,
   );
@@ -120,13 +171,16 @@ function TypewriterMessage({
 
       <div className="min-h-14 max-w-4xl">
         <p className="sr-only" aria-live="polite">
-          {message}
+          {plainMessage}
         </p>
         <p
           aria-hidden="true"
           className="text-[1.05rem] font-medium leading-8 tracking-[-0.01em] text-foreground md:text-lg md:leading-8"
         >
-          {characters.slice(0, visibleCount).join('')}
+          <FormattedMessage
+            segments={segments}
+            visibleCount={visibleCount}
+          />
           {isTyping && (
             <motion.span
               className="ml-0.5 inline-block h-[1.05em] w-0.5 translate-y-0.5 rounded-full bg-primary"
@@ -161,6 +215,7 @@ export function ConsultingPrompter({
 }: ConsultingPrompterProps) {
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = Boolean(shouldReduceMotion);
+  const messageKey = JSON.stringify(message);
 
   return (
     <motion.div
@@ -178,7 +233,7 @@ export function ConsultingPrompter({
           </div>
 
           <TypewriterMessage
-            key={`${message}-${reduceMotion}`}
+            key={`${messageKey}-${reduceMotion}`}
             message={message}
             reduceMotion={reduceMotion}
             onTypingComplete={onTypingComplete}
