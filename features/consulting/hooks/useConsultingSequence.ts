@@ -114,7 +114,7 @@ export function useConsultingSequence<
 
   const completeWaitingAction = useCallback(
     (
-      expectedWait: PrompterWait | 'user',
+      expectedWait: PrompterWait | 'user' | 'animation',
       update?: ConsultingContextUpdate<Context>,
     ) => {
       const index = actionIndexRef.current;
@@ -141,6 +141,10 @@ export function useConsultingSequence<
   const completeScreen = useCallback(
     (update?: ConsultingContextUpdate<Context>) =>
       completeWaitingAction('user', update),
+    [completeWaitingAction],
+  );
+  const completeScreenAnimation = useCallback(
+    () => completeWaitingAction('animation'),
     [completeWaitingAction],
   );
 
@@ -224,6 +228,7 @@ export function useConsultingSequence<
     completePrompterLayout,
     completePrompterTyping,
     completeScreen,
+    completeScreenAnimation,
     continueSequence,
     retryExternalAction,
   };

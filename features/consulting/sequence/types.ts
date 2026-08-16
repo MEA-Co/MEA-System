@@ -20,7 +20,7 @@ export type PrompterAction<Context> = {
 export type ScreenAction<Context, Screen extends string> = {
   type: 'screen';
   screen: ConsultingValue<Screen | null, Context>;
-  waitFor?: 'none' | 'user';
+  waitFor?: 'none' | 'user' | 'animation';
 };
 
 export type ExternalAction<Operation extends string> = {

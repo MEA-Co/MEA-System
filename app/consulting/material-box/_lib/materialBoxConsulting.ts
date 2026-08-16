@@ -3,8 +3,20 @@ import {
   defineConsulting,
 } from '@/features/consulting/sequence/createConsultingSequence';
 
-export type MaterialBoxContext = Record<string, never>;
-export type MaterialBoxScreen = never;
+export type MajorPreference = {
+  major: string;
+  reason: string;
+};
+
+export type MaterialBoxContext = {
+  preferences: Array<MajorPreference>;
+};
+
+export type MaterialBoxScreen =
+  | 'major-one'
+  | 'major-one-with-reason'
+  | 'three-majors'
+  | 'major-input';
 
 const action = createConsultingActions<MaterialBoxContext, MaterialBoxScreen>();
 
@@ -12,7 +24,9 @@ export const materialBoxConsulting = defineConsulting<
   MaterialBoxContext,
   MaterialBoxScreen
 >({
-  initialContext: {},
+  initialContext: {
+    preferences: [],
+  },
   sequence: [
     action.prompter({
       message: [
@@ -24,6 +38,54 @@ export const materialBoxConsulting = defineConsulting<
       ],
       placement: 'center',
       size: 'default',
+      waitFor: 'continue',
+    }),
+    action.prompter({
+      message: [
+        { text: '이제 본격적으로 ' },
+        { text: '재료함', emphasis: 'accent' },
+        { text: '을 만들어봅시다!' },
+      ],
+      waitFor: 'typing',
+    }),
+    action.prompter({
+      placement: 'bottom',
+      size: 'wide',
+      waitFor: 'layout',
+    }),
+    action.screen({
+      screen: 'major-one',
+      waitFor: 'animation',
+    }),
+    action.prompter({
+      message: '우선 여러분이 가고 싶은 학과가 필요해요.',
+      waitFor: 'typing',
+    }),
+    action.screen({
+      screen: 'major-one-with-reason',
+      waitFor: 'animation',
+    }),
+    action.prompter({
+      message:
+        '그 전공을 공부하고 싶은 여러분만의 이유도 필요합니다. 구체적인 이유가 있을 수도 있고, 막연하게 멋있어서 희망할 수도 있어요. 무엇이든 편하게 알려주시면 됩니다.',
+      waitFor: 'typing',
+    }),
+    action.screen({
+      screen: 'three-majors',
+      waitFor: 'animation',
+    }),
+    action.prompter({
+      message:
+        '희망 전공이 하나가 아닐 수도 있습니다. 그 희망전공들에서 여러분만의 스토리가 드러나요. 희망 전공이 여러개라면, 가장 가고 싶은 학과를 3개까지 써주세요.',
+      waitFor: 'typing',
+    }),
+    action.screen({
+      screen: 'major-input',
+      waitFor: 'user',
+    }),
+    action.prompter({
+      message:
+        '잘 작성했나요? 희망 전공은 나중에 얼마든지 달라질 수 있습니다. 희망 전공이 달라지면 어떻게 해야하는지는 나중에 알려드릴게요.',
       waitFor: 'typing',
     }),
   ],

@@ -52,9 +52,7 @@ function FormattedMessage({
     return (
       <span
         key={`${index}-${segment.text}`}
-        className={cn(
-          segment.emphasis && emphasisClassNames[segment.emphasis],
-        )}
+        className={cn(segment.emphasis && emphasisClassNames[segment.emphasis])}
       >
         {visibleText}
       </span>
@@ -169,7 +167,7 @@ function TypewriterMessage({
         )}
       </AnimatePresence>
 
-      <div className="min-h-14 max-w-4xl">
+      <div className="min-h-14 w-full">
         <p className="sr-only" aria-live="polite">
           {plainMessage}
         </p>
@@ -177,10 +175,7 @@ function TypewriterMessage({
           aria-hidden="true"
           className="text-[1.05rem] font-medium leading-8 tracking-[-0.01em] text-foreground md:text-lg md:leading-8"
         >
-          <FormattedMessage
-            segments={segments}
-            visibleCount={visibleCount}
-          />
+          <FormattedMessage segments={segments} visibleCount={visibleCount} />
           {isTyping && (
             <motion.span
               className="ml-0.5 inline-block h-[1.05em] w-0.5 translate-y-0.5 rounded-full bg-primary"

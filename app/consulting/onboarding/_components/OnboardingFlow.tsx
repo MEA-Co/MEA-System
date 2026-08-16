@@ -1,14 +1,14 @@
 'use client';
 
-import { ArrowRight, CheckCircle2, FileText, XCircle } from 'lucide-react';
+import { CheckCircle2, FileText, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import {
   type OnboardingAnswer,
   onboardingConsulting,
 } from '@/app/consulting/onboarding/_lib/onboardingConsulting';
-import { Button } from '@/components/ui/button';
 import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
+import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
 import { useConsultingSequence } from '@/features/consulting/hooks/useConsultingSequence';
 import { cn } from '@/lib/utils';
@@ -37,17 +37,7 @@ export function OnboardingFlow() {
           onTypingComplete={consulting.completePrompterTyping}
         >
           {canContinue && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={consulting.continueSequence}
-              className="group/progress h-11 border-border/80 bg-background/90 pr-2 pl-5 text-foreground shadow-sm hover:border-foreground/20 hover:bg-muted"
-            >
-              진행하기
-              <span className="ml-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover/progress:translate-x-0.5">
-                <ArrowRight className="size-3.5" aria-hidden="true" />
-              </span>
-            </Button>
+            <ConsultingProgressButton onClick={consulting.continueSequence} />
           )}
         </ConsultingPrompter>
       }
