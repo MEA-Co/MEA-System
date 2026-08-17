@@ -1,21 +1,63 @@
 import { ArrowRight } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import { type ComponentProps, useEffect, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-type ConsultingProgressButtonProps = ComponentProps<typeof Button> & {
+type ConsultingProgressButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  'ref'
+> & {
   compact?: boolean;
+  spacebarShortcut?: boolean;
 };
 
 export function ConsultingProgressButton({
   children = '진행하기',
   className,
   compact = false,
+  spacebarShortcut = false,
   ...props
 }: ConsultingProgressButtonProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!spacebarShortcut || props.disabled) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.code !== 'Space' ||
+        event.repeat ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      buttonRef.current?.click();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [props.disabled, spacebarShortcut]);
+
   return (
     <Button
+      ref={buttonRef}
       variant={compact ? 'ghost' : 'outline'}
       size={compact ? 'sm' : 'lg'}
       className={cn(
@@ -25,6 +67,9 @@ export function ConsultingProgressButton({
         className,
       )}
       {...props}
+      aria-keyshortcuts={
+        spacebarShortcut ? 'Space' : props['aria-keyshortcuts']
+      }
     >
       {children}
       {compact ? (

@@ -196,7 +196,7 @@ export function MajorPreferencesScreen({
                     onChange={(event) =>
                       updatePreference(index, event.target.value)
                     }
-                    placeholder="예: 심리학과"
+                    placeholder={`${index + 1}순위 희망 전공을 입력해 주세요.`}
                   />
                 ) : (
                   <div

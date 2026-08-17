@@ -34,6 +34,7 @@ export function OnboardingFlow() {
               <ConsultingProgressButton
                 compact
                 disabled={!canContinue}
+                spacebarShortcut
                 onClick={() => session.send({ type: 'CONTINUE' })}
               />
             )}

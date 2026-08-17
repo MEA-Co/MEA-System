@@ -78,6 +78,7 @@ export function MaterialBoxFlow() {
                 <ConsultingProgressButton
                   compact
                   disabled={!canContinue}
+                  spacebarShortcut
                   onClick={() => session.send({ type: 'CONTINUE' })}
                 />
               )
