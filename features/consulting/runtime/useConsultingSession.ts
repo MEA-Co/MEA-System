@@ -385,7 +385,16 @@ export function useConsultingSession<
   const tasks = state.tasks as ConsultingTaskStates<TaskOutputs>;
   const activeSequenceAction = sequence[state.sequenceIndex] as
     SequenceAction | undefined;
+  const nextSequenceAction = sequence[state.sequenceIndex + 1] as
+    SequenceAction | undefined;
   const isWaitingForEvent = activeSequenceAction?.type === 'event.await';
+  const sequenceEvent = isWaitingForEvent
+    ? activeSequenceAction.event
+    : activeSequenceAction?.type === 'present' &&
+        state.pendingPresentation === 'prompter' &&
+        nextSequenceAction?.type === 'event.await'
+      ? nextSequenceAction.event
+      : null;
   const sequenceComplete =
     state.sequenceIndex >= sequence.length &&
     !state.pendingPresentation &&
@@ -690,6 +699,7 @@ export function useConsultingSession<
     interaction: currentNode.interaction,
     phase,
     isWaitingForUser: phase === 'waiting-for-user',
+    sequenceEvent,
     view: state.view,
     memory: state.memory,
     tasks,

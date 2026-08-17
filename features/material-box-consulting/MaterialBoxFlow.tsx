@@ -29,12 +29,16 @@ function isMajorPreferenceScreen(
 export function MaterialBoxFlow() {
   const session = useConsultingSession(materialBoxConsulting);
   const currentScreen = session.view.screen;
-  const hasContinueInteraction = session.interaction.kind === 'continue';
+  const hasContinueInteraction =
+    session.interaction.kind === 'continue' ||
+    session.sequenceEvent === 'CONTINUE';
   const canContinue = hasContinueInteraction && session.isWaitingForUser;
   const hasReviewInteraction = session.interaction.kind === 'major-review';
   const canReviewPreferences = hasReviewInteraction && session.isWaitingForUser;
   const canEditMajors =
-    session.interaction.kind === 'major-form' && session.isWaitingForUser;
+    session.interaction.kind === 'major-form' &&
+    session.isWaitingForUser &&
+    session.sequenceEvent === null;
   const canEditKeyword =
     session.interaction.kind === 'keyword-form' && session.isWaitingForUser;
 
@@ -89,7 +93,6 @@ export function MaterialBoxFlow() {
     >
       {isMajorPreferenceScreen(currentScreen) && (
         <MajorPreferencesScreen
-          key={`${currentScreen}-${session.presentationKeys.screen}`}
           screen={currentScreen}
           isInteractive={canEditMajors}
           submittedPreferences={session.memory.majorPreferences}

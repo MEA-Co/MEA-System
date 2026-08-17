@@ -92,11 +92,26 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           { message: '희망 전공에서 출발해보겠습니다.' },
           'prompter',
         ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present(
+          {
+            message: '희망 전공은 하나일 수도 있고,',
+          },
+          'prompter',
+        ),
         sequence.present({ screen: 'three-majors' }, 'screen'),
         sequence.present(
           {
             message:
-              '희망 전공이 하나가 아닐 수도 있습니다. 그 희망전공들에서 여러분만의 스토리가 드러나요. 희망 전공이 여러개라면, 가장 가고 싶은 학과를 3개까지 써주세요.',
+              '여러 개일 수도 있습니다. 희망 전공이 여러 개라면 그 희망 전공들에서 여러분들의 특색이 드러나기도 합니다.',
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present(
+          {
+            message:
+              '여러분의 희망 전공은 무엇인가요? 하나라면 1개만, 여러 개라면 가장 가고 싶은 학과를 3개까지 입력해주세요',
           },
           'prompter',
         ),

@@ -146,6 +146,7 @@ export interface ConsultingSession<
   interaction: Interaction;
   phase: ConsultingProcessPhase;
   isWaitingForUser: boolean;
+  sequenceEvent: Event['type'] | null;
   view: View;
   memory: Memory;
   tasks: ConsultingTaskStates<TaskOutputs>;
