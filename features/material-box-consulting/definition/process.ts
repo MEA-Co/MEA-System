@@ -10,7 +10,8 @@ import type {
 const sequence = createSequenceActions<
   MaterialBoxMemory,
   MaterialBoxView,
-  MaterialBoxTaskOutputs
+  MaterialBoxTaskOutputs,
+  MaterialBoxEvent
 >();
 
 export const materialBoxProcess: ConsultingProcessDefinition<
@@ -34,14 +35,40 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           {
             message: [
               {
-                text: '앞서 여러분은 생활기록부 브랜딩이란 무엇이며, 브랜딩을 하기 위해서 ',
+                text: '여러분의 생활기록부에는 ',
               },
-              { text: '재료함', emphasis: 'accent' },
-              { text: '이라는 것이 필요하다는 걸 확인했어요.' },
+              { text: '3년간의 성장서사', emphasis: 'accent' },
+              { text: '가 담겨야 하고, 여러분이라는 ' },
+              { text: '브랜드', emphasis: 'accent' },
+              { text: '가 드러나야 합니다.' },
             ],
             prompterPlacement: 'center',
             prompterSize: 'default',
             screen: null,
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present(
+          {
+            message: [
+              { text: '그렇게 하기 위해서, 여러분들만의 ' },
+              { text: '재료함', emphasis: 'accent' },
+              {
+                text: '을 만들어두고 앞으로 계속 사용할거에요. 재료함의 내용은 지속적으로 업데이트되거나 추가될 수는 있지만 비어있어서는 안됩니다.',
+              },
+            ],
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present(
+          {
+            message: [
+              { text: '이번 컨설팅에서는 여러분이라는 브랜드를 담는 ' },
+              { text: '재료함', emphasis: 'accent' },
+              { text: '을 직접 만들어보겠습니다.' },
+            ],
           },
           'prompter',
         ),
@@ -55,19 +82,6 @@ export const materialBoxProcess: ConsultingProcessDefinition<
       sequence: [
         sequence.present(
           {
-            message: [
-              { text: '이제 본격적으로 ' },
-              { text: '재료함', emphasis: 'accent' },
-              { text: '을 만들어봅시다!' },
-            ],
-            prompterPlacement: 'center',
-            prompterSize: 'default',
-            screen: null,
-          },
-          'prompter',
-        ),
-        sequence.present(
-          {
             prompterPlacement: 'bottom',
             prompterSize: 'wide',
           },
@@ -75,7 +89,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
         ),
         sequence.present({ screen: 'major-one' }, 'screen'),
         sequence.present(
-          { message: '우선 여러분이 가고 싶은 학과가 필요해요.' },
+          { message: '희망 전공에서 출발해보겠습니다.' },
           'prompter',
         ),
         sequence.present({ screen: 'three-majors' }, 'screen'),

@@ -9,6 +9,10 @@ export type ConsultingProcessPhase =
 export type PresentationWaitFor =
   'immediate' | 'prompter' | 'layout' | 'screen';
 
+export interface ConsultingEvent {
+  type: string;
+}
+
 export interface ConsultingUpdate<Memory extends object, View extends object> {
   memory?: Partial<Memory>;
   view?: Partial<View>;
@@ -54,18 +58,21 @@ export type AwaitTaskAction<
   };
 }[keyof TaskOutputs & string];
 
-export type PresentationAction<
+export interface AwaitEventAction<Event extends ConsultingEvent> {
+  type: 'event.await';
+  event: Event['type'];
+}
+
+export type ConsultingSequenceAction<
   Memory extends object,
   View extends object,
   TaskOutputs extends object,
+  Event extends ConsultingEvent,
 > =
   | PresentAction<Memory, View, TaskOutputs>
   | StartTaskAction<TaskOutputs>
-  | AwaitTaskAction<Memory, View, TaskOutputs>;
-
-export interface ConsultingEvent {
-  type: string;
-}
+  | AwaitTaskAction<Memory, View, TaskOutputs>
+  | AwaitEventAction<Event>;
 
 export type EdgeRuntime<
   Memory extends object,
@@ -103,7 +110,9 @@ export interface ConsultingNode<
   Event extends ConsultingEvent,
   Interaction,
 > {
-  sequence?: ReadonlyArray<PresentationAction<Memory, View, TaskOutputs>>;
+  sequence?: ReadonlyArray<
+    ConsultingSequenceAction<Memory, View, TaskOutputs, Event>
+  >;
   interaction: Interaction;
   edges: Partial<
     Record<Event['type'], ConsultingEdge<Memory, View, TaskOutputs, Event>>

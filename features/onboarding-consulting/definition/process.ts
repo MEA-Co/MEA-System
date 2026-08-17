@@ -11,7 +11,8 @@ import type {
 const sequence = createSequenceActions<
   OnboardingMemory,
   OnboardingView,
-  OnboardingTaskOutputs
+  OnboardingTaskOutputs,
+  OnboardingEvent
 >();
 
 export const onboardingProcess: ConsultingProcessDefinition<

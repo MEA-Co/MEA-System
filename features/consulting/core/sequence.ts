@@ -1,6 +1,7 @@
 import type {
+  ConsultingEvent,
+  ConsultingSequenceAction,
   ConsultingUpdate,
-  PresentationAction,
   PresentationWaitFor,
 } from '@/features/consulting/core/process';
 import type { ConsultingRuntimeSnapshot } from '@/features/consulting/core/task';
@@ -9,11 +10,16 @@ export function createSequenceActions<
   Memory extends object,
   View extends object,
   TaskOutputs extends object,
+  Event extends ConsultingEvent,
 >() {
   type Runtime = ConsultingRuntimeSnapshot<Memory, View, TaskOutputs>;
-  type Action = PresentationAction<Memory, View, TaskOutputs>;
+  type Action = ConsultingSequenceAction<Memory, View, TaskOutputs, Event>;
 
   return {
+    awaitEvent<Type extends Event['type']>(event: Type): Action {
+      return { type: 'event.await', event } as Action;
+    },
+
     present(
       view: Partial<View> | ((runtime: Runtime) => Partial<View>),
       waitFor: PresentationWaitFor = 'immediate',

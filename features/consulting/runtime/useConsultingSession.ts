@@ -7,9 +7,9 @@ import type {
   ConsultingEdge,
   ConsultingEvent,
   ConsultingProcessPhase,
+  ConsultingSequenceAction,
   ConsultingSession,
   ConsultingUpdate,
-  PresentationAction,
   PresentationWaitFor,
 } from '@/features/consulting/core/process';
 import type {
@@ -67,6 +67,7 @@ type ProcessAction<
       actionIndex: number;
       presentation: PresentationWaitFor;
     }
+  | { type: 'event-received'; visitId: number; actionIndex: number }
   | { type: 'action-started'; visitId: number; actionIndex: number }
   | {
       type: 'action-completed';
@@ -163,6 +164,9 @@ function processReducer<
         sequenceIndex: state.sequenceIndex + 1,
         pendingPresentation: null,
       };
+    case 'event-received':
+      if (state.sequenceIndex !== action.actionIndex) return state;
+      return { ...state, sequenceIndex: state.sequenceIndex + 1 };
     case 'action-started':
       if (state.sequenceIndex !== action.actionIndex) return state;
       return { ...state, actionRunning: true, error: null };
@@ -324,7 +328,12 @@ export function useConsultingSession<
     Interaction
   >,
 ): ConsultingSession<Memory, View, TaskOutputs, Event, Interaction> {
-  type SequenceAction = PresentationAction<Memory, View, TaskOutputs>;
+  type SequenceAction = ConsultingSequenceAction<
+    Memory,
+    View,
+    TaskOutputs,
+    Event
+  >;
   type Edge = ConsultingEdge<Memory, View, TaskOutputs, Event>;
   const {
     memory: memoryDefinition,
@@ -374,6 +383,9 @@ export function useConsultingSession<
     [currentNode.sequence],
   );
   const tasks = state.tasks as ConsultingTaskStates<TaskOutputs>;
+  const activeSequenceAction = sequence[state.sequenceIndex] as
+    SequenceAction | undefined;
+  const isWaitingForEvent = activeSequenceAction?.type === 'event.await';
   const sequenceComplete =
     state.sequenceIndex >= sequence.length &&
     !state.pendingPresentation &&
@@ -384,7 +396,7 @@ export function useConsultingSession<
       ? 'complete'
       : state.transitionRunning
         ? 'transitioning'
-        : sequenceComplete
+        : isWaitingForEvent || sequenceComplete
           ? 'waiting-for-user'
           : 'presenting';
 
@@ -406,8 +418,9 @@ export function useConsultingSession<
       return;
     }
 
-    const action = sequence[state.sequenceIndex] as SequenceAction | undefined;
+    const action = activeSequenceAction;
     if (!action) return;
+    if (action.type === 'event.await') return;
 
     const executionKey = `${state.visitId}:${state.sequenceIndex}`;
 
@@ -533,6 +546,7 @@ export function useConsultingSession<
         });
       });
   }, [
+    activeSequenceAction,
     taskDefinitions,
     phase,
     sequence,
@@ -560,6 +574,18 @@ export function useConsultingSession<
   const send = useCallback(
     (event: Event) => {
       if (phase !== 'waiting-for-user') return;
+
+      if (activeSequenceAction?.type === 'event.await') {
+        if (activeSequenceAction.event !== event.type) return;
+
+        dispatch({
+          type: 'event-received',
+          visitId: state.visitId,
+          actionIndex: state.sequenceIndex,
+        });
+        return;
+      }
+
       if (submittedEdgeRef.current === state.visitId) return;
 
       const edge = currentNode.edges[event.type as Event['type']] as
@@ -630,12 +656,14 @@ export function useConsultingSession<
         });
     },
     [
+      activeSequenceAction,
       currentNode.edges,
       process.nodes,
       phase,
       state.history,
       state.memory,
       state.nodeId,
+      state.sequenceIndex,
       state.view,
       state.visitId,
       tasks,
