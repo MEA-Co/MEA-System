@@ -53,6 +53,7 @@ export function MaterialBoxFlow() {
         session.view.message && (
           <ConsultingPrompter
             key={session.presentationKeys.prompter}
+            animateTyping={session.nodeId !== 'major-edit'}
             message={session.view.message}
             onTypingComplete={session.completePrompterPresentation}
           >

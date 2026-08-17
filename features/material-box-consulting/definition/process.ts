@@ -155,7 +155,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
         sequence.present(
           {
             message:
-              '희망 전공이 하나가 아닐 수도 있습니다. 그 희망전공들에서 여러분만의 스토리가 드러나요. 희망 전공이 여러개라면, 가장 가고 싶은 학과를 3개까지 써주세요.',
+              '여러분의 희망 전공은 무엇인가요? 하나라면 1개만, 여러 개라면 가장 가고 싶은 학과를 3개까지 입력해주세요.',
             prompterPlacement: 'bottom',
             prompterSize: 'wide',
             screen: 'major-input',

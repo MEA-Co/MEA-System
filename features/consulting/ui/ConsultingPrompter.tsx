@@ -20,6 +20,7 @@ import type {
 import { cn } from '@/lib/utils';
 
 type ConsultingPrompterProps = {
+  animateTyping?: boolean;
   message: ConsultingMessage;
   children?: ReactNode;
   onTypingComplete?: () => void;
@@ -234,12 +235,14 @@ function TypewriterMessage({
 }
 
 export function ConsultingPrompter({
+  animateTyping = true,
   message,
   children,
   onTypingComplete,
 }: ConsultingPrompterProps) {
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = Boolean(shouldReduceMotion);
+  const typeImmediately = reduceMotion || !animateTyping;
   const messageKey = JSON.stringify(message);
 
   return (
@@ -258,9 +261,9 @@ export function ConsultingPrompter({
           </div>
 
           <TypewriterMessage
-            key={`${messageKey}-${reduceMotion}`}
+            key={`${messageKey}-${typeImmediately}`}
             message={message}
-            reduceMotion={reduceMotion}
+            reduceMotion={typeImmediately}
             onTypingComplete={onTypingComplete}
           >
             {children}
