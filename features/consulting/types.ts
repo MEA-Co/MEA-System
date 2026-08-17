@@ -1,5 +1,3 @@
-export type ConsultingTurn = 'service' | 'user';
-
 export type ConsultingMessageEmphasis = 'strong' | 'accent' | 'muted';
 
 export type ConsultingMessageSegment = {
@@ -8,5 +6,4 @@ export type ConsultingMessageSegment = {
 };
 
 export type ConsultingMessage =
-  | string
-  | ReadonlyArray<ConsultingMessageSegment>;
+  string | ReadonlyArray<ConsultingMessageSegment>;

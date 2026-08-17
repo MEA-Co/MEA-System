@@ -10,7 +10,7 @@ import {
 import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
-import { useConsultingSequence } from '@/features/consulting/hooks/useConsultingSequence';
+import { useConsultingRunner } from '@/features/consulting/hooks/useConsultingRunner';
 import { cn } from '@/lib/utils';
 
 const choices: Array<{ answer: OnboardingAnswer; label: string }> = [
@@ -19,25 +19,28 @@ const choices: Array<{ answer: OnboardingAnswer; label: string }> = [
 ];
 
 export function OnboardingFlow() {
-  const consulting = useConsultingSequence(onboardingConsulting);
+  const consulting = useConsultingRunner(onboardingConsulting);
   const showChoices = consulting.view.screen === 'writing-comparison';
   const selectedAnswer = consulting.context.answer;
   const canContinue =
-    consulting.currentAction?.type === 'prompter' &&
-    consulting.currentAction.waitFor === 'continue';
+    consulting.currentTurnId === 'intro-continue' && consulting.canSubmitUser;
+  const canChoose =
+    consulting.currentTurnId === 'writing-choice' && consulting.canSubmitUser;
 
   return (
     <ConsultingMain
       prompterPlacement={consulting.view.prompterPlacement}
       prompterSize={consulting.view.prompterSize}
-      onPrompterTransitionComplete={consulting.completePrompterLayout}
+      onPrompterTransitionComplete={consulting.completeLayoutPresentation}
       prompter={
         <ConsultingPrompter
           message={consulting.view.message}
-          onTypingComplete={consulting.completePrompterTyping}
+          onTypingComplete={consulting.completePrompterPresentation}
         >
           {canContinue && (
-            <ConsultingProgressButton onClick={consulting.continueSequence} />
+            <ConsultingProgressButton
+              onClick={() => consulting.submitUserTurn({ type: 'continue' })}
+            />
           )}
         </ConsultingPrompter>
       }
@@ -50,6 +53,7 @@ export function OnboardingFlow() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
+            onAnimationComplete={consulting.completeScreenPresentation}
             className="mx-auto grid min-h-96 w-full max-w-3xl grid-cols-1 content-start gap-4 pt-10 pb-52 md:grid-cols-2 md:gap-5 md:pt-14 md:pb-44"
           >
             {choices.map((choice, index) => {
@@ -60,23 +64,22 @@ export function OnboardingFlow() {
                 <motion.button
                   key={choice.answer}
                   type="button"
-                  disabled={consulting.turn !== 'user'}
+                  disabled={!canChoose}
                   aria-pressed={isSelected}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.08 }}
-                  whileHover={
-                    consulting.turn === 'user' ? { y: -4 } : undefined
-                  }
-                  whileTap={
-                    consulting.turn === 'user' ? { scale: 0.985 } : undefined
-                  }
+                  whileHover={canChoose ? { y: -4 } : undefined}
+                  whileTap={canChoose ? { scale: 0.985 } : undefined}
                   onClick={() =>
-                    consulting.completeScreen({ answer: choice.answer })
+                    consulting.submitUserTurn({
+                      type: 'select-writing',
+                      answer: choice.answer,
+                    })
                   }
                   className={cn(
                     'group relative flex min-h-40 cursor-pointer flex-col items-start justify-between overflow-hidden rounded-2xl border bg-background/85 p-5 text-left shadow-sm transition-[border-color,background-color,box-shadow,opacity] outline-none hover:border-foreground/25 hover:shadow-md focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-default md:min-h-48 md:p-6',
-                    consulting.turn !== 'user' && !isSelected && 'opacity-50',
+                    !canChoose && !isSelected && 'opacity-50',
                     isSelected &&
                       isCorrect &&
                       'border-emerald-500/60 bg-emerald-500/10 shadow-md',

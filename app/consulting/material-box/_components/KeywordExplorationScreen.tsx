@@ -12,6 +12,7 @@ import type {
 import { Input } from '@/components/ui/input';
 import { ConsultingAdvice } from '@/features/consulting/components/ConsultingAdvice';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
+import type { ConsultingResourceStatus } from '@/features/consulting/runner/types';
 import { cn } from '@/lib/utils';
 
 const questions: ReadonlyArray<{
@@ -30,6 +31,7 @@ const questions: ReadonlyArray<{
 
 type KeywordExplorationScreenProps = {
   advice: Array<MentorAdvice>;
+  adviceStatus: ConsultingResourceStatus;
   isInteractive: boolean;
   preferences: Array<MajorPreference>;
   submittedKeyword: string;
@@ -38,6 +40,7 @@ type KeywordExplorationScreenProps = {
 
 export function KeywordExplorationScreen({
   advice,
+  adviceStatus,
   isInteractive,
   preferences,
   submittedKeyword,
@@ -175,9 +178,16 @@ export function KeywordExplorationScreen({
                 }
                 title="멘토의 조언"
                 description={question.title}
-                triggerLabel="멘토의 조언"
-                triggerDisabled={!isInteractive}
-                highlightTrigger
+                triggerLabel={
+                  adviceStatus === 'loading'
+                    ? '조언 준비 중'
+                    : adviceStatus === 'error'
+                      ? '조언 불러오기 실패'
+                      : '멘토의 조언'
+                }
+                triggerDisabled={!isInteractive || adviceStatus !== 'success'}
+                highlightTrigger={adviceStatus === 'success'}
+                triggerLoading={adviceStatus === 'loading'}
                 triggerClassName="shrink-0 self-end sm:self-auto"
               >
                 <div className="space-y-3">

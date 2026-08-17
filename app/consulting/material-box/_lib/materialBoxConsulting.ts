@@ -1,7 +1,5 @@
-import {
-  createConsultingActions,
-  defineConsulting,
-} from '@/features/consulting/sequence/createConsultingSequence';
+import { createConsultingActions } from '@/features/consulting/runner/createConsultingActions';
+import { defineConsulting } from '@/features/consulting/runner/defineConsulting';
 
 export type MajorPreference = {
   major: string;
@@ -20,12 +18,15 @@ export type MentorAdvice = {
 
 export type MaterialBoxContext = {
   preferences: Array<MajorPreference>;
-  mentorAdvice: Array<MentorAdvice>;
   keyword: string;
 };
 
 export type MaterialBoxMemory = {
   majorPreferences: Array<MajorPreference>;
+};
+
+export type MaterialBoxResources = {
+  mentorAdvice: Array<MentorAdvice>;
 };
 
 export type MajorPreferenceScreen =
@@ -34,120 +35,58 @@ export type MajorPreferenceScreen =
 export type MaterialBoxScreen =
   MajorPreferenceScreen | 'keyword-examples' | 'keyword-exploration';
 
-export type MaterialBoxOperation = 'load-mentor-advice';
+export type MaterialBoxUserInput =
+  | { type: 'continue' }
+  | {
+      type: 'submit-majors';
+      preferences: Array<MajorPreference>;
+    }
+  | {
+      type: 'review-majors';
+      decision: 'confirm' | 'edit';
+    }
+  | {
+      type: 'submit-keyword';
+      keyword: string;
+    };
 
 const action = createConsultingActions<
   MaterialBoxContext,
+  MaterialBoxMemory,
   MaterialBoxScreen,
-  MaterialBoxOperation,
-  MaterialBoxMemory
+  MaterialBoxResources
 >();
 
-export const materialBoxConsulting = defineConsulting<
-  MaterialBoxContext,
-  MaterialBoxScreen,
-  MaterialBoxOperation,
-  MaterialBoxMemory
->({
-  initialContext: {
-    preferences: [],
-    mentorAdvice: [],
-    keyword: '',
+const introMessage = [
+  {
+    text: '앞서 여러분은 생활기록부 브랜딩이란 무엇이며, 브랜딩을 하기 위해서 ',
   },
-  initialMemory: {
-    majorPreferences: [],
+  { text: '재료함', emphasis: 'accent' as const },
+  { text: '이라는 것이 필요하다는 걸 확인했어요.' },
+];
+
+const startMessage = [
+  { text: '이제 본격적으로 ' },
+  { text: '재료함', emphasis: 'accent' as const },
+  { text: '을 만들어봅시다!' },
+];
+
+const majorInputMessage =
+  '희망 전공이 하나가 아닐 수도 있습니다. 그 희망전공들에서 여러분만의 스토리가 드러나요. 희망 전공이 여러개라면, 가장 가고 싶은 학과를 3개까지 써주세요.';
+
+const majorReviewMessage =
+  '잘 작성했나요? 희망 전공은 나중에 얼마든지 달라질 수 있습니다. 희망 전공이 달라지면 어떻게 해야하는지는 나중에 알려드릴게요.';
+
+const keywordIntroMessage = [
+  {
+    text: '좋습니다! 그런데 전공은 사실 아주 광범위한 내용을 다룬답니다. 여러분이 여러분만의 서사를 담아내려면, 전공 별로 ',
   },
-  sequence: [
-    action.prompter({
-      message: [
-        {
-          text: '앞서 여러분은 생활기록부 브랜딩이란 무엇이며, 브랜딩을 하기 위해서 ',
-        },
-        { text: '재료함', emphasis: 'accent' },
-        { text: '이라는 것이 필요하다는 걸 확인했어요.' },
-      ],
-      placement: 'center',
-      size: 'default',
-      waitFor: 'continue',
-    }),
-    action.prompter({
-      message: [
-        { text: '이제 본격적으로 ' },
-        { text: '재료함', emphasis: 'accent' },
-        { text: '을 만들어봅시다!' },
-      ],
-      waitFor: 'typing',
-    }),
-    action.prompter({
-      placement: 'bottom',
-      size: 'wide',
-      waitFor: 'layout',
-    }),
-    action.screen({
-      screen: 'major-one',
-      waitFor: 'animation',
-    }),
-    action.prompter({
-      message: '우선 여러분이 가고 싶은 학과가 필요해요.',
-      waitFor: 'typing',
-    }),
-    action.screen({
-      screen: 'three-majors',
-      waitFor: 'animation',
-    }),
-    action.prompter({
-      message:
-        '희망 전공이 하나가 아닐 수도 있습니다. 그 희망전공들에서 여러분만의 스토리가 드러나요. 희망 전공이 여러개라면, 가장 가고 싶은 학과를 3개까지 써주세요.',
-      waitFor: 'typing',
-    }),
-    action.screen({
-      screen: 'major-input',
-      waitFor: 'user',
-    }),
-    action.prompter({
-      message:
-        '잘 작성했나요? 희망 전공은 나중에 얼마든지 달라질 수 있습니다. 희망 전공이 달라지면 어떻게 해야하는지는 나중에 알려드릴게요.',
-      waitFor: 'continue',
-    }),
-    action.memory({
-      update: ({ preferences }) => ({
-        majorPreferences: preferences.map((preference) => ({ ...preference })),
-      }),
-    }),
-    action.prompter({
-      message: [
-        {
-          text: '좋습니다! 그런데 전공은 사실 아주 광범위한 내용을 다룬답니다. 여러분이 여러분만의 서사를 담아내려면, 전공 별로 ',
-        },
-        { text: "'세부 키워드'", emphasis: 'strong' },
-        { text: '를 선택해야 해요.' },
-      ],
-      waitFor: 'continue',
-    }),
-    action.prompter({
-      message: '너무 어렵게 생각하지 않아도 됩니다.',
-      waitFor: 'typing',
-    }),
-    action.screen({
-      screen: 'keyword-examples',
-      waitFor: 'animation',
-    }),
-    action.prompter({
-      message:
-        '이미 여러분만의 관심사가 있을 수도 있고, 조금만 생각해보면 관심 가는 분야가 나올 수도 있어요.',
-      waitFor: 'continue',
-    }),
-    action.external({ operation: 'load-mentor-advice' }),
-    action.prompter({
-      message: '이제 세부 키워드를 입력해주세요!',
-      waitFor: 'typing',
-    }),
-    action.screen({
-      screen: 'keyword-exploration',
-      waitFor: 'user',
-    }),
-  ],
-});
+  { text: "'세부 키워드'", emphasis: 'strong' as const },
+  { text: '를 선택해야 해요.' },
+];
+
+const keywordInterestMessage =
+  '이미 여러분만의 관심사가 있을 수도 있고, 조금만 생각해보면 관심 가는 분야가 나올 수도 있어요.';
 
 const mentorAdviceFixtures: Array<MentorAdvice> = [
   {
@@ -171,7 +110,7 @@ const mentorAdviceFixtures: Array<MentorAdvice> = [
   {
     id: 'computer-data',
     question: 'keyword-help',
-    mentorName: '이서준 멘토',
+    mentorName: '이도현 멘토',
     mentorMajor: '컴퓨터공학과',
     message:
       '아직 한 분야를 고르기 어렵다면 어디에서나 활용할 수 있는 데이터부터 살펴보세요. 관심 있는 현상의 데이터를 모으고 분석하는 과정은 다양한 전공 주제로 확장할 수 있습니다.',
@@ -188,14 +127,160 @@ const mentorAdviceFixtures: Array<MentorAdvice> = [
   },
 ];
 
-export async function executeMaterialBoxExternalAction(
-  operation: MaterialBoxOperation,
-): Promise<Partial<MaterialBoxContext>> {
-  if (operation === 'load-mentor-advice') {
-    return {
-      mentorAdvice: mentorAdviceFixtures.map((advice) => ({ ...advice })),
-    };
-  }
+const introView = {
+  message: introMessage,
+  prompterPlacement: 'center' as const,
+  prompterSize: 'default' as const,
+  screen: null,
+};
 
-  return {};
-}
+export const materialBoxConsulting = defineConsulting<
+  MaterialBoxContext,
+  MaterialBoxMemory,
+  MaterialBoxScreen,
+  MaterialBoxResources,
+  MaterialBoxUserInput
+>({
+  initialSystemTurnId: 'intro-system',
+  initialContext: {
+    preferences: [],
+    keyword: '',
+  },
+  initialMemory: {
+    majorPreferences: [],
+  },
+  initialView: introView,
+  turns: [
+    {
+      id: 'intro-system',
+      actor: 'system',
+      sequence: [action.present(introView, 'prompter')],
+      next: 'intro-continue',
+    },
+    {
+      id: 'intro-continue',
+      actor: 'user',
+      submit: () => undefined,
+      next: 'major-setup-system',
+    },
+    {
+      id: 'major-setup-system',
+      actor: 'system',
+      sequence: [
+        action.present({ message: startMessage }, 'prompter'),
+        action.present(
+          {
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+          },
+          'layout',
+        ),
+        action.present({ screen: 'major-one' }, 'screen'),
+        action.present(
+          { message: '우선 여러분이 가고 싶은 학과가 필요해요.' },
+          'prompter',
+        ),
+        action.present({ screen: 'three-majors' }, 'screen'),
+        action.present({ message: majorInputMessage }, 'prompter'),
+        action.present({ screen: 'major-input' }),
+      ],
+      next: 'major-input',
+    },
+    {
+      id: 'major-input',
+      actor: 'user',
+      submit: (input) => {
+        if (input.type !== 'submit-majors') return;
+        return { context: { preferences: input.preferences } };
+      },
+      next: 'major-review-system',
+    },
+    {
+      id: 'major-review-system',
+      actor: 'system',
+      sequence: [action.present({ message: majorReviewMessage }, 'prompter')],
+      next: 'major-review',
+    },
+    {
+      id: 'major-review',
+      actor: 'user',
+      submit: () => undefined,
+      next: ({ input }) =>
+        input.type === 'review-majors' && input.decision === 'edit'
+          ? 'major-edit-system'
+          : 'keyword-intro-system',
+    },
+    {
+      id: 'major-edit-system',
+      actor: 'system',
+      sequence: [action.present({ message: majorInputMessage }, 'prompter')],
+      next: 'major-input',
+    },
+    {
+      id: 'keyword-intro-system',
+      actor: 'system',
+      sequence: [
+        action.run(({ context }) => ({
+          memory: {
+            majorPreferences: context.preferences.map((preference) => ({
+              ...preference,
+            })),
+          },
+        })),
+        action.present({ message: keywordIntroMessage }, 'prompter'),
+      ],
+      next: 'keyword-intro-continue',
+    },
+    {
+      id: 'keyword-intro-continue',
+      actor: 'user',
+      submit: () => undefined,
+      next: 'keyword-examples-system',
+    },
+    {
+      id: 'keyword-examples-system',
+      actor: 'system',
+      sequence: [
+        action.present(
+          { message: '너무 어렵게 생각하지 않아도 됩니다.' },
+          'prompter',
+        ),
+        action.present({ screen: 'keyword-examples' }, 'screen'),
+        action.present({ message: keywordInterestMessage }, 'prompter'),
+      ],
+      next: 'keyword-interest-continue',
+    },
+    {
+      id: 'keyword-interest-continue',
+      actor: 'user',
+      submit: () => undefined,
+      next: 'keyword-input-system',
+    },
+    {
+      id: 'keyword-input-system',
+      actor: 'system',
+      sequence: [
+        action.startResource('mentorAdvice', async () => {
+          await new Promise((resolve) => window.setTimeout(resolve, 900));
+          return mentorAdviceFixtures.map((advice) => ({ ...advice }));
+        }),
+        action.present(
+          {
+            message: '이제 세부 키워드를 입력해주세요!',
+            screen: 'keyword-exploration',
+          },
+          'prompter',
+        ),
+      ],
+      next: 'keyword-input',
+    },
+    {
+      id: 'keyword-input',
+      actor: 'user',
+      submit: (input) => {
+        if (input.type !== 'submit-keyword') return;
+        return { context: { keyword: input.keyword } };
+      },
+    },
+  ],
+});

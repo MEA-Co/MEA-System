@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot } from 'lucide-react';
+import { Bot, LoaderCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ type ConsultingAdviceProps = {
   title?: string;
   triggerDisabled?: boolean;
   triggerLabel?: string;
+  triggerLoading?: boolean;
   triggerClassName?: string;
 };
 
@@ -35,6 +36,7 @@ export function ConsultingAdvice({
   title = 'AI 조언',
   triggerDisabled = false,
   triggerLabel = 'AI 조언',
+  triggerLoading = false,
   triggerClassName,
 }: ConsultingAdviceProps) {
   return (
@@ -45,6 +47,7 @@ export function ConsultingAdvice({
             type="button"
             variant="outline"
             disabled={triggerDisabled}
+            aria-busy={triggerLoading}
             className={cn(
               'relative',
               highlightTrigger &&
@@ -63,7 +66,11 @@ export function ConsultingAdvice({
             <span className="relative inline-flex size-2.5 rounded-full bg-blue-500" />
           </span>
         )}
-        <Bot />
+        {triggerLoading ? (
+          <LoaderCircle className="animate-spin" aria-hidden="true" />
+        ) : (
+          <Bot />
+        )}
         {triggerLabel}
       </DrawerTrigger>
       <DrawerContent className="md:max-w-md">

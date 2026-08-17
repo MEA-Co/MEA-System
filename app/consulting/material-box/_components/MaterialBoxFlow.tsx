@@ -6,7 +6,6 @@ import { KeywordExamplesScreen } from '@/app/consulting/material-box/_components
 import { KeywordExplorationScreen } from '@/app/consulting/material-box/_components/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/app/consulting/material-box/_components/MajorPreferencesScreen';
 import {
-  executeMaterialBoxExternalAction,
   type MajorPreferenceScreen,
   materialBoxConsulting,
   type MaterialBoxScreen,
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ConsultingMain } from '@/features/consulting/components/ConsultingMain';
 import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/components/ConsultingPrompter';
-import { useConsultingSequence } from '@/features/consulting/hooks/useConsultingSequence';
+import { useConsultingRunner } from '@/features/consulting/hooks/useConsultingRunner';
 
 function isMajorPreferenceScreen(
   screen: MaterialBoxScreen | null,
@@ -28,27 +27,29 @@ function isMajorPreferenceScreen(
 }
 
 export function MaterialBoxFlow() {
-  const consulting = useConsultingSequence(materialBoxConsulting, {
-    executeExternalAction: executeMaterialBoxExternalAction,
-  });
+  const consulting = useConsultingRunner(materialBoxConsulting);
   const currentScreen = consulting.view.screen;
   const canContinue =
-    consulting.currentAction?.type === 'prompter' &&
-    consulting.currentAction.waitFor === 'continue';
+    (consulting.currentTurnId === 'intro-continue' ||
+      consulting.currentTurnId === 'keyword-intro-continue' ||
+      consulting.currentTurnId === 'keyword-interest-continue') &&
+    consulting.canSubmitUser;
   const isReviewingPreferences =
-    canContinue &&
-    currentScreen === 'major-input' &&
-    consulting.memory.majorPreferences.length === 0;
+    consulting.currentTurnId === 'major-review' && consulting.canSubmitUser;
+  const canEditMajors =
+    consulting.currentTurnId === 'major-input' && consulting.canSubmitUser;
+  const canEditKeyword =
+    consulting.currentTurnId === 'keyword-input' && consulting.canSubmitUser;
 
   return (
     <ConsultingMain
       prompterPlacement={consulting.view.prompterPlacement}
       prompterSize={consulting.view.prompterSize}
-      onPrompterTransitionComplete={consulting.completePrompterLayout}
+      onPrompterTransitionComplete={consulting.completeLayoutPresentation}
       prompter={
         <ConsultingPrompter
           message={consulting.view.message}
-          onTypingComplete={consulting.completePrompterTyping}
+          onTypingComplete={consulting.completePrompterPresentation}
         >
           {isReviewingPreferences ? (
             <div className="flex flex-wrap justify-end gap-2">
@@ -56,19 +57,33 @@ export function MaterialBoxFlow() {
                 type="button"
                 variant="ghost"
                 size="lg"
-                onClick={consulting.returnToPreviousUserAction}
+                onClick={() =>
+                  consulting.submitUserTurn({
+                    type: 'review-majors',
+                    decision: 'edit',
+                  })
+                }
                 className="h-11 px-4 text-muted-foreground hover:text-foreground"
               >
                 <Undo2 className="size-4" aria-hidden="true" />
                 아니오, 수정할게요
               </Button>
-              <ConsultingProgressButton onClick={consulting.continueSequence}>
+              <ConsultingProgressButton
+                onClick={() =>
+                  consulting.submitUserTurn({
+                    type: 'review-majors',
+                    decision: 'confirm',
+                  })
+                }
+              >
                 네, 잘 작성했어요
               </ConsultingProgressButton>
             </div>
           ) : (
             canContinue && (
-              <ConsultingProgressButton onClick={consulting.continueSequence} />
+              <ConsultingProgressButton
+                onClick={() => consulting.submitUserTurn({ type: 'continue' })}
+              />
             )
           )}
         </ConsultingPrompter>
@@ -77,26 +92,37 @@ export function MaterialBoxFlow() {
       {isMajorPreferenceScreen(currentScreen) && (
         <MajorPreferencesScreen
           screen={currentScreen}
-          isInteractive={consulting.turn === 'user'}
+          isInteractive={canEditMajors}
           submittedPreferences={consulting.context.preferences}
-          onAnimationComplete={consulting.completeScreenAnimation}
-          onSubmit={(preferences) => consulting.completeScreen({ preferences })}
+          onAnimationComplete={consulting.completeScreenPresentation}
+          onSubmit={(preferences) =>
+            consulting.submitUserTurn({
+              type: 'submit-majors',
+              preferences,
+            })
+          }
         />
       )}
 
       {currentScreen === 'keyword-examples' && (
         <KeywordExamplesScreen
-          onAnimationComplete={consulting.completeScreenAnimation}
+          onAnimationComplete={consulting.completeScreenPresentation}
         />
       )}
 
       {currentScreen === 'keyword-exploration' && (
         <KeywordExplorationScreen
-          advice={consulting.context.mentorAdvice}
-          isInteractive={consulting.turn === 'user'}
+          advice={consulting.resources.mentorAdvice.data ?? []}
+          adviceStatus={consulting.resources.mentorAdvice.status}
+          isInteractive={canEditKeyword}
           preferences={consulting.memory.majorPreferences}
           submittedKeyword={consulting.context.keyword}
-          onSubmit={(keyword) => consulting.completeScreen({ keyword })}
+          onSubmit={(keyword) =>
+            consulting.submitUserTurn({
+              type: 'submit-keyword',
+              keyword,
+            })
+          }
         />
       )}
     </ConsultingMain>
