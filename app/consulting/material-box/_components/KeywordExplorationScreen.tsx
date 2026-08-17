@@ -109,7 +109,7 @@ export function KeywordExplorationScreen({
           delay: shouldReduceMotion ? 0 : 0.2,
           ease: 'easeOut',
         }}
-        className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] p-5 md:p-6"
+        className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/6 p-5 md:p-6"
       >
         <label htmlFor="detail-keyword" className="text-sm font-semibold">
           나의 세부 키워드
