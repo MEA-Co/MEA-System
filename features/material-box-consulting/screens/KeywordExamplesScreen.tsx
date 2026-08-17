@@ -4,7 +4,7 @@ import { Quote } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useEffect } from 'react';
 
-const examples = [
+const keywordExamples = [
   [
     { text: '나는 F1 엔지니어들처럼 ' },
     { text: '모터 스포츠용 엔진', emphasis: true },
@@ -53,7 +53,7 @@ export function KeywordExamplesScreen({
   return (
     <div className="mx-auto min-h-112 w-full max-w-4xl pt-8 pb-56 md:pt-10 md:pb-48">
       <div className="grid gap-4 md:grid-cols-2">
-        {examples.map((example, index) => {
+        {keywordExamples.map((example, index) => {
           return (
             <motion.section
               key={index}

@@ -4,15 +4,15 @@ import { Check, CircleAlert, Sparkles } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 
+import { Input } from '@/components/ui/input';
+import type { ConsultingTaskStatus } from '@/features/consulting/process/types';
+import { ConsultingAdvice } from '@/features/consulting/ui/ConsultingAdvice';
+import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type {
   MajorPreference,
   MentorAdvice,
   MentorAdviceQuestion,
-} from '@/app/consulting/material-box/_lib/materialBoxConsulting';
-import { Input } from '@/components/ui/input';
-import { ConsultingAdvice } from '@/features/consulting/components/ConsultingAdvice';
-import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
-import type { ConsultingResourceStatus } from '@/features/consulting/runner/types';
+} from '@/features/material-box-consulting/model/types';
 import { cn } from '@/lib/utils';
 
 const questions: ReadonlyArray<{
@@ -31,7 +31,7 @@ const questions: ReadonlyArray<{
 
 type KeywordExplorationScreenProps = {
   advice: Array<MentorAdvice>;
-  adviceStatus: ConsultingResourceStatus;
+  adviceStatus: ConsultingTaskStatus;
   isInteractive: boolean;
   preferences: Array<MajorPreference>;
   submittedKeyword: string;
@@ -179,7 +179,7 @@ export function KeywordExplorationScreen({
                 title="멘토의 조언"
                 description={question.title}
                 triggerLabel={
-                  adviceStatus === 'loading'
+                  adviceStatus === 'running'
                     ? '조언 준비 중'
                     : adviceStatus === 'error'
                       ? '조언 불러오기 실패'
@@ -187,7 +187,7 @@ export function KeywordExplorationScreen({
                 }
                 triggerDisabled={!isInteractive || adviceStatus !== 'success'}
                 highlightTrigger={adviceStatus === 'success'}
-                triggerLoading={adviceStatus === 'loading'}
+                triggerLoading={adviceStatus === 'running'}
                 triggerClassName="shrink-0 self-end sm:self-auto"
               >
                 <div className="space-y-3">

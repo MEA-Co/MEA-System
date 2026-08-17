@@ -16,7 +16,7 @@ import type {
   ConsultingMessage,
   ConsultingMessageEmphasis,
   ConsultingMessageSegment,
-} from '@/features/consulting/types';
+} from '@/features/consulting/ui/message';
 import { cn } from '@/lib/utils';
 
 type ConsultingPrompterProps = {
@@ -203,11 +203,9 @@ function TypewriterMessage({
       </AnimatePresence>
 
       <div className="min-h-14 w-full">
-        <p className="sr-only" aria-live="polite">
-          {plainMessage}
-        </p>
         <p
-          aria-hidden="true"
+          aria-live={isTyping ? 'off' : 'polite'}
+          aria-atomic="true"
           className="text-[1.05rem] font-medium leading-8 tracking-[-0.01em] text-foreground md:text-lg md:leading-8"
         >
           <FormattedMessage segments={segments} visibleCount={visibleCount} />

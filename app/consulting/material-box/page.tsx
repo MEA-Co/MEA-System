@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { MaterialBoxFlow } from '@/app/consulting/material-box/_components/MaterialBoxFlow';
 import { Button } from '@/components/ui/button';
+import { MaterialBoxFlow } from '@/features/material-box-consulting';
 import { requireUserAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';

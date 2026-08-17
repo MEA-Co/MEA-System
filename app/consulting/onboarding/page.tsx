@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { OnboardingFlow } from '@/app/consulting/onboarding/_components/OnboardingFlow';
 import { Button } from '@/components/ui/button';
+import { OnboardingFlow } from '@/features/onboarding-consulting';
 import { requireUserAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';

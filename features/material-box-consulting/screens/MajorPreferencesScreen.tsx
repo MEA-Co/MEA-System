@@ -4,12 +4,12 @@ import { CircleAlert } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, useEffect, useState } from 'react';
 
+import { Input } from '@/components/ui/input';
+import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type {
   MajorPreference,
   MajorPreferenceScreen,
-} from '@/app/consulting/material-box/_lib/materialBoxConsulting';
-import { Input } from '@/components/ui/input';
-import { ConsultingProgressButton } from '@/features/consulting/components/ConsultingProgressButton';
+} from '@/features/material-box-consulting/model/types';
 import { cn } from '@/lib/utils';
 
 type MajorPreferencesScreenProps = {
@@ -24,10 +24,12 @@ type PreferenceValidationResult =
   | { success: true; preferences: Array<MajorPreference> }
   | { success: false; message: string };
 
-const emptyPreferences: Array<MajorPreference> = Array.from(
-  { length: 3 },
-  () => ({ major: '' }),
-);
+function createPreferences(submittedPreferences: Array<MajorPreference>) {
+  return Array.from(
+    { length: 3 },
+    (_, index) => submittedPreferences[index] ?? { major: '' },
+  );
+}
 
 const animationDurations: Record<
   Exclude<MajorPreferenceScreen, 'major-input'>,
@@ -62,7 +64,9 @@ export function MajorPreferencesScreen({
   onSubmit,
 }: MajorPreferencesScreenProps) {
   const shouldReduceMotion = useReducedMotion();
-  const [preferences, setPreferences] = useState(emptyPreferences);
+  const [preferences, setPreferences] = useState(() =>
+    createPreferences(submittedPreferences),
+  );
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );

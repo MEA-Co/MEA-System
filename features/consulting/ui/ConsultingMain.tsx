@@ -1,8 +1,10 @@
 'use client';
 
+import { ArrowLeft } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type ReactNode, useEffect } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +18,8 @@ type ConsultingMainProps = {
   prompter?: ReactNode;
   prompterPlacement?: ConsultingPrompterPlacement;
   prompterSize?: ConsultingPrompterSize;
+  canGoBack?: boolean;
+  onBack?: () => void;
   onPrompterTransitionComplete?: () => void;
 };
 
@@ -38,6 +42,8 @@ export function ConsultingMain({
   prompter,
   prompterPlacement = 'bottom',
   prompterSize = 'wide',
+  canGoBack = false,
+  onBack,
   onPrompterTransitionComplete,
 }: ConsultingMainProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -74,6 +80,21 @@ export function ConsultingMain({
           main
         </p>
       </div>
+
+      {onBack && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!canGoBack}
+          onClick={onBack}
+          className="absolute top-14 left-3 z-30 text-muted-foreground md:top-16 md:left-5"
+          aria-label="이전 단계로 돌아가기"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          이전으로
+        </Button>
+      )}
 
       <CardContent className="relative z-0 p-5 pt-16 md:p-8 md:pt-20">
         {children}
