@@ -91,14 +91,19 @@ function TypewriterMessage({
   );
   const timeoutIdRef = useRef<number | null>(null);
   const hasCompletedRef = useRef(false);
+  const onTypingCompleteRef = useRef(onTypingComplete);
   const isTyping = visibleCount < characters.length;
+
+  useEffect(() => {
+    onTypingCompleteRef.current = onTypingComplete;
+  }, [onTypingComplete]);
 
   const finishTyping = useCallback(() => {
     if (hasCompletedRef.current) return;
 
     hasCompletedRef.current = true;
-    onTypingComplete?.();
-  }, [onTypingComplete]);
+    onTypingCompleteRef.current?.();
+  }, []);
 
   useEffect(() => {
     if (reduceMotion || characters.length === 0) {
