@@ -1,5 +1,5 @@
-import { createPresentationActions } from '@/features/consulting/core/presentation';
 import type { ConsultingProcessDefinition } from '@/features/consulting/core/process';
+import { createSequenceActions } from '@/features/consulting/core/sequence';
 import {
   introMessage,
   keywordInterestMessage,
@@ -15,7 +15,7 @@ import type {
   MaterialBoxTaskOutputs,
   MaterialBoxView,
 } from '@/features/material-box-consulting/model/types';
-const presentation = createPresentationActions<
+const sequence = createSequenceActions<
   MaterialBoxMemory,
   MaterialBoxView,
   MaterialBoxTaskOutputs
@@ -38,7 +38,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
   nodes: {
     intro: {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: introMessage,
             prompterPlacement: 'center',
@@ -55,7 +55,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     majors: {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: startMessage,
             prompterPlacement: 'center',
@@ -64,21 +64,21 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           },
           'prompter',
         ),
-        presentation.present(
+        sequence.present(
           {
             prompterPlacement: 'bottom',
             prompterSize: 'wide',
           },
           'layout',
         ),
-        presentation.present({ screen: 'major-one' }, 'screen'),
-        presentation.present(
+        sequence.present({ screen: 'major-one' }, 'screen'),
+        sequence.present(
           { message: '우선 여러분이 가고 싶은 학과가 필요해요.' },
           'prompter',
         ),
-        presentation.present({ screen: 'three-majors' }, 'screen'),
-        presentation.present({ message: majorInputMessage }, 'prompter'),
-        presentation.present({ screen: 'major-input' }),
+        sequence.present({ screen: 'three-majors' }, 'screen'),
+        sequence.present({ message: majorInputMessage }, 'prompter'),
+        sequence.present({ screen: 'major-input' }),
       ],
       interaction: { kind: 'major-form' },
       edges: {
@@ -93,7 +93,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'major-review': {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: majorReviewMessage,
             prompterPlacement: 'bottom',
@@ -114,7 +114,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'major-edit': {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: majorInputMessage,
             prompterPlacement: 'bottom',
@@ -138,7 +138,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'keyword-intro': {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: keywordIntroMessage,
             prompterPlacement: 'bottom',
@@ -155,7 +155,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'keyword-examples': {
       sequence: [
-        presentation.present(
+        sequence.present(
           {
             message: '너무 어렵게 생각하지 않아도 됩니다.',
             prompterPlacement: 'bottom',
@@ -164,8 +164,8 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           },
           'prompter',
         ),
-        presentation.present({ screen: 'keyword-examples' }, 'screen'),
-        presentation.present({ message: keywordInterestMessage }, 'prompter'),
+        sequence.present({ screen: 'keyword-examples' }, 'screen'),
+        sequence.present({ message: keywordInterestMessage }, 'prompter'),
       ],
       interaction: { kind: 'continue' },
       edges: {
@@ -174,8 +174,8 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'keyword-input': {
       sequence: [
-        presentation.startTask('mentorAdvice'),
-        presentation.present(
+        sequence.startTask('mentorAdvice'),
+        sequence.present(
           {
             message: '이제 세부 키워드를 입력해주세요!',
             prompterPlacement: 'bottom',

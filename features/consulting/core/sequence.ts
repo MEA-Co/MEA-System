@@ -5,7 +5,7 @@ import type {
 } from '@/features/consulting/core/process';
 import type { ConsultingRuntimeSnapshot } from '@/features/consulting/core/task';
 
-export function createPresentationActions<
+export function createSequenceActions<
   Memory extends object,
   View extends object,
   TaskOutputs extends object,
