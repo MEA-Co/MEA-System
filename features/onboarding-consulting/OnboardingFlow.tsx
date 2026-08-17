@@ -2,15 +2,15 @@
 
 import { AnimatePresence } from 'motion/react';
 
-import { useConsultingProcess } from '@/features/consulting/process/useConsultingProcess';
+import { useConsultingSession } from '@/features/consulting/runtime/useConsultingSession';
 import { ConsultingMain } from '@/features/consulting/ui/ConsultingMain';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/ui/ConsultingPrompter';
-import { onboardingProcess } from '@/features/onboarding-consulting/process/graph';
+import { onboardingConsulting } from '@/features/onboarding-consulting/definition/consulting';
 import { WritingComparisonScreen } from '@/features/onboarding-consulting/screens/WritingComparisonScreen';
 
 export function OnboardingFlow() {
-  const session = useConsultingProcess(onboardingProcess);
+  const session = useConsultingSession(onboardingConsulting);
   const canContinue =
     session.interaction.kind === 'continue' && session.isWaitingForUser;
   const canChoose =

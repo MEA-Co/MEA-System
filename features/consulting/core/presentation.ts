@@ -1,16 +1,16 @@
 import type {
-  ConsultingRuntime,
   ConsultingUpdate,
   PresentationAction,
   PresentationWaitFor,
-} from '@/features/consulting/process/types';
+} from '@/features/consulting/core/process';
+import type { ConsultingRuntimeSnapshot } from '@/features/consulting/core/task';
 
 export function createPresentationActions<
   Memory extends object,
   View extends object,
   TaskOutputs extends object,
 >() {
-  type Runtime = ConsultingRuntime<Memory, View, TaskOutputs>;
+  type Runtime = ConsultingRuntimeSnapshot<Memory, View, TaskOutputs>;
   type Action = PresentationAction<Memory, View, TaskOutputs>;
 
   return {

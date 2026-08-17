@@ -2,17 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
+import type { ConsultingDefinition } from '@/features/consulting/core/consulting';
 import type {
   ConsultingEdge,
   ConsultingEvent,
-  ConsultingProcessDefinition,
   ConsultingProcessPhase,
-  ConsultingTaskState,
-  ConsultingTaskStates,
+  ConsultingSession,
   ConsultingUpdate,
   PresentationAction,
   PresentationWaitFor,
-} from '@/features/consulting/process/types';
+} from '@/features/consulting/core/process';
+import type {
+  ConsultingTaskState,
+  ConsultingTaskStates,
+} from '@/features/consulting/core/task';
 
 type InternalTaskState<Output> = ConsultingTaskState<Output> & {
   requestId: number;
@@ -306,32 +309,38 @@ function toError(error: unknown, fallback: string) {
   return error instanceof Error ? error : new Error(fallback);
 }
 
-export function useConsultingProcess<
+export function useConsultingSession<
   Memory extends object,
   View extends object,
   TaskOutputs extends object,
   Event extends ConsultingEvent,
   Interaction,
 >(
-  definition: ConsultingProcessDefinition<
+  consulting: ConsultingDefinition<
     Memory,
     View,
     TaskOutputs,
     Event,
     Interaction
   >,
-) {
+): ConsultingSession<Memory, View, TaskOutputs, Event, Interaction> {
   type SequenceAction = PresentationAction<Memory, View, TaskOutputs>;
   type Edge = ConsultingEdge<Memory, View, TaskOutputs, Event>;
+  const {
+    memory: memoryDefinition,
+    process,
+    tasks: taskDefinitions,
+  } = consulting;
 
   const [state, dispatch] = useReducer(
     processReducer<Memory, View, TaskOutputs>,
-    {
-      nodeId: definition.initialNodeId,
-      memory: definition.initialMemory,
-      view: definition.initialView,
+    consulting,
+    () => ({
+      nodeId: process.initialNodeId,
+      memory: memoryDefinition.createInitial(),
+      view: process.initialView,
       tasks: createInitialTaskStates(
-        Object.keys(definition.tasks) as Array<keyof TaskOutputs>,
+        Object.keys(taskDefinitions) as Array<keyof TaskOutputs>,
       ),
       history: [],
       visitId: 0,
@@ -346,7 +355,7 @@ export function useConsultingProcess<
       transitionRunning: false,
       error: null,
       complete: false,
-    },
+    }),
   );
   const executedActionRef = useRef<string | null>(null);
   const submittedEdgeRef = useRef<number | null>(null);
@@ -355,7 +364,7 @@ export function useConsultingProcess<
     new Map<keyof TaskOutputs, AbortController>(),
   );
 
-  const currentNode = definition.nodes[state.nodeId];
+  const currentNode = process.nodes[state.nodeId];
   if (!currentNode) {
     throw new Error(`정의되지 않은 컨설팅 노드입니다: ${state.nodeId}`);
   }
@@ -473,7 +482,7 @@ export function useConsultingProcess<
       });
 
       void Promise.resolve(
-        definition.tasks[task]({
+        taskDefinitions[task]({
           memory: state.memory,
           view: state.view,
           tasks,
@@ -524,7 +533,7 @@ export function useConsultingProcess<
         });
       });
   }, [
-    definition.tasks,
+    taskDefinitions,
     phase,
     sequence,
     state.actionRunning,
@@ -587,7 +596,7 @@ export function useConsultingProcess<
             dispatch({ type: 'completed', visitId, memory });
             return;
           }
-          if (!target || !definition.nodes[target]) {
+          if (!target || !process.nodes[target]) {
             dispatch({
               type: 'failed',
               visitId,
@@ -622,7 +631,7 @@ export function useConsultingProcess<
     },
     [
       currentNode.edges,
-      definition.nodes,
+      process.nodes,
       phase,
       state.history,
       state.memory,

@@ -3,15 +3,15 @@
 import { Undo2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { useConsultingProcess } from '@/features/consulting/process/useConsultingProcess';
+import { useConsultingSession } from '@/features/consulting/runtime/useConsultingSession';
 import { ConsultingMain } from '@/features/consulting/ui/ConsultingMain';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/features/consulting/ui/ConsultingPrompter';
+import { materialBoxConsulting } from '@/features/material-box-consulting/definition/consulting';
 import type {
   MajorPreferenceScreen,
   MaterialBoxScreen,
 } from '@/features/material-box-consulting/model/types';
-import { materialBoxProcess } from '@/features/material-box-consulting/process/graph';
 import { KeywordExamplesScreen } from '@/features/material-box-consulting/screens/KeywordExamplesScreen';
 import { KeywordExplorationScreen } from '@/features/material-box-consulting/screens/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
@@ -27,7 +27,7 @@ function isMajorPreferenceScreen(
 }
 
 export function MaterialBoxFlow() {
-  const session = useConsultingProcess(materialBoxProcess);
+  const session = useConsultingSession(materialBoxConsulting);
   const currentScreen = session.view.screen;
   const canContinue =
     session.interaction.kind === 'continue' && session.isWaitingForUser;

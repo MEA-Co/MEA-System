@@ -1,5 +1,5 @@
-import { createPresentationActions } from '@/features/consulting/process/createPresentationActions';
-import { defineConsultingProcess } from '@/features/consulting/process/defineConsultingProcess';
+import { createPresentationActions } from '@/features/consulting/core/presentation';
+import type { ConsultingProcessDefinition } from '@/features/consulting/core/process';
 import {
   introMessage,
   keywordInterestMessage,
@@ -15,34 +15,25 @@ import type {
   MaterialBoxTaskOutputs,
   MaterialBoxView,
 } from '@/features/material-box-consulting/model/types';
-import { loadMentorAdvice } from '@/features/material-box-consulting/tasks/loadMentorAdvice';
-
 const presentation = createPresentationActions<
   MaterialBoxMemory,
   MaterialBoxView,
   MaterialBoxTaskOutputs
 >();
 
-export const materialBoxProcess = defineConsultingProcess<
+export const materialBoxProcess: ConsultingProcessDefinition<
   MaterialBoxMemory,
   MaterialBoxView,
   MaterialBoxTaskOutputs,
   MaterialBoxEvent,
   MaterialBoxInteraction
->({
+> = {
   initialNodeId: 'intro',
-  initialMemory: {
-    majorPreferences: [],
-    keyword: '',
-  },
   initialView: {
     message: null,
     prompterPlacement: 'center',
     prompterSize: 'default',
     screen: null,
-  },
-  tasks: {
-    mentorAdvice: ({ signal }) => loadMentorAdvice(signal),
   },
   nodes: {
     intro: {
@@ -206,4 +197,4 @@ export const materialBoxProcess = defineConsultingProcess<
       },
     },
   },
-});
+};

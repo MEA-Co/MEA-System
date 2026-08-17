@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
-import type { ConsultingTaskStatus } from '@/features/consulting/process/types';
+import type { ConsultingTaskStatus } from '@/features/consulting/core/task';
 import { ConsultingAdvice } from '@/features/consulting/ui/ConsultingAdvice';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type {

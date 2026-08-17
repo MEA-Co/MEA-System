@@ -1,5 +1,5 @@
-import { createPresentationActions } from '@/features/consulting/process/createPresentationActions';
-import { defineConsultingProcess } from '@/features/consulting/process/defineConsultingProcess';
+import { createPresentationActions } from '@/features/consulting/core/presentation';
+import type { ConsultingProcessDefinition } from '@/features/consulting/core/process';
 import type {
   OnboardingEvent,
   OnboardingInteraction,
@@ -14,24 +14,20 @@ const presentation = createPresentationActions<
   OnboardingTaskOutputs
 >();
 
-export const onboardingProcess = defineConsultingProcess<
+export const onboardingProcess: ConsultingProcessDefinition<
   OnboardingMemory,
   OnboardingView,
   OnboardingTaskOutputs,
   OnboardingEvent,
   OnboardingInteraction
->({
+> = {
   initialNodeId: 'intro',
-  initialMemory: {
-    answer: null,
-  },
   initialView: {
     message: null,
     prompterPlacement: 'center',
     prompterSize: 'default',
     screen: null,
   },
-  tasks: {},
   nodes: {
     intro: {
       sequence: [
@@ -96,4 +92,4 @@ export const onboardingProcess = defineConsultingProcess<
       terminal: true,
     },
   },
-});
+};
