@@ -133,7 +133,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
         sequence.present(
           {
             message:
-              '잘 작성했나요? 희망 전공은 나중에 얼마든지 달라질 수 있습니다. 희망 전공이 달라지면 어떻게 해야하는지는 나중에 알려드릴게요.',
+              '잘 작성했나요? 희망 전공은 학교를 다니면서 얼마든지 달라질 수 있습니다. 중요한 것은 지금 여러분의 관심사와 목표입니다.',
             prompterPlacement: 'bottom',
             prompterSize: 'wide',
             screen: 'major-input',
