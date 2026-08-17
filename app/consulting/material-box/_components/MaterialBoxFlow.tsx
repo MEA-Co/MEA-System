@@ -94,6 +94,7 @@ export function MaterialBoxFlow() {
         <KeywordExplorationScreen
           advice={consulting.context.mentorAdvice}
           isInteractive={consulting.turn === 'user'}
+          preferences={consulting.memory.majorPreferences}
           submittedKeyword={consulting.context.keyword}
           onSubmit={(keyword) => consulting.completeScreen({ keyword })}
         />

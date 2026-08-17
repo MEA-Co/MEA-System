@@ -138,6 +138,10 @@ export const materialBoxConsulting = defineConsulting<
       waitFor: 'continue',
     }),
     action.external({ operation: 'load-mentor-advice' }),
+    action.prompter({
+      message: '이제 세부 키워드를 입력해주세요!',
+      waitFor: 'typing',
+    }),
     action.screen({
       screen: 'keyword-exploration',
       waitFor: 'user',
@@ -167,7 +171,7 @@ const mentorAdviceFixtures: Array<MentorAdvice> = [
   {
     id: 'computer-data',
     question: 'keyword-help',
-    mentorName: '이도현 멘토',
+    mentorName: '이서준 멘토',
     mentorMajor: '컴퓨터공학과',
     message:
       '아직 한 분야를 고르기 어렵다면 어디에서나 활용할 수 있는 데이터부터 살펴보세요. 관심 있는 현상의 데이터를 모으고 분석하는 과정은 다양한 전공 주제로 확장할 수 있습니다.',

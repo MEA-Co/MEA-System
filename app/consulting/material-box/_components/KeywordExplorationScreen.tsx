@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 
 import type {
+  MajorPreference,
   MentorAdvice,
   MentorAdviceQuestion,
 } from '@/app/consulting/material-box/_lib/materialBoxConsulting';
@@ -30,6 +31,7 @@ const questions: ReadonlyArray<{
 type KeywordExplorationScreenProps = {
   advice: Array<MentorAdvice>;
   isInteractive: boolean;
+  preferences: Array<MajorPreference>;
   submittedKeyword: string;
   onSubmit: (keyword: string) => void;
 };
@@ -37,6 +39,7 @@ type KeywordExplorationScreenProps = {
 export function KeywordExplorationScreen({
   advice,
   isInteractive,
+  preferences,
   submittedKeyword,
   onSubmit,
 }: KeywordExplorationScreenProps) {
@@ -76,7 +79,69 @@ export function KeywordExplorationScreen({
       onSubmit={submitKeyword}
       className="mx-auto min-h-112 w-full max-w-4xl pt-6 pb-56 md:pt-8 md:pb-48"
     >
-      <div className="space-y-3">
+      <motion.section
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="rounded-2xl border bg-background/90 p-5 shadow-sm md:p-6"
+      >
+        <p className="text-sm font-semibold">희망 전공</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {preferences.map((preference, index) => (
+            <div
+              key={`${index}-${preference.major}`}
+              className="rounded-xl border border-blue-500/20 bg-blue-500/6 px-4 py-3"
+            >
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                {index + 1}순위
+              </p>
+              <p className="mt-1 font-semibold">{preference.major}</p>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.38,
+          delay: shouldReduceMotion ? 0 : 0.2,
+          ease: 'easeOut',
+        }}
+        className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] p-5 md:p-6"
+      >
+        <label htmlFor="detail-keyword" className="text-sm font-semibold">
+          나의 세부 키워드
+        </label>
+        <p className="mt-1 text-sm text-muted-foreground">
+          직접 입력하거나 아래 멘토의 조언에서 하나를 선택해보세요.
+        </p>
+        <Input
+          id="detail-keyword"
+          value={keyword}
+          readOnly={!isInteractive}
+          onChange={(event) => {
+            setKeyword(event.target.value);
+            setSelectedAdviceId(null);
+            setValidationMessage(null);
+          }}
+          className="mt-4 bg-background"
+          placeholder="예: 인공지능 검색 모델"
+        />
+
+        {isInteractive && validationMessage && (
+          <p
+            role="alert"
+            className="mt-3 flex items-start gap-2 text-sm text-destructive"
+          >
+            <CircleAlert className="mt-0.5 size-4 shrink-0" />
+            {validationMessage}
+          </p>
+        )}
+      </motion.section>
+
+      <div className="mt-5 space-y-3">
         {questions.map((question, index) => {
           const questionAdvice = advice.filter(
             (mentorAdvice) => mentorAdvice.question === question.id,
@@ -91,7 +156,7 @@ export function KeywordExplorationScreen({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{
                 duration: 0.38,
-                delay: shouldReduceMotion ? 0 : 0.12 + index * 0.2,
+                delay: shouldReduceMotion ? 0 : 0.48 + index * 0.2,
                 ease: 'easeOut',
               }}
               className="flex flex-col gap-4 rounded-2xl border bg-background/90 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:p-6"
@@ -166,52 +231,19 @@ export function KeywordExplorationScreen({
         })}
       </div>
 
-      <motion.section
-        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.38,
-          delay: shouldReduceMotion ? 0 : 0.62,
-          ease: 'easeOut',
-        }}
-        className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] p-5 md:p-6"
-      >
-        <label htmlFor="detail-keyword" className="text-sm font-semibold">
-          나의 세부 키워드
-        </label>
-        <p className="mt-1 text-sm text-muted-foreground">
-          직접 입력하거나 멘토의 조언에서 하나를 선택해보세요.
-        </p>
-        <Input
-          id="detail-keyword"
-          value={keyword}
-          readOnly={!isInteractive}
-          onChange={(event) => {
-            setKeyword(event.target.value);
-            setSelectedAdviceId(null);
-            setValidationMessage(null);
+      {isInteractive && (
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.3,
+            delay: shouldReduceMotion ? 0 : 0.92,
           }}
-          className="mt-4 bg-background"
-          placeholder="예: 인공지능 검색 모델"
-        />
-
-        {isInteractive && (
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {validationMessage ? (
-              <p
-                role="alert"
-                className="flex items-start gap-2 text-sm text-destructive"
-              >
-                <CircleAlert className="mt-0.5 size-4 shrink-0" />
-                {validationMessage}
-              </p>
-            ) : (
-              <span />
-            )}
-            <ConsultingProgressButton type="submit" className="self-end" />
-          </div>
-        )}
-      </motion.section>
+          className="mt-5 flex justify-end"
+        >
+          <ConsultingProgressButton type="submit" />
+        </motion.div>
+      )}
     </motion.form>
   );
 }
