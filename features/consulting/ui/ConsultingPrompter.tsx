@@ -224,19 +224,11 @@ function TypewriterMessage({
         </p>
       </div>
 
-      <AnimatePresence initial={false}>
-        {!isTyping && children && (
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.25 }}
-            className="flex justify-end pt-5"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {children && (
+        <div className="absolute right-4 bottom-4 z-10 flex justify-end md:right-5 md:bottom-5">
+          {children}
+        </div>
+      )}
     </>
   );
 }
@@ -257,7 +249,7 @@ export function ConsultingPrompter({
       transition={{ duration: 0.35, ease: 'easeOut' }}
     >
       <Card className="relative gap-0 overflow-hidden rounded-xl border bg-card/95 py-0 shadow-xl ring-0 backdrop-blur-md supports-backdrop-filter:bg-card/90">
-        <CardContent className="p-5 md:p-7">
+        <CardContent className={cn('p-5 md:p-7', children && 'pb-16 md:pb-16')}>
           <div className="mb-4 flex items-center gap-2.5 pr-16">
             <span className="h-px w-6 bg-primary/70" aria-hidden="true" />
             <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">

@@ -29,10 +29,10 @@ function isMajorPreferenceScreen(
 export function MaterialBoxFlow() {
   const session = useConsultingSession(materialBoxConsulting);
   const currentScreen = session.view.screen;
-  const canContinue =
-    session.interaction.kind === 'continue' && session.isWaitingForUser;
-  const isReviewingPreferences =
-    session.interaction.kind === 'major-review' && session.isWaitingForUser;
+  const hasContinueInteraction = session.interaction.kind === 'continue';
+  const canContinue = hasContinueInteraction && session.isWaitingForUser;
+  const hasReviewInteraction = session.interaction.kind === 'major-review';
+  const canReviewPreferences = hasReviewInteraction && session.isWaitingForUser;
   const canEditMajors =
     session.interaction.kind === 'major-form' && session.isWaitingForUser;
   const canEditKeyword =
@@ -52,27 +52,32 @@ export function MaterialBoxFlow() {
             message={session.view.message}
             onTypingComplete={session.completePrompterPresentation}
           >
-            {isReviewingPreferences ? (
+            {hasReviewInteraction ? (
               <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="lg"
+                  size="sm"
+                  disabled={!canReviewPreferences}
                   onClick={() => session.send({ type: 'EDIT_MAJORS' })}
-                  className="h-11 px-4 text-muted-foreground hover:text-foreground"
+                  className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <Undo2 className="size-4" aria-hidden="true" />
                   아니오, 수정할게요
                 </Button>
                 <ConsultingProgressButton
+                  compact
+                  disabled={!canReviewPreferences}
                   onClick={() => session.send({ type: 'CONFIRM_MAJORS' })}
                 >
                   네, 잘 작성했어요
                 </ConsultingProgressButton>
               </div>
             ) : (
-              canContinue && (
+              hasContinueInteraction && (
                 <ConsultingProgressButton
+                  compact
+                  disabled={!canContinue}
                   onClick={() => session.send({ type: 'CONTINUE' })}
                 />
               )

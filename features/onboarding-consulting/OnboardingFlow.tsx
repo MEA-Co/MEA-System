@@ -11,8 +11,8 @@ import { WritingComparisonScreen } from '@/features/onboarding-consulting/screen
 
 export function OnboardingFlow() {
   const session = useConsultingSession(onboardingConsulting);
-  const canContinue =
-    session.interaction.kind === 'continue' && session.isWaitingForUser;
+  const hasContinueInteraction = session.interaction.kind === 'continue';
+  const canContinue = hasContinueInteraction && session.isWaitingForUser;
   const canChoose =
     session.interaction.kind === 'writing-choice' && session.isWaitingForUser;
 
@@ -30,8 +30,10 @@ export function OnboardingFlow() {
             message={session.view.message}
             onTypingComplete={session.completePrompterPresentation}
           >
-            {canContinue && (
+            {hasContinueInteraction && (
               <ConsultingProgressButton
+                compact
+                disabled={!canContinue}
                 onClick={() => session.send({ type: 'CONTINUE' })}
               />
             )}
