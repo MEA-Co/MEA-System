@@ -11,10 +11,12 @@ import { materialBoxConsulting } from '@/features/material-box-consulting/defini
 import type {
   MajorPreferenceScreen,
   MaterialBoxScreen,
+  MaterialReflectionScreen as MaterialReflectionScreenName,
 } from '@/features/material-box-consulting/model/types';
 import { KeywordExamplesScreen } from '@/features/material-box-consulting/screens/KeywordExamplesScreen';
 import { KeywordExplorationScreen } from '@/features/material-box-consulting/screens/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
+import { MaterialReflectionScreen } from '@/features/material-box-consulting/screens/MaterialReflectionScreen';
 
 function isMajorPreferenceScreen(
   screen: MaterialBoxScreen | null,
@@ -23,6 +25,17 @@ function isMajorPreferenceScreen(
     screen === 'major-one' ||
     screen === 'three-majors' ||
     screen === 'major-input'
+  );
+}
+
+function isMaterialReflectionScreen(
+  screen: MaterialBoxScreen | null,
+): screen is MaterialReflectionScreenName {
+  return (
+    screen === 'career-identity-input' ||
+    screen === 'core-value-input' ||
+    screen === 'field-strength-input' ||
+    screen === 'personal-strength-input'
   );
 }
 
@@ -41,6 +54,46 @@ export function MaterialBoxFlow() {
     session.sequenceEvent === null;
   const canEditKeyword =
     session.interaction.kind === 'keyword-form' && session.isWaitingForUser;
+  const canEditReflection =
+    session.interaction.kind === 'reflection-form' && session.isWaitingForUser;
+
+  const reflectionValue = isMaterialReflectionScreen(currentScreen)
+    ? {
+        'career-identity-input': session.memory.careerIdentity,
+        'core-value-input': session.memory.coreValue,
+        'field-strength-input': session.memory.fieldStrength,
+        'personal-strength-input': session.memory.personalStrength,
+      }[currentScreen]
+    : '';
+
+  const submitReflection = (
+    screen: MaterialReflectionScreenName,
+    value: string,
+  ) => {
+    switch (screen) {
+      case 'career-identity-input':
+        session.send({
+          type: 'SUBMIT_CAREER_IDENTITY',
+          careerIdentity: value,
+        });
+        break;
+      case 'core-value-input':
+        session.send({ type: 'SUBMIT_CORE_VALUE', coreValue: value });
+        break;
+      case 'field-strength-input':
+        session.send({
+          type: 'SUBMIT_FIELD_STRENGTH',
+          fieldStrength: value,
+        });
+        break;
+      case 'personal-strength-input':
+        session.send({
+          type: 'SUBMIT_PERSONAL_STRENGTH',
+          personalStrength: value,
+        });
+        break;
+    }
+  };
 
   return (
     <ConsultingMain
@@ -122,6 +175,16 @@ export function MaterialBoxFlow() {
           onSubmit={(keyword) =>
             session.send({ type: 'SUBMIT_KEYWORD', keyword })
           }
+        />
+      )}
+
+      {isMaterialReflectionScreen(currentScreen) && (
+        <MaterialReflectionScreen
+          key={currentScreen}
+          screen={currentScreen}
+          isInteractive={canEditReflection}
+          submittedValue={reflectionValue}
+          onSubmit={(value) => submitReflection(currentScreen, value)}
         />
       )}
     </ConsultingMain>

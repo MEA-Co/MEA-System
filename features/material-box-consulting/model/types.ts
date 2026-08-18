@@ -22,6 +22,10 @@ export type MentorAdvice = {
 export type MaterialBoxMemory = {
   majorPreferences: Array<MajorPreference>;
   keyword: string;
+  careerIdentity: string;
+  coreValue: string;
+  fieldStrength: string;
+  personalStrength: string;
 };
 
 export type MaterialBoxTaskOutputs = {
@@ -31,8 +35,17 @@ export type MaterialBoxTaskOutputs = {
 export type MajorPreferenceScreen =
   'major-one' | 'three-majors' | 'major-input';
 
+export type MaterialReflectionScreen =
+  | 'career-identity-input'
+  | 'core-value-input'
+  | 'field-strength-input'
+  | 'personal-strength-input';
+
 export type MaterialBoxScreen =
-  MajorPreferenceScreen | 'keyword-examples' | 'keyword-exploration';
+  | MajorPreferenceScreen
+  | MaterialReflectionScreen
+  | 'keyword-examples'
+  | 'keyword-exploration';
 
 export type MaterialBoxView = {
   message: ConsultingMessage | null;
@@ -45,7 +58,9 @@ export type MaterialBoxInteraction =
   | { kind: 'continue' }
   | { kind: 'major-form' }
   | { kind: 'major-review' }
-  | { kind: 'keyword-form' };
+  | { kind: 'keyword-form' }
+  | { kind: 'reflection-form' }
+  | { kind: 'complete' };
 
 export type MaterialBoxEvent =
   | { type: 'CONTINUE' }
@@ -55,4 +70,8 @@ export type MaterialBoxEvent =
     }
   | { type: 'EDIT_MAJORS' }
   | { type: 'CONFIRM_MAJORS' }
-  | { type: 'SUBMIT_KEYWORD'; keyword: string };
+  | { type: 'SUBMIT_KEYWORD'; keyword: string }
+  | { type: 'SUBMIT_CAREER_IDENTITY'; careerIdentity: string }
+  | { type: 'SUBMIT_CORE_VALUE'; coreValue: string }
+  | { type: 'SUBMIT_FIELD_STRENGTH'; fieldStrength: string }
+  | { type: 'SUBMIT_PERSONAL_STRENGTH'; personalStrength: string };

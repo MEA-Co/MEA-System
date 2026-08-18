@@ -239,13 +239,123 @@ export const materialBoxProcess: ConsultingProcessDefinition<
       interaction: { kind: 'keyword-form' },
       edges: {
         SUBMIT_KEYWORD: {
-          target: null,
+          target: 'career-identity-input',
           updateMemory: ({ event }) =>
             event.type === 'SUBMIT_KEYWORD'
               ? { keyword: event.keyword }
               : undefined,
         },
       },
+    },
+    'career-identity-input': {
+      sequence: [
+        sequence.present(
+          {
+            message:
+              "좋아요. 이제 이 키워드를 바탕으로 궁극적으로 되고 싶은 모습을 하나의 명사형 진로로 붙여볼게요. '무엇을 하는 사람'인지 선명하게 이름 지어보세요.",
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+            screen: 'career-identity-input',
+          },
+          'prompter',
+        ),
+      ],
+      interaction: { kind: 'reflection-form' },
+      edges: {
+        SUBMIT_CAREER_IDENTITY: {
+          target: 'core-value-input',
+          updateMemory: ({ event }) =>
+            event.type === 'SUBMIT_CAREER_IDENTITY'
+              ? { careerIdentity: event.careerIdentity }
+              : undefined,
+        },
+      },
+    },
+    'core-value-input': {
+      sequence: [
+        sequence.present(
+          {
+            message:
+              '진로의 이름을 정했다면, 이제 그 일을 통해 지키고 싶은 가치를 찾아볼 차례예요. 관심 분야에서 아직 해결되지 않은 문제에 시선을 두어보세요.',
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+            screen: 'core-value-input',
+          },
+          'prompter',
+        ),
+      ],
+      interaction: { kind: 'reflection-form' },
+      edges: {
+        SUBMIT_CORE_VALUE: {
+          target: 'field-strength-input',
+          updateMemory: ({ event }) =>
+            event.type === 'SUBMIT_CORE_VALUE'
+              ? { coreValue: event.coreValue }
+              : undefined,
+        },
+      },
+    },
+    'field-strength-input': {
+      sequence: [
+        sequence.present(
+          {
+            message:
+              '그 문제를 해결할 때 여러분은 어떤 힘을 발휘할 수 있을까요? 잘하는 과목과 잘하는 이유를 연결하면 강점이 더 구체적으로 보입니다.',
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+            screen: 'field-strength-input',
+          },
+          'prompter',
+        ),
+      ],
+      interaction: { kind: 'reflection-form' },
+      edges: {
+        SUBMIT_FIELD_STRENGTH: {
+          target: 'personal-strength-input',
+          updateMemory: ({ event }) =>
+            event.type === 'SUBMIT_FIELD_STRENGTH'
+              ? { fieldStrength: event.fieldStrength }
+              : undefined,
+        },
+      },
+    },
+    'personal-strength-input': {
+      sequence: [
+        sequence.present(
+          {
+            message:
+              '마지막으로 성적이나 진로와 바로 연결되지 않아도 괜찮아요. 평소 반복하는 습관과 자연스럽게 드러나는 장점을 떠올려보세요.',
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+            screen: 'personal-strength-input',
+          },
+          'prompter',
+        ),
+      ],
+      interaction: { kind: 'reflection-form' },
+      edges: {
+        SUBMIT_PERSONAL_STRENGTH: {
+          target: 'complete',
+          updateMemory: ({ event }) =>
+            event.type === 'SUBMIT_PERSONAL_STRENGTH'
+              ? { personalStrength: event.personalStrength }
+              : undefined,
+        },
+      },
+    },
+    complete: {
+      sequence: [
+        sequence.present(
+          {
+            message:
+              '좋습니다! 진로의 모습, 중요 가치, 분야 역량, 평소의 장점까지 재료함에 모두 담겼어요. 이 재료들은 앞으로 여러분만의 활동과 성장 서사를 설계하는 기준이 됩니다.',
+          },
+          'prompter',
+        ),
+      ],
+      interaction: { kind: 'complete' },
+      edges: {},
+      terminal: true,
     },
   },
 };

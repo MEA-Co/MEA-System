@@ -5,5 +5,9 @@ export const materialBoxMemory = defineConsultingMemory<MaterialBoxMemory>(
   () => ({
     majorPreferences: [],
     keyword: '',
+    careerIdentity: '',
+    coreValue: '',
+    fieldStrength: '',
+    personalStrength: '',
   }),
 );
