@@ -156,7 +156,7 @@ export function MaterialBoxReportScreen({
         <div className="px-5 py-7 md:px-10 md:py-10">
           <section>
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-xl font-bold tracking-[-0.025em] text-slate-950">
+              <h2 className="text-xl font-bold tracking-tight text-slate-950">
                 진로 브랜드 한눈에 보기
               </h2>
               <p className="hidden text-xs font-semibold tracking-[0.12em] text-slate-400 sm:block">
@@ -204,7 +204,7 @@ export function MaterialBoxReportScreen({
 
           <section className="mt-10">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-xl font-bold tracking-[-0.025em] text-slate-950">
+              <h2 className="text-xl font-bold tracking-tight text-slate-950">
                 나의 진로 브랜딩 재료
               </h2>
               <p className="hidden text-xs font-semibold tracking-[0.12em] text-slate-400 sm:block">
@@ -243,7 +243,7 @@ export function MaterialBoxReportScreen({
             <p className="text-xs font-bold tracking-[0.15em] text-blue-600">
               CONSULTANT SUMMARY
             </p>
-            <h2 className="mt-2 text-xl font-bold tracking-[-0.025em] text-slate-950">
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-950">
               컨설턴트 종합 의견
             </h2>
             <p className="mt-4 text-sm leading-7 text-slate-700 md:text-base md:leading-8">
@@ -253,7 +253,7 @@ export function MaterialBoxReportScreen({
 
           <section className="mt-10">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-xl font-bold tracking-[-0.025em] text-slate-950">
+              <h2 className="text-xl font-bold tracking-tight text-slate-950">
                 다음 활동 설계 가이드
               </h2>
               <p className="hidden text-xs font-semibold tracking-[0.12em] text-slate-400 sm:block">

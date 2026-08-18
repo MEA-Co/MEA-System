@@ -35,12 +35,30 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           {
             message: [
               {
-                text: '여러분의 생활기록부에는 ',
+                text: '여러분의 생활기록부가 특별해지기 위해서는 ',
               },
               { text: '3년간의 성장서사', emphasis: 'accent' },
-              { text: '가 담겨야 하고, 여러분이라는 ' },
+              { text: '가 담겨야 하고, 여러분이 하나의 ' },
               { text: '브랜드', emphasis: 'accent' },
-              { text: '가 드러나야 합니다.' },
+              { text: '로 드러나야 합니다.' },
+            ],
+            prompterPlacement: 'center',
+            prompterSize: 'default',
+            screen: null,
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present(
+          {
+            message: [
+              {
+                text: '바꿔 말하면, 여러분의 생활기록부를 읽었을 때 여러분의 생각, 경험 등으로부터 여러분이 ',
+              },
+              { text: '어떤 학생인지', emphasis: 'accent' },
+              {
+                text: '가 보여야 합니다. 활동들이 나열되어 있는 것만으로는 여러분이 어떤 학생인지 잘 드러나지 않습니다.',
+              },
             ],
             prompterPlacement: 'center',
             prompterSize: 'default',
