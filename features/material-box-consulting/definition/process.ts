@@ -66,7 +66,22 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           },
           'prompter',
         ),
-        sequence.awaitEvent('CONTINUE'),
+      ],
+      interaction: { kind: 'continue' },
+      edges: {
+        CONTINUE: 'material-box-overview',
+      },
+    },
+    'material-box-overview': {
+      sequence: [
+        sequence.present(
+          {
+            prompterPlacement: 'bottom',
+            prompterSize: 'wide',
+          },
+          'layout',
+        ),
+        sequence.present({ screen: 'material-box-overview' }, 'screen'),
         sequence.present(
           {
             message: [

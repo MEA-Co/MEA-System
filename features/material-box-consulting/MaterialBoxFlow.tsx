@@ -16,6 +16,7 @@ import type {
 import { KeywordExamplesScreen } from '@/features/material-box-consulting/screens/KeywordExamplesScreen';
 import { KeywordExplorationScreen } from '@/features/material-box-consulting/screens/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
+import { MaterialBoxOverviewScreen } from '@/features/material-box-consulting/screens/MaterialBoxOverviewScreen';
 import { MaterialBoxReportScreen } from '@/features/material-box-consulting/screens/MaterialBoxReportScreen';
 import { MaterialReflectionScreen } from '@/features/material-box-consulting/screens/MaterialReflectionScreen';
 
@@ -161,6 +162,13 @@ export function MaterialBoxFlow() {
       {currentScreen === 'keyword-examples' && (
         <KeywordExamplesScreen
           key={`keyword-examples-${session.presentationKeys.screen}`}
+          onAnimationComplete={session.completeScreenPresentation}
+        />
+      )}
+
+      {currentScreen === 'material-box-overview' && (
+        <MaterialBoxOverviewScreen
+          key={`material-box-overview-${session.presentationKeys.screen}`}
           onAnimationComplete={session.completeScreenPresentation}
         />
       )}

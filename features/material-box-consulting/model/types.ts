@@ -44,6 +44,7 @@ export type MaterialReflectionScreen =
 export type MaterialBoxScreen =
   | MajorPreferenceScreen
   | MaterialReflectionScreen
+  | 'material-box-overview'
   | 'keyword-examples'
   | 'keyword-exploration'
   | 'report';
