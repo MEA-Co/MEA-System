@@ -151,6 +151,7 @@ export function MaterialBoxFlow() {
         <MajorPreferencesScreen
           screen={currentScreen}
           isInteractive={canEditMajors}
+          showSavedPreferences={session.nodeId.startsWith('keyword')}
           submittedPreferences={session.memory.majorPreferences}
           onAnimationComplete={session.completeScreenPresentation}
           onSubmit={(preferences) =>

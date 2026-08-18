@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 type MajorPreferencesScreenProps = {
   screen: MajorPreferenceScreen;
   isInteractive: boolean;
+  showSavedPreferences: boolean;
   submittedPreferences: Array<MajorPreference>;
   onAnimationComplete: () => void;
   onSubmit: (preferences: Array<MajorPreference>) => void;
@@ -77,12 +78,16 @@ function validatePreferences(
 type MajorMaterialBoxTableProps = {
   compact: boolean;
   expanded: boolean;
+  preferences: Array<MajorPreference>;
+  showSavedPreferences: boolean;
   shouldReduceMotion: boolean;
 };
 
 function MajorMaterialBoxTable({
   compact,
   expanded,
+  preferences,
+  showSavedPreferences,
   shouldReduceMotion,
 }: MajorMaterialBoxTableProps) {
   const majorRowCount = expanded ? 3 : 1;
@@ -113,7 +118,7 @@ function MajorMaterialBoxTable({
             ? 'rounded-lg'
             : 'rounded-lg sm:min-w-160 sm:table-auto sm:rounded-xl sm:text-sm',
         )}
-        aria-label="전공과 키워드 행이 강조된 재료함"
+        aria-label="전공 칸이 강조된 재료함"
       >
         <tbody>
           {Array.from({ length: majorRowCount }, (_, index) => (
@@ -155,10 +160,43 @@ function MajorMaterialBoxTable({
                     : 'w-[29%] px-2.5 py-3 sm:w-44 sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
-                {expanded ? `${index + 1}순위 전공` : '전공'}
+                <AnimatePresence mode="wait" initial={false}>
+                  {showSavedPreferences && preferences[index]?.major ? (
+                    <motion.span
+                      key={preferences[index].major}
+                      initial={
+                        shouldReduceMotion ? false : { opacity: 0, y: 4 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -3 }}
+                      transition={{
+                        duration: shouldReduceMotion ? 0 : 0.25,
+                      }}
+                      className="block"
+                    >
+                      <span className="block text-[10px] font-semibold text-blue-700 dark:text-blue-300">
+                        {index + 1}순위
+                      </span>
+                      <span className="mt-0.5 block break-words">
+                        {preferences[index].major}
+                      </span>
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="placeholder"
+                      initial={
+                        shouldReduceMotion ? false : { opacity: 0, y: 3 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -3 }}
+                      className="block"
+                    >
+                      {expanded ? `${index + 1}순위 전공` : '전공'}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </motion.th>
-              <motion.td
-                {...highlightAnimation(index)}
+              <td
                 className={cn(
                   'border-b text-muted-foreground',
                   compact
@@ -167,7 +205,7 @@ function MajorMaterialBoxTable({
                 )}
               >
                 키워드
-              </motion.td>
+              </td>
             </motion.tr>
           ))}
 
@@ -223,6 +261,7 @@ function MajorMaterialBoxTable({
 export function MajorPreferencesScreen({
   screen,
   isInteractive,
+  showSavedPreferences,
   submittedPreferences,
   onAnimationComplete,
   onSubmit,
@@ -281,12 +320,23 @@ export function MajorPreferencesScreen({
 
   return (
     <motion.form
-      layout
+      layout={!shouldReduceMotion && !showInputs}
       onSubmit={submitPreferences}
-      className="mx-auto min-h-112 w-full pt-6 pb-56 md:pt-8 md:pb-48"
+      className="relative isolate mx-auto min-h-112 w-full pt-6 pb-56 md:pt-8 md:pb-48"
     >
+      {showInputs && !shouldReduceMotion && (
+        <motion.div
+          key="major-input-whiteout"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.34, delay: 0.2, ease: 'easeOut' }}
+          className="pointer-events-none absolute inset-0 z-20 bg-background"
+          aria-hidden="true"
+        />
+      )}
+
       <motion.div
-        layout={!shouldReduceMotion}
+        layout={!shouldReduceMotion && !showInputs}
         transition={{
           layout: { type: 'spring', stiffness: 300, damping: 32 },
         }}
@@ -298,7 +348,23 @@ export function MajorPreferencesScreen({
         )}
       >
         <motion.div
-          layout={!shouldReduceMotion}
+          key={showInputs ? 'compact-material-box' : 'full-material-box'}
+          layout={!shouldReduceMotion && !showInputs}
+          initial={showInputs && !shouldReduceMotion ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={
+            showInputs
+              ? {
+                  opacity: {
+                    duration: shouldReduceMotion ? 0 : 0.38,
+                    delay: shouldReduceMotion ? 0 : 0.32,
+                    ease: 'easeOut',
+                  },
+                }
+              : {
+                  layout: { type: 'spring', stiffness: 300, damping: 32 },
+                }
+          }
           className={cn(
             showInputs &&
               'lg:col-start-2 lg:row-start-1 lg:w-96 lg:justify-self-end',
@@ -307,6 +373,8 @@ export function MajorPreferencesScreen({
           <MajorMaterialBoxTable
             compact={showInputs}
             expanded={showPriorities}
+            preferences={submittedPreferences}
+            showSavedPreferences={showSavedPreferences}
             shouldReduceMotion={Boolean(shouldReduceMotion)}
           />
         </motion.div>
@@ -314,12 +382,14 @@ export function MajorPreferencesScreen({
         <AnimatePresence>
           {showInputs && (
             <motion.section
-              initial={
-                shouldReduceMotion ? false : { opacity: 0, y: 18, scale: 0.985 }
-              }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: shouldReduceMotion ? 0 : 0.36 }}
+              initial={shouldReduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: shouldReduceMotion ? 0 : 0.38,
+                delay: shouldReduceMotion ? 0 : 0.32,
+                ease: 'easeOut',
+              }}
               className="rounded-2xl border bg-background/95 p-5 shadow-sm lg:col-start-1 lg:row-start-1 md:p-6"
             >
               <div className="mb-5">
@@ -391,7 +461,7 @@ export function MajorPreferencesScreen({
               exit={{ opacity: 0, y: 6 }}
               transition={{
                 duration: shouldReduceMotion ? 0 : 0.3,
-                delay: shouldReduceMotion ? 0 : 0.18,
+                delay: shouldReduceMotion ? 0 : 0.46,
               }}
               className="flex flex-col items-center lg:col-span-2"
             >
