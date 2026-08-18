@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 
 import { AdminDashboard } from '@/app/_components/AdminDashboard';
+import { ConsultingManagement } from '@/app/_components/ConsultingManagement';
 import { StudentDashboard } from '@/app/_components/StudentDashboard';
 import { signOut } from '@/app/_lib/actions';
 import type { AdminView, ManagedMember } from '@/app/_lib/admin';
@@ -108,6 +109,10 @@ export default async function Home({ searchParams }: HomeProps) {
               <p className="mt-2 font-semibold text-black">상담 준비 완료</p>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
+          <ConsultingManagement />
         </div>
       </section>
     </main>

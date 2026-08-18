@@ -1,5 +1,6 @@
 import { LogOut } from 'lucide-react';
 
+import { ConsultingManagement } from '@/app/_components/ConsultingManagement';
 import { signOut } from '@/app/_lib/actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,10 @@ export function StudentDashboard({
           <Badge variant="outline" className="w-fit">
             {studentPeriod}
           </Badge>
+        </div>
+
+        <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
+          <ConsultingManagement />
         </div>
       </section>
     </main>

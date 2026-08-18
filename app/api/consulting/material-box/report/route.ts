@@ -5,6 +5,7 @@ import type { MaterialBoxMemory } from '@/features/material-box-consulting/model
 import { materialBoxReportFileName } from '@/features/material-box-consulting/report/content';
 import { createMaterialBoxReportDocument } from '@/features/material-box-consulting/report/MaterialBoxReportDocument';
 import { getUserAccess, hasRole } from '@/lib/auth';
+import { MEMBER_ROLES } from '@/lib/profile';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
   }
 
-  if (!hasRole(access, ['admin'])) {
+  if (!hasRole(access, MEMBER_ROLES)) {
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
   }
 

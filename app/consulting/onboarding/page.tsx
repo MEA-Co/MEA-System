@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { OnboardingFlow } from '@/features/onboarding-consulting';
 import { requireUserAccess } from '@/lib/auth';
+import { MEMBER_ROLES } from '@/lib/profile';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OnboardingConsultingPage() {
-  await requireUserAccess({ allowedRoles: ['admin'] });
+  await requireUserAccess({ allowedRoles: MEMBER_ROLES });
 
   return (
     <main className="min-h-svh bg-muted/30">
