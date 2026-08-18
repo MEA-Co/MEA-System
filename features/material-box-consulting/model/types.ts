@@ -45,7 +45,8 @@ export type MaterialBoxScreen =
   | MajorPreferenceScreen
   | MaterialReflectionScreen
   | 'keyword-examples'
-  | 'keyword-exploration';
+  | 'keyword-exploration'
+  | 'report';
 
 export type MaterialBoxView = {
   message: ConsultingMessage | null;

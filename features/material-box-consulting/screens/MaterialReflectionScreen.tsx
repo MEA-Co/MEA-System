@@ -18,6 +18,7 @@ type ReflectionScreenContent = {
   example: string;
   validationMessage: string;
   multiline: boolean;
+  maxLength: number;
 };
 
 const screenContent: Record<
@@ -34,6 +35,7 @@ const screenContent: Record<
     example: '기후 위기에 대응하는 친환경 모빌리티 엔지니어',
     validationMessage: '궁극적으로 하고 싶은 진로의 명칭을 작성해 주세요.',
     multiline: false,
+    maxLength: 80,
   },
   'core-value-input': {
     step: 2,
@@ -46,6 +48,7 @@ const screenContent: Record<
     example: '기술의 발전이 정보 취약계층을 소외시키지 않아야 한다.',
     validationMessage: '관심 분야에서 중요하게 생각하는 가치를 작성해 주세요.',
     multiline: true,
+    maxLength: 180,
   },
   'field-strength-input': {
     step: 3,
@@ -60,6 +63,7 @@ const screenContent: Record<
     validationMessage:
       '관심 분야에서 발휘할 수 있는 강점이나 역량을 작성해 주세요.',
     multiline: true,
+    maxLength: 180,
   },
   'personal-strength-input': {
     step: 4,
@@ -72,6 +76,7 @@ const screenContent: Record<
     example: '책 읽기를 좋아한다 · 창의적이다 · 손이 여물다',
     validationMessage: '평소 가지고 있는 습관이나 나다운 장점을 작성해 주세요.',
     multiline: true,
+    maxLength: 180,
   },
 };
 
@@ -118,7 +123,7 @@ export function MaterialReflectionScreen({
     id: `material-reflection-${content.step}`,
     value,
     readOnly: !isInteractive,
-    maxLength: 500,
+    maxLength: content.maxLength,
     placeholder: content.placeholder,
     'aria-invalid': Boolean(validationMessage),
     onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -140,7 +145,7 @@ export function MaterialReflectionScreen({
             재료함 확장 {content.step}/4
           </span>
           <span className="text-xs font-medium text-muted-foreground">
-            최대 500자
+            최대 {content.maxLength}자
           </span>
         </div>
 

@@ -349,6 +349,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
           {
             message:
               '좋습니다! 진로의 모습, 중요 가치, 분야 역량, 평소의 장점까지 재료함에 모두 담겼어요. 이 재료들은 앞으로 여러분만의 활동과 성장 서사를 설계하는 기준이 됩니다.',
+            screen: 'report',
           },
           'prompter',
         ),

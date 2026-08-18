@@ -16,6 +16,7 @@ import type {
 import { KeywordExamplesScreen } from '@/features/material-box-consulting/screens/KeywordExamplesScreen';
 import { KeywordExplorationScreen } from '@/features/material-box-consulting/screens/KeywordExplorationScreen';
 import { MajorPreferencesScreen } from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
+import { MaterialBoxReportScreen } from '@/features/material-box-consulting/screens/MaterialBoxReportScreen';
 import { MaterialReflectionScreen } from '@/features/material-box-consulting/screens/MaterialReflectionScreen';
 
 function isMajorPreferenceScreen(
@@ -186,6 +187,10 @@ export function MaterialBoxFlow() {
           submittedValue={reflectionValue}
           onSubmit={(value) => submitReflection(currentScreen, value)}
         />
+      )}
+
+      {currentScreen === 'report' && (
+        <MaterialBoxReportScreen memory={session.memory} />
       )}
     </ConsultingMain>
   );
