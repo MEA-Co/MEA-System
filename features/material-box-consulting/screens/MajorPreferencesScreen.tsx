@@ -24,6 +24,9 @@ import { cn } from '@/lib/utils';
 type MajorPreferencesScreenProps = {
   screen: MajorPreferenceScreen;
   isInteractive: boolean;
+  materialBoxHighlight: 'major' | 'keyword';
+  materialBoxKeyword: string;
+  showMajorHelpButton: boolean;
   showSavedPreferences: boolean;
   submittedPreferences: Array<MajorPreference>;
   onAnimationComplete: () => void;
@@ -78,24 +81,33 @@ function validatePreferences(
 type MajorMaterialBoxTableProps = {
   compact: boolean;
   expanded: boolean;
+  highlight: 'major' | 'keyword' | null;
+  keyword: string;
   preferences: Array<MajorPreference>;
   showSavedPreferences: boolean;
   shouldReduceMotion: boolean;
 };
 
-function MajorMaterialBoxTable({
+export function MaterialBoxProgressTable({
   compact,
   expanded,
+  highlight,
+  keyword,
   preferences,
   showSavedPreferences,
   shouldReduceMotion,
 }: MajorMaterialBoxTableProps) {
   const majorRowCount = expanded ? 3 : 1;
-  const highlightAnimation = (index: number) => ({
-    initial: shouldReduceMotion
-      ? false
-      : { backgroundColor: 'rgba(59, 130, 246, 0)' },
-    animate: { backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  const highlightAnimation = (active: boolean, index: number) => ({
+    initial:
+      active && !shouldReduceMotion
+        ? { backgroundColor: 'rgba(59, 130, 246, 0)' }
+        : false,
+    animate: {
+      backgroundColor: active
+        ? 'rgba(59, 130, 246, 0.1)'
+        : 'rgba(59, 130, 246, 0)',
+    },
     transition: {
       duration: shouldReduceMotion ? 0 : 0.9,
       delay: shouldReduceMotion ? 0 : 0.08 + index * 0.18,
@@ -118,7 +130,7 @@ function MajorMaterialBoxTable({
             ? 'rounded-lg'
             : 'rounded-lg sm:min-w-160 sm:table-auto sm:rounded-xl sm:text-sm',
         )}
-        aria-label="전공 칸이 강조된 재료함"
+        aria-label={`${highlight === 'keyword' ? '키워드' : '전공'} 칸이 강조된 재료함`}
       >
         <tbody>
           {Array.from({ length: majorRowCount }, (_, index) => (
@@ -143,7 +155,7 @@ function MajorMaterialBoxTable({
                   className={cn(
                     'border-r border-b bg-muted/35 font-bold',
                     compact
-                      ? 'w-[52%] px-2.5 py-3 text-[11px] leading-5 whitespace-nowrap sm:text-xs'
+                      ? 'w-[42%] px-2 py-3 text-[11px] leading-5 whitespace-nowrap sm:w-[40%] sm:text-xs'
                       : 'w-[38%] px-2.5 py-3 leading-5 sm:w-56 sm:px-5 sm:py-5 sm:text-sm',
                   )}
                 >
@@ -151,12 +163,12 @@ function MajorMaterialBoxTable({
                 </th>
               )}
               <motion.th
-                {...highlightAnimation(index)}
+                {...highlightAnimation(highlight === 'major', index)}
                 scope="row"
                 className={cn(
                   'border-r border-b font-semibold',
                   compact
-                    ? 'w-[28%] px-2.5 py-3'
+                    ? 'w-[35%] px-2 py-3 sm:w-[36%]'
                     : 'w-[29%] px-2.5 py-3 sm:w-44 sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
@@ -177,7 +189,10 @@ function MajorMaterialBoxTable({
                       <span className="block text-[10px] font-semibold text-blue-700 dark:text-blue-300">
                         {index + 1}순위
                       </span>
-                      <span className="mt-0.5 block break-words">
+                      <span
+                        className="mt-0.5 block truncate"
+                        title={preferences[index].major}
+                      >
                         {preferences[index].major}
                       </span>
                     </motion.span>
@@ -196,7 +211,8 @@ function MajorMaterialBoxTable({
                   )}
                 </AnimatePresence>
               </motion.th>
-              <td
+              <motion.td
+                {...highlightAnimation(highlight === 'keyword', index)}
                 className={cn(
                   'border-b text-muted-foreground',
                   compact
@@ -204,8 +220,13 @@ function MajorMaterialBoxTable({
                     : 'px-2.5 py-3 sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
-                키워드
-              </td>
+                <span
+                  className="block truncate"
+                  title={keyword && index === 0 ? keyword : undefined}
+                >
+                  {keyword && index === 0 ? keyword : '키워드'}
+                </span>
+              </motion.td>
             </motion.tr>
           ))}
 
@@ -261,6 +282,9 @@ function MajorMaterialBoxTable({
 export function MajorPreferencesScreen({
   screen,
   isInteractive,
+  materialBoxHighlight,
+  materialBoxKeyword,
+  showMajorHelpButton,
   showSavedPreferences,
   submittedPreferences,
   onAnimationComplete,
@@ -277,11 +301,7 @@ export function MajorPreferencesScreen({
   const [majorHelpPath, setMajorHelpPath] = useState<MajorHelpPath | null>(
     null,
   );
-  const isReviewing =
-    screen === 'major-input' &&
-    !isInteractive &&
-    submittedPreferences.length > 0;
-  const visiblePreferences = isReviewing ? submittedPreferences : preferences;
+  const visiblePreferences = preferences;
   const showPriorities = screen === 'three-majors' || screen === 'major-input';
   const showInputs = screen === 'major-input';
 
@@ -370,9 +390,11 @@ export function MajorPreferencesScreen({
               'lg:col-start-2 lg:row-start-1 lg:w-96 lg:justify-self-end',
           )}
         >
-          <MajorMaterialBoxTable
+          <MaterialBoxProgressTable
             compact={showInputs}
             expanded={showPriorities}
+            highlight={materialBoxHighlight}
+            keyword={materialBoxKeyword}
             preferences={submittedPreferences}
             showSavedPreferences={showSavedPreferences}
             shouldReduceMotion={Boolean(shouldReduceMotion)}
@@ -454,7 +476,7 @@ export function MajorPreferencesScreen({
         </AnimatePresence>
 
         <AnimatePresence>
-          {showInputs && (
+          {showInputs && showMajorHelpButton && (
             <motion.div
               initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

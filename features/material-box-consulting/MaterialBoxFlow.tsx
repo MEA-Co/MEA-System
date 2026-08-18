@@ -1,6 +1,7 @@
 'use client';
 
 import { Undo2 } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { Button } from '@/components/ui/button';
 import { useConsultingSession } from '@/features/consulting/runtime/useConsultingSession';
@@ -15,7 +16,10 @@ import type {
 } from '@/features/material-box-consulting/model/types';
 import { KeywordExamplesScreen } from '@/features/material-box-consulting/screens/KeywordExamplesScreen';
 import { KeywordExplorationScreen } from '@/features/material-box-consulting/screens/KeywordExplorationScreen';
-import { MajorPreferencesScreen } from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
+import {
+  MajorPreferencesScreen,
+  MaterialBoxProgressTable,
+} from '@/features/material-box-consulting/screens/MajorPreferencesScreen';
 import { MaterialBoxOverviewScreen } from '@/features/material-box-consulting/screens/MaterialBoxOverviewScreen';
 import { MaterialBoxReportScreen } from '@/features/material-box-consulting/screens/MaterialBoxReportScreen';
 import { MaterialReflectionScreen } from '@/features/material-box-consulting/screens/MaterialReflectionScreen';
@@ -41,9 +45,23 @@ function isMaterialReflectionScreen(
   );
 }
 
+const nodesBeforePersistentMaterialBox = new Set([
+  'intro',
+  'material-box-overview',
+  'major',
+  'major-review',
+  'major-edit',
+]);
+
 export function MaterialBoxFlow() {
   const session = useConsultingSession(materialBoxConsulting);
+  const shouldReduceMotion = useReducedMotion();
   const currentScreen = session.view.screen;
+  const hasCompletedMajor = !nodesBeforePersistentMaterialBox.has(
+    session.nodeId,
+  );
+  const showPersistentMaterialBox =
+    hasCompletedMajor && !isMajorPreferenceScreen(currentScreen);
   const hasContinueInteraction =
     session.interaction.kind === 'continue' ||
     session.sequenceEvent === 'CONTINUE';
@@ -147,61 +165,98 @@ export function MaterialBoxFlow() {
         )
       }
     >
-      {isMajorPreferenceScreen(currentScreen) && (
-        <MajorPreferencesScreen
-          screen={currentScreen}
-          isInteractive={canEditMajors}
-          showSavedPreferences={session.nodeId.startsWith('keyword')}
-          submittedPreferences={session.memory.majorPreferences}
-          onAnimationComplete={session.completeScreenPresentation}
-          onSubmit={(preferences) =>
-            session.send({ type: 'SUBMIT_MAJORS', preferences })
-          }
-        />
+      {showPersistentMaterialBox && (
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.4 }}
+          className="relative z-10 mx-auto mb-5 w-full lg:absolute lg:inset-x-8 lg:top-28 lg:mb-0 lg:w-auto"
+        >
+          <div className="mx-auto grid w-full max-w-5xl lg:grid-cols-[minmax(0,1fr)_24rem]">
+            <aside
+              className="w-full lg:col-start-2 lg:w-96"
+              aria-label="현재까지 완성된 재료함"
+            >
+              <MaterialBoxProgressTable
+                compact
+                expanded
+                highlight="keyword"
+                keyword={session.memory.keyword}
+                preferences={session.memory.majorPreferences}
+                showSavedPreferences
+                shouldReduceMotion={Boolean(shouldReduceMotion)}
+              />
+            </aside>
+          </div>
+        </motion.div>
       )}
 
-      {currentScreen === 'keyword-examples' && (
-        <KeywordExamplesScreen
-          key={`keyword-examples-${session.presentationKeys.screen}`}
-          onAnimationComplete={session.completeScreenPresentation}
-        />
-      )}
+      <div
+        className={
+          showPersistentMaterialBox
+            ? 'mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]'
+            : undefined
+        }
+      >
+        {isMajorPreferenceScreen(currentScreen) && (
+          <MajorPreferencesScreen
+            screen={currentScreen}
+            isInteractive={canEditMajors}
+            materialBoxHighlight={hasCompletedMajor ? 'keyword' : 'major'}
+            materialBoxKeyword={session.memory.keyword}
+            showMajorHelpButton={!hasCompletedMajor}
+            showSavedPreferences={hasCompletedMajor}
+            submittedPreferences={session.memory.majorPreferences}
+            onAnimationComplete={session.completeScreenPresentation}
+            onSubmit={(preferences) =>
+              session.send({ type: 'SUBMIT_MAJORS', preferences })
+            }
+          />
+        )}
 
-      {currentScreen === 'material-box-overview' && (
-        <MaterialBoxOverviewScreen
-          key={`material-box-overview-${session.presentationKeys.screen}`}
-          focus={session.view.materialBoxOverviewFocus}
-          onAnimationComplete={session.completeScreenPresentation}
-        />
-      )}
+        {currentScreen === 'keyword-examples' && (
+          <KeywordExamplesScreen
+            key={`keyword-examples-${session.presentationKeys.screen}`}
+            onAnimationComplete={session.completeScreenPresentation}
+          />
+        )}
 
-      {currentScreen === 'keyword-exploration' && (
-        <KeywordExplorationScreen
-          key={`keyword-exploration-${session.presentationKeys.screen}`}
-          advice={session.tasks.mentorAdvice.data ?? []}
-          adviceStatus={session.tasks.mentorAdvice.status}
-          isInteractive={canEditKeyword}
-          preferences={session.memory.majorPreferences}
-          submittedKeyword={session.memory.keyword}
-          onSubmit={(keyword) =>
-            session.send({ type: 'SUBMIT_KEYWORD', keyword })
-          }
-        />
-      )}
+        {currentScreen === 'material-box-overview' && (
+          <MaterialBoxOverviewScreen
+            key={`material-box-overview-${session.presentationKeys.screen}`}
+            focus={session.view.materialBoxOverviewFocus}
+            onAnimationComplete={session.completeScreenPresentation}
+          />
+        )}
 
-      {isMaterialReflectionScreen(currentScreen) && (
-        <MaterialReflectionScreen
-          key={currentScreen}
-          screen={currentScreen}
-          isInteractive={canEditReflection}
-          submittedValue={reflectionValue}
-          onSubmit={(value) => submitReflection(currentScreen, value)}
-        />
-      )}
+        {currentScreen === 'keyword-exploration' && (
+          <KeywordExplorationScreen
+            key={`keyword-exploration-${session.presentationKeys.screen}`}
+            advice={session.tasks.mentorAdvice.data ?? []}
+            adviceStatus={session.tasks.mentorAdvice.status}
+            isInteractive={canEditKeyword}
+            preferences={session.memory.majorPreferences}
+            submittedKeyword={session.memory.keyword}
+            onSubmit={(keyword) =>
+              session.send({ type: 'SUBMIT_KEYWORD', keyword })
+            }
+          />
+        )}
 
-      {currentScreen === 'report' && (
-        <MaterialBoxReportScreen memory={session.memory} />
-      )}
+        {isMaterialReflectionScreen(currentScreen) && (
+          <MaterialReflectionScreen
+            key={currentScreen}
+            screen={currentScreen}
+            isInteractive={canEditReflection}
+            submittedValue={reflectionValue}
+            onSubmit={(value) => submitReflection(currentScreen, value)}
+          />
+        )}
+
+        {currentScreen === 'report' && (
+          <MaterialBoxReportScreen memory={session.memory} />
+        )}
+      </div>
     </ConsultingMain>
   );
 }
