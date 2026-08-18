@@ -169,6 +169,7 @@ export function MaterialBoxFlow() {
       {currentScreen === 'material-box-overview' && (
         <MaterialBoxOverviewScreen
           key={`material-box-overview-${session.presentationKeys.screen}`}
+          focus={session.view.materialBoxOverviewFocus}
           onAnimationComplete={session.completeScreenPresentation}
         />
       )}

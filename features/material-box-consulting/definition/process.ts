@@ -27,6 +27,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     prompterPlacement: 'center',
     prompterSize: 'default',
     screen: null,
+    materialBoxOverviewFocus: null,
   },
   nodes: {
     intro: {
@@ -76,6 +77,19 @@ export const materialBoxProcess: ConsultingProcessDefinition<
       sequence: [
         sequence.present(
           {
+            message: [
+              {
+                text: '그렇게 하기 위해 먼저 여러분이 어떤 사람인지를 여러분 스스로 잘 정의해두어야 합니다.',
+              },
+            ],
+            prompterPlacement: 'center',
+            prompterSize: 'default',
+            screen: null,
+          },
+          'prompter',
+        ),
+        sequence.present(
+          {
             prompterPlacement: 'bottom',
             prompterSize: 'wide',
           },
@@ -85,10 +99,10 @@ export const materialBoxProcess: ConsultingProcessDefinition<
         sequence.present(
           {
             message: [
-              { text: '그렇게 하기 위해서, 여러분들만의 ' },
+              { text: '여러분은 지금부터 ' },
               { text: '재료함', emphasis: 'accent' },
               {
-                text: '을 만들어두고 앞으로 계속 사용할거에요. 재료함의 내용은 지속적으로 업데이트되거나 추가될 수는 있지만 비어있어서는 안됩니다.',
+                text: '이라고 하는 것을 채워가며 생활기록부에 그려질 여러분의 모습을 만들어볼 것입니다.',
               },
             ],
           },
@@ -97,11 +111,55 @@ export const materialBoxProcess: ConsultingProcessDefinition<
         sequence.awaitEvent('CONTINUE'),
         sequence.present(
           {
+            message: '각각에 대해 너무 어렵게 생각하지 않아도 됩니다.',
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present({ materialBoxOverviewFocus: 'interest' }),
+        sequence.present(
+          {
             message: [
-              { text: '이번 컨설팅에서는 여러분이라는 브랜드를 담는 ' },
-              { text: '재료함', emphasis: 'accent' },
-              { text: '을 직접 만들어보겠습니다.' },
+              { text: '나는 ' },
+              { text: '무엇', emphasis: 'accent' },
+              {
+                text: '에 관심이 있는가 (또는 무엇을 중요하게 생각하는가)',
+              },
             ],
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present({ materialBoxOverviewFocus: 'motivation' }),
+        sequence.present(
+          {
+            message: [
+              { text: '나는 ' },
+              { text: '왜', emphasis: 'accent' },
+              {
+                text: ' 그것에 관심이 있는가 (또는 중요하게 생각하는가)',
+              },
+            ],
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present({ materialBoxOverviewFocus: 'approach' }),
+        sequence.present(
+          {
+            message: [
+              { text: '그것을 ' },
+              { text: '어떻게', emphasis: 'accent' },
+              { text: ' 다룰 것인가' },
+            ],
+          },
+          'prompter',
+        ),
+        sequence.awaitEvent('CONTINUE'),
+        sequence.present({ materialBoxOverviewFocus: null }),
+        sequence.present(
+          {
+            message: [{ text: '하나씩 채워봅시다!' }],
           },
           'prompter',
         ),

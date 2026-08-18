@@ -49,11 +49,14 @@ export type MaterialBoxScreen =
   | 'keyword-exploration'
   | 'report';
 
+export type MaterialBoxOverviewFocus = 'interest' | 'motivation' | 'approach';
+
 export type MaterialBoxView = {
   message: ConsultingMessage | null;
   prompterPlacement: ConsultingPrompterPlacement;
   prompterSize: ConsultingPrompterSize;
   screen: MaterialBoxScreen | null;
+  materialBoxOverviewFocus: MaterialBoxOverviewFocus | null;
 };
 
 export type MaterialBoxInteraction =

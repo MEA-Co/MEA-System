@@ -3,13 +3,16 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { useEffect } from 'react';
 
-const majorPriorities = ['1순위 전공', '2순위 전공', '3순위 전공'] as const;
+import type { MaterialBoxOverviewFocus } from '@/features/material-box-consulting/model/types';
+import { cn } from '@/lib/utils';
 
 type MaterialBoxOverviewScreenProps = {
+  focus: MaterialBoxOverviewFocus | null;
   onAnimationComplete: () => void;
 };
 
 export function MaterialBoxOverviewScreen({
+  focus,
   onAnimationComplete,
 }: MaterialBoxOverviewScreenProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -40,43 +43,64 @@ export function MaterialBoxOverviewScreen({
       <div className="overflow-x-auto">
         <table className="w-full min-w-160 border-separate border-spacing-0 overflow-hidden rounded-xl border text-left">
           <tbody>
-            {majorPriorities.map((priority, index) => (
-              <motion.tr key={priority} {...rowMotion(0.18 + index * 0.13)}>
-                {index === 0 && (
-                  <th
-                    scope="rowgroup"
-                    rowSpan={4}
-                    className="w-56 border-r border-b bg-muted/35 px-5 py-5 align-middle text-sm font-bold"
-                  >
-                    전공 세부 분야 키워드
-                  </th>
+            <motion.tr
+              {...rowMotion(0.18)}
+              className={cn(
+                'transition-colors duration-500',
+                focus === 'interest' && 'bg-blue-500/10',
+              )}
+            >
+              <th
+                scope="rowgroup"
+                rowSpan={2}
+                className={cn(
+                  'w-56 border-r border-b px-5 py-5 align-middle text-sm font-bold transition-colors duration-500',
+                  focus === 'interest'
+                    ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/35',
                 )}
-                <th
-                  scope="row"
-                  className="w-44 border-r border-b px-5 py-4 text-sm font-semibold"
-                >
-                  {priority}
-                </th>
-                <td className="border-b px-5 py-4 text-sm text-muted-foreground">
-                  전공 키워드
-                </td>
-              </motion.tr>
-            ))}
+              >
+                전공 세부 분야 키워드
+              </th>
+              <td className="w-44 border-r border-b px-5 py-5 text-sm font-semibold">
+                전공
+              </td>
+              <td className="border-b px-5 py-5 text-sm text-muted-foreground">
+                키워드
+              </td>
+            </motion.tr>
 
-            <motion.tr {...rowMotion(0.57)}>
+            <motion.tr
+              {...rowMotion(0.36)}
+              className={cn(
+                'transition-colors duration-500',
+                focus === 'interest' && 'bg-blue-500/10',
+              )}
+            >
               <th
                 scope="row"
                 colSpan={2}
-                className="border-b px-5 py-4 text-sm font-semibold"
+                className="border-b px-5 py-5 text-sm font-semibold"
               >
                 학생의 스토리
               </th>
             </motion.tr>
 
-            <motion.tr {...rowMotion(0.7)}>
+            <motion.tr
+              {...rowMotion(0.54)}
+              className={cn(
+                'transition-colors duration-500',
+                focus === 'motivation' && 'bg-blue-500/10',
+              )}
+            >
               <th
                 scope="row"
-                className="border-r border-b bg-muted/35 px-5 py-5 text-sm font-bold"
+                className={cn(
+                  'border-r border-b px-5 py-5 text-sm font-bold transition-colors duration-500',
+                  focus === 'motivation'
+                    ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/35',
+                )}
               >
                 전공 가치관
               </th>
@@ -86,10 +110,21 @@ export function MaterialBoxOverviewScreen({
               />
             </motion.tr>
 
-            <motion.tr {...rowMotion(0.83)}>
+            <motion.tr
+              {...rowMotion(0.72)}
+              className={cn(
+                'transition-colors duration-500',
+                focus === 'approach' && 'bg-blue-500/10',
+              )}
+            >
               <th
                 scope="row"
-                className="border-r bg-muted/35 px-5 py-5 text-sm font-bold"
+                className={cn(
+                  'border-r px-5 py-5 text-sm font-bold transition-colors duration-500',
+                  focus === 'approach'
+                    ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/35',
+                )}
               >
                 계열 적합 역량
               </th>
