@@ -41,11 +41,14 @@ export function createGuidedConsultingEngine<
 
   const createSnapshot = (): GuidedConsultingSnapshot<Context, Tools> => {
     const step = definition.steps[state.stepIndex] ?? null;
-    const guide = step
-      ? typeof step.guide === 'function'
-        ? step.guide(state.context)
-        : step.guide
-      : null;
+    const explanation = step
+      ? typeof step.explain === 'function'
+        ? step.explain(state.context)
+        : step.explain
+      : [];
+    const explanations = Array.isArray(explanation)
+      ? explanation
+      : [explanation];
 
     return {
       definitionId: definition.id,
@@ -54,7 +57,7 @@ export function createGuidedConsultingEngine<
       stepIndex: state.stepIndex,
       stepCount: definition.steps.length,
       step,
-      guide,
+      explanations,
       context: state.context,
       answers: state.answers,
       error: state.error,

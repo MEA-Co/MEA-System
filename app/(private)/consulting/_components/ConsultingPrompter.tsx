@@ -1,16 +1,21 @@
 import { CheckCircle2, Lightbulb } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
-import type { GuidedConsultingGuide } from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingExplanation } from '@/features/guided-consulting/core/types';
 
 type ConsultingPrompterProps = {
-  guide: GuidedConsultingGuide;
+  explanation: GuidedConsultingExplanation;
+  pageLabel?: string;
   complete?: boolean;
+  children?: ReactNode;
 };
 
 export function ConsultingPrompter({
-  guide,
+  explanation,
+  pageLabel,
   complete = false,
+  children,
 }: ConsultingPrompterProps) {
   return (
     <Card className="gap-0 overflow-hidden rounded-xl border bg-card/95 py-0 shadow-xl ring-0 backdrop-blur-md supports-backdrop-filter:bg-card/90">
@@ -23,7 +28,7 @@ export function ConsultingPrompter({
             </p>
           </div>
           <p className="text-xs font-bold tracking-[0.12em] text-primary">
-            {guide.eyebrow}
+            {pageLabel ?? explanation.eyebrow}
           </p>
         </div>
 
@@ -36,14 +41,14 @@ export function ConsultingPrompter({
                   aria-hidden="true"
                 />
               )}
-              {guide.title}
+              {explanation.title}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-[0.95rem]">
-              {guide.description}
+              {explanation.description}
             </p>
           </div>
 
-          {guide.tips && guide.tips.length > 0 && (
+          {explanation.tips && explanation.tips.length > 0 && (
             <div className="rounded-lg bg-muted/55 px-3.5 py-3">
               <p className="flex items-center gap-2 text-xs font-semibold">
                 <Lightbulb
@@ -53,13 +58,19 @@ export function ConsultingPrompter({
                 입력 가이드
               </p>
               <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
-                {guide.tips.map((tip) => (
+                {explanation.tips.map((tip) => (
                   <li key={tip}>· {tip}</li>
                 ))}
               </ul>
             </div>
           )}
         </div>
+
+        {children && (
+          <div className="mt-4 flex items-center justify-end gap-2 border-t pt-4">
+            {children}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,12 +1,15 @@
 export type GuidedConsultingPhase =
   'waiting-for-input' | 'running-action' | 'complete' | 'error';
 
-export type GuidedConsultingGuide = {
+export type GuidedConsultingExplanation = {
   eyebrow?: string;
   title: string;
   description: string;
   tips?: ReadonlyArray<string>;
 };
+
+export type GuidedConsultingExplanations =
+  GuidedConsultingExplanation | ReadonlyArray<GuidedConsultingExplanation>;
 
 export type GuidedConsultingInput = {
   label: string;
@@ -35,9 +38,9 @@ export type GuidedConsultingStep<
   Tools extends object,
 > = {
   id: string;
-  guide:
-    | GuidedConsultingGuide
-    | ((context: Readonly<Context>) => GuidedConsultingGuide);
+  explain:
+    | GuidedConsultingExplanations
+    | ((context: Readonly<Context>) => GuidedConsultingExplanations);
   input: GuidedConsultingInput;
   validate?: (value: string) => string;
   action: (
@@ -73,7 +76,7 @@ export type GuidedConsultingSnapshot<
   stepIndex: number;
   stepCount: number;
   step: GuidedConsultingStep<Context, Tools> | null;
-  guide: GuidedConsultingGuide | null;
+  explanations: ReadonlyArray<GuidedConsultingExplanation>;
   context: Context;
   answers: Readonly<Record<string, string>>;
   error: Error | null;

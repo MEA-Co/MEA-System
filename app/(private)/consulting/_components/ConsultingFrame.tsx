@@ -14,6 +14,7 @@ type ConsultingFrameProps = {
   stepCount?: number;
   canGoBack?: boolean;
   onBack?: () => void;
+  topRightAction?: ReactNode;
 };
 
 export function ConsultingFrame({
@@ -24,6 +25,7 @@ export function ConsultingFrame({
   stepCount,
   canGoBack = false,
   onBack,
+  topRightAction,
 }: ConsultingFrameProps) {
   const hasProgress =
     currentStep !== undefined && stepCount !== undefined && stepCount > 0;
@@ -89,6 +91,12 @@ export function ConsultingFrame({
           <ArrowLeft className="size-4" aria-hidden="true" />
           이전으로
         </Button>
+      )}
+
+      {topRightAction && (
+        <div className="absolute top-18 right-3 z-30 md:right-5">
+          {topRightAction}
+        </div>
       )}
 
       <CardContent className="relative z-0 min-h-153 p-5 pt-16 pb-72 md:p-8 md:pt-20 md:pb-60">

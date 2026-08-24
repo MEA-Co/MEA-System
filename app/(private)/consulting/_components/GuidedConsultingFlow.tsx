@@ -1,7 +1,15 @@
 'use client';
 
-import { ArrowRight, LoaderCircle, RotateCcw } from 'lucide-react';
-import { type FormEvent, type ReactNode, useState } from 'react';
+import {
+  ArrowRight,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  LoaderCircle,
+  RotateCcw,
+} from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
 import { ConsultingFrame } from '@/app/(private)/consulting/_components/ConsultingFrame';
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
@@ -10,7 +18,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
+import type {
+  GuidedConsultingDefinition,
+  GuidedConsultingExplanation,
+  GuidedConsultingStep,
+} from '@/features/guided-consulting/core/types';
 
 type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
   definition: GuidedConsultingDefinition<Context, Tools>;
@@ -18,136 +30,203 @@ type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
   renderComplete: (context: Context) => ReactNode;
 };
 
-export function GuidedConsultingFlow<
-  Context extends object,
-  Tools extends object,
->({
-  definition,
-  tools,
-  renderComplete,
-}: GuidedConsultingFlowProps<Context, Tools>) {
-  const session = useGuidedConsultingSession(definition, tools);
-  const [draft, setDraft] = useState({ stepId: '', value: '' });
-  const stepId = session.step?.id ?? null;
-  const value =
-    stepId && draft.stepId === stepId
-      ? draft.value
-      : stepId
-        ? (session.answers[stepId] ?? '')
-        : '';
+type StepEntryView = 'explanation' | 'input';
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    session.submit(value);
+type GuidedStepViewProps<Context extends object, Tools extends object> = {
+  title: string;
+  step: GuidedConsultingStep<Context, Tools>;
+  explanations: ReadonlyArray<GuidedConsultingExplanation>;
+  stepIndex: number;
+  stepCount: number;
+  initialView: StepEntryView;
+  value: string;
+  running: boolean;
+  failed: boolean;
+  error: Error | null;
+  canGoBack: boolean;
+  onBack: () => void;
+  onValueChange: (value: string) => void;
+  onSubmit: (value: string) => void;
+};
+
+function GuidedStepView<Context extends object, Tools extends object>({
+  title,
+  step,
+  explanations,
+  stepIndex,
+  stepCount,
+  initialView,
+  value,
+  running,
+  failed,
+  error,
+  canGoBack,
+  onBack,
+  onValueChange,
+  onSubmit,
+}: GuidedStepViewProps<Context, Tools>) {
+  const [view, setView] = useState<StepEntryView>(
+    initialView === 'explanation' && explanations.length > 0
+      ? 'explanation'
+      : 'input',
+  );
+  const [explanationIndex, setExplanationIndex] = useState(0);
+  const explanation = explanations[explanationIndex] ?? null;
+  const Field = step.input.multiline ? Textarea : Input;
+
+  const showInput = () => setView('input');
+  const reviewExplanation = () => {
+    setExplanationIndex(0);
+    setView('explanation');
   };
 
-  if (session.isComplete) {
+  if (view === 'explanation' && explanation) {
+    const isFirstExplanation = explanationIndex === 0;
+    const isLastExplanation = explanationIndex === explanations.length - 1;
+
     return (
       <ConsultingFrame
-        title={session.title}
-        currentStep={session.stepCount}
-        stepCount={session.stepCount}
-        canGoBack={session.canGoBack}
-        onBack={session.back}
+        title={title}
+        currentStep={stepIndex + 1}
+        stepCount={stepCount}
+        canGoBack={canGoBack}
+        onBack={onBack}
         prompter={
           <ConsultingPrompter
-            complete
-            guide={{
-              eyebrow: 'COMPLETE',
-              title: '나만의 결과가 완성됐어요',
-              description:
-                '화면에 정리된 결과를 확인해보세요. 수정하고 싶다면 이전 단계로 돌아갈 수 있어요.',
-            }}
-          />
+            explanation={explanation}
+            pageLabel={`${explanation.eyebrow ?? '설명'} · ${explanationIndex + 1}/${explanations.length}`}
+          >
+            {!isFirstExplanation && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setExplanationIndex((index) => index - 1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+                이전 설명
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                if (isLastExplanation) {
+                  showInput();
+                  return;
+                }
+                setExplanationIndex((index) => index + 1);
+              }}
+            >
+              {isLastExplanation ? '입력하기' : '다음 설명'}
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </ConsultingPrompter>
         }
       >
-        <Card className="mx-auto w-full max-w-3xl gap-0 rounded-2xl bg-background/90 py-0 shadow-sm ring-0">
-          <CardContent className="p-5 md:p-7">
-            <div className="flex items-center justify-between gap-4 border-b pb-4">
-              <div>
-                <p className="text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
-                  컨설팅 완료
-                </p>
-                <h1 className="mt-1 text-xl font-bold tracking-[-0.03em] md:text-2xl">
-                  컨설팅 결과
-                </h1>
-              </div>
-              <Button type="button" variant="outline" onClick={session.reset}>
-                <RotateCcw aria-hidden="true" />
-                다시 체험하기
-              </Button>
-            </div>
-
-            <div className="mt-5">{renderComplete(session.context)}</div>
-          </CardContent>
-        </Card>
+        <section className="mx-auto flex min-h-64 w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-dashed bg-background/50 px-6 py-10 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <BookOpen className="size-6" aria-hidden="true" />
+          </span>
+          <p className="mt-5 text-xs font-bold tracking-[0.14em] text-primary">
+            TUTORIAL
+          </p>
+          <h1 className="mt-2 text-xl font-bold tracking-[-0.03em] md:text-2xl">
+            입력 전에 잠깐 알아볼게요
+          </h1>
+          <div
+            className="mt-5 flex items-center gap-2"
+            aria-label={`설명 ${explanationIndex + 1}/${explanations.length}`}
+          >
+            {explanations.map((page, index) => (
+              <span
+                key={`${page.title}-${index}`}
+                className={
+                  index === explanationIndex
+                    ? 'h-2 w-6 rounded-full bg-primary'
+                    : 'size-2 rounded-full bg-muted-foreground/25'
+                }
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+        </section>
       </ConsultingFrame>
     );
   }
 
-  if (!session.step || !session.guide) return null;
-
-  const running = session.phase === 'running-action';
-  const failed = session.phase === 'error';
-  const Field = session.step.input.multiline ? Textarea : Input;
-
   return (
     <ConsultingFrame
-      title={session.title}
-      currentStep={session.stepIndex + 1}
-      stepCount={session.stepCount}
-      canGoBack={session.canGoBack}
-      onBack={session.back}
-      prompter={<ConsultingPrompter guide={session.guide} />}
+      title={title}
+      currentStep={stepIndex + 1}
+      stepCount={stepCount}
+      canGoBack={canGoBack}
+      onBack={onBack}
+      topRightAction={
+        explanations.length > 0 ? (
+          <Button type="button" variant="outline" onClick={reviewExplanation}>
+            <Eye aria-hidden="true" />
+            설명 다시 보기
+          </Button>
+        ) : undefined
+      }
+      prompter={
+        <ConsultingPrompter
+          pageLabel="INPUT"
+          explanation={{
+            title: '이제 직접 입력해보세요',
+            description: `‘${step.input.label}’을 작성한 뒤 입력 완료를 눌러주세요.`,
+          }}
+        />
+      }
     >
-      <form onSubmit={submit} className="mx-auto w-full max-w-2xl">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(value);
+        }}
+        className="mx-auto w-full max-w-2xl"
+      >
         <Card className="gap-0 rounded-2xl bg-background/90 py-0 shadow-sm ring-0">
           <CardContent className="p-5 md:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold tracking-[0.12em] text-primary">
-                  INPUT {session.stepIndex + 1}
+                  INPUT {stepIndex + 1}
                 </p>
                 <label
-                  htmlFor={`guided-input-${session.step.id}`}
+                  htmlFor={`guided-input-${step.id}`}
                   className="mt-2 block text-lg font-bold tracking-[-0.02em]"
                 >
-                  {session.step.input.label}
+                  {step.input.label}
                 </label>
               </div>
-              {session.step.input.maxLength && (
+              {step.input.maxLength && (
                 <p className="shrink-0 text-xs text-muted-foreground">
-                  {value.length} / {session.step.input.maxLength}
+                  {value.length} / {step.input.maxLength}
                 </p>
               )}
             </div>
 
             <Field
-              id={`guided-input-${session.step.id}`}
+              id={`guided-input-${step.id}`}
               value={value}
               readOnly={running}
-              maxLength={session.step.input.maxLength}
-              placeholder={session.step.input.placeholder}
+              maxLength={step.input.maxLength}
+              placeholder={step.input.placeholder}
               autoFocus
-              onChange={(event) =>
-                setDraft({
-                  stepId: session.step!.id,
-                  value: event.target.value,
-                })
-              }
+              onChange={(event) => onValueChange(event.target.value)}
               className={
-                session.step.input.multiline
+                step.input.multiline
                   ? 'mt-5 min-h-32 resize-none bg-background'
                   : 'mt-5 h-11 bg-background'
               }
             />
 
-            {session.error && (
+            {error && (
               <p
                 role="alert"
                 className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-sm text-destructive"
               >
-                {session.error.message}
+                {error.message}
               </p>
             )}
 
@@ -178,5 +257,111 @@ export function GuidedConsultingFlow<
         </Card>
       </form>
     </ConsultingFrame>
+  );
+}
+
+export function GuidedConsultingFlow<
+  Context extends object,
+  Tools extends object,
+>({
+  definition,
+  tools,
+  renderComplete,
+}: GuidedConsultingFlowProps<Context, Tools>) {
+  const session = useGuidedConsultingSession(definition, tools);
+  const [draft, setDraft] = useState({ stepId: '', value: '' });
+  const [nextEntryView, setNextEntryView] =
+    useState<StepEntryView>('explanation');
+  const stepId = session.step?.id ?? null;
+  const value =
+    stepId && draft.stepId === stepId
+      ? draft.value
+      : stepId
+        ? (session.answers[stepId] ?? '')
+        : '';
+
+  const backToInput = () => {
+    setNextEntryView('input');
+    session.back();
+  };
+
+  const resetToExplanation = () => {
+    setNextEntryView('explanation');
+    session.reset();
+  };
+
+  if (session.isComplete) {
+    return (
+      <ConsultingFrame
+        title={session.title}
+        currentStep={session.stepCount}
+        stepCount={session.stepCount}
+        canGoBack={session.canGoBack}
+        onBack={backToInput}
+        prompter={
+          <ConsultingPrompter
+            complete
+            pageLabel="COMPLETE"
+            explanation={{
+              title: '나만의 결과가 완성됐어요',
+              description:
+                '화면에 정리된 결과를 확인해보세요. 수정하고 싶다면 이전 단계로 돌아갈 수 있어요.',
+            }}
+          />
+        }
+      >
+        <Card className="mx-auto w-full max-w-3xl gap-0 rounded-2xl bg-background/90 py-0 shadow-sm ring-0">
+          <CardContent className="p-5 md:p-7">
+            <div className="flex items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+                  컨설팅 완료
+                </p>
+                <h1 className="mt-1 text-xl font-bold tracking-[-0.03em] md:text-2xl">
+                  컨설팅 결과
+                </h1>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetToExplanation}
+              >
+                <RotateCcw aria-hidden="true" />
+                다시 체험하기
+              </Button>
+            </div>
+
+            <div className="mt-5">{renderComplete(session.context)}</div>
+          </CardContent>
+        </Card>
+      </ConsultingFrame>
+    );
+  }
+
+  if (!session.step) return null;
+
+  return (
+    <GuidedStepView
+      key={`${session.stepIndex}:${session.step.id}`}
+      title={session.title}
+      step={session.step}
+      explanations={session.explanations}
+      stepIndex={session.stepIndex}
+      stepCount={session.stepCount}
+      initialView={nextEntryView}
+      value={value}
+      running={session.phase === 'running-action'}
+      failed={session.phase === 'error'}
+      error={session.error}
+      canGoBack={session.canGoBack}
+      onBack={backToInput}
+      onValueChange={(nextValue) =>
+        setDraft({ stepId: session.step!.id, value: nextValue })
+      }
+      onSubmit={(submittedValue) => {
+        setNextEntryView('explanation');
+        session.submit(submittedValue);
+      }}
+    />
   );
 }

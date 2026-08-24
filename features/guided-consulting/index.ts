@@ -6,7 +6,8 @@ export { createGuidedConsultingEngine } from '@/features/guided-consulting/core/
 export type {
   GuidedConsultingDefinition,
   GuidedConsultingEngine,
-  GuidedConsultingGuide,
+  GuidedConsultingExplanation,
+  GuidedConsultingExplanations,
   GuidedConsultingInput,
   GuidedConsultingPhase,
   GuidedConsultingSnapshot,
