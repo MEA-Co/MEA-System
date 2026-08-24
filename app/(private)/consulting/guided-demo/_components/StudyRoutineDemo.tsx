@@ -1,9 +1,9 @@
 'use client';
 
-import { studyRoutineConsulting } from '@/features/guided-consulting/examples/study-routine/definition';
-import { studyRoutineTools } from '@/features/guided-consulting/examples/study-routine/tools';
-import type { StudyRoutineContext } from '@/features/guided-consulting/examples/study-routine/types';
-import { GuidedConsultingFlow } from '@/features/guided-consulting/ui/GuidedConsultingFlow';
+import { GuidedConsultingFlow } from '@/app/(private)/consulting/_components/GuidedConsultingFlow';
+import { studyRoutineConsulting } from '@/app/(private)/consulting/guided-demo/_lib/definition';
+import { studyRoutineTools } from '@/app/(private)/consulting/guided-demo/_lib/tools';
+import type { StudyRoutineContext } from '@/app/(private)/consulting/guided-demo/_lib/types';
 
 function StudyRoutineResult({ context }: { context: StudyRoutineContext }) {
   const items = [

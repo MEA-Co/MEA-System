@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { StudyRoutineDemo } from '@/app/(private)/consulting/guided-demo/_components/StudyRoutineDemo';
 import { Button } from '@/components/ui/button';
-import { StudyRoutineDemo } from '@/features/guided-consulting/examples/study-routine/StudyRoutineDemo';
 import { requireUserAccess } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 

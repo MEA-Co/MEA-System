@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
-import { useGuidedConsultingSession } from '@/features/guided-consulting/runtime/useGuidedConsultingSession';
+import { useGuidedConsultingSession } from '@/app/(private)/consulting/_hooks/useGuidedConsultingSession';
 
 type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
   definition: GuidedConsultingDefinition<Context, Tools>;

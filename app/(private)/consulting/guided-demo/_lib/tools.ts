@@ -1,4 +1,4 @@
-import type { StudyRoutineTools } from '@/features/guided-consulting/examples/study-routine/types';
+import type { StudyRoutineTools } from '@/app/(private)/consulting/guided-demo/_lib/types';
 
 function wait(duration: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {

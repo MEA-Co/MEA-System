@@ -1,8 +1,8 @@
-import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
 import type {
   StudyRoutineContext,
   StudyRoutineTools,
-} from '@/features/guided-consulting/examples/study-routine/types';
+} from '@/app/(private)/consulting/guided-demo/_lib/types';
+import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
 
 function requireValue(value: string, message: string) {
   const normalized = value.trim();
