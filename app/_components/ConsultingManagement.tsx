@@ -13,6 +13,10 @@ const consultations = [
     title: '생활기록부 브랜딩 컨설팅 [재료함 설계]',
     href: '/consulting/material-box',
   },
+  {
+    title: '단순 Step 컨설팅 데모',
+    href: '/consulting/guided-demo',
+  },
 ] as const;
 
 export function ConsultingManagement() {
