@@ -19,6 +19,21 @@ export type MentorAdvice = {
   keyword: string;
 };
 
+export type KeywordRecommendation = {
+  major: string;
+  keyword: string;
+  summary: string;
+  university: string;
+  departmentName: string;
+  departmentUrl: string;
+  labName: string;
+  labUrl: string;
+};
+
+export type KeywordRecommendationsResponse = {
+  recommendations: Array<KeywordRecommendation>;
+};
+
 export type MaterialBoxMemory = {
   majorPreferences: Array<MajorPreference>;
   keyword: string;
@@ -30,6 +45,7 @@ export type MaterialBoxMemory = {
 
 export type MaterialBoxTaskOutputs = {
   mentorAdvice: Array<MentorAdvice>;
+  keywordRecommendations: Array<KeywordRecommendation>;
 };
 
 export type MajorPreferenceScreen =

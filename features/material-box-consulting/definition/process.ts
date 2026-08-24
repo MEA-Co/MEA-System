@@ -212,6 +212,7 @@ export const materialBoxProcess: ConsultingProcessDefinition<
     },
     'major-review': {
       sequence: [
+        sequence.startTask('keywordRecommendations'),
         sequence.present(
           {
             message:

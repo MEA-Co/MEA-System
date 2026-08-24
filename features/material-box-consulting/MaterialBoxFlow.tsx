@@ -236,6 +236,11 @@ export function MaterialBoxFlow() {
             adviceStatus={session.tasks.mentorAdvice.status}
             isInteractive={canEditKeyword}
             preferences={session.memory.majorPreferences}
+            recommendations={session.tasks.keywordRecommendations.data ?? []}
+            recommendationError={
+              session.tasks.keywordRecommendations.error?.message ?? null
+            }
+            recommendationStatus={session.tasks.keywordRecommendations.status}
             submittedKeyword={session.memory.keyword}
             onSubmit={(keyword) =>
               session.send({ type: 'SUBMIT_KEYWORD', keyword })

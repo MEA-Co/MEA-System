@@ -1,6 +1,12 @@
 'use client';
 
-import { Check, CircleAlert, Sparkles } from 'lucide-react';
+import {
+  Check,
+  CircleAlert,
+  ExternalLink,
+  LoaderCircle,
+  Sparkles,
+} from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 
@@ -9,6 +15,7 @@ import type { ConsultingTaskStatus } from '@/features/consulting/core/task';
 import { ConsultingAdvice } from '@/features/consulting/ui/ConsultingAdvice';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type {
+  KeywordRecommendation,
   MajorPreference,
   MentorAdvice,
   MentorAdviceQuestion,
@@ -34,6 +41,9 @@ type KeywordExplorationScreenProps = {
   adviceStatus: ConsultingTaskStatus;
   isInteractive: boolean;
   preferences: Array<MajorPreference>;
+  recommendations: Array<KeywordRecommendation>;
+  recommendationError: string | null;
+  recommendationStatus: ConsultingTaskStatus;
   submittedKeyword: string;
   onSubmit: (keyword: string) => void;
 };
@@ -43,6 +53,9 @@ export function KeywordExplorationScreen({
   adviceStatus,
   isInteractive,
   preferences,
+  recommendations,
+  recommendationError,
+  recommendationStatus,
   submittedKeyword,
   onSubmit,
 }: KeywordExplorationScreenProps) {
@@ -52,6 +65,9 @@ export function KeywordExplorationScreen({
     null,
   );
   const [selectedAdviceId, setSelectedAdviceId] = useState<string | null>(null);
+  const [selectedRecommendation, setSelectedRecommendation] = useState<
+    string | null
+  >(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
@@ -59,8 +75,18 @@ export function KeywordExplorationScreen({
   const selectAdvice = (mentorAdvice: MentorAdvice) => {
     setKeyword(mentorAdvice.keyword);
     setSelectedAdviceId(mentorAdvice.id);
+    setSelectedRecommendation(null);
     setValidationMessage(null);
     setOpenQuestion(null);
+  };
+
+  const selectRecommendation = (recommendation: KeywordRecommendation) => {
+    setKeyword(recommendation.keyword);
+    setSelectedRecommendation(
+      `${recommendation.keyword}-${recommendation.labUrl}`,
+    );
+    setSelectedAdviceId(null);
+    setValidationMessage(null);
   };
 
   const submitKeyword = (event: FormEvent<HTMLFormElement>) => {
@@ -118,7 +144,7 @@ export function KeywordExplorationScreen({
           나의 세부 키워드
         </label>
         <p className="mt-1 text-sm text-muted-foreground">
-          직접 입력하거나 아래 멘토의 조언에서 하나를 선택해보세요.
+          직접 입력하거나 전공 기반 추천과 아래 멘토의 조언을 참고해보세요.
         </p>
         <Input
           id="detail-keyword"
@@ -127,6 +153,7 @@ export function KeywordExplorationScreen({
           onChange={(event) => {
             setKeyword(event.target.value);
             setSelectedAdviceId(null);
+            setSelectedRecommendation(null);
             setValidationMessage(null);
           }}
           className="mt-4 bg-background"
@@ -141,6 +168,131 @@ export function KeywordExplorationScreen({
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
             {validationMessage}
           </p>
+        )}
+
+        {isInteractive && (
+          <div className="mt-5 border-t border-blue-500/15 pt-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles
+                    className="size-4 text-blue-600 dark:text-blue-300"
+                    aria-hidden="true"
+                  />
+                  전공 기반 추천 키워드
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  OpenAI가 한국 주요 대학의 학과·연구실 정보를 찾아 추천해요.
+                </p>
+              </div>
+            </div>
+
+            {(recommendationStatus === 'idle' ||
+              recommendationStatus === 'running') && (
+              <div
+                className="mt-4 flex min-h-32 items-center justify-center gap-2 rounded-xl border border-dashed border-blue-500/25 bg-background/65 px-4 text-sm text-muted-foreground"
+                role="status"
+              >
+                <LoaderCircle
+                  className="size-4 animate-spin"
+                  aria-hidden="true"
+                />
+                입력은 먼저 시작해도 괜찮아요. 전공과 연결되는 연구 분야를 찾고
+                있어요.
+              </div>
+            )}
+
+            {recommendationStatus === 'error' && (
+              <div
+                className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive"
+                role="alert"
+              >
+                <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                <p>
+                  {recommendationError ??
+                    '추천 키워드를 불러오지 못했습니다. 직접 입력하거나 멘토의 조언을 참고해 주세요.'}
+                </p>
+              </div>
+            )}
+
+            {recommendationStatus === 'success' && (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {recommendations.map((recommendation) => {
+                  const recommendationKey = `${recommendation.keyword}-${recommendation.labUrl}`;
+                  const isSelected =
+                    selectedRecommendation === recommendationKey;
+
+                  return (
+                    <article
+                      key={recommendationKey}
+                      className={cn(
+                        'overflow-hidden rounded-xl border bg-background/90 transition-[border-color,box-shadow] hover:border-blue-500/35 hover:shadow-sm',
+                        isSelected &&
+                          'border-blue-500/60 ring-2 ring-blue-500/10',
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => selectRecommendation(recommendation)}
+                        className="w-full p-4 text-left outline-none focus-visible:bg-blue-500/5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                              {recommendation.major} ·{' '}
+                              {recommendation.university}
+                            </p>
+                            <h3 className="mt-1.5 font-semibold leading-6">
+                              {recommendation.keyword}
+                            </h3>
+                          </div>
+                          {isSelected && (
+                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                              <Check className="size-3.5" aria-hidden="true" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {recommendation.summary}
+                        </p>
+                        <p className="mt-3 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                          {isSelected ? '선택됨' : '이 키워드 입력하기'}
+                        </p>
+                      </button>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 border-t bg-muted/30 px-4 py-3 text-xs">
+                        <a
+                          href={recommendation.departmentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-foreground/75 underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                          {recommendation.departmentName}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                        <a
+                          href={recommendation.labUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-foreground/75 underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                          {recommendation.labName}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            {recommendationStatus === 'success' && (
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                출처 링크에서 실제 연구 내용을 확인하고 나에게 맞게 다듬어
+                보세요.
+              </p>
+            )}
+          </div>
         )}
       </motion.section>
 
