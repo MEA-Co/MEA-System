@@ -13,4 +13,3 @@ export type {
   GuidedConsultingStep,
   GuidedConsultingStepResult,
 } from '@/features/guided-consulting/core/types';
-export { useGuidedConsultingSession } from '@/app/(private)/consulting/_hooks/useGuidedConsultingSession';
