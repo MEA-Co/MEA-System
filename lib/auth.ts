@@ -83,7 +83,7 @@ export function hasRole(
 
 export async function requireUserAccess({
   allowedRoles,
-  loginRedirectTo = '/login',
+  loginRedirectTo = '/auth/login',
   onboardingRedirectTo = '/onboarding',
   unauthorizedRedirectTo = '/',
 }: RequireUserAccessOptions = {}): Promise<AuthorizedUserAccess> {

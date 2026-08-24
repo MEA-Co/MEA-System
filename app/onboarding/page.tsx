@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export default async function OnboardingPage() {
   const { user, isOnboarded } = await getUserAccess();
 
-  if (!user) redirect('/login');
+  if (!user) redirect('/auth/login');
   if (isOnboarded) redirect('/');
 
   const googleName =
