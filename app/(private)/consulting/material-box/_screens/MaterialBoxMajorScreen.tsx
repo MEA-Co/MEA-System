@@ -1,6 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Undo2 } from 'lucide-react';
+import { type FormEvent, type ReactNode } from 'react';
 import { useState } from 'react';
 
 import {
@@ -10,6 +11,7 @@ import {
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
 import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
@@ -30,13 +32,20 @@ const majorMessages = [
 
 function MajorInput({
   majors,
+  validationMessage,
   onMajorChange,
+  onSubmit,
 }: {
   majors: ReadonlyArray<string>;
+  validationMessage: string | null;
   onMajorChange: (index: number, value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+    <form
+      onSubmit={onSubmit}
+      className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
+    >
       <Card className="gap-0 rounded-2xl bg-background/95 py-0 shadow-sm ring-0">
         <CardContent className="p-5 md:p-6">
           <p className="text-xs font-bold tracking-[0.12em] text-blue-600 dark:text-blue-400">
@@ -67,6 +76,18 @@ function MajorInput({
               </div>
             ))}
           </div>
+
+          {validationMessage && (
+            <p className="mt-4 text-sm text-destructive" role="alert">
+              {validationMessage}
+            </p>
+          )}
+
+          <div className="mt-5 flex justify-end border-t pt-5">
+            <ConsultingProgressButton type="submit">
+              입력 확인하기
+            </ConsultingProgressButton>
+          </div>
         </CardContent>
       </Card>
 
@@ -76,17 +97,27 @@ function MajorInput({
         majorRowCount={3}
         majors={majors}
       />
-    </div>
+    </form>
   );
 }
 
-function MaterialBoxMajorScreen() {
+function MaterialBoxMajorScreen({
+  environment,
+}: {
+  environment: GuidedConsultingScreenRenderEnvironment;
+}) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   const [majors, setMajors] = useState(['', '', '']);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null,
+  );
   const isInputPage = pageIndex === majorMessages.length - 1;
+  const normalizedMajors = majors.map((major) => major.trim()).filter(Boolean);
 
   const updateMajor = (index: number, value: string) => {
+    setValidationMessage(null);
     setMajors((current) =>
       current.map((major, majorIndex) =>
         majorIndex === index ? value : major,
@@ -94,10 +125,41 @@ function MaterialBoxMajorScreen() {
     );
   };
 
+  const reviewInput = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (normalizedMajors.length === 0) {
+      setValidationMessage('희망 전공을 한 개 이상 입력해주세요.');
+      return;
+    }
+
+    setValidationMessage(null);
+    setIsTypingComplete(false);
+    setIsReviewing(true);
+  };
+
+  const confirmInput = () => {
+    environment.send({
+      type: 'user.submit',
+      value: JSON.stringify(normalizedMajors),
+    });
+  };
+
   return (
     <ConsultingScreenView>
-      {isInputPage ? (
-        <MajorInput majors={majors} onMajorChange={updateMajor} />
+      {isReviewing ? (
+        <MaterialBoxTable
+          focus="major"
+          majorRowCount={3}
+          majors={normalizedMajors}
+        />
+      ) : isInputPage ? (
+        <MajorInput
+          majors={majors}
+          validationMessage={validationMessage}
+          onMajorChange={updateMajor}
+          onSubmit={reviewInput}
+        />
       ) : (
         <MaterialBoxTable
           focus="major"
@@ -107,21 +169,57 @@ function MaterialBoxMajorScreen() {
 
       <ConsultingPrompter
         animateTyping
-        message={majorMessages[pageIndex]}
+        message={
+          isReviewing
+            ? {
+                segments: [
+                  {
+                    text: '잘 작성했나요? 희망 전공은 학교를 다니면서 얼마든지 달라질 수 있습니다. 중요한 것은 지금 여러분의 관심사와 목표입니다.',
+                  },
+                ],
+              }
+            : majorMessages[pageIndex]
+        }
         onTypingComplete={() => setIsTypingComplete(true)}
       >
-        {!isInputPage && (
-          <ConsultingProgressButton
-            compact
-            disabled={!isTypingComplete}
-            spacebarShortcut
-            onClick={() => {
-              setIsTypingComplete(false);
-              setPageIndex((current) => current + 1);
-            }}
-          >
-            다음으로
-          </ConsultingProgressButton>
+        {isReviewing ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              disabled={!isTypingComplete}
+              onClick={() => {
+                setIsTypingComplete(false);
+                setIsReviewing(false);
+              }}
+            >
+              <Undo2 aria-hidden="true" className="size-3.5" />
+              아니오, 수정할게요
+            </Button>
+            <ConsultingProgressButton
+              compact
+              disabled={!isTypingComplete}
+              onClick={confirmInput}
+            >
+              네, 잘 작성했어요
+            </ConsultingProgressButton>
+          </>
+        ) : (
+          !isInputPage && (
+            <ConsultingProgressButton
+              compact
+              disabled={!isTypingComplete}
+              spacebarShortcut
+              onClick={() => {
+                setIsTypingComplete(false);
+                setPageIndex((current) => current + 1);
+              }}
+            >
+              다음으로
+            </ConsultingProgressButton>
+          )
         )}
       </ConsultingPrompter>
     </ConsultingScreenView>
@@ -130,7 +228,9 @@ function MaterialBoxMajorScreen() {
 
 export const materialBoxMajorScreen = {
   mode: 'static',
-  render: () => <MaterialBoxMajorScreen />,
+  render: (_request, environment) => (
+    <MaterialBoxMajorScreen environment={environment} />
+  ),
 } satisfies GuidedConsultingRendererEntry<
   GuidedConsultingScreenRenderEnvironment,
   ReactNode

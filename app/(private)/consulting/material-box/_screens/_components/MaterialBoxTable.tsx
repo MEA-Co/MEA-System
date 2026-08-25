@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export type MaterialBoxTableFocus =
-  'interest' | 'major' | 'motivation' | 'approach' | null;
+  'interest' | 'major' | 'keyword' | 'motivation' | 'approach' | null;
 
 type MaterialBoxTableProps = {
   focus: MaterialBoxTableFocus;
@@ -87,8 +87,10 @@ export function MaterialBoxTable({
                 </td>
                 <td
                   className={cn(
-                    'border-b px-2.5 py-3 text-muted-foreground',
+                    'border-b px-2.5 py-3 text-muted-foreground transition-colors duration-500',
                     !compact && 'sm:px-5 sm:py-5 sm:text-sm',
+                    focus === 'keyword' &&
+                      'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
                   키워드
