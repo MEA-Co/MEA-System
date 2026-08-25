@@ -24,7 +24,7 @@ export type GuidedConsultingLoggerOptions = {
 };
 
 function getModuleEndpoint(moduleId: string) {
-  return moduleId === 'screen.render' ? 'renderer' : moduleId;
+  return moduleId === 'screen.render' ? 'renderer' : 'tools';
 }
 
 export function createGuidedConsultingLogger(
