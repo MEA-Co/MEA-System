@@ -4,12 +4,14 @@ import type {
   GuidedConsultingUserAction,
 } from '@/features/guided-consulting/core/protocol';
 import {
-  createGuidedConsultingRendererRequest,
   createGuidedConsultingToolRequest,
-  parseGuidedConsultingRendererResponse,
   parseGuidedConsultingToolRequest,
   parseGuidedConsultingToolResponse,
 } from '@/features/guided-consulting/core/protocol';
+import {
+  createGuidedConsultingRendererRequest,
+  parseGuidedConsultingRendererResponse,
+} from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type {
   GuidedConsultingAgent,

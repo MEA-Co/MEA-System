@@ -7,12 +7,12 @@ import { createGuidedConsultingLogger } from '@/features/guided-consulting/core/
 import type {
   GuidedConsultingRendererError,
   GuidedConsultingRenderTarget,
-} from '@/features/guided-consulting/core/protocol';
+} from '@/features/guided-consulting/core/renderer/protocol';
 import {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererSuccessResponse,
   parseGuidedConsultingRendererRequest,
-} from '@/features/guided-consulting/core/protocol';
+} from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 

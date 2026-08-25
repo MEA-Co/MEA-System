@@ -1,8 +1,8 @@
 import type {
-  GuidedConsultingRenderTarget,
   GuidedConsultingToolError,
   GuidedConsultingUserAction,
 } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingRenderTarget } from '@/features/guided-consulting/core/renderer/protocol';
 
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';

@@ -13,6 +13,28 @@ export type {
 } from '@/features/guided-consulting/core/logger';
 export { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
 export type {
+  GuidedConsultingToolError,
+  GuidedConsultingToolRejectedResponse,
+  GuidedConsultingToolRequest,
+  GuidedConsultingToolResponse,
+  GuidedConsultingToolSuccessResponse,
+  GuidedConsultingUserAction,
+} from '@/features/guided-consulting/core/protocol';
+export {
+  createGuidedConsultingToolRejectedResponse,
+  createGuidedConsultingToolRequest,
+  createGuidedConsultingToolSuccessResponse,
+  GUIDED_CONSULTING_TOOLS_PROTOCOL,
+  parseGuidedConsultingToolRequest,
+  parseGuidedConsultingToolResponse,
+} from '@/features/guided-consulting/core/protocol';
+export type {
+  GuidedConsultingRenderer,
+  GuidedConsultingRendererEntry,
+  GuidedConsultingRenderHandler,
+} from '@/features/guided-consulting/core/renderer';
+export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
+export type {
   GuidedConsultingDynamicRenderTarget,
   GuidedConsultingRendererDynamicRequest,
   GuidedConsultingRendererError,
@@ -23,33 +45,15 @@ export type {
   GuidedConsultingRendererSuccessResponse,
   GuidedConsultingRenderTarget,
   GuidedConsultingStaticRenderTarget,
-  GuidedConsultingToolError,
-  GuidedConsultingToolRejectedResponse,
-  GuidedConsultingToolRequest,
-  GuidedConsultingToolResponse,
-  GuidedConsultingToolSuccessResponse,
-  GuidedConsultingUserAction,
-} from '@/features/guided-consulting/core/protocol';
+} from '@/features/guided-consulting/core/renderer/protocol';
 export {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererRequest,
   createGuidedConsultingRendererSuccessResponse,
-  createGuidedConsultingToolRejectedResponse,
-  createGuidedConsultingToolRequest,
-  createGuidedConsultingToolSuccessResponse,
   GUIDED_CONSULTING_RENDERER_PROTOCOL,
-  GUIDED_CONSULTING_TOOLS_PROTOCOL,
   parseGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
-  parseGuidedConsultingToolRequest,
-  parseGuidedConsultingToolResponse,
-} from '@/features/guided-consulting/core/protocol';
-export type {
-  GuidedConsultingRenderer,
-  GuidedConsultingRendererEntry,
-  GuidedConsultingRenderHandler,
-} from '@/features/guided-consulting/core/renderer';
-export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
+} from '@/features/guided-consulting/core/renderer/protocol';
 export type {
   GuidedConsultingToolContract,
   GuidedConsultingToolEntry,
