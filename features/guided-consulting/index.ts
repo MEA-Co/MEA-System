@@ -14,15 +14,26 @@ export type {
   GuidedConsultingRendererSuccessResponse,
   GuidedConsultingRenderTarget,
   GuidedConsultingStaticRenderTarget,
+  GuidedConsultingToolError,
+  GuidedConsultingToolRejectedResponse,
+  GuidedConsultingToolRequest,
+  GuidedConsultingToolResponse,
+  GuidedConsultingToolSuccessResponse,
   GuidedConsultingUserAction,
 } from '@/features/guided-consulting/core/protocol';
 export {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererRequest,
   createGuidedConsultingRendererSuccessResponse,
+  createGuidedConsultingToolRejectedResponse,
+  createGuidedConsultingToolRequest,
+  createGuidedConsultingToolSuccessResponse,
   GUIDED_CONSULTING_RENDERER_PROTOCOL,
+  GUIDED_CONSULTING_TOOLS_PROTOCOL,
   parseGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
+  parseGuidedConsultingToolRequest,
+  parseGuidedConsultingToolResponse,
 } from '@/features/guided-consulting/core/protocol';
 export type {
   GuidedConsultingRenderer,
@@ -32,8 +43,10 @@ export type {
 export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 export type {
   GuidedConsultingToolContract,
+  GuidedConsultingToolEntry,
   GuidedConsultingTools,
   GuidedConsultingToolSchema,
+  GuidedConsultingToolsRuntime,
 } from '@/features/guided-consulting/core/tools';
 export { createGuidedConsultingTools } from '@/features/guided-consulting/core/tools';
 export type {
@@ -54,7 +67,9 @@ export type {
   GuidedConsultingStep,
   GuidedConsultingStepResult,
   GuidedConsultingStepTool,
+  GuidedConsultingStepToolInputParams,
+  GuidedConsultingStepToolResultParams,
   GuidedConsultingToolCall,
   GuidedConsultingToolCallKind,
-  GuidedConsultingToolParams,
+  GuidedConsultingToolId,
 } from '@/features/guided-consulting/core/types';

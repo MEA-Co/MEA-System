@@ -12,13 +12,14 @@ import {
   createGuidedConsultingRendererSuccessResponse,
   parseGuidedConsultingRendererRequest,
 } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
 const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
 export function useGuidedConsultingAgent<
   Context extends object,
-  Tools extends object,
+  Tools extends GuidedConsultingToolsRuntime,
 >(
   definition: GuidedConsultingDefinition<Context, Tools>,
   tools: Tools,

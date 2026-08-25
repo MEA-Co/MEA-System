@@ -25,6 +25,20 @@ function validateNumbers(value: string) {
   return parseTenNumbers(value).join(', ');
 }
 
+function getSortedNumbers(output: unknown) {
+  if (
+    typeof output !== 'object' ||
+    output === null ||
+    !('sorted' in output) ||
+    !Array.isArray(output.sorted) ||
+    output.sorted.some((number) => typeof number !== 'number')
+  ) {
+    throw new Error('머지 소트 결과 형식이 올바르지 않습니다.');
+  }
+
+  return output.sorted as Array<number>;
+}
+
 export const mergeSortConsulting = defineGuidedConsulting<
   MergeSortContext,
   MergeSortTools
@@ -54,19 +68,18 @@ export const mergeSortConsulting = defineGuidedConsulting<
       },
       validate: validateNumbers,
       tool: {
-        name: 'numbers.merge-sort',
-        execute: async ({ value, tools, signal }) => {
+        id: 'numbers.merge-sort',
+        createInput: ({ value }) => ({
+          numbers: parseTenNumbers(value),
+          delayMs: 1_400,
+        }),
+        resolve: ({ value, output }) => {
           const numbers = parseTenNumbers(value);
-          const { sorted } = await tools.execute(
-            'numbers.merge-sort',
-            { numbers, delayMs: 1_400 },
-            { signal },
-          );
 
           return {
             context: {
               firstInput: numbers,
-              firstSorted: sorted,
+              firstSorted: getSortedNumbers(output),
             },
           };
         },
@@ -113,19 +126,18 @@ export const mergeSortConsulting = defineGuidedConsulting<
         },
       }),
       tool: {
-        name: 'numbers.merge-sort',
-        execute: async ({ value, tools, signal }) => {
+        id: 'numbers.merge-sort',
+        createInput: ({ value }) => ({
+          numbers: parseTenNumbers(value),
+          delayMs: 2_400,
+        }),
+        resolve: ({ value, output }) => {
           const numbers = parseTenNumbers(value);
-          const { sorted } = await tools.execute(
-            'numbers.merge-sort',
-            { numbers, delayMs: 2_400 },
-            { signal },
-          );
 
           return {
             context: {
               secondInput: numbers,
-              secondSorted: sorted,
+              secondSorted: getSortedNumbers(output),
             },
           };
         },

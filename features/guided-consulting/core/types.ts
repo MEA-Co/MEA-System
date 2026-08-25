@@ -29,26 +29,34 @@ export type GuidedConsultingStepResult<Context extends object> = {
   next?: string | null;
 };
 
-export type GuidedConsultingToolParams<
-  Context extends object,
-  Tools extends object,
-> = {
+export type GuidedConsultingStepToolInputParams<Context extends object> = {
   value: string;
   context: Readonly<Context>;
-  tools: Tools;
-  signal: AbortSignal;
 };
+
+export type GuidedConsultingStepToolResultParams<Context extends object> = {
+  value: string;
+  context: Readonly<Context>;
+  output: unknown;
+};
+
+export type GuidedConsultingToolId<Tools extends object> = Tools extends {
+  ids: ReadonlyArray<infer Id>;
+}
+  ? Extract<Id, string>
+  : string;
 
 export type GuidedConsultingStepTool<
   Context extends object,
   Tools extends object,
 > = {
-  name: string;
-  execute: (
-    params: GuidedConsultingToolParams<Context, Tools>,
-  ) =>
-    | GuidedConsultingStepResult<Context>
-    | Promise<GuidedConsultingStepResult<Context>>;
+  id: GuidedConsultingToolId<Tools>;
+  createInput: (
+    params: GuidedConsultingStepToolInputParams<Context>,
+  ) => unknown;
+  resolve: (
+    params: GuidedConsultingStepToolResultParams<Context>,
+  ) => GuidedConsultingStepResult<Context>;
 };
 
 export type GuidedConsultingStep<
@@ -132,6 +140,7 @@ export type GuidedConsultingToolCall = {
   toolName: string;
   stepId: string | null;
   input: unknown;
+  metadata?: unknown;
 };
 
 export type GuidedConsultingAgentLogKind =

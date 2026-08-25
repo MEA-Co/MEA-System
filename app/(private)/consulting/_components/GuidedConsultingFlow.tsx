@@ -10,9 +10,13 @@ import { useGuidedConsultingAgent } from '@/app/(private)/consulting/_hooks/useG
 import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
 import type { GuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
+import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
-type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
+type GuidedConsultingFlowProps<
+  Context extends object,
+  Tools extends GuidedConsultingToolsRuntime,
+> = {
   definition: GuidedConsultingDefinition<Context, Tools>;
   tools: Tools;
   renderer: GuidedConsultingRenderer<
@@ -24,7 +28,7 @@ type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
 
 export function GuidedConsultingFlow<
   Context extends object,
-  Tools extends object,
+  Tools extends GuidedConsultingToolsRuntime,
 >({
   definition,
   tools,

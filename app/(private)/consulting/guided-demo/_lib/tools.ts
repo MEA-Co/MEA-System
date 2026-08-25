@@ -2,6 +2,27 @@ import { createGuidedConsultingTools } from '@/features/guided-consulting/core/t
 
 import type { MergeSortToolSchema } from './types';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isMergeSortInput(value: unknown) {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.numbers) &&
+    value.numbers.every((number) => typeof number === 'number') &&
+    typeof value.delayMs === 'number'
+  );
+}
+
+function isMergeSortOutput(value: unknown) {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.sorted) &&
+    value.sorted.every((number) => typeof number === 'number')
+  );
+}
+
 function wait(duration: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, duration);
@@ -45,8 +66,12 @@ function mergeSort(numbers: Array<number>): Array<number> {
 }
 
 export const mergeSortTools = createGuidedConsultingTools<MergeSortToolSchema>({
-  'numbers.merge-sort': async ({ numbers, delayMs }, { signal }) => {
-    await wait(delayMs, signal);
-    return { sorted: mergeSort(numbers) };
+  'numbers.merge-sort': {
+    validateInput: isMergeSortInput,
+    validateOutput: isMergeSortOutput,
+    execute: async ({ numbers, delayMs }, { signal }) => {
+      await wait(delayMs, signal);
+      return { sorted: mergeSort(numbers) };
+    },
   },
 });

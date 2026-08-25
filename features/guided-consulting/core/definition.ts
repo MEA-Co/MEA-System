@@ -26,7 +26,7 @@ export function defineGuidedConsulting<
     }
     stepIds.add(step.id);
 
-    if (!step.tool.name.trim()) {
+    if (!step.tool.id.trim()) {
       throw new Error(`Step Tool 이름이 필요합니다: ${step.id}`);
     }
   }

@@ -1,8 +1,12 @@
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
+  createGuidedConsultingToolRequest,
   parseGuidedConsultingRendererResponse,
+  parseGuidedConsultingToolRequest,
+  parseGuidedConsultingToolResponse,
 } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type {
   GuidedConsultingAgent,
   GuidedConsultingAgentLog,
@@ -36,8 +40,7 @@ type ValidationCallInput = {
   rawValue: string;
 };
 
-type StepCallInput<Context extends object> = {
-  stepId: string;
+type StepCallMetadata<Context extends object> = {
   value: string;
   context: Context;
 };
@@ -63,7 +66,7 @@ function resolveExplanations<Context extends object, Tools extends object>(
 
 export function createGuidedConsultingAgent<
   Context extends object,
-  Tools extends object,
+  Tools extends GuidedConsultingToolsRuntime,
 >(
   definition: GuidedConsultingDefinition<Context, Tools>,
   tools: Tools,
@@ -144,6 +147,7 @@ export function createGuidedConsultingAgent<
     toolName: string,
     stepId: string | null,
     input: unknown,
+    metadata?: unknown,
   ) => {
     const call: GuidedConsultingToolCall = {
       id: `call-${++callId}`,
@@ -151,6 +155,7 @@ export function createGuidedConsultingAgent<
       toolName,
       stepId,
       input,
+      metadata,
     };
     state.pendingToolCalls.push(call);
     appendLog('tool.call', `${toolName} 호출`, {
@@ -481,17 +486,8 @@ export function createGuidedConsultingAgent<
       return { value };
     }
 
-    const input = call.input as StepCallInput<Context>;
-    const step = definition.steps.find(
-      (candidate) => candidate.id === input.stepId,
-    );
-    if (!step) throw new Error(`Step을 찾을 수 없습니다: ${input.stepId}`);
-    return step.tool.execute({
-      value: input.value,
-      context: input.context,
-      tools,
-      signal,
-    });
+    const request = parseGuidedConsultingToolRequest(call.input);
+    return tools.execute(request, { signal });
   };
 
   const resolveToolCall = (resolvedCallId: string, output: unknown) => {
@@ -501,6 +497,44 @@ export function createGuidedConsultingAgent<
     );
     if (callIndex < 0) return;
     const [call] = state.pendingToolCalls.splice(callIndex, 1);
+
+    let toolResponse = null;
+    if (call.kind === 'step') {
+      try {
+        toolResponse = parseGuidedConsultingToolResponse(output);
+      } catch (cause) {
+        const metadata = call.metadata as StepCallMetadata<Context> | undefined;
+        const error = toError(cause, '올바르지 않은 Tool 응답입니다.');
+        appendLog('tool.error', error.message, {
+          stepId: call.stepId,
+          callId: call.id,
+          toolName: call.toolName,
+          data: output,
+        });
+        presentInput('error', error.message, metadata?.value);
+        publish();
+        return;
+      }
+    }
+
+    if (toolResponse?.status === 'rejected') {
+      const metadata = call.metadata as StepCallMetadata<Context> | undefined;
+      const error = new Error(toolResponse.error.message);
+      state.error = error;
+      appendLog('tool.error', `${call.toolName} 실행에 실패했습니다.`, {
+        stepId: call.stepId,
+        callId: call.id,
+        toolName: call.toolName,
+        data: toolResponse,
+      });
+      appendLog(
+        'agent.message',
+        '도구 실행 오류를 표시하고 다시 입력받습니다.',
+      );
+      presentInput('error', error.message, metadata?.value);
+      publish();
+      return;
+    }
 
     appendLog('tool.result', `${call.toolName} 결과를 받았습니다.`, {
       stepId: call.stepId,
@@ -529,15 +563,36 @@ export function createGuidedConsultingAgent<
       state.answers = { ...state.answers, [step.id]: value };
       appendLog(
         'agent.message',
-        `검증된 입력을 ${step.tool.name} 도구에 전달합니다.`,
+        `검증된 입력을 ${step.tool.id} 도구에 전달합니다.`,
         { data: { value, context: state.context } },
       );
+
+      let request;
+      try {
+        request = createGuidedConsultingToolRequest(
+          step.tool.id,
+          step.tool.createInput({ value, context: state.context }),
+        );
+      } catch (cause) {
+        const error = toError(
+          cause,
+          `${step.tool.id} 입력 생성에 실패했습니다.`,
+        );
+        appendLog('tool.error', `${step.tool.id} 요청 생성에 실패했습니다.`, {
+          stepId: step.id,
+          toolName: step.tool.id,
+          data: { message: error.message },
+        });
+        presentInput('error', error.message, value);
+        publish();
+        return;
+      }
+
       presentInput('running', null, value);
-      issueToolCall('step', step.tool.name, step.id, {
-        stepId: step.id,
+      issueToolCall('step', step.tool.id, step.id, request, {
         value,
         context: state.context,
-      } satisfies StepCallInput<Context>);
+      } satisfies StepCallMetadata<Context>);
       publish();
       return;
     }
@@ -546,8 +601,41 @@ export function createGuidedConsultingAgent<
       (candidate) => candidate.id === call.stepId,
     );
     if (!step) return;
-    const result = output as GuidedConsultingStepResult<Context>;
-    const contextBeforeAction = state.context;
+    const metadata = call.metadata as StepCallMetadata<Context> | undefined;
+    if (!metadata || !toolResponse || toolResponse.status !== 'completed') {
+      const error = new Error('Tool Result를 Step에 반영할 정보가 없습니다.');
+      appendLog('tool.error', error.message, {
+        stepId: call.stepId,
+        callId: call.id,
+        toolName: call.toolName,
+        data: output,
+      });
+      presentInput('error', error.message, metadata?.value);
+      publish();
+      return;
+    }
+
+    let result: GuidedConsultingStepResult<Context>;
+    try {
+      result = step.tool.resolve({
+        value: metadata.value,
+        context: metadata.context,
+        output: toolResponse.output,
+      });
+    } catch (cause) {
+      const error = toError(cause, 'Tool Result 처리에 실패했습니다.');
+      appendLog('tool.error', error.message, {
+        stepId: call.stepId,
+        callId: call.id,
+        toolName: call.toolName,
+        data: output,
+      });
+      presentInput('error', error.message, metadata.value);
+      publish();
+      return;
+    }
+
+    const contextBeforeAction = metadata.context;
     const nextContext = result.context
       ? { ...contextBeforeAction, ...result.context }
       : contextBeforeAction;
@@ -573,11 +661,7 @@ export function createGuidedConsultingAgent<
         'agent.message',
         '다음 단계로 이동하지 못해 현재 입력 화면을 다시 표시합니다.',
       );
-      presentInput(
-        'error',
-        error.message,
-        (call.input as StepCallInput<Context>).value,
-      );
+      presentInput('error', error.message, metadata.value);
       publish();
       return;
     }
@@ -639,7 +723,7 @@ export function createGuidedConsultingAgent<
     const value =
       call.kind === 'validation'
         ? (call.input as ValidationCallInput).rawValue
-        : (call.input as StepCallInput<Context>).value;
+        : (call.metadata as StepCallMetadata<Context> | undefined)?.value;
     appendLog(
       'agent.message',
       call.kind === 'validation'
