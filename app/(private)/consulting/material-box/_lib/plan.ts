@@ -17,18 +17,6 @@ export const materialBoxPlan = defineGuidedConsultingPlan<
       id: 'intro',
       type: 'screen',
       screen: { screenId: 'material-box.intro', mode: 'static' },
-      on: { 'user.next-explanation': 'identity' },
-    },
-    identity: {
-      id: 'identity',
-      type: 'screen',
-      screen: { screenId: 'material-box.identity', mode: 'static' },
-      on: { 'user.next-explanation': 'self-definition' },
-    },
-    'self-definition': {
-      id: 'self-definition',
-      type: 'screen',
-      screen: { screenId: 'material-box.self-definition', mode: 'static' },
       on: { 'user.next-explanation': 'overview-intro' },
     },
     'overview-intro': {
