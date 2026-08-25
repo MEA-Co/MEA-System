@@ -1,13 +1,12 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 import { ConsultingDebugConsole } from '@/app/(private)/consulting/_components/ConsultingDebugConsole';
 import { ConsultingFrame } from '@/app/(private)/consulting/_components/ConsultingFrame';
-import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { useGuidedConsultingAgent } from '@/app/(private)/consulting/_hooks/useGuidedConsultingAgent';
-import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
 import type { GuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
@@ -20,7 +19,7 @@ type GuidedConsultingFlowProps<
   definition: GuidedConsultingDefinition<Context, Tools>;
   tools: Tools;
   renderer: GuidedConsultingRenderer<
-    GuidedConsultingMainRenderEnvironment,
+    GuidedConsultingScreenRenderEnvironment,
     ReactNode
   >;
   debug?: boolean;
@@ -61,9 +60,9 @@ export function GuidedConsultingFlow<
 
   if (!screen) return debugConsole;
 
-  const rendererError = renderer.validate(screen.main);
-  const main = !rendererError ? (
-    renderer.render(screen.main, {
+  const rendererError = renderer.validate(screen.renderTarget);
+  const renderedScreen = !rendererError ? (
+    renderer.render(screen.renderTarget, {
       draftValue,
       onDraftChange: (value) =>
         setDraft({
@@ -81,72 +80,22 @@ export function GuidedConsultingFlow<
     </section>
   );
 
-  if (screen.kind === 'explanation') {
-    const isFirstExplanation = screen.explanationIndex === 0;
-    const isLastExplanation =
-      screen.explanationIndex === screen.explanationCount - 1;
+  const running =
+    screen.kind === 'input' &&
+    (screen.status === 'validating' || screen.status === 'running');
 
-    return (
-      <div className="space-y-6">
-        <ConsultingFrame
-          title={screen.title}
-          currentStep={screen.stepIndex + 1}
-          stepCount={screen.stepCount}
-          canGoBack={screen.canGoBack}
-          onBack={() => agent.send({ type: 'user.back' })}
-          prompter={
-            <ConsultingPrompter
-              explanation={screen.prompter}
-              pageLabel={`${screen.prompter.eyebrow ?? '설명'} · ${screen.explanationIndex + 1}/${screen.explanationCount}`}
-            >
-              {!isFirstExplanation && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    agent.send({ type: 'user.previous-explanation' })
-                  }
-                >
-                  <ChevronLeft aria-hidden="true" />
-                  이전 설명
-                </Button>
-              )}
-              <Button
-                type="button"
-                onClick={() =>
-                  agent.send({
-                    type: isLastExplanation
-                      ? 'user.start-input'
-                      : 'user.next-explanation',
-                  })
-                }
-              >
-                {isLastExplanation ? '입력하기' : '다음 설명'}
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </ConsultingPrompter>
-          }
-        >
-          {main}
-        </ConsultingFrame>
-        {debugConsole}
-      </div>
-    );
-  }
-
-  if (screen.kind === 'input') {
-    const running =
-      screen.status === 'validating' || screen.status === 'running';
-
-    return (
-      <div className="space-y-6">
-        <ConsultingFrame
-          title={screen.title}
-          currentStep={screen.stepIndex + 1}
-          stepCount={screen.stepCount}
-          canGoBack={screen.canGoBack}
-          onBack={() => agent.send({ type: 'user.back' })}
-          topRightAction={
+  return (
+    <div className="space-y-6">
+      <ConsultingFrame
+        title={screen.title}
+        currentStep={
+          screen.kind === 'complete' ? screen.stepCount : screen.stepIndex + 1
+        }
+        stepCount={screen.stepCount}
+        canGoBack={screen.canGoBack}
+        onBack={() => agent.send({ type: 'user.back' })}
+        topRightAction={
+          screen.kind === 'input' ? (
             <Button
               type="button"
               variant="outline"
@@ -156,38 +105,10 @@ export function GuidedConsultingFlow<
               <Eye aria-hidden="true" />
               설명 다시 보기
             </Button>
-          }
-          prompter={
-            <ConsultingPrompter
-              pageLabel={screen.prompter.eyebrow}
-              explanation={screen.prompter}
-            />
-          }
-        >
-          {main}
-        </ConsultingFrame>
-        {debugConsole}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <ConsultingFrame
-        title={screen.title}
-        currentStep={screen.stepCount}
-        stepCount={screen.stepCount}
-        canGoBack={screen.canGoBack}
-        onBack={() => agent.send({ type: 'user.back' })}
-        prompter={
-          <ConsultingPrompter
-            complete
-            pageLabel={screen.prompter.eyebrow}
-            explanation={screen.prompter}
-          />
+          ) : undefined
         }
       >
-        {main}
+        {renderedScreen}
       </ConsultingFrame>
       {debugConsole}
     </div>

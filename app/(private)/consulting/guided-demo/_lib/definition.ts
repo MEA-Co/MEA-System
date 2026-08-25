@@ -65,24 +65,26 @@ export const mergeSortConsulting = defineGuidedConsulting<
     {
       id: 'first-sort',
       explain: {
-        eyebrow: 'STEP 1 · WAIT',
-        title: '정렬할 숫자 10개를 입력해 주세요',
-        description:
-          '첫 번째 실행은 머지 소트 Tool Result를 기다린 다음 결과 화면을 표시합니다.',
-        tips: ['쉼표 또는 공백으로 숫자를 구분할 수 있어요.'],
+        screenId: 'first-sort.explanation',
+        mode: 'static',
       },
       input: {
         label: '첫 번째 숫자 10개',
         placeholder: '예: 42, 7, 19, 3, 88, 14, 1, 55, 26, 9',
         maxLength: 160,
       },
-      inputScreen: ({ status }) => ({
-        screenId:
-          status === 'ready' || status === 'error'
-            ? 'first-sort.input'
-            : 'first-sort.waiting',
-        mode: 'static',
-      }),
+      inputScreen: ({ status, error }) =>
+        status === 'error'
+          ? {
+              screenId: 'first-sort.input-error',
+              mode: 'dynamic',
+              data: { error: error ?? '입력 내용을 다시 확인해 주세요.' },
+            }
+          : {
+              screenId:
+                status === 'ready' ? 'first-sort.input' : 'first-sort.waiting',
+              mode: 'static',
+            },
       validation: tenNumbersValidation,
       tool: {
         id: 'numbers.merge-sort',
@@ -106,26 +108,17 @@ export const mergeSortConsulting = defineGuidedConsulting<
       id: 'second-sort',
       explain: ({ firstInput, firstSorted }) => [
         {
-          eyebrow: 'RESULT 1',
-          title: '첫 번째 머지 소트가 끝났어요',
-          description:
-            'Agent는 Tool Result가 도착할 때까지 기다린 후 이 결과 화면을 요청했습니다.',
-          main: {
-            screenId: 'merge-sort.result',
-            mode: 'dynamic',
-            data: {
-              label: '첫 번째 정렬 결과',
-              input: firstInput,
-              sorted: firstSorted,
-            },
+          screenId: 'merge-sort.result',
+          mode: 'dynamic',
+          data: {
+            label: '첫 번째 정렬 결과',
+            input: firstInput,
+            sorted: firstSorted,
           },
         },
         {
-          eyebrow: 'STEP 2 · UPDATE',
-          title: '다시 숫자 10개를 입력해 주세요',
-          description:
-            '이번에는 대기 화면을 먼저 표시하고, 머지 소트 결과가 도착하면 같은 화면 영역을 업데이트합니다.',
-          tips: ['첫 번째와 다른 순서의 숫자를 입력해보세요.'],
+          screenId: 'second-sort.explanation',
+          mode: 'static',
         },
       ],
       input: {
@@ -161,4 +154,9 @@ export const mergeSortConsulting = defineGuidedConsulting<
       },
     },
   ],
+  complete: (context) => ({
+    screenId: 'result.default',
+    mode: 'dynamic',
+    data: { context },
+  }),
 });

@@ -1,7 +1,7 @@
 import { BookOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import type { GuidedConsultingStaticRenderTarget } from '@/features/guided-consulting/core/protocol';
 import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
 
@@ -29,6 +29,6 @@ export const defaultTutorialScreen = {
   mode: 'static',
   render: (request) => <DefaultTutorialScreen request={request} />,
 } satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingMainRenderEnvironment,
+  GuidedConsultingScreenRenderEnvironment,
   ReactNode
 >;

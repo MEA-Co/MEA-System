@@ -1,12 +1,15 @@
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
+import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
+import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import {
   isMergeSortScreenData,
   type MergeSortScreenData,
 } from '@/app/(private)/consulting/guided-demo/_screens/data';
 import { NumberList } from '@/app/(private)/consulting/guided-demo/_screens/NumberList';
+import { Button } from '@/components/ui/button';
 import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
 
 export function MergeSortResultScreen({ data }: { data: MergeSortScreenData }) {
@@ -36,10 +39,28 @@ export function MergeSortResultScreen({ data }: { data: MergeSortScreenData }) {
 export const mergeSortResultScreen = {
   mode: 'dynamic',
   validateData: isMergeSortScreenData,
-  render: (request) => (
-    <MergeSortResultScreen data={request.data as MergeSortScreenData} />
+  render: (request, environment) => (
+    <ConsultingScreenView>
+      <MergeSortResultScreen data={request.data as MergeSortScreenData} />
+      <ConsultingPrompter
+        pageLabel="RESULT 1 · 1/2"
+        message={{
+          title: '첫 번째 머지 소트가 끝났어요',
+          description:
+            'Agent는 Tool 결과가 도착할 때까지 기다린 후 이 화면을 요청했습니다.',
+        }}
+      >
+        <Button
+          type="button"
+          onClick={() => environment.send({ type: 'user.next-explanation' })}
+        >
+          다음 설명
+          <ChevronRight aria-hidden="true" />
+        </Button>
+      </ConsultingPrompter>
+    </ConsultingScreenView>
   ),
 } satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingMainRenderEnvironment,
+  GuidedConsultingScreenRenderEnvironment,
   ReactNode
 >;

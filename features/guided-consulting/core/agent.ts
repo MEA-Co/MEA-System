@@ -12,7 +12,6 @@ import type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
   GuidedConsultingDefinition,
-  GuidedConsultingExplanation,
   GuidedConsultingHistoryFrame,
   GuidedConsultingInputStatus,
   GuidedConsultingPhase,
@@ -53,7 +52,7 @@ function resolveExplanations<Context extends object, Tools extends object>(
   definition: GuidedConsultingDefinition<Context, Tools>,
   stepIndex: number,
   context: Context,
-): ReadonlyArray<GuidedConsultingExplanation> {
+): ReadonlyArray<GuidedConsultingScreen<Context>['renderTarget']> {
   const step = definition.steps[stepIndex];
   if (!step) return [];
 
@@ -61,7 +60,7 @@ function resolveExplanations<Context extends object, Tools extends object>(
     typeof step.explain === 'function' ? step.explain(context) : step.explain;
   return Array.isArray(explanation)
     ? explanation
-    : [explanation as GuidedConsultingExplanation];
+    : [explanation as GuidedConsultingScreen<Context>['renderTarget']];
 }
 
 export function createGuidedConsultingAgent<
@@ -115,16 +114,14 @@ export function createGuidedConsultingAgent<
   };
 
   const createScreenBase = (
-    main: GuidedConsultingScreen<Context>['main'],
-    prompter: GuidedConsultingExplanation,
+    renderTarget: GuidedConsultingScreen<Context>['renderTarget'],
   ) => ({
     id: `screen-${++screenId}`,
     title: definition.title,
     stepIndex: state.stepIndex,
     stepCount: definition.steps.length,
     canGoBack: state.history.length > 0 && state.phase !== 'running-tools',
-    main,
-    prompter,
+    renderTarget,
   });
 
   const presentScreen = (screen: GuidedConsultingScreen<Context>) => {
@@ -133,7 +130,7 @@ export function createGuidedConsultingAgent<
       'screen',
       'screen.render',
       definition.steps[state.stepIndex]?.id ?? null,
-      createGuidedConsultingRendererRequest(screen.main),
+      createGuidedConsultingRendererRequest(screen.renderTarget),
     );
   };
 
@@ -156,16 +153,9 @@ export function createGuidedConsultingAgent<
     state.error = null;
     setPhase('waiting-for-user');
     presentScreen({
-      ...createScreenBase(
-        explanation.main ?? {
-          screenId: 'tutorial.default',
-          mode: 'static',
-        },
-        explanation,
-      ),
+      ...createScreenBase(explanation),
       kind: 'explanation',
       stepId: step.id,
-      explanation,
       explanationIndex: index,
       explanationCount: explanations.length,
     });
@@ -183,20 +173,6 @@ export function createGuidedConsultingAgent<
 
     state.error = error ? new Error(error) : null;
     setPhase(running ? 'running-tools' : error ? 'error' : 'waiting-for-user');
-    const prompter: GuidedConsultingExplanation = {
-      eyebrow: 'INPUT',
-      title: running
-        ? status === 'validating'
-          ? '입력 내용을 확인하고 있어요'
-          : '입력을 바탕으로 작업하고 있어요'
-        : error
-          ? '입력 내용을 다시 확인해 주세요'
-          : '이제 직접 입력해보세요',
-      description: running
-        ? '작업이 끝나면 중심 에이전트가 다음 화면을 요청합니다.'
-        : (error ??
-          `‘${step.input.label}’을 작성한 뒤 입력 완료를 눌러주세요.`),
-    };
     const pendingMain =
       status === 'running' && step.pending
         ? typeof step.pending === 'function'
@@ -228,7 +204,6 @@ export function createGuidedConsultingAgent<
               error,
             },
           },
-        prompter,
       ),
       kind: 'input',
       stepId: step.id,
@@ -241,18 +216,16 @@ export function createGuidedConsultingAgent<
 
   const presentComplete = () => {
     setPhase('complete');
+    const completeTarget =
+      typeof definition.complete === 'function'
+        ? definition.complete(state.context)
+        : definition.complete;
     presentScreen({
       ...createScreenBase(
-        {
+        completeTarget ?? {
           screenId: 'result.default',
           mode: 'dynamic',
           data: { context: state.context },
-        },
-        {
-          eyebrow: 'COMPLETE',
-          title: '나만의 결과가 완성됐어요',
-          description:
-            '화면에 정리된 결과를 확인해보세요. 수정하려면 이전 단계로 돌아갈 수 있어요.',
         },
       ),
       kind: 'complete',

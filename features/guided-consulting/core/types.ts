@@ -6,17 +6,6 @@ import type {
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';
 
-export type GuidedConsultingExplanation = {
-  eyebrow?: string;
-  title: string;
-  description: string;
-  tips?: ReadonlyArray<string>;
-  main?: GuidedConsultingRenderTarget;
-};
-
-export type GuidedConsultingExplanations =
-  GuidedConsultingExplanation | ReadonlyArray<GuidedConsultingExplanation>;
-
 export type GuidedConsultingInput = {
   label: string;
   placeholder?: string;
@@ -79,8 +68,13 @@ export type GuidedConsultingStep<
 > = {
   id: string;
   explain:
-    | GuidedConsultingExplanations
-    | ((context: Readonly<Context>) => GuidedConsultingExplanations);
+    | GuidedConsultingRenderTarget
+    | ReadonlyArray<GuidedConsultingRenderTarget>
+    | ((
+        context: Readonly<Context>,
+      ) =>
+        | GuidedConsultingRenderTarget
+        | ReadonlyArray<GuidedConsultingRenderTarget>);
   input: GuidedConsultingInput;
   inputScreen?:
     | GuidedConsultingRenderTarget
@@ -108,6 +102,9 @@ export type GuidedConsultingDefinition<
   title: string;
   createInitialContext: () => Context;
   steps: ReadonlyArray<GuidedConsultingStep<Context, Tools>>;
+  complete?:
+    | GuidedConsultingRenderTarget
+    | ((context: Readonly<Context>) => GuidedConsultingRenderTarget);
 };
 
 export type GuidedConsultingHistoryFrame<Context extends object> = {
@@ -122,14 +119,12 @@ type GuidedConsultingScreenBase = {
   stepIndex: number;
   stepCount: number;
   canGoBack: boolean;
-  main: GuidedConsultingRenderTarget;
-  prompter: GuidedConsultingExplanation;
+  renderTarget: GuidedConsultingRenderTarget;
 };
 
 export type GuidedConsultingExplanationScreen = GuidedConsultingScreenBase & {
   kind: 'explanation';
   stepId: string;
-  explanation: GuidedConsultingExplanation;
   explanationIndex: number;
   explanationCount: number;
 };

@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/components/ui/card';
 type ConsultingFrameProps = {
   title: string;
   children: ReactNode;
-  prompter: ReactNode;
   currentStep?: number;
   stepCount?: number;
   canGoBack?: boolean;
@@ -20,7 +19,6 @@ type ConsultingFrameProps = {
 export function ConsultingFrame({
   title,
   children,
-  prompter,
   currentStep,
   stepCount,
   canGoBack = false,
@@ -99,13 +97,9 @@ export function ConsultingFrame({
         </div>
       )}
 
-      <CardContent className="relative z-0 min-h-153 p-5 pt-16 pb-72 md:p-8 md:pt-20 md:pb-60">
+      <CardContent className="relative z-0 min-h-153 p-5 pt-16 md:p-8 md:pt-20">
         {children}
       </CardContent>
-
-      <div className="absolute inset-x-3 bottom-3 z-20 md:inset-x-5 md:bottom-5">
-        {prompter}
-      </div>
     </Card>
   );
 }

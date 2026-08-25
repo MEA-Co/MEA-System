@@ -131,7 +131,7 @@ export function ConsultingDebugConsole<Context extends object>({
             <Badge variant="outline" className="border-zinc-700 text-zinc-300">
               {definitionId}
             </Badge>
-            <span>{screen?.id ?? '화면 없음'}</span>
+            <span>{screen?.renderTarget.screenId ?? '화면 없음'}</span>
             <span>·</span>
             <span>{screen?.kind ?? '대기'}</span>
             <span>·</span>

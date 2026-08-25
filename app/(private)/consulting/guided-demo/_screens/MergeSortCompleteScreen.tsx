@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { GuidedConsultingResultCard } from '@/app/(private)/consulting/_components/GuidedConsultingResultCard';
-import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import type { MergeSortContext } from '@/app/(private)/consulting/guided-demo/_lib/types';
 import {
   type FinalResultsScreenData,
@@ -48,6 +48,6 @@ export const mergeSortCompleteScreen = {
     );
   },
 } satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingMainRenderEnvironment,
+  GuidedConsultingScreenRenderEnvironment,
   ReactNode
 >;

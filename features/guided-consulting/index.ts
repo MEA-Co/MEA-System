@@ -66,8 +66,6 @@ export type {
   GuidedConsultingAgentSnapshot,
   GuidedConsultingCompleteScreen,
   GuidedConsultingDefinition,
-  GuidedConsultingExplanation,
-  GuidedConsultingExplanations,
   GuidedConsultingExplanationScreen,
   GuidedConsultingInput,
   GuidedConsultingInputScreen,

@@ -2,17 +2,23 @@ import { CheckCircle2, Lightbulb } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
-import type { GuidedConsultingExplanation } from '@/features/guided-consulting/core/types';
+
+export type ConsultingPrompterMessage = {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  tips?: ReadonlyArray<string>;
+};
 
 type ConsultingPrompterProps = {
-  explanation: GuidedConsultingExplanation;
+  message: ConsultingPrompterMessage;
   pageLabel?: string;
   complete?: boolean;
   children?: ReactNode;
 };
 
 export function ConsultingPrompter({
-  explanation,
+  message,
   pageLabel,
   complete = false,
   children,
@@ -28,7 +34,7 @@ export function ConsultingPrompter({
             </p>
           </div>
           <p className="text-xs font-bold tracking-[0.12em] text-primary">
-            {pageLabel ?? explanation.eyebrow}
+            {pageLabel ?? message.eyebrow}
           </p>
         </div>
 
@@ -41,14 +47,14 @@ export function ConsultingPrompter({
                   aria-hidden="true"
                 />
               )}
-              {explanation.title}
+              {message.title}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-[0.95rem]">
-              {explanation.description}
+              {message.description}
             </p>
           </div>
 
-          {explanation.tips && explanation.tips.length > 0 && (
+          {message.tips && message.tips.length > 0 && (
             <div className="rounded-lg bg-muted/55 px-3.5 py-3">
               <p className="flex items-center gap-2 text-xs font-semibold">
                 <Lightbulb
@@ -58,7 +64,7 @@ export function ConsultingPrompter({
                 입력 가이드
               </p>
               <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
-                {explanation.tips.map((tip) => (
+                {message.tips.map((tip) => (
                   <li key={tip}>· {tip}</li>
                 ))}
               </ul>
