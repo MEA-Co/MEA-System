@@ -1,7 +1,7 @@
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
+import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
 
-export type GuidedConsultingScreenRenderEnvironment = {
+export type ConsultingScreenRenderEnvironment = {
   draftValue: string;
   onDraftChange: (value: string) => void;
-  send: (input: GuidedConsultingUserAction) => void;
+  send: (input: ConsultingUserAction) => void;
 };

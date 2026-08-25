@@ -11,7 +11,7 @@ const consultingItems = [
   },
   {
     title: '비동기 머지 소트 컨설팅 데모',
-    href: '/consulting/guided-demo',
+    href: '/consulting/demo',
   },
 ] as const;
 

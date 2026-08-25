@@ -4,12 +4,13 @@ import { Eye, Lightbulb } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
+import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
   type ConsultingPrompterMessage,
 } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import {
   isMaterialBoxProgressScreenData,
   type MaterialBoxProgressScreenData,
@@ -21,8 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
-import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 export type MaterialBoxReflectionId =
   'career-identity' | 'core-value' | 'field-strength' | 'personal-strength';
@@ -242,7 +242,7 @@ function MaterialBoxReflectionScreen({
 }: {
   reflectionId: MaterialBoxReflectionId;
   data: MaterialBoxProgressScreenData;
-  environment: GuidedConsultingScreenRenderEnvironment;
+  environment: ConsultingScreenRenderEnvironment;
 }) {
   const content = reflectionContent[reflectionId];
   const [isInputPage, setIsInputPage] = useState(false);
@@ -357,8 +357,8 @@ export function createMaterialBoxReflectionScreen(
         environment={environment}
       />
     ),
-  } satisfies GuidedConsultingRendererEntry<
-    GuidedConsultingScreenRenderEnvironment,
+  } satisfies ConsultingRendererEntry<
+    ConsultingScreenRenderEnvironment,
     ReactNode
   >;
 }

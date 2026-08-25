@@ -14,29 +14,29 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
-import type { GuidedConsultingAgentSnapshot } from '@/features/guided-consulting/core/agent/types';
-import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
-import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
+import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
+import type { ConsultingAgentSnapshot } from '@/features/consulting/core/agent/types';
+import type { ConsultingLog } from '@/features/consulting/core/logger';
+import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
 import { cn } from '@/lib/utils';
 
 type ConsultingDebugConsoleProps<
   Context extends object,
-  Tools extends GuidedConsultingToolsRuntime,
+  Tools extends ConsultingToolsRuntime,
 > = {
-  snapshot: GuidedConsultingAgentSnapshot<Context, Tools>;
-  memory: GuidedConsultingMemory<Context>;
-  logs: ReadonlyArray<GuidedConsultingLog>;
+  snapshot: ConsultingAgentSnapshot<Context, Tools>;
+  memory: ConsultingMemory<Context>;
+  logs: ReadonlyArray<ConsultingLog>;
 };
 
-const logKindLabels: Record<GuidedConsultingLog['kind'], string> = {
+const logKindLabels: Record<ConsultingLog['kind'], string> = {
   'agent.input': 'INPUT',
   'module.request': 'REQUEST',
   'module.response': 'RESPONSE',
   'module.error': 'ERROR',
 };
 
-const unreadLogClassNames: Record<GuidedConsultingLog['kind'], string> = {
+const unreadLogClassNames: Record<ConsultingLog['kind'], string> = {
   'agent.input': 'border-sky-400/50 bg-sky-400/10 ring-sky-400/15',
   'module.request': 'border-amber-400/50 bg-amber-400/10 ring-amber-400/15',
   'module.response':
@@ -45,7 +45,7 @@ const unreadLogClassNames: Record<GuidedConsultingLog['kind'], string> = {
 };
 
 const phaseLabels: Record<
-  GuidedConsultingAgentSnapshot<object, GuidedConsultingToolsRuntime>['phase'],
+  ConsultingAgentSnapshot<object, ConsultingToolsRuntime>['phase'],
   string
 > = {
   'waiting-for-user': 'WAITING FOR USER',
@@ -54,7 +54,7 @@ const phaseLabels: Record<
   error: 'ERROR',
 };
 
-function getLogEvent(log: GuidedConsultingLog) {
+function getLogEvent(log: ConsultingLog) {
   if (log.moduleId) return log.moduleId;
   const type = (log.data as { type?: unknown } | undefined)?.type;
   return typeof type === 'string' ? type : log.kind;
@@ -97,7 +97,7 @@ function DataBlock({ value }: { value: unknown }) {
 
 export function ConsultingDebugConsole<
   Context extends object,
-  Tools extends GuidedConsultingToolsRuntime,
+  Tools extends ConsultingToolsRuntime,
 >({ snapshot, memory, logs }: ConsultingDebugConsoleProps<Context, Tools>) {
   const [isOpen, setIsOpen] = useState(true);
   const [readLogIds, setReadLogIds] = useState<ReadonlySet<number>>(

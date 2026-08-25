@@ -3,8 +3,8 @@
 import { motion, useReducedMotion } from 'motion/react';
 import type { FormEvent } from 'react';
 
+import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import { Input } from '@/components/ui/input';
-import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 
 export function KeywordInput({
   majors,

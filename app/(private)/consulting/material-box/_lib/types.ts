@@ -1,4 +1,4 @@
-import type { GuidedConsultingTools } from '@/features/guided-consulting/core/tools';
+import type { ConsultingTools } from '@/features/consulting/core/tools';
 
 export type MaterialBoxContext = Record<never, never>;
 
@@ -61,4 +61,4 @@ export function isMaterialBoxProgressScreenData(
 
 export type MaterialBoxToolSchema = Record<never, never>;
 
-export type MaterialBoxTools = GuidedConsultingTools<MaterialBoxToolSchema>;
+export type MaterialBoxTools = ConsultingTools<MaterialBoxToolSchema>;

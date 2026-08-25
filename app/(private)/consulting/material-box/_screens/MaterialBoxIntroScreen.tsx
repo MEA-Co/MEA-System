@@ -3,13 +3,13 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
   type ConsultingPrompterMessage,
 } from '@/app/(private)/consulting/_components/ConsultingPrompter';
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
-import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
-import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 const introMessages = [
   {
@@ -44,7 +44,7 @@ const introMessages = [
 function MaterialBoxIntroScreen({
   environment,
 }: {
-  environment: GuidedConsultingScreenRenderEnvironment;
+  environment: ConsultingScreenRenderEnvironment;
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -87,7 +87,7 @@ export const materialBoxIntroScreen = {
   render: (_request, environment) => (
     <MaterialBoxIntroScreen environment={environment} />
   ),
-} satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingScreenRenderEnvironment,
+} satisfies ConsultingRendererEntry<
+  ConsultingScreenRenderEnvironment,
   ReactNode
 >;

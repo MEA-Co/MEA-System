@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { materialBoxIntroScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxIntroScreen';
 import { materialBoxKeywordScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxKeywordScreen';
 import { materialBoxMajorScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxMajorScreen';
 import { materialBoxOverviewScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxOverviewScreen';
 import { createMaterialBoxReflectionScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxReflectionScreen';
 import { materialBoxCompleteScreen } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxCompleteScreen';
-import { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
+import { createConsultingRenderer } from '@/features/consulting/core/renderer';
 
-export const materialBoxRenderer = createGuidedConsultingRenderer<
-  GuidedConsultingScreenRenderEnvironment,
+export const materialBoxRenderer = createConsultingRenderer<
+  ConsultingScreenRenderEnvironment,
   ReactNode
 >({
   'material-box.intro': materialBoxIntroScreen,

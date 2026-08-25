@@ -2,11 +2,11 @@ import type {
   MaterialBoxContext,
   MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
-import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
-import { defineGuidedConsultingPlan } from '@/features/guided-consulting/core/plan';
+import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
+import { defineConsultingPlan } from '@/features/consulting/core/plan';
 
 function getSubmittedMajors(
-  memory: GuidedConsultingMemory<MaterialBoxContext>,
+  memory: ConsultingMemory<MaterialBoxContext>,
 ) {
   const action = memory.actions.major;
   if (action?.type !== 'user.submit') {
@@ -29,7 +29,7 @@ function getSubmittedMajors(
 }
 
 function getSubmittedText(
-  memory: GuidedConsultingMemory<MaterialBoxContext>,
+  memory: ConsultingMemory<MaterialBoxContext>,
   nodeId: string,
   label: string,
   maxLength: number,
@@ -48,7 +48,7 @@ function getSubmittedText(
 }
 
 function getProgressScreenData(
-  memory: GuidedConsultingMemory<MaterialBoxContext>,
+  memory: ConsultingMemory<MaterialBoxContext>,
 ) {
   const getOptionalSubmittedText = (
     nodeId: string,
@@ -77,7 +77,7 @@ function getProgressScreenData(
   };
 }
 
-export const materialBoxPlan = defineGuidedConsultingPlan<
+export const materialBoxPlan = defineConsultingPlan<
   MaterialBoxContext,
   MaterialBoxTools
 >({

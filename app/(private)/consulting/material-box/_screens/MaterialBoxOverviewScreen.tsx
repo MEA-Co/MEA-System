@@ -3,18 +3,18 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
   type ConsultingPrompterMessage,
 } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import {
   MaterialBoxTable,
   type MaterialBoxTableFocus,
 } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
-import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
-import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 type MaterialBoxOverviewPage = {
   focus: MaterialBoxTableFocus;
@@ -75,7 +75,7 @@ const overviewPages = [
 function MaterialBoxOverviewScreen({
   environment,
 }: {
-  environment: GuidedConsultingScreenRenderEnvironment;
+  environment: ConsultingScreenRenderEnvironment;
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -116,7 +116,7 @@ export const materialBoxOverviewScreen = {
   render: (_request, environment) => (
     <MaterialBoxOverviewScreen environment={environment} />
   ),
-} satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingScreenRenderEnvironment,
+} satisfies ConsultingRendererEntry<
+  ConsultingScreenRenderEnvironment,
   ReactNode
 >;

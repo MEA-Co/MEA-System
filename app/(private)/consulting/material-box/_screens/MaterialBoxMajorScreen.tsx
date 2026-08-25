@@ -4,18 +4,18 @@ import { Undo2 } from 'lucide-react';
 import { type FormEvent, type ReactNode } from 'react';
 import { useState } from 'react';
 
+import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
   type ConsultingPrompterMessage,
 } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
-import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 const majorMessages = [
   { segments: [{ text: '전공부터 시작해봅시다.' }] },
@@ -104,7 +104,7 @@ function MajorInput({
 function MaterialBoxMajorScreen({
   environment,
 }: {
-  environment: GuidedConsultingScreenRenderEnvironment;
+  environment: ConsultingScreenRenderEnvironment;
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -231,7 +231,7 @@ export const materialBoxMajorScreen = {
   render: (_request, environment) => (
     <MaterialBoxMajorScreen environment={environment} />
   ),
-} satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingScreenRenderEnvironment,
+} satisfies ConsultingRendererEntry<
+  ConsultingScreenRenderEnvironment,
   ReactNode
 >;

@@ -1,0 +1,72 @@
+'use client';
+
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
+import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import { Button } from '@/components/ui/button';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
+
+function SecondSortExplanationScreen({
+  environment,
+}: {
+  environment: ConsultingScreenRenderEnvironment;
+}) {
+  return (
+    <ConsultingScreenView>
+      <section className="mx-auto flex min-h-64 w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-dashed bg-background/50 px-6 py-10 text-center">
+        <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <RefreshCw className="size-6" aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-xs font-bold tracking-[0.14em] text-primary">
+          SECOND MERGE SORT
+        </p>
+        <h1 className="mt-2 text-xl font-bold tracking-[-0.03em] md:text-2xl">
+          이번에는 대기 화면이 먼저 표시됩니다
+        </h1>
+      </section>
+
+      <ConsultingPrompter
+        message={{
+          label: 'STEP 2 · 2/2',
+          title: '다시 숫자 10개를 입력해 주세요',
+          segments: [
+            {
+              text: '대기 화면을 먼저 표시하고, 결과가 도착하면 화면을 업데이트합니다.',
+            },
+          ],
+        }}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            environment.send({ type: 'user.previous-explanation' })
+          }
+        >
+          <ChevronLeft aria-hidden="true" />
+          이전 설명
+        </Button>
+        <Button
+          type="button"
+          onClick={() => environment.send({ type: 'user.start-input' })}
+        >
+          입력하기
+          <ChevronRight aria-hidden="true" />
+        </Button>
+      </ConsultingPrompter>
+    </ConsultingScreenView>
+  );
+}
+
+export const secondSortExplanationScreen = {
+  mode: 'static',
+  render: (_request, environment) => (
+    <SecondSortExplanationScreen environment={environment} />
+  ),
+} satisfies ConsultingRendererEntry<
+  ConsultingScreenRenderEnvironment,
+  ReactNode
+>;

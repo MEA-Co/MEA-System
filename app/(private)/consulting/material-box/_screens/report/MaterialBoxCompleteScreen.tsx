@@ -15,12 +15,12 @@ import { type ReactNode, useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
-import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { isMaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
 import { exampleMaterialBoxReport as engineeringReport } from '@/app/(private)/consulting/material-box/_screens/report/example-report';
 import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(private)/consulting/material-box/_screens/report/humanities-example-report';
 import type { MaterialBoxReportType } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxReportPdf';
-import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
+import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 function ReportSection({
   number,
@@ -683,7 +683,7 @@ export const materialBoxCompleteScreen = {
   mode: 'dynamic',
   validateData: isMaterialBoxProgressScreenData,
   render: () => <MaterialBoxCompleteScreen />,
-} satisfies GuidedConsultingRendererEntry<
-  GuidedConsultingScreenRenderEnvironment,
+} satisfies ConsultingRendererEntry<
+  ConsultingScreenRenderEnvironment,
   ReactNode
 >;
