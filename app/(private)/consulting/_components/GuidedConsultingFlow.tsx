@@ -19,7 +19,7 @@ type GuidedConsultingFlowProps<
   definition: GuidedConsultingDefinition<Context, Services>;
   services: Services;
   renderer: GuidedConsultingRenderer<
-    GuidedConsultingMainRenderEnvironment<Context>,
+    GuidedConsultingMainRenderEnvironment,
     ReactNode
   >;
   debug?: boolean;
@@ -60,26 +60,23 @@ export function GuidedConsultingFlow<
 
   if (!screen) return debugConsole;
 
-  const main = renderer.has(screen.main.id) ? (
-    renderer.render(
-      { id: screen.main.id, data: screen.main.data },
-      {
-        screen,
-        draftValue,
-        onDraftChange: (value) =>
-          setDraft({
-            stepId: screen.kind === 'input' ? screen.stepId : '',
-            value,
-          }),
-        send: agent.send,
-      },
-    )
+  const rendererError = renderer.validate(screen.main);
+  const main = !rendererError ? (
+    renderer.render(screen.main, {
+      draftValue,
+      onDraftChange: (value) =>
+        setDraft({
+          stepId: screen.kind === 'input' ? screen.stepId : '',
+          value,
+        }),
+      send: agent.send,
+    })
   ) : (
     <section
       role="alert"
       className="mx-auto w-full max-w-2xl rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive"
     >
-      Renderer ID를 찾을 수 없습니다: {screen.main.id}
+      {rendererError.message}
     </section>
   );
 

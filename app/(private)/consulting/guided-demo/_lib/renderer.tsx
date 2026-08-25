@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import {
   type GuidedConsultingMainRenderEnvironment,
   GuidedConsultingResultCard,
+  isDefaultInputRendererData,
   renderDefaultInputMain,
   renderDefaultTutorialMain,
 } from '@/app/(private)/consulting/_components/GuidedConsultingMainRenderer';
@@ -15,6 +16,46 @@ type MergeSortScreenData = {
   input: Array<number>;
   sorted?: Array<number>;
 };
+
+type FinalResultsScreenData = {
+  context: MergeSortContext;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isNumberArray(value: unknown): value is Array<number> {
+  return (
+    Array.isArray(value) &&
+    value.every((candidate) => typeof candidate === 'number')
+  );
+}
+
+function isMergeSortScreenData(value: unknown): value is MergeSortScreenData {
+  return (
+    isRecord(value) &&
+    typeof value.label === 'string' &&
+    isNumberArray(value.input) &&
+    (value.sorted === undefined || isNumberArray(value.sorted))
+  );
+}
+
+function isMergeSortContext(value: unknown): value is MergeSortContext {
+  return (
+    isRecord(value) &&
+    isNumberArray(value.firstInput) &&
+    isNumberArray(value.firstSorted) &&
+    isNumberArray(value.secondInput) &&
+    isNumberArray(value.secondSorted)
+  );
+}
+
+function isFinalResultsScreenData(
+  value: unknown,
+): value is FinalResultsScreenData {
+  return isRecord(value) && isMergeSortContext(value.context);
+}
 
 function NumberList({ numbers }: { numbers: Array<number> }) {
   return (
@@ -96,25 +137,46 @@ function FinalResults({ context }: { context: MergeSortContext }) {
 }
 
 export const mergeSortRenderer = createGuidedConsultingRenderer<
-  GuidedConsultingMainRenderEnvironment<MergeSortContext>,
+  GuidedConsultingMainRenderEnvironment,
   ReactNode
 >({
-  'tutorial.default': renderDefaultTutorialMain,
-  'input.default': renderDefaultInputMain,
-  'merge-sort.result': (request) => (
-    <MergeSortResult data={request.data as MergeSortScreenData} />
-  ),
-  'merge-sort.pending': (request) => (
-    <MergeSortPending data={request.data as MergeSortScreenData} />
-  ),
-  'result.default': (_request, environment) => {
-    const { screen, send } = environment;
-    if (screen.kind !== 'complete') return null;
+  'tutorial.default': {
+    mode: 'static',
+    render: renderDefaultTutorialMain,
+  },
+  'input.default': {
+    mode: 'dynamic',
+    validateData: isDefaultInputRendererData,
+    render: renderDefaultInputMain,
+  },
+  'merge-sort.result': {
+    mode: 'dynamic',
+    validateData: isMergeSortScreenData,
+    render: (request) => (
+      <MergeSortResult data={request.data as MergeSortScreenData} />
+    ),
+  },
+  'merge-sort.pending': {
+    mode: 'dynamic',
+    validateData: isMergeSortScreenData,
+    render: (request) => (
+      <MergeSortPending data={request.data as MergeSortScreenData} />
+    ),
+  },
+  'result.default': {
+    mode: 'dynamic',
+    validateData: isFinalResultsScreenData,
+    render: (request, environment) => {
+      const { send } = environment;
+      const { context } = request.data as FinalResultsScreenData;
 
-    return (
-      <GuidedConsultingResultCard onReset={() => send({ type: 'user.reset' })}>
-        <FinalResults context={screen.context} />
-      </GuidedConsultingResultCard>
-    );
+      return (
+        <GuidedConsultingResultCard
+          onReset={() => send({ type: 'user.reset' })}
+        >
+          <FinalResults context={context} />
+        </GuidedConsultingResultCard>
+      );
+    },
   },
 });

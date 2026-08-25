@@ -1,5 +1,3 @@
-import type { GuidedConsultingScreen } from '@/features/guided-consulting/core/types';
-
 // User → Agent
 
 export type GuidedConsultingUserAction =
@@ -11,25 +9,51 @@ export type GuidedConsultingUserAction =
   | { type: 'user.back' }
   | { type: 'user.reset' };
 
-// Agent ↔ Renderer
+// Agent → Renderer
 
 export const GUIDED_CONSULTING_RENDERER_PROTOCOL =
   'guided-consulting.renderer/v1' as const;
 
-export type GuidedConsultingRendererAction = GuidedConsultingUserAction['type'];
+export type GuidedConsultingStaticRenderTarget = {
+  screenId: string;
+  mode: 'static';
+};
 
-export type GuidedConsultingRendererRequest<Context extends object> = {
+export type GuidedConsultingDynamicRenderTarget = {
+  screenId: string;
+  mode: 'dynamic';
+  data: unknown;
+};
+
+export type GuidedConsultingRenderTarget =
+  GuidedConsultingStaticRenderTarget | GuidedConsultingDynamicRenderTarget;
+
+type GuidedConsultingRendererRequestBase = {
   protocol: typeof GUIDED_CONSULTING_RENDERER_PROTOCOL;
   type: 'render.request';
-  screen: GuidedConsultingScreen<Context>;
-  allowedActions: ReadonlyArray<GuidedConsultingRendererAction>;
+};
+
+export type GuidedConsultingRendererStaticRequest =
+  GuidedConsultingRendererRequestBase & GuidedConsultingStaticRenderTarget;
+
+export type GuidedConsultingRendererDynamicRequest =
+  GuidedConsultingRendererRequestBase & GuidedConsultingDynamicRenderTarget;
+
+export type GuidedConsultingRendererRequest =
+  | GuidedConsultingRendererStaticRequest
+  | GuidedConsultingRendererDynamicRequest;
+
+// Renderer → Agent
+
+export type GuidedConsultingRendererError = {
+  code: 'RENDERER_NOT_FOUND' | 'INVALID_REQUEST' | 'RENDER_FAILED';
+  message: string;
 };
 
 type GuidedConsultingRendererResponseBase = {
   protocol: typeof GUIDED_CONSULTING_RENDERER_PROTOCOL;
   type: 'render.response';
   screenId: string;
-  rendererId: string;
 };
 
 export type GuidedConsultingRendererSuccessResponse =
@@ -40,10 +64,7 @@ export type GuidedConsultingRendererSuccessResponse =
 export type GuidedConsultingRendererRejectedResponse =
   GuidedConsultingRendererResponseBase & {
     status: 'rejected';
-    error: {
-      code: 'RENDERER_NOT_FOUND' | 'INVALID_REQUEST' | 'RENDER_FAILED';
-      message: string;
-    };
+    error: GuidedConsultingRendererError;
   };
 
 export type GuidedConsultingRendererResponse =
@@ -54,92 +75,61 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function getAllowedActions<Context extends object>(
-  screen: GuidedConsultingScreen<Context>,
-): ReadonlyArray<GuidedConsultingRendererAction> {
-  if (screen.kind === 'explanation') {
-    return [
-      ...(screen.canGoBack ? (['user.back'] as const) : []),
-      ...(screen.explanationIndex > 0
-        ? (['user.previous-explanation'] as const)
-        : []),
-      screen.explanationIndex === screen.explanationCount - 1
-        ? 'user.start-input'
-        : 'user.next-explanation',
-    ];
-  }
-
-  if (screen.kind === 'input') {
-    const running =
-      screen.status === 'validating' || screen.status === 'running';
-    if (running) return [];
-    return [
-      ...(screen.canGoBack ? (['user.back'] as const) : []),
-      'user.review-explanation',
-      'user.submit',
-    ];
-  }
-
-  return [...(screen.canGoBack ? (['user.back'] as const) : []), 'user.reset'];
-}
-
-export function createGuidedConsultingRendererRequest<Context extends object>(
-  screen: GuidedConsultingScreen<Context>,
-): GuidedConsultingRendererRequest<Context> {
+export function createGuidedConsultingRendererRequest(
+  target: GuidedConsultingRenderTarget,
+): GuidedConsultingRendererRequest {
   return {
     protocol: GUIDED_CONSULTING_RENDERER_PROTOCOL,
     type: 'render.request',
-    screen,
-    allowedActions: getAllowedActions(screen),
+    ...target,
   };
 }
 
-export function parseGuidedConsultingRendererRequest<Context extends object>(
+export function parseGuidedConsultingRendererRequest(
   value: unknown,
-): GuidedConsultingRendererRequest<Context> {
+): GuidedConsultingRendererRequest {
   if (
     !isRecord(value) ||
     value.protocol !== GUIDED_CONSULTING_RENDERER_PROTOCOL ||
     value.type !== 'render.request' ||
-    !isRecord(value.screen) ||
-    typeof value.screen.id !== 'string' ||
-    !isRecord(value.screen.main) ||
-    typeof value.screen.main.id !== 'string' ||
-    !isRecord(value.screen.prompter) ||
-    !Array.isArray(value.allowedActions)
+    typeof value.screenId !== 'string' ||
+    value.screenId.length === 0 ||
+    (value.mode !== 'static' && value.mode !== 'dynamic')
   ) {
     throw new Error('올바르지 않은 Renderer 요청입니다.');
   }
 
-  return value as GuidedConsultingRendererRequest<Context>;
+  if (value.mode === 'static' && 'data' in value) {
+    throw new Error('Static Renderer 요청에는 data를 전달할 수 없습니다.');
+  }
+
+  if (value.mode === 'dynamic' && value.data === undefined) {
+    throw new Error('Dynamic Renderer 요청에는 data가 필요합니다.');
+  }
+
+  return value as GuidedConsultingRendererRequest;
 }
 
-export function createGuidedConsultingRendererSuccessResponse<
-  Context extends object,
->(
-  request: GuidedConsultingRendererRequest<Context>,
+export function createGuidedConsultingRendererSuccessResponse(
+  request: GuidedConsultingRendererRequest,
 ): GuidedConsultingRendererSuccessResponse {
   return {
     protocol: GUIDED_CONSULTING_RENDERER_PROTOCOL,
     type: 'render.response',
     status: 'rendered',
-    screenId: request.screen.id,
-    rendererId: request.screen.main.id,
+    screenId: request.screenId,
   };
 }
 
-export function createGuidedConsultingRendererRejectedResponse<
-  Context extends object,
->(
-  request: GuidedConsultingRendererRequest<Context>,
-  error: GuidedConsultingRendererRejectedResponse['error'],
+export function createGuidedConsultingRendererRejectedResponse(
+  screenId: string,
+  error: GuidedConsultingRendererError,
 ): GuidedConsultingRendererRejectedResponse {
   return {
     protocol: GUIDED_CONSULTING_RENDERER_PROTOCOL,
     type: 'render.response',
     status: 'rejected',
-    screenId: request.screen.id,
-    rendererId: request.screen.main.id,
+    screenId,
     error,
   };
 }
@@ -152,8 +142,7 @@ export function parseGuidedConsultingRendererResponse(
     value.protocol !== GUIDED_CONSULTING_RENDERER_PROTOCOL ||
     value.type !== 'render.response' ||
     (value.status !== 'rendered' && value.status !== 'rejected') ||
-    typeof value.screenId !== 'string' ||
-    typeof value.rendererId !== 'string'
+    typeof value.screenId !== 'string'
   ) {
     throw new Error('올바르지 않은 Renderer 응답입니다.');
   }

@@ -181,7 +181,7 @@ export function createGuidedConsultingAgent<
       'screen',
       'screen.render',
       definition.steps[state.stepIndex]?.id ?? null,
-      createGuidedConsultingRendererRequest(screen),
+      createGuidedConsultingRendererRequest(screen.main),
     );
   };
 
@@ -206,12 +206,8 @@ export function createGuidedConsultingAgent<
     presentScreen({
       ...createScreenBase(
         explanation.main ?? {
-          id: 'tutorial.default',
-          data: {
-            stepId: step.id,
-            explanationIndex: index,
-            explanationCount: explanations.length,
-          },
+          screenId: 'tutorial.default',
+          mode: 'static',
         },
         explanation,
       ),
@@ -258,9 +254,11 @@ export function createGuidedConsultingAgent<
     presentScreen({
       ...createScreenBase(
         pendingMain ?? {
-          id: 'input.default',
+          screenId: 'input.default',
+          mode: 'dynamic',
           data: {
             stepId: step.id,
+            stepIndex: state.stepIndex,
             input: step.input,
             value: inputValue,
             status,
@@ -282,7 +280,11 @@ export function createGuidedConsultingAgent<
     setPhase('complete');
     presentScreen({
       ...createScreenBase(
-        { id: 'result.default', data: { context: state.context } },
+        {
+          screenId: 'result.default',
+          mode: 'dynamic',
+          data: { context: state.context },
+        },
         {
           eyebrow: 'COMPLETE',
           title: '나만의 결과가 완성됐어요',

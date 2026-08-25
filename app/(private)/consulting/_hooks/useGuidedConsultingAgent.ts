@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
+import type {
+  GuidedConsultingRendererError,
+  GuidedConsultingRenderTarget,
+} from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererSuccessResponse,
@@ -18,7 +22,11 @@ export function useGuidedConsultingAgent<
 >(
   definition: GuidedConsultingDefinition<Context, Services>,
   services: Services,
-  renderer: { has: (id: string) => boolean },
+  renderer: {
+    validate: (
+      request: GuidedConsultingRenderTarget,
+    ) => GuidedConsultingRendererError | null;
+  },
 ) {
   const agent = useMemo(
     () => createGuidedConsultingAgent(definition, services),
@@ -77,15 +85,35 @@ export function useGuidedConsultingAgent<
           return agent.executeToolCall(call.id, controller.signal);
         }
 
-        const request = parseGuidedConsultingRendererRequest<Context>(
-          call.input,
-        );
-        if (!renderer.has(request.screen.main.id)) {
+        const input =
+          typeof call.input === 'object' && call.input !== null
+            ? (call.input as Record<string, unknown>)
+            : null;
+        const screenId =
+          typeof input?.screenId === 'string' ? input.screenId : 'unknown';
+
+        let request;
+        try {
+          request = parseGuidedConsultingRendererRequest(call.input);
+        } catch (error) {
           return Promise.resolve(
-            createGuidedConsultingRendererRejectedResponse(request, {
-              code: 'RENDERER_NOT_FOUND',
-              message: `Renderer ID를 찾을 수 없습니다: ${request.screen.main.id}`,
+            createGuidedConsultingRendererRejectedResponse(screenId, {
+              code: 'INVALID_REQUEST',
+              message:
+                error instanceof Error
+                  ? error.message
+                  : '올바르지 않은 Renderer 요청입니다.',
             }),
+          );
+        }
+
+        const rendererError = renderer.validate(request);
+        if (rendererError) {
+          return Promise.resolve(
+            createGuidedConsultingRendererRejectedResponse(
+              request.screenId,
+              rendererError,
+            ),
           );
         }
 

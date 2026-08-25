@@ -7,15 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
-import type { GuidedConsultingScreen } from '@/features/guided-consulting/core/types';
+import type {
+  GuidedConsultingDynamicRenderTarget,
+  GuidedConsultingStaticRenderTarget,
+  GuidedConsultingUserAction,
+} from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingInput } from '@/features/guided-consulting/core/types';
 
-export type GuidedConsultingMainRenderEnvironment<Context extends object> = {
-  screen: GuidedConsultingScreen<Context>;
+export type GuidedConsultingMainRenderEnvironment = {
   draftValue: string;
   onDraftChange: (value: string) => void;
   send: (input: GuidedConsultingUserAction) => void;
 };
+
+type InputRendererData = {
+  stepId: string;
+  stepIndex: number;
+  input: GuidedConsultingInput;
+  status: 'ready' | 'validating' | 'running' | 'error';
+  error: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function isDefaultInputRendererData(
+  value: unknown,
+): value is InputRendererData {
+  const statuses = ['ready', 'validating', 'running', 'error'];
+  return (
+    isRecord(value) &&
+    typeof value.stepId === 'string' &&
+    typeof value.stepIndex === 'number' &&
+    isRecord(value.input) &&
+    typeof value.input.label === 'string' &&
+    typeof value.status === 'string' &&
+    statuses.includes(value.status) &&
+    (typeof value.error === 'string' || value.error === null)
+  );
+}
 
 function RendererMismatch({ expected }: { expected: string }) {
   return (
@@ -25,57 +56,36 @@ function RendererMismatch({ expected }: { expected: string }) {
   );
 }
 
-export function renderDefaultTutorialMain<Context extends object>(
-  _request: { id: string; data?: unknown },
-  environment: GuidedConsultingMainRenderEnvironment<Context>,
+export function renderDefaultTutorialMain(
+  request: GuidedConsultingStaticRenderTarget,
 ): ReactNode {
-  const { screen } = environment;
-  if (screen.kind !== 'explanation') {
-    return <RendererMismatch expected="explanation" />;
-  }
-
   return (
     <section className="mx-auto flex min-h-64 w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-dashed bg-background/50 px-6 py-10 text-center">
       <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
         <BookOpen className="size-6" aria-hidden="true" />
       </span>
       <p className="mt-5 text-xs font-bold tracking-[0.14em] text-primary">
-        {screen.main.id}
+        {request.screenId}
       </p>
       <h1 className="mt-2 text-xl font-bold tracking-[-0.03em] md:text-2xl">
         화면 렌더러가 표시한 설명 화면
       </h1>
-      <div
-        className="mt-5 flex items-center gap-2"
-        aria-label={`설명 ${screen.explanationIndex + 1}/${screen.explanationCount}`}
-      >
-        {Array.from({ length: screen.explanationCount }, (_, index) => (
-          <span
-            key={index}
-            className={
-              index === screen.explanationIndex
-                ? 'h-2 w-6 rounded-full bg-primary'
-                : 'size-2 rounded-full bg-muted-foreground/25'
-            }
-            aria-hidden="true"
-          />
-        ))}
-      </div>
     </section>
   );
 }
 
-export function renderDefaultInputMain<Context extends object>(
-  _request: { id: string; data?: unknown },
-  environment: GuidedConsultingMainRenderEnvironment<Context>,
+export function renderDefaultInputMain(
+  request: GuidedConsultingDynamicRenderTarget,
+  environment: GuidedConsultingMainRenderEnvironment,
 ): ReactNode {
-  const { screen, draftValue, onDraftChange, send } = environment;
-  if (screen.kind !== 'input') {
-    return <RendererMismatch expected="input" />;
+  const { draftValue, onDraftChange, send } = environment;
+  if (!isDefaultInputRendererData(request.data)) {
+    return <RendererMismatch expected="input data가 있는 dynamic" />;
   }
+  const data = request.data;
 
-  const running = screen.status === 'validating' || screen.status === 'running';
-  const Field = screen.input.multiline ? Textarea : Input;
+  const running = data.status === 'validating' || data.status === 'running';
+  const Field = data.input.multiline ? Textarea : Input;
 
   return (
     <form
@@ -90,43 +100,43 @@ export function renderDefaultInputMain<Context extends object>(
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold tracking-[0.12em] text-primary">
-                INPUT {screen.stepIndex + 1}
+                INPUT {data.stepIndex + 1}
               </p>
               <label
-                htmlFor={`guided-input-${screen.stepId}`}
+                htmlFor={`guided-input-${data.stepId}`}
                 className="mt-2 block text-lg font-bold tracking-[-0.02em]"
               >
-                {screen.input.label}
+                {data.input.label}
               </label>
             </div>
-            {screen.input.maxLength && (
+            {data.input.maxLength && (
               <p className="shrink-0 text-xs text-muted-foreground">
-                {draftValue.length} / {screen.input.maxLength}
+                {draftValue.length} / {data.input.maxLength}
               </p>
             )}
           </div>
 
           <Field
-            id={`guided-input-${screen.stepId}`}
+            id={`guided-input-${data.stepId}`}
             value={draftValue}
             readOnly={running}
-            maxLength={screen.input.maxLength}
-            placeholder={screen.input.placeholder}
+            maxLength={data.input.maxLength}
+            placeholder={data.input.placeholder}
             autoFocus={!running}
             onChange={(event) => onDraftChange(event.target.value)}
             className={
-              screen.input.multiline
+              data.input.multiline
                 ? 'mt-5 min-h-32 resize-none bg-background'
                 : 'mt-5 h-11 bg-background'
             }
           />
 
-          {screen.error && (
+          {data.error && (
             <p
               role="alert"
               className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-sm text-destructive"
             >
-              {screen.error}
+              {data.error}
             </p>
           )}
 
@@ -139,7 +149,7 @@ export function renderDefaultInputMain<Context extends object>(
                 className="size-4 animate-spin"
                 aria-hidden="true"
               />
-              {screen.status === 'validating'
+              {data.status === 'validating'
                 ? '중심 에이전트가 입력 검증 결과를 기다리고 있어요.'
                 : '중심 에이전트가 Tool Agent의 결과를 기다리고 있어요.'}
             </div>
@@ -154,7 +164,7 @@ export function renderDefaultInputMain<Context extends object>(
               )}
               {running
                 ? '처리 중'
-                : screen.status === 'error'
+                : data.status === 'error'
                   ? '다시 시도'
                   : '입력 완료'}
             </Button>

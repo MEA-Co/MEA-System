@@ -4,11 +4,16 @@ export {
   defineGuidedStep,
 } from '@/features/guided-consulting/core/definition';
 export type {
-  GuidedConsultingRendererAction,
+  GuidedConsultingDynamicRenderTarget,
+  GuidedConsultingRendererDynamicRequest,
+  GuidedConsultingRendererError,
   GuidedConsultingRendererRejectedResponse,
   GuidedConsultingRendererRequest,
   GuidedConsultingRendererResponse,
+  GuidedConsultingRendererStaticRequest,
   GuidedConsultingRendererSuccessResponse,
+  GuidedConsultingRenderTarget,
+  GuidedConsultingStaticRenderTarget,
   GuidedConsultingUserAction,
 } from '@/features/guided-consulting/core/protocol';
 export {
@@ -21,8 +26,8 @@ export {
 } from '@/features/guided-consulting/core/protocol';
 export type {
   GuidedConsultingRenderer,
+  GuidedConsultingRendererEntry,
   GuidedConsultingRenderHandler,
-  GuidedConsultingRenderRequest,
 } from '@/features/guided-consulting/core/renderer';
 export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 export type {
@@ -44,7 +49,6 @@ export type {
   GuidedConsultingExplanationScreen,
   GuidedConsultingInput,
   GuidedConsultingInputScreen,
-  GuidedConsultingMainContent,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
   GuidedConsultingStep,

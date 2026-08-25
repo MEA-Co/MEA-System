@@ -1,19 +1,17 @@
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
+import type {
+  GuidedConsultingRenderTarget,
+  GuidedConsultingUserAction,
+} from '@/features/guided-consulting/core/protocol';
 
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';
-
-export type GuidedConsultingMainContent = {
-  id: string;
-  data?: unknown;
-};
 
 export type GuidedConsultingExplanation = {
   eyebrow?: string;
   title: string;
   description: string;
   tips?: ReadonlyArray<string>;
-  main?: GuidedConsultingMainContent;
+  main?: GuidedConsultingRenderTarget;
 };
 
 export type GuidedConsultingExplanations =
@@ -64,11 +62,11 @@ export type GuidedConsultingStep<
   input: GuidedConsultingInput;
   validate?: (value: string) => string;
   pending?:
-    | GuidedConsultingMainContent
+    | GuidedConsultingRenderTarget
     | ((params: {
         value: string;
         context: Readonly<Context>;
-      }) => GuidedConsultingMainContent);
+      }) => GuidedConsultingRenderTarget);
   tool: GuidedConsultingStepTool<Context, Services>;
 };
 
@@ -94,7 +92,7 @@ type GuidedConsultingScreenBase = {
   stepIndex: number;
   stepCount: number;
   canGoBack: boolean;
-  main: GuidedConsultingMainContent;
+  main: GuidedConsultingRenderTarget;
   prompter: GuidedConsultingExplanation;
 };
 

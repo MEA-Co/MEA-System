@@ -81,7 +81,8 @@ export const mergeSortConsulting = defineGuidedConsulting<
           description:
             'Agent는 Tool Result가 도착할 때까지 기다린 후 이 결과 화면을 요청했습니다.',
           main: {
-            id: 'merge-sort.result',
+            screenId: 'merge-sort.result',
+            mode: 'dynamic',
             data: {
               label: '첫 번째 정렬 결과',
               input: firstInput,
@@ -104,7 +105,8 @@ export const mergeSortConsulting = defineGuidedConsulting<
       },
       validate: validateNumbers,
       pending: ({ value }) => ({
-        id: 'merge-sort.pending',
+        screenId: 'merge-sort.pending',
+        mode: 'dynamic',
         data: {
           label: '두 번째 머지 소트 실행 중',
           input: parseTenNumbers(value),
