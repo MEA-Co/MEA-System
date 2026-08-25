@@ -25,6 +25,10 @@ export function defineGuidedConsulting<
       throw new Error(`중복된 Step ID입니다: ${step.id}`);
     }
     stepIds.add(step.id);
+
+    if (!step.tool.name.trim()) {
+      throw new Error(`Step Tool 이름이 필요합니다: ${step.id}`);
+    }
   }
 
   return definition;

@@ -1,4 +1,6 @@
-import type { StudyRoutineTools } from '@/app/(private)/consulting/guided-demo/_lib/types';
+import { createGuidedConsultingToolModule } from '@/features/guided-consulting/core/tool-module';
+
+import type { MergeSortToolSchema } from './types';
 
 function wait(duration: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -15,10 +17,37 @@ function wait(duration: number, signal: AbortSignal) {
   });
 }
 
-export const studyRoutineTools: StudyRoutineTools = {
-  async suggestRoutine({ goal, availableTime }, { signal }) {
-    await wait(1_100, signal);
+function merge(left: Array<number>, right: Array<number>) {
+  const result: Array<number> = [];
+  let leftIndex = 0;
+  let rightIndex = 0;
 
-    return `${availableTime} 안에서 ‘${goal}’에 집중할 수 있도록, 시작 5분은 지난 내용을 복습하고 이후에는 한 가지 과제에 집중하는 루틴`;
-  },
-};
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] <= right[rightIndex]) {
+      result.push(left[leftIndex]);
+      leftIndex += 1;
+    } else {
+      result.push(right[rightIndex]);
+      rightIndex += 1;
+    }
+  }
+
+  return [...result, ...left.slice(leftIndex), ...right.slice(rightIndex)];
+}
+
+function mergeSort(numbers: Array<number>): Array<number> {
+  if (numbers.length <= 1) return numbers;
+  const middle = Math.floor(numbers.length / 2);
+  return merge(
+    mergeSort(numbers.slice(0, middle)),
+    mergeSort(numbers.slice(middle)),
+  );
+}
+
+export const mergeSortToolModule =
+  createGuidedConsultingToolModule<MergeSortToolSchema>({
+    'numbers.merge-sort': async ({ numbers, delayMs }, { signal }) => {
+      await wait(delayMs, signal);
+      return { sorted: mergeSort(numbers) };
+    },
+  });

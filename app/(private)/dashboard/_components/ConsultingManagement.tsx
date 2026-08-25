@@ -14,7 +14,7 @@ const consultingItems = [
     href: '/consulting/material-box',
   },
   {
-    title: '단순 Step 컨설팅 데모',
+    title: '비동기 머지 소트 컨설팅 데모',
     href: '/consulting/guided-demo',
   },
 ] as const;

@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { StudyRoutineDemo } from '@/app/(private)/consulting/guided-demo/_components/StudyRoutineDemo';
+import { MergeSortDemo } from '@/app/(private)/consulting/guided-demo/_components/MergeSortDemo';
 import { Button } from '@/components/ui/button';
 import { requireUserAccess } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
@@ -25,16 +25,16 @@ export default async function GuidedConsultingDemoPage() {
             <ArrowLeft />
           </Button>
           <div>
-            <p className="text-sm font-semibold">단순 Step 컨설팅 데모</p>
+            <p className="text-sm font-semibold">비동기 머지 소트 데모</p>
             <p className="text-xs text-muted-foreground">
-              가이드 → 입력 → 처리 구조 체험
+              결과 대기와 화면 선표시 후 업데이트 방식 비교
             </p>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8 lg:px-8">
-        <StudyRoutineDemo />
+        <MergeSortDemo />
       </div>
     </main>
   );
