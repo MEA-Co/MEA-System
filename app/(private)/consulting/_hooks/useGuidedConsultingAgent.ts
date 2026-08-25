@@ -70,7 +70,7 @@ export function useGuidedConsultingAgent<
 
   useEffect(() => {
     const pendingCallIds = new Set(
-      snapshot.pendingToolCalls.map((call) => call.id),
+      snapshot.pendingModuleCalls.map((call) => call.id),
     );
 
     for (const [callId, controller] of runningCallsRef.current) {
@@ -80,7 +80,7 @@ export function useGuidedConsultingAgent<
       }
     }
 
-    for (const call of snapshot.pendingToolCalls) {
+    for (const call of snapshot.pendingModuleCalls) {
       if (runningCallsRef.current.has(call.id)) continue;
 
       const controller = new AbortController();
@@ -132,19 +132,19 @@ export function useGuidedConsultingAgent<
         .then(executeCall)
         .then((output) => {
           if (!controller.signal.aborted) {
-            agent.resolveToolCall(call.id, output);
+            agent.resolveModuleCall(call.id, output);
           }
         })
         .catch((error: unknown) => {
           if (!controller.signal.aborted) {
-            agent.rejectToolCall(call.id, error);
+            agent.rejectModuleCall(call.id, error);
           }
         })
         .finally(() => {
           runningCallsRef.current.delete(call.id);
         });
     }
-  }, [agent, renderer, snapshot.pendingToolCalls]);
+  }, [agent, renderer, snapshot.pendingModuleCalls]);
 
   return {
     ...snapshot,

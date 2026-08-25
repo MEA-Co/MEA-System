@@ -1,12 +1,18 @@
 import type {
   GuidedConsultingDefinition,
-  GuidedConsultingStep,
+  GuidedConsultingPlanNode,
 } from '@/features/guided-consulting/core/types';
 
-export function defineGuidedStep<Context extends object, Tools extends object>(
-  step: GuidedConsultingStep<Context, Tools>,
-): GuidedConsultingStep<Context, Tools> {
-  return step;
+function assertTargetExists<Context extends object, Tools extends object>(
+  nodes: Readonly<Record<string, GuidedConsultingPlanNode<Context, Tools>>>,
+  sourceId: string,
+  targetId: string,
+) {
+  if (!nodes[targetId]) {
+    throw new Error(
+      `${sourceId}가 참조하는 Node를 찾을 수 없습니다: ${targetId}`,
+    );
+  }
 }
 
 export function defineGuidedConsulting<
@@ -15,24 +21,32 @@ export function defineGuidedConsulting<
 >(
   definition: GuidedConsultingDefinition<Context, Tools>,
 ): GuidedConsultingDefinition<Context, Tools> {
-  if (definition.steps.length === 0) {
-    throw new Error('컨설팅에는 한 개 이상의 Step이 필요합니다.');
+  const nodes = definition.nodes;
+  if (!nodes[definition.entry]) {
+    throw new Error(`Entry Node를 찾을 수 없습니다: ${definition.entry}`);
   }
 
-  const stepIds = new Set<string>();
-  for (const step of definition.steps) {
-    if (stepIds.has(step.id)) {
-      throw new Error(`중복된 Step ID입니다: ${step.id}`);
-    }
-    stepIds.add(step.id);
-
-    if (!step.tool.id.trim()) {
-      throw new Error(`Step Tool 이름이 필요합니다: ${step.id}`);
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    if (node.id !== nodeId) {
+      throw new Error(`Node key와 id가 일치하지 않습니다: ${nodeId}`);
     }
 
-    if (step.validation && !step.validation.id.trim()) {
-      throw new Error(`Validation Tool 이름이 필요합니다: ${step.id}`);
+    if (node.type === 'screen') {
+      for (const transition of Object.values(node.on ?? {})) {
+        if (typeof transition === 'string') {
+          assertTargetExists(nodes, nodeId, transition);
+        }
+      }
+      continue;
     }
+
+    if (!node.toolId.trim()) {
+      throw new Error(`Tool Node에 toolId가 필요합니다: ${nodeId}`);
+    }
+    if (typeof node.next === 'string') {
+      assertTargetExists(nodes, nodeId, node.next);
+    }
+    assertTargetExists(nodes, nodeId, node.onRejected);
   }
 
   return definition;

@@ -5,21 +5,26 @@ import { Activity, Bot, Bug, Database, Radio } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
+import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/protocol';
 import type {
+  GuidedConsultingModuleCall,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
-  GuidedConsultingToolCall,
 } from '@/features/guided-consulting/core/types';
 
 type ConsultingDebugConsoleProps<Context extends object> = {
   definitionId: string;
   phase: GuidedConsultingPhase;
-  screen: GuidedConsultingScreen<Context> | null;
+  currentNodeId: string;
+  node: unknown;
+  screen: GuidedConsultingScreen | null;
   draftValue: string;
   context: Context;
-  answers: Readonly<Record<string, string>>;
+  actions: Readonly<Record<string, unknown>>;
+  toolResults: Readonly<Record<string, unknown>>;
+  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
   error: Error | null;
-  pendingToolCalls: ReadonlyArray<GuidedConsultingToolCall>;
+  pendingModuleCalls: ReadonlyArray<GuidedConsultingModuleCall>;
   logs: ReadonlyArray<GuidedConsultingLog>;
 };
 
@@ -93,12 +98,16 @@ function DataBlock({
 export function ConsultingDebugConsole<Context extends object>({
   definitionId,
   phase,
+  currentNodeId,
+  node,
   screen,
   draftValue,
   context,
-  answers,
+  actions,
+  toolResults,
+  toolErrors,
   error,
-  pendingToolCalls,
+  pendingModuleCalls,
   logs,
 }: ConsultingDebugConsoleProps<Context>) {
   const latestLogs = [...logs].reverse();
@@ -133,9 +142,9 @@ export function ConsultingDebugConsole<Context extends object>({
             </Badge>
             <span>{screen?.renderTarget.screenId ?? '화면 없음'}</span>
             <span>·</span>
-            <span>{screen?.kind ?? '대기'}</span>
+            <span>{currentNodeId}</span>
             <span>·</span>
-            <span>Pending tools {pendingToolCalls.length}</span>
+            <span>Pending modules {pendingModuleCalls.length}</span>
           </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
@@ -149,8 +158,8 @@ export function ConsultingDebugConsole<Context extends object>({
                   screen: screen
                     ? {
                         id: screen.id,
-                        kind: screen.kind,
-                        stepIndex: screen.stepIndex,
+                        nodeId: screen.nodeId,
+                        availableActions: screen.availableActions,
                       }
                     : null,
                   draftValue,
@@ -166,10 +175,11 @@ export function ConsultingDebugConsole<Context extends object>({
               <DataBlock
                 value={{
                   phase,
+                  currentNodeId,
+                  node,
                   activeScreen: screen,
-                  answers,
                   error,
-                  pendingToolCalls,
+                  pendingModuleCalls,
                 }}
               />
             </section>
@@ -180,9 +190,11 @@ export function ConsultingDebugConsole<Context extends object>({
                   className="size-4 text-emerald-400"
                   aria-hidden="true"
                 />
-                Agent Context
+                Agent Memory
               </h2>
-              <DataBlock value={context} />
+              <DataBlock
+                value={{ context, actions, toolResults, toolErrors }}
+              />
             </section>
           </div>
 
@@ -222,7 +234,7 @@ export function ConsultingDebugConsole<Context extends object>({
                   <div>
                     <p className="font-mono text-xs leading-5 text-zinc-200">
                       {getLogEvent(log)}
-                      {log.stepId ? ` · ${log.stepId}` : ''}
+                      {log.nodeId ? ` · ${log.nodeId}` : ''}
                     </p>
                     {log.data !== undefined && (
                       <DataBlock compact value={log.data} />

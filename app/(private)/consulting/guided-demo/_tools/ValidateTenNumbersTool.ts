@@ -41,15 +41,21 @@ function validateInput(value: unknown) {
 }
 
 function validateOutput(value: unknown): value is ValidateTenNumbersToolOutput {
-  return isRecord(value) && typeof value.normalized === 'string';
+  return (
+    isRecord(value) &&
+    typeof value.normalized === 'string' &&
+    Array.isArray(value.numbers) &&
+    value.numbers.every((number) => typeof number === 'number')
+  );
 }
 
 export const validateTenNumbersTool = {
   validateInput,
   validateOutput,
-  execute: ({ value }) => ({
-    normalized: parseTenNumbers(value).join(', '),
-  }),
+  execute: ({ value }) => {
+    const numbers = parseTenNumbers(value);
+    return { normalized: numbers.join(', '), numbers };
+  },
 } satisfies GuidedConsultingToolEntry<
   ValidateTenNumbersToolInput,
   ValidateTenNumbersToolOutput

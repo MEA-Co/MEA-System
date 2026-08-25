@@ -35,25 +35,29 @@ export function GuidedConsultingFlow<
   debug = false,
 }: GuidedConsultingFlowProps<Context, Tools>) {
   const agent = useGuidedConsultingAgent(definition, tools, renderer);
-  const [draft, setDraft] = useState({ stepId: '', value: '' });
+  const [drafts, setDrafts] = useState<{
+    sessionId: number;
+    values: Record<string, string>;
+  }>({ sessionId: agent.sessionId, values: {} });
   const screen = agent.screen;
+  const draftKey = screen?.draftKey ?? screen?.nodeId ?? '';
   const draftValue =
-    screen?.kind === 'input' && draft.stepId === screen.stepId
-      ? draft.value
-      : screen?.kind === 'input'
-        ? screen.value
-        : '';
+    drafts.sessionId === agent.sessionId ? (drafts.values[draftKey] ?? '') : '';
 
   const debugConsole = debug ? (
     <ConsultingDebugConsole
       definitionId={agent.definitionId}
       phase={agent.phase}
+      currentNodeId={agent.currentNodeId}
+      node={agent.node}
       screen={screen}
       draftValue={draftValue}
       context={agent.context}
-      answers={agent.answers}
+      actions={agent.actions}
+      toolResults={agent.toolResults}
+      toolErrors={agent.toolErrors}
       error={agent.error}
-      pendingToolCalls={agent.pendingToolCalls}
+      pendingModuleCalls={agent.pendingModuleCalls}
       logs={agent.logs}
     />
   ) : null;
@@ -65,10 +69,13 @@ export function GuidedConsultingFlow<
     renderer.render(screen.renderTarget, {
       draftValue,
       onDraftChange: (value) =>
-        setDraft({
-          stepId: screen.kind === 'input' ? screen.stepId : '',
-          value,
-        }),
+        setDrafts((current) => ({
+          sessionId: agent.sessionId,
+          values: {
+            ...(current.sessionId === agent.sessionId ? current.values : {}),
+            [draftKey]: value,
+          },
+        })),
       send: agent.send,
     })
   ) : (
@@ -80,26 +87,24 @@ export function GuidedConsultingFlow<
     </section>
   );
 
-  const running =
-    screen.kind === 'input' &&
-    (screen.status === 'validating' || screen.status === 'running');
+  const canGoBack = screen.availableActions.includes('user.back');
+  const canReviewExplanation = screen.availableActions.includes(
+    'user.review-explanation',
+  );
 
   return (
     <div className="space-y-6">
       <ConsultingFrame
         title={screen.title}
-        currentStep={
-          screen.kind === 'complete' ? screen.stepCount : screen.stepIndex + 1
-        }
-        stepCount={screen.stepCount}
-        canGoBack={screen.canGoBack}
+        currentStep={screen.progress?.current}
+        stepCount={screen.progress?.total}
+        canGoBack={canGoBack}
         onBack={() => agent.send({ type: 'user.back' })}
         topRightAction={
-          screen.kind === 'input' ? (
+          canReviewExplanation ? (
             <Button
               type="button"
               variant="outline"
-              disabled={running}
               onClick={() => agent.send({ type: 'user.review-explanation' })}
             >
               <Eye aria-hidden="true" />

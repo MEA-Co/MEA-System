@@ -12,11 +12,17 @@ import { NumberList } from '@/app/(private)/consulting/guided-demo/_screens/Numb
 import { Button } from '@/components/ui/button';
 import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
 
-export function MergeSortResultScreen({ data }: { data: MergeSortScreenData }) {
+export function MergeSortResultScreen({
+  data,
+  label,
+}: {
+  data: MergeSortScreenData;
+  label: string;
+}) {
   return (
     <section className="mx-auto w-full max-w-3xl rounded-2xl border bg-background/90 p-6 text-center shadow-sm md:p-8">
       <p className="text-xs font-bold tracking-[0.14em] text-primary">
-        {data.label}
+        {label}
       </p>
       <p className="mt-5 text-xs font-semibold text-muted-foreground">INPUT</p>
       <div className="mt-3">
@@ -41,7 +47,10 @@ export const mergeSortResultScreen = {
   validateData: isMergeSortScreenData,
   render: (request, environment) => (
     <ConsultingScreenView>
-      <MergeSortResultScreen data={request.data as MergeSortScreenData} />
+      <MergeSortResultScreen
+        data={request.data as MergeSortScreenData}
+        label="첫 번째 정렬 결과"
+      />
       <ConsultingPrompter
         pageLabel="RESULT 1 · 1/2"
         message={{

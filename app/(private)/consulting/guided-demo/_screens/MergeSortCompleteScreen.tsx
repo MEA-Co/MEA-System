@@ -16,15 +16,15 @@ function FinalResults({ context }: { context: MergeSortContext }) {
   return (
     <div className="grid gap-5">
       <MergeSortResultScreen
+        label="첫 번째 정렬 결과"
         data={{
-          label: '첫 번째 정렬 결과',
           input: context.firstInput,
           sorted: context.firstSorted,
         }}
       />
       <MergeSortResultScreen
+        label="두 번째 정렬 결과 · 화면 업데이트 완료"
         data={{
-          label: '두 번째 정렬 결과 · 화면 업데이트 완료',
           input: context.secondInput,
           sorted: context.secondSorted,
         }}

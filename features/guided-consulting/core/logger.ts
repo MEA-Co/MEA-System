@@ -7,7 +7,7 @@ export type GuidedConsultingLog = {
   id: number;
   kind: GuidedConsultingLogKind;
   text: string;
-  stepId: string | null;
+  nodeId: string;
   callId?: string;
   moduleId?: string;
   data?: unknown;
@@ -47,7 +47,7 @@ export function createGuidedConsultingLogger(
         append({
           kind: 'agent.input',
           text: 'system -> agent',
-          stepId: event.stepId,
+          nodeId: event.nodeId,
           data: {
             type: event.type,
             definitionId: event.definitionId,
@@ -60,7 +60,7 @@ export function createGuidedConsultingLogger(
         append({
           kind: 'agent.input',
           text: 'user -> agent',
-          stepId: event.stepId,
+          nodeId: event.nodeId,
           data: event.action,
         });
         return;
@@ -68,7 +68,7 @@ export function createGuidedConsultingLogger(
 
       const endpoint = getModuleEndpoint(event.call.toolName);
       const common = {
-        stepId: event.call.stepId,
+        nodeId: event.call.nodeId,
         callId: event.call.id,
         moduleId: event.call.toolName,
       };

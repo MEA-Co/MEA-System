@@ -1,7 +1,6 @@
 import type { MergeSortContext } from '@/app/(private)/consulting/guided-demo/_lib/types';
 
 export type MergeSortScreenData = {
-  label: string;
   input: Array<number>;
   sorted?: Array<number>;
 };
@@ -26,7 +25,6 @@ export function isMergeSortScreenData(
 ): value is MergeSortScreenData {
   return (
     isRecord(value) &&
-    typeof value.label === 'string' &&
     isNumberArray(value.input) &&
     (value.sorted === undefined || isNumberArray(value.sorted))
   );

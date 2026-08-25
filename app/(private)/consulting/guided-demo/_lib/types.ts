@@ -22,6 +22,7 @@ export type ValidateTenNumbersToolInput = {
 
 export type ValidateTenNumbersToolOutput = {
   normalized: string;
+  numbers: Array<number>;
 };
 
 export type MergeSortToolSchema = {

@@ -1,29 +1,29 @@
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
-import type { GuidedConsultingToolCall } from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingModuleCall } from '@/features/guided-consulting/core/types';
 
 export type GuidedConsultingAgentEvent =
   | {
       type: 'session.started';
       definitionId: string;
-      stepId: string | null;
+      nodeId: string;
     }
   | {
       type: 'user.action.received';
       action: GuidedConsultingUserAction;
-      stepId: string | null;
+      nodeId: string;
     }
   | {
       type: 'module.request.sent';
-      call: GuidedConsultingToolCall;
+      call: GuidedConsultingModuleCall;
     }
   | {
       type: 'module.response.received';
-      call: GuidedConsultingToolCall;
+      call: GuidedConsultingModuleCall;
       output: unknown;
     }
   | {
       type: 'module.error.received';
-      call: GuidedConsultingToolCall;
+      call: GuidedConsultingModuleCall;
       error: Error;
     };
 

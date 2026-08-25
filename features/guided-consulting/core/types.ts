@@ -1,36 +1,11 @@
 import type {
   GuidedConsultingRenderTarget,
+  GuidedConsultingToolError,
   GuidedConsultingUserAction,
 } from '@/features/guided-consulting/core/protocol';
 
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';
-
-export type GuidedConsultingInput = {
-  label: string;
-  placeholder?: string;
-  multiline?: boolean;
-  maxLength?: number;
-};
-
-export type GuidedConsultingInputStatus =
-  'ready' | 'validating' | 'running' | 'error';
-
-export type GuidedConsultingStepResult<Context extends object> = {
-  context?: Partial<Context>;
-  next?: string | null;
-};
-
-export type GuidedConsultingStepToolInputParams<Context extends object> = {
-  value: string;
-  context: Readonly<Context>;
-};
-
-export type GuidedConsultingStepToolResultParams<Context extends object> = {
-  value: string;
-  context: Readonly<Context>;
-  output: unknown;
-};
 
 export type GuidedConsultingToolId<Tools extends object> = Tools extends {
   ids: ReadonlyArray<infer Id>;
@@ -38,61 +13,77 @@ export type GuidedConsultingToolId<Tools extends object> = Tools extends {
   ? Extract<Id, string>
   : string;
 
-export type GuidedConsultingStepTool<
-  Context extends object,
-  Tools extends object,
-> = {
-  id: GuidedConsultingToolId<Tools>;
-  createInput: (
-    params: GuidedConsultingStepToolInputParams<Context>,
-  ) => unknown;
-  resolve: (
-    params: GuidedConsultingStepToolResultParams<Context>,
-  ) => GuidedConsultingStepResult<Context>;
+export type GuidedConsultingMemory<Context extends object> = {
+  context: Readonly<Context>;
+  actions: Readonly<Record<string, GuidedConsultingUserAction>>;
+  toolResults: Readonly<Record<string, unknown>>;
+  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
+  lastAction: GuidedConsultingUserAction | null;
+  lastToolResult: unknown;
+  lastToolError: GuidedConsultingToolError | null;
 };
 
-export type GuidedConsultingStepValidation<
-  Context extends object,
-  Tools extends object,
-> = {
-  id: GuidedConsultingToolId<Tools>;
-  createInput: (
-    params: GuidedConsultingStepToolInputParams<Context>,
-  ) => unknown;
-  resolve: (params: GuidedConsultingStepToolResultParams<Context>) => string;
+export type GuidedConsultingValueResolver<Context extends object, Value> =
+  Value | ((memory: GuidedConsultingMemory<Context>) => Value);
+
+export type GuidedConsultingPlanTransition<Context extends object> =
+  | string
+  | ((params: {
+      action: GuidedConsultingUserAction;
+      memory: GuidedConsultingMemory<Context>;
+    }) => string);
+
+export type GuidedConsultingScreenProgress = {
+  current: number;
+  total: number;
 };
 
-export type GuidedConsultingStep<
+export type GuidedConsultingScreenNode<Context extends object> = {
+  id: string;
+  type: 'screen';
+  screen: GuidedConsultingValueResolver<Context, GuidedConsultingRenderTarget>;
+  on?: Partial<
+    Record<
+      GuidedConsultingUserAction['type'],
+      GuidedConsultingPlanTransition<Context>
+    >
+  >;
+  progress?: GuidedConsultingScreenProgress;
+  draftKey?: string;
+  terminal?: boolean;
+};
+
+export type GuidedConsultingToolResultParams<Context extends object> = {
+  context: Readonly<Context>;
+  output: unknown;
+  memory: GuidedConsultingMemory<Context>;
+};
+
+export type GuidedConsultingToolNode<
   Context extends object,
   Tools extends object,
 > = {
   id: string;
-  explain:
-    | GuidedConsultingRenderTarget
-    | ReadonlyArray<GuidedConsultingRenderTarget>
-    | ((
-        context: Readonly<Context>,
-      ) =>
-        | GuidedConsultingRenderTarget
-        | ReadonlyArray<GuidedConsultingRenderTarget>);
-  input: GuidedConsultingInput;
-  inputScreen?:
-    | GuidedConsultingRenderTarget
-    | ((params: {
-        value: string;
-        status: GuidedConsultingInputStatus;
-        error: string | null;
-        context: Readonly<Context>;
-      }) => GuidedConsultingRenderTarget);
-  validation?: GuidedConsultingStepValidation<Context, Tools>;
-  pending?:
-    | GuidedConsultingRenderTarget
-    | ((params: {
-        value: string;
-        context: Readonly<Context>;
-      }) => GuidedConsultingRenderTarget);
-  tool: GuidedConsultingStepTool<Context, Tools>;
+  type: 'tool';
+  toolId: GuidedConsultingToolId<Tools>;
+  input: (memory: GuidedConsultingMemory<Context>) => unknown;
+  pendingScreen?: GuidedConsultingValueResolver<
+    Context,
+    GuidedConsultingRenderTarget
+  >;
+  progress?: GuidedConsultingScreenProgress;
+  next:
+    string | ((params: GuidedConsultingToolResultParams<Context>) => string);
+  onRejected: string;
+  reduce?: (params: GuidedConsultingToolResultParams<Context>) => Context;
 };
+
+export type GuidedConsultingPlanNode<
+  Context extends object,
+  Tools extends object,
+> =
+  | GuidedConsultingScreenNode<Context>
+  | GuidedConsultingToolNode<Context, Tools>;
 
 export type GuidedConsultingDefinition<
   Context extends object,
@@ -100,64 +91,30 @@ export type GuidedConsultingDefinition<
 > = {
   id: string;
   title: string;
+  entry: string;
   createInitialContext: () => Context;
-  steps: ReadonlyArray<GuidedConsultingStep<Context, Tools>>;
-  complete?:
-    | GuidedConsultingRenderTarget
-    | ((context: Readonly<Context>) => GuidedConsultingRenderTarget);
+  nodes: Readonly<Record<string, GuidedConsultingPlanNode<Context, Tools>>>;
 };
 
-export type GuidedConsultingHistoryFrame<Context extends object> = {
-  stepIndex: number;
-  context: Context;
-  answers: Record<string, string>;
-};
-
-type GuidedConsultingScreenBase = {
+export type GuidedConsultingScreen = {
   id: string;
+  nodeId: string;
   title: string;
-  stepIndex: number;
-  stepCount: number;
-  canGoBack: boolean;
   renderTarget: GuidedConsultingRenderTarget;
+  availableActions: ReadonlyArray<GuidedConsultingUserAction['type']>;
+  progress?: GuidedConsultingScreenProgress;
+  draftKey?: string;
+  terminal: boolean;
 };
 
-export type GuidedConsultingExplanationScreen = GuidedConsultingScreenBase & {
-  kind: 'explanation';
-  stepId: string;
-  explanationIndex: number;
-  explanationCount: number;
-};
+export type GuidedConsultingModuleCallKind = 'screen' | 'tool';
 
-export type GuidedConsultingInputScreen = GuidedConsultingScreenBase & {
-  kind: 'input';
-  stepId: string;
-  input: GuidedConsultingInput;
-  value: string;
-  status: GuidedConsultingInputStatus;
-  error: string | null;
-};
-
-export type GuidedConsultingCompleteScreen<Context extends object> =
-  GuidedConsultingScreenBase & {
-    kind: 'complete';
-    context: Context;
-  };
-
-export type GuidedConsultingScreen<Context extends object> =
-  | GuidedConsultingExplanationScreen
-  | GuidedConsultingInputScreen
-  | GuidedConsultingCompleteScreen<Context>;
-
-export type GuidedConsultingToolCallKind = 'screen' | 'tool';
-
-export type GuidedConsultingToolCall = {
+export type GuidedConsultingModuleCall = {
   id: string;
-  kind: GuidedConsultingToolCallKind;
+  kind: GuidedConsultingModuleCallKind;
   toolName: string;
-  stepId: string | null;
+  nodeId: string;
   input: unknown;
-  metadata?: unknown;
 };
 
 export type GuidedConsultingAgentSnapshot<
@@ -165,18 +122,19 @@ export type GuidedConsultingAgentSnapshot<
   Tools extends object,
 > = {
   definitionId: string;
+  sessionId: number;
   title: string;
   phase: GuidedConsultingPhase;
-  stepIndex: number;
-  stepCount: number;
-  step: GuidedConsultingStep<Context, Tools> | null;
+  currentNodeId: string;
+  node: GuidedConsultingPlanNode<Context, Tools>;
   context: Context;
-  answers: Readonly<Record<string, string>>;
+  actions: Readonly<Record<string, GuidedConsultingUserAction>>;
+  toolResults: Readonly<Record<string, unknown>>;
+  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
   error: Error | null;
-  canGoBack: boolean;
   isComplete: boolean;
-  screen: GuidedConsultingScreen<Context> | null;
-  pendingToolCalls: ReadonlyArray<GuidedConsultingToolCall>;
+  screen: GuidedConsultingScreen | null;
+  pendingModuleCalls: ReadonlyArray<GuidedConsultingModuleCall>;
 };
 
 export type GuidedConsultingAgent<
@@ -187,7 +145,7 @@ export type GuidedConsultingAgent<
   subscribe: (listener: () => void) => () => void;
   send: (input: GuidedConsultingUserAction) => void;
   executeToolCall: (callId: string, signal: AbortSignal) => Promise<unknown>;
-  resolveToolCall: (callId: string, output: unknown) => void;
-  rejectToolCall: (callId: string, error: unknown) => void;
+  resolveModuleCall: (callId: string, output: unknown) => void;
+  rejectModuleCall: (callId: string, error: unknown) => void;
   dispose: () => void;
 };
