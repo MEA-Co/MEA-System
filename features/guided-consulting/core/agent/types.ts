@@ -1,9 +1,9 @@
+import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
 import type {
   GuidedConsultingPlanNode,
   GuidedConsultingScreenProgress,
 } from '@/features/guided-consulting/core/plan/types';
 import type { GuidedConsultingRenderTarget } from '@/features/guided-consulting/core/renderer/protocol';
-import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingPhase =
@@ -40,10 +40,6 @@ export type GuidedConsultingAgentSnapshot<
   phase: GuidedConsultingPhase;
   currentNodeId: string;
   node: GuidedConsultingPlanNode<Context, Tools>;
-  context: Context;
-  actions: Readonly<Record<string, GuidedConsultingUserAction>>;
-  toolResults: Readonly<Record<string, unknown>>;
-  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
   error: Error | null;
   isComplete: boolean;
   screen: GuidedConsultingScreen | null;
@@ -55,6 +51,7 @@ export type GuidedConsultingAgent<
   Tools extends object,
 > = {
   getSnapshot: () => GuidedConsultingAgentSnapshot<Context, Tools>;
+  getMemory: () => GuidedConsultingMemory<Context>;
   subscribe: (listener: () => void) => () => void;
   send: (input: GuidedConsultingUserAction) => void;
   executeToolCall: (callId: string, signal: AbortSignal) => Promise<unknown>;

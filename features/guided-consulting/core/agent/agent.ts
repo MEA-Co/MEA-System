@@ -198,7 +198,6 @@ export function createGuidedConsultingAgent<
   };
 
   const createSnapshot = (): GuidedConsultingAgentSnapshot<Context, Tools> => {
-    const memory = readMemory();
     return {
       planId: plan.id,
       sessionId: state.sessionId,
@@ -206,10 +205,6 @@ export function createGuidedConsultingAgent<
       phase: state.phase,
       currentNodeId: state.currentNodeId,
       node: getNode(state.currentNodeId),
-      context: memory.context,
-      actions: memory.actions,
-      toolResults: memory.toolResults,
-      toolErrors: memory.toolErrors,
       error: state.error,
       isComplete: state.phase === 'complete',
       screen: state.screen,
@@ -410,6 +405,7 @@ export function createGuidedConsultingAgent<
 
   return {
     getSnapshot: () => snapshot,
+    getMemory: readMemory,
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

@@ -147,7 +147,8 @@ export function useGuidedConsultingAgent<
   }, [agent, renderer, snapshot.pendingModuleCalls]);
 
   return {
-    ...snapshot,
+    snapshot,
+    memory: agent.getMemory(),
     logs: logger.getSnapshot(),
     send: agent.send,
   };

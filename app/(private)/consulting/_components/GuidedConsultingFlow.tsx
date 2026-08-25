@@ -34,31 +34,24 @@ export function GuidedConsultingFlow<
   renderer,
   debug = false,
 }: GuidedConsultingFlowProps<Context, Tools>) {
-  const agent = useGuidedConsultingAgent(plan, tools, renderer);
+  const { snapshot, memory, logs, send } = useGuidedConsultingAgent(
+    plan,
+    tools,
+    renderer,
+  );
   const [drafts, setDrafts] = useState<{
     sessionId: number;
     values: Record<string, string>;
-  }>({ sessionId: agent.sessionId, values: {} });
-  const screen = agent.screen;
+  }>({ sessionId: snapshot.sessionId, values: {} });
+  const screen = snapshot.screen;
   const draftKey = screen?.draftKey ?? screen?.nodeId ?? '';
   const draftValue =
-    drafts.sessionId === agent.sessionId ? (drafts.values[draftKey] ?? '') : '';
+    drafts.sessionId === snapshot.sessionId
+      ? (drafts.values[draftKey] ?? '')
+      : '';
 
   const debugConsole = debug ? (
-    <ConsultingDebugConsole
-      planId={agent.planId}
-      phase={agent.phase}
-      currentNodeId={agent.currentNodeId}
-      node={agent.node}
-      screen={screen}
-      context={agent.context}
-      actions={agent.actions}
-      toolResults={agent.toolResults}
-      toolErrors={agent.toolErrors}
-      error={agent.error}
-      pendingModuleCalls={agent.pendingModuleCalls}
-      logs={agent.logs}
-    />
+    <ConsultingDebugConsole snapshot={snapshot} memory={memory} logs={logs} />
   ) : null;
 
   if (!screen) return debugConsole;
@@ -69,13 +62,13 @@ export function GuidedConsultingFlow<
       draftValue,
       onDraftChange: (value) =>
         setDrafts((current) => ({
-          sessionId: agent.sessionId,
+          sessionId: snapshot.sessionId,
           values: {
-            ...(current.sessionId === agent.sessionId ? current.values : {}),
+            ...(current.sessionId === snapshot.sessionId ? current.values : {}),
             [draftKey]: value,
           },
         })),
-      send: agent.send,
+      send,
     })
   ) : (
     <section
@@ -98,13 +91,13 @@ export function GuidedConsultingFlow<
         currentStep={screen.progress?.current}
         stepCount={screen.progress?.total}
         canGoBack={canGoBack}
-        onBack={() => agent.send({ type: 'user.back' })}
+        onBack={() => send({ type: 'user.back' })}
         topRightAction={
           canReviewExplanation ? (
             <Button
               type="button"
               variant="outline"
-              onClick={() => agent.send({ type: 'user.review-explanation' })}
+              onClick={() => send({ type: 'user.review-explanation' })}
             >
               <Eye aria-hidden="true" />
               설명 다시 보기

@@ -14,27 +14,18 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type {
-  GuidedConsultingModuleCall,
-  GuidedConsultingPhase,
-  GuidedConsultingScreen,
-} from '@/features/guided-consulting/core/agent/types';
+import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
+import type { GuidedConsultingAgentSnapshot } from '@/features/guided-consulting/core/agent/types';
 import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
-import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
+import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import { cn } from '@/lib/utils';
 
-type ConsultingDebugConsoleProps<Context extends object> = {
-  planId: string;
-  phase: GuidedConsultingPhase;
-  currentNodeId: string;
-  node: unknown;
-  screen: GuidedConsultingScreen | null;
-  context: Context;
-  actions: Readonly<Record<string, unknown>>;
-  toolResults: Readonly<Record<string, unknown>>;
-  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
-  error: Error | null;
-  pendingModuleCalls: ReadonlyArray<GuidedConsultingModuleCall>;
+type ConsultingDebugConsoleProps<
+  Context extends object,
+  Tools extends GuidedConsultingToolsRuntime,
+> = {
+  snapshot: GuidedConsultingAgentSnapshot<Context, Tools>;
+  memory: GuidedConsultingMemory<Context>;
   logs: ReadonlyArray<GuidedConsultingLog>;
 };
 
@@ -53,7 +44,10 @@ const unreadLogClassNames: Record<GuidedConsultingLog['kind'], string> = {
   'module.error': 'border-rose-400/50 bg-rose-400/10 ring-rose-400/15',
 };
 
-const phaseLabels: Record<GuidedConsultingPhase, string> = {
+const phaseLabels: Record<
+  GuidedConsultingAgentSnapshot<object, GuidedConsultingToolsRuntime>['phase'],
+  string
+> = {
   'waiting-for-user': 'WAITING FOR USER',
   'running-tools': 'RUNNING TOOLS',
   complete: 'COMPLETE',
@@ -101,20 +95,10 @@ function DataBlock({ value }: { value: unknown }) {
   );
 }
 
-export function ConsultingDebugConsole<Context extends object>({
-  planId,
-  phase,
-  currentNodeId,
-  node,
-  screen,
-  context,
-  actions,
-  toolResults,
-  toolErrors,
-  error,
-  pendingModuleCalls,
-  logs,
-}: ConsultingDebugConsoleProps<Context>) {
+export function ConsultingDebugConsole<
+  Context extends object,
+  Tools extends GuidedConsultingToolsRuntime,
+>({ snapshot, memory, logs }: ConsultingDebugConsoleProps<Context, Tools>) {
   const [isOpen, setIsOpen] = useState(true);
   const [readLogIds, setReadLogIds] = useState<ReadonlySet<number>>(
     () => new Set(),
@@ -166,7 +150,7 @@ export function ConsultingDebugConsole<Context extends object>({
                     CONSULTING EVENT LOG
                   </p>
                   <p className="mt-0.5 truncate text-[0.7rem] text-zinc-400">
-                    {planId} · {currentNodeId}
+                    {snapshot.planId} · {snapshot.currentNodeId}
                   </p>
                 </div>
               </div>
@@ -186,7 +170,7 @@ export function ConsultingDebugConsole<Context extends object>({
             <div className="mt-3 flex items-center justify-between gap-3">
               <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
                 <Radio className="size-3 animate-pulse" aria-hidden="true" />
-                {phaseLabels[phase]}
+                {phaseLabels[snapshot.phase]}
               </Badge>
               <p className="text-[0.7rem] text-zinc-400">
                 {unreadCount > 0 ? `${unreadCount} new` : 'All read'}
@@ -203,21 +187,12 @@ export function ConsultingDebugConsole<Context extends object>({
                       className="size-4 text-violet-400"
                       aria-hidden="true"
                     />
-                    Agent State
+                    Agent Snapshot
                   </span>
                   <ChevronDown className="size-4 text-zinc-500 transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="border-t border-zinc-800 px-3.5 pb-3.5">
-                  <DataBlock
-                    value={{
-                      phase,
-                      currentNodeId,
-                      node,
-                      activeScreen: screen,
-                      error,
-                      pendingModuleCalls,
-                    }}
-                  />
+                  <DataBlock value={snapshot} />
                 </div>
               </details>
 
@@ -233,9 +208,7 @@ export function ConsultingDebugConsole<Context extends object>({
                   <ChevronDown className="size-4 text-zinc-500 transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="border-t border-zinc-800 px-3.5 pb-3.5">
-                  <DataBlock
-                    value={{ context, actions, toolResults, toolErrors }}
-                  />
+                  <DataBlock value={memory} />
                 </div>
               </details>
             </div>
