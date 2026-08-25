@@ -1,8 +1,20 @@
+export type { GuidedConsultingAgentOptions } from '@/features/guided-consulting/core/agent';
 export { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
 export {
   defineGuidedConsulting,
   defineGuidedStep,
 } from '@/features/guided-consulting/core/definition';
+export type {
+  GuidedConsultingAgentEvent,
+  GuidedConsultingAgentEventListener,
+} from '@/features/guided-consulting/core/events';
+export type {
+  GuidedConsultingLog,
+  GuidedConsultingLogger,
+  GuidedConsultingLoggerOptions,
+  GuidedConsultingLogKind,
+} from '@/features/guided-consulting/core/logger';
+export { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
 export type {
   GuidedConsultingDynamicRenderTarget,
   GuidedConsultingRendererDynamicRequest,
@@ -51,9 +63,6 @@ export type {
 export { createGuidedConsultingTools } from '@/features/guided-consulting/core/tools';
 export type {
   GuidedConsultingAgent,
-  GuidedConsultingAgentLog,
-  GuidedConsultingAgentLogKind,
-  GuidedConsultingAgentOptions,
   GuidedConsultingAgentSnapshot,
   GuidedConsultingCompleteScreen,
   GuidedConsultingDefinition,

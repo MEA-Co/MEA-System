@@ -4,8 +4,8 @@ import { Activity, Bot, Bug, Database, Radio } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
 import type {
-  GuidedConsultingAgentLog,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
   GuidedConsultingToolCall,
@@ -20,16 +20,14 @@ type ConsultingDebugConsoleProps<Context extends object> = {
   answers: Readonly<Record<string, string>>;
   error: Error | null;
   pendingToolCalls: ReadonlyArray<GuidedConsultingToolCall>;
-  logs: ReadonlyArray<GuidedConsultingAgentLog>;
+  logs: ReadonlyArray<GuidedConsultingLog>;
 };
 
-const logKindLabels: Record<GuidedConsultingAgentLog['kind'], string> = {
+const logKindLabels: Record<GuidedConsultingLog['kind'], string> = {
   'agent.input': 'INPUT',
-  'agent.message': 'MESSAGE',
-  'tool.call': 'CALL',
-  'tool.result': 'RESULT',
-  'tool.error': 'ERROR',
-  'state.changed': 'STATE',
+  'module.request': 'REQUEST',
+  'module.response': 'RESPONSE',
+  'module.error': 'ERROR',
 };
 
 const phaseLabels: Record<GuidedConsultingPhase, string> = {
@@ -39,8 +37,8 @@ const phaseLabels: Record<GuidedConsultingPhase, string> = {
   error: 'ERROR',
 };
 
-function getLogEvent(log: GuidedConsultingAgentLog) {
-  if (log.toolName) return log.toolName;
+function getLogEvent(log: GuidedConsultingLog) {
+  if (log.moduleId) return log.moduleId;
   const type = (log.data as { type?: unknown } | undefined)?.type;
   return typeof type === 'string' ? type : log.kind;
 }
@@ -114,10 +112,10 @@ export function ConsultingDebugConsole<Context extends object>({
           </span>
           <div>
             <p className="text-xs font-bold tracking-[0.12em]">
-              CONSULTING AGENT LOG
+              CONSULTING EVENT LOG
             </p>
             <p className="mt-0.5 text-[0.7rem] text-zinc-400">
-              Agent Input · Message · Tool Call · Tool Result
+              User · Agent · Renderer · Tools
             </p>
           </div>
         </div>
@@ -207,13 +205,11 @@ export function ConsultingDebugConsole<Context extends object>({
                   <div>
                     <p
                       className={
-                        log.kind === 'agent.message'
-                          ? 'text-xs font-semibold text-sky-300'
-                          : log.kind === 'tool.call'
-                            ? 'text-xs font-semibold text-amber-300'
-                            : log.kind === 'tool.result'
-                              ? 'text-xs font-semibold text-emerald-300'
-                              : 'text-xs font-semibold text-zinc-300'
+                        log.kind === 'module.request'
+                          ? 'text-xs font-semibold text-amber-300'
+                          : log.kind === 'module.response'
+                            ? 'text-xs font-semibold text-emerald-300'
+                            : 'text-xs font-semibold text-zinc-300'
                       }
                     >
                       #{log.id} {log.text}

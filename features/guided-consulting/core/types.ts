@@ -165,24 +165,6 @@ export type GuidedConsultingToolCall = {
   metadata?: unknown;
 };
 
-export type GuidedConsultingAgentLogKind =
-  | 'agent.input'
-  | 'agent.message'
-  | 'tool.call'
-  | 'tool.result'
-  | 'tool.error'
-  | 'state.changed';
-
-export type GuidedConsultingAgentLog = {
-  id: number;
-  kind: GuidedConsultingAgentLogKind;
-  text: string;
-  stepId: string | null;
-  callId?: string;
-  toolName?: string;
-  data?: unknown;
-};
-
 export type GuidedConsultingAgentSnapshot<
   Context extends object,
   Tools extends object,
@@ -200,11 +182,6 @@ export type GuidedConsultingAgentSnapshot<
   isComplete: boolean;
   screen: GuidedConsultingScreen<Context> | null;
   pendingToolCalls: ReadonlyArray<GuidedConsultingToolCall>;
-  logs: ReadonlyArray<GuidedConsultingAgentLog>;
-};
-
-export type GuidedConsultingAgentOptions = {
-  maxLogs?: number;
 };
 
 export type GuidedConsultingAgent<

@@ -1,3 +1,4 @@
+import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/events';
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
@@ -9,9 +10,6 @@ import {
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
 import type {
   GuidedConsultingAgent,
-  GuidedConsultingAgentLog,
-  GuidedConsultingAgentLogKind,
-  GuidedConsultingAgentOptions,
   GuidedConsultingAgentSnapshot,
   GuidedConsultingDefinition,
   GuidedConsultingExplanation,
@@ -24,6 +22,10 @@ import type {
   GuidedConsultingToolCall,
   GuidedConsultingToolCallKind,
 } from '@/features/guided-consulting/core/types';
+
+export type GuidedConsultingAgentOptions = {
+  onEvent?: GuidedConsultingAgentEventListener;
+};
 
 type AgentState<Context extends object> = {
   phase: GuidedConsultingPhase;
@@ -71,9 +73,8 @@ export function createGuidedConsultingAgent<
   options: GuidedConsultingAgentOptions = {},
 ): GuidedConsultingAgent<Context, Tools> {
   const listeners = new Set<() => void>();
-  const logs: Array<GuidedConsultingAgentLog> = [];
-  const maxLogs = options.maxLogs ?? 200;
-  let logId = 0;
+  const emitEvent: GuidedConsultingAgentEventListener =
+    options.onEvent ?? (() => undefined);
   let callId = 0;
   let screenId = 0;
   let disposed = false;
@@ -89,51 +90,8 @@ export function createGuidedConsultingAgent<
     pendingToolCalls: [],
   };
 
-  const appendLog = (
-    kind: GuidedConsultingAgentLogKind,
-    _text: string,
-    details: {
-      stepId?: string | null;
-      callId?: string;
-      toolName?: string;
-      data?: unknown;
-    } = {},
-  ) => {
-    if (kind === 'agent.message' || kind === 'state.changed') return;
-
-    const endpoint =
-      details.toolName === 'screen.render' ? 'renderer' : details.toolName;
-    const inputType = (details.data as { type?: string } | undefined)?.type;
-    const direction =
-      kind === 'agent.input'
-        ? inputType === 'consulting.started'
-          ? 'system -> agent'
-          : 'user -> agent'
-        : kind === 'tool.call'
-          ? `agent -> ${endpoint ?? 'tool'}`
-          : `${endpoint ?? 'tool'} -> agent`;
-
-    logs.push({
-      id: ++logId,
-      kind,
-      text: direction,
-      stepId: details.stepId ?? definition.steps[state.stepIndex]?.id ?? null,
-      callId: details.callId,
-      toolName: details.toolName,
-      data: details.data,
-    });
-
-    if (logs.length > maxLogs) {
-      logs.splice(0, logs.length - maxLogs);
-    }
-  };
-
-  const setPhase = (phase: GuidedConsultingPhase, data?: unknown) => {
-    const previousPhase = state.phase;
+  const setPhase = (phase: GuidedConsultingPhase) => {
     state.phase = phase;
-    if (previousPhase !== phase) {
-      appendLog('state.changed', `${previousPhase} → ${phase}`, { data });
-    }
   };
 
   const issueToolCall = (
@@ -152,12 +110,7 @@ export function createGuidedConsultingAgent<
       metadata,
     };
     state.pendingToolCalls.push(call);
-    appendLog('tool.call', `${toolName} 호출`, {
-      stepId,
-      callId: call.id,
-      toolName,
-      data: input,
-    });
+    emitEvent({ type: 'module.request.sent', call });
     return call;
   };
 
@@ -312,11 +265,6 @@ export function createGuidedConsultingAgent<
     value: string,
   ) => {
     state.answers = { ...state.answers, [step.id]: value };
-    appendLog(
-      'agent.message',
-      `검증된 입력을 ${step.tool.id} 도구에 전달합니다.`,
-      { data: { value, context: state.context } },
-    );
 
     let request;
     try {
@@ -326,11 +274,6 @@ export function createGuidedConsultingAgent<
       );
     } catch (cause) {
       const error = toError(cause, `${step.tool.id} 입력 생성에 실패했습니다.`);
-      appendLog('tool.error', `${step.tool.id} 요청 생성에 실패했습니다.`, {
-        stepId: step.id,
-        toolName: step.tool.id,
-        data: { message: error.message },
-      });
       presentInput('error', error.message, value);
       return;
     }
@@ -357,14 +300,13 @@ export function createGuidedConsultingAgent<
     isComplete: state.phase === 'complete',
     screen: state.screen,
     pendingToolCalls: [...state.pendingToolCalls],
-    logs: [...logs],
   });
 
-  appendLog('agent.input', '컨설팅 시작 이벤트를 받았습니다.', {
+  emitEvent({
+    type: 'session.started',
+    definitionId: definition.id,
     stepId: definition.steps[0]?.id ?? null,
-    data: { type: 'consulting.started', definitionId: definition.id },
   });
-  appendLog('agent.message', '첫 번째 설명 화면을 표시합니다.');
   presentExplanation(0);
 
   let snapshot = createSnapshot();
@@ -374,22 +316,13 @@ export function createGuidedConsultingAgent<
     for (const listener of listeners) listener();
   };
 
-  const logAgentInput = (input: GuidedConsultingUserAction) => {
-    const labels: Record<GuidedConsultingUserAction['type'], string> = {
-      'user.next-explanation': '사용자가 다음 설명을 요청했습니다.',
-      'user.previous-explanation': '사용자가 이전 설명을 요청했습니다.',
-      'user.start-input': '사용자가 입력 화면을 요청했습니다.',
-      'user.review-explanation': '사용자가 설명 다시 보기를 요청했습니다.',
-      'user.submit': '사용자가 입력을 제출했습니다.',
-      'user.back': '사용자가 이전 단계로 이동했습니다.',
-      'user.reset': '사용자가 컨설팅을 다시 시작했습니다.',
-    };
-    appendLog('agent.input', labels[input.type], { data: input });
-  };
-
   const send = (input: GuidedConsultingUserAction) => {
     if (disposed) return;
-    logAgentInput(input);
+    emitEvent({
+      type: 'user.action.received',
+      action: input,
+      stepId: definition.steps[state.stepIndex]?.id ?? null,
+    });
 
     if (input.type === 'user.reset') {
       state.pendingToolCalls = [];
@@ -404,7 +337,6 @@ export function createGuidedConsultingAgent<
         screen: null,
         pendingToolCalls: [],
       };
-      appendLog('agent.message', '컨설팅을 초기화하고 처음부터 시작합니다.');
       presentExplanation(0);
       publish();
       return;
@@ -412,13 +344,11 @@ export function createGuidedConsultingAgent<
 
     if (input.type === 'user.back') {
       if (state.phase === 'running-tools') {
-        appendLog('agent.message', '도구 실행 중에는 뒤로갈 수 없습니다.');
         publish();
         return;
       }
       const frame = state.history.at(-1);
       if (!frame) {
-        appendLog('agent.message', '이전 단계가 없습니다.');
         publish();
         return;
       }
@@ -429,10 +359,6 @@ export function createGuidedConsultingAgent<
       state.history = state.history.slice(0, -1);
       state.explanationIndex = 0;
       state.error = null;
-      appendLog(
-        'agent.message',
-        '이전 단계의 설명은 건너뛰고 입력 화면을 표시합니다.',
-      );
       presentInput('ready', null);
       publish();
       return;
@@ -441,13 +367,11 @@ export function createGuidedConsultingAgent<
     const step = definition.steps[state.stepIndex];
     const screen = state.screen;
     if (!step || !screen) {
-      appendLog('agent.message', '현재 처리할 수 있는 단계가 없습니다.');
       publish();
       return;
     }
 
     if (state.phase === 'running-tools') {
-      appendLog('agent.message', '현재 Tool Result를 기다리고 있습니다.');
       publish();
       return;
     }
@@ -462,7 +386,6 @@ export function createGuidedConsultingAgent<
         state.explanationIndex + 1,
         explanations.length - 1,
       );
-      appendLog('agent.message', '다음 설명 화면을 표시합니다.');
       presentExplanation(nextIndex);
       publish();
       return;
@@ -470,21 +393,18 @@ export function createGuidedConsultingAgent<
 
     if (input.type === 'user.previous-explanation') {
       const previousIndex = Math.max(state.explanationIndex - 1, 0);
-      appendLog('agent.message', '이전 설명 화면을 표시합니다.');
       presentExplanation(previousIndex);
       publish();
       return;
     }
 
     if (input.type === 'user.start-input') {
-      appendLog('agent.message', '사용자 입력 화면을 표시합니다.');
       presentInput('ready', null);
       publish();
       return;
     }
 
     if (input.type === 'user.review-explanation') {
-      appendLog('agent.message', '설명을 첫 페이지부터 다시 표시합니다.');
       presentExplanation(0);
       publish();
       return;
@@ -496,11 +416,6 @@ export function createGuidedConsultingAgent<
         publish();
         return;
       }
-
-      appendLog(
-        'agent.message',
-        `제출된 입력을 ${step.validation.id} 도구에 전달합니다.`,
-      );
 
       try {
         const request = createGuidedConsultingToolRequest(
@@ -520,15 +435,6 @@ export function createGuidedConsultingAgent<
         const error = toError(
           cause,
           `${step.validation.id} 입력 생성에 실패했습니다.`,
-        );
-        appendLog(
-          'tool.error',
-          `${step.validation.id} 요청 생성에 실패했습니다.`,
-          {
-            stepId: step.id,
-            toolName: step.validation.id,
-            data: { message: error.message },
-          },
         );
         presentInput('error', error.message, input.value);
       }
@@ -561,6 +467,7 @@ export function createGuidedConsultingAgent<
     );
     if (callIndex < 0) return;
     const [call] = state.pendingToolCalls.splice(callIndex, 1);
+    emitEvent({ type: 'module.response.received', call, output });
 
     let toolResponse = null;
     if (call.kind === 'tool') {
@@ -569,12 +476,6 @@ export function createGuidedConsultingAgent<
       } catch (cause) {
         const metadata = call.metadata as ToolCallMetadata<Context> | undefined;
         const error = toError(cause, '올바르지 않은 Tool 응답입니다.');
-        appendLog('tool.error', error.message, {
-          stepId: call.stepId,
-          callId: call.id,
-          toolName: call.toolName,
-          data: output,
-        });
         presentInput('error', error.message, metadata?.value);
         publish();
         return;
@@ -585,27 +486,10 @@ export function createGuidedConsultingAgent<
       const metadata = call.metadata as ToolCallMetadata<Context> | undefined;
       const error = new Error(toolResponse.error.message);
       state.error = error;
-      appendLog('tool.error', `${call.toolName} 실행에 실패했습니다.`, {
-        stepId: call.stepId,
-        callId: call.id,
-        toolName: call.toolName,
-        data: toolResponse,
-      });
-      appendLog(
-        'agent.message',
-        '도구 실행 오류를 표시하고 다시 입력받습니다.',
-      );
       presentInput('error', error.message, metadata?.value);
       publish();
       return;
     }
-
-    appendLog('tool.result', `${call.toolName} 결과를 받았습니다.`, {
-      stepId: call.stepId,
-      callId: call.id,
-      toolName: call.toolName,
-      data: output,
-    });
 
     if (call.kind === 'screen') {
       const response = parseGuidedConsultingRendererResponse(output);
@@ -624,12 +508,6 @@ export function createGuidedConsultingAgent<
     const metadata = call.metadata as ToolCallMetadata<Context> | undefined;
     if (!metadata || !toolResponse || toolResponse.status !== 'completed') {
       const error = new Error('Tool Result를 Step에 반영할 정보가 없습니다.');
-      appendLog('tool.error', error.message, {
-        stepId: call.stepId,
-        callId: call.id,
-        toolName: call.toolName,
-        data: output,
-      });
       presentInput('error', error.message, metadata?.value);
       publish();
       return;
@@ -638,12 +516,6 @@ export function createGuidedConsultingAgent<
     if (metadata.purpose === 'validation') {
       if (!step.validation) {
         const error = new Error('Step에 Validation Tool 설정이 없습니다.');
-        appendLog('tool.error', error.message, {
-          stepId: call.stepId,
-          callId: call.id,
-          toolName: call.toolName,
-          data: output,
-        });
         presentInput('error', error.message, metadata.value);
         publish();
         return;
@@ -658,12 +530,6 @@ export function createGuidedConsultingAgent<
         startActionTool(step, value);
       } catch (cause) {
         const error = toError(cause, 'Validation Result 처리에 실패했습니다.');
-        appendLog('tool.error', error.message, {
-          stepId: call.stepId,
-          callId: call.id,
-          toolName: call.toolName,
-          data: output,
-        });
         presentInput('error', error.message, metadata.value);
       }
       publish();
@@ -679,12 +545,6 @@ export function createGuidedConsultingAgent<
       });
     } catch (cause) {
       const error = toError(cause, 'Tool Result 처리에 실패했습니다.');
-      appendLog('tool.error', error.message, {
-        stepId: call.stepId,
-        callId: call.id,
-        toolName: call.toolName,
-        data: output,
-      });
       presentInput('error', error.message, metadata.value);
       publish();
       return;
@@ -706,16 +566,6 @@ export function createGuidedConsultingAgent<
     if (nextStepIndex < 0) {
       const error = new Error(`다음 Step을 찾을 수 없습니다: ${result.next}`);
       state.error = error;
-      appendLog('tool.error', 'Tool Result의 다음 Step이 올바르지 않습니다.', {
-        stepId: call.stepId,
-        callId: call.id,
-        toolName: call.toolName,
-        data: { message: error.message, result },
-      });
-      appendLog(
-        'agent.message',
-        '다음 단계로 이동하지 못해 현재 입력 화면을 다시 표시합니다.',
-      );
       presentInput('error', error.message, metadata.value);
       publish();
       return;
@@ -735,17 +585,8 @@ export function createGuidedConsultingAgent<
     state.error = null;
 
     if (nextStepIndex >= definition.steps.length) {
-      appendLog(
-        'agent.message',
-        '모든 단계가 끝났습니다. 완료 화면을 표시합니다.',
-      );
       presentComplete();
     } else {
-      appendLog(
-        'agent.message',
-        '도구 결과를 context에 반영하고 다음 설명 화면을 표시합니다.',
-        { data: { context: nextContext } },
-      );
       presentExplanation(0);
     }
     publish();
@@ -759,25 +600,17 @@ export function createGuidedConsultingAgent<
     if (callIndex < 0) return;
     const [call] = state.pendingToolCalls.splice(callIndex, 1);
     const error = toError(cause, `${call.toolName} 실행에 실패했습니다.`);
-
-    appendLog('tool.error', `${call.toolName} 실행에 실패했습니다.`, {
-      stepId: call.stepId,
-      callId: call.id,
-      toolName: call.toolName,
-      data: { message: error.message },
-    });
+    emitEvent({ type: 'module.error.received', call, error });
 
     if (call.kind === 'screen') {
       state.error = error;
       setPhase('error');
-      appendLog('agent.message', '화면 렌더러가 요청을 처리하지 못했습니다.');
       publish();
       return;
     }
 
     const value = (call.metadata as ToolCallMetadata<Context> | undefined)
       ?.value;
-    appendLog('agent.message', '도구 실행 오류를 표시하고 다시 입력받습니다.');
     presentInput('error', error.message, value);
     publish();
   };

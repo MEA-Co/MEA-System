@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
+import { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
 import type {
   GuidedConsultingRendererError,
   GuidedConsultingRenderTarget,
@@ -29,10 +30,14 @@ export function useGuidedConsultingAgent<
     ) => GuidedConsultingRendererError | null;
   },
 ) {
-  const agent = useMemo(
-    () => createGuidedConsultingAgent(definition, tools),
-    [definition, tools],
-  );
+  const runtime = useMemo(() => {
+    const logger = createGuidedConsultingLogger();
+    const agent = createGuidedConsultingAgent(definition, tools, {
+      onEvent: logger.record,
+    });
+    return { agent, logger };
+  }, [definition, tools]);
+  const { agent, logger } = runtime;
   const runningCallsRef = useRef(new Map<string, AbortController>());
 
   useEffect(() => {
@@ -143,6 +148,7 @@ export function useGuidedConsultingAgent<
 
   return {
     ...snapshot,
+    logs: logger.getSnapshot(),
     send: agent.send,
   };
 }
