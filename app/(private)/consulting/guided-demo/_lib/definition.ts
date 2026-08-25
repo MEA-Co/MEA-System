@@ -3,26 +3,30 @@ import type {
   MergeSortTools,
 } from '@/app/(private)/consulting/guided-demo/_lib/types';
 import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
+import type { GuidedConsultingStepValidation } from '@/features/guided-consulting/core/types';
 
-function parseTenNumbers(value: string) {
-  const tokens = value
-    .trim()
-    .split(/[\s,]+/)
-    .filter(Boolean);
-  const numbers = tokens.map(Number);
-
+function parseNormalizedNumbers(value: string) {
+  const numbers = value.split(',').map((token) => Number(token.trim()));
   if (
     numbers.length !== 10 ||
     numbers.some((number) => !Number.isFinite(number))
   ) {
-    throw new Error('쉼표나 공백으로 구분한 숫자 10개를 입력해 주세요.');
+    throw new Error('검증된 숫자 데이터 형식이 올바르지 않습니다.');
   }
-
   return numbers;
 }
 
-function validateNumbers(value: string) {
-  return parseTenNumbers(value).join(', ');
+function getNormalizedValue(output: unknown) {
+  if (
+    typeof output !== 'object' ||
+    output === null ||
+    !('normalized' in output) ||
+    typeof output.normalized !== 'string'
+  ) {
+    throw new Error('숫자 검증 결과 형식이 올바르지 않습니다.');
+  }
+
+  return output.normalized;
 }
 
 function getSortedNumbers(output: unknown) {
@@ -38,6 +42,12 @@ function getSortedNumbers(output: unknown) {
 
   return output.sorted as Array<number>;
 }
+
+const tenNumbersValidation = {
+  id: 'numbers.validate-ten',
+  createInput: ({ value }) => ({ value }),
+  resolve: ({ output }) => getNormalizedValue(output),
+} satisfies GuidedConsultingStepValidation<MergeSortContext, MergeSortTools>;
 
 export const mergeSortConsulting = defineGuidedConsulting<
   MergeSortContext,
@@ -66,15 +76,15 @@ export const mergeSortConsulting = defineGuidedConsulting<
         placeholder: '예: 42, 7, 19, 3, 88, 14, 1, 55, 26, 9',
         maxLength: 160,
       },
-      validate: validateNumbers,
+      validation: tenNumbersValidation,
       tool: {
         id: 'numbers.merge-sort',
         createInput: ({ value }) => ({
-          numbers: parseTenNumbers(value),
+          numbers: parseNormalizedNumbers(value),
           delayMs: 1_400,
         }),
         resolve: ({ value, output }) => {
-          const numbers = parseTenNumbers(value);
+          const numbers = parseNormalizedNumbers(value);
 
           return {
             context: {
@@ -116,23 +126,23 @@ export const mergeSortConsulting = defineGuidedConsulting<
         placeholder: '예: 31 4 72 18 6 90 11 43 2 65',
         maxLength: 160,
       },
-      validate: validateNumbers,
+      validation: tenNumbersValidation,
       pending: ({ value }) => ({
         screenId: 'merge-sort.pending',
         mode: 'dynamic',
         data: {
           label: '두 번째 머지 소트 실행 중',
-          input: parseTenNumbers(value),
+          input: parseNormalizedNumbers(value),
         },
       }),
       tool: {
         id: 'numbers.merge-sort',
         createInput: ({ value }) => ({
-          numbers: parseTenNumbers(value),
+          numbers: parseNormalizedNumbers(value),
           delayMs: 2_400,
         }),
         resolve: ({ value, output }) => {
-          const numbers = parseTenNumbers(value);
+          const numbers = parseNormalizedNumbers(value);
 
           return {
             context: {

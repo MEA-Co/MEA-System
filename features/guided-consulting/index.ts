@@ -69,6 +69,7 @@ export type {
   GuidedConsultingStepTool,
   GuidedConsultingStepToolInputParams,
   GuidedConsultingStepToolResultParams,
+  GuidedConsultingStepValidation,
   GuidedConsultingToolCall,
   GuidedConsultingToolCallKind,
   GuidedConsultingToolId,

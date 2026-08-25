@@ -16,7 +16,19 @@ export type MergeSortToolOutput = {
   sorted: Array<number>;
 };
 
+export type ValidateTenNumbersToolInput = {
+  value: string;
+};
+
+export type ValidateTenNumbersToolOutput = {
+  normalized: string;
+};
+
 export type MergeSortToolSchema = {
+  'numbers.validate-ten': {
+    input: ValidateTenNumbersToolInput;
+    output: ValidateTenNumbersToolOutput;
+  };
   'numbers.merge-sort': {
     input: MergeSortToolInput;
     output: MergeSortToolOutput;

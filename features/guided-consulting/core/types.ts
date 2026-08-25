@@ -59,6 +59,17 @@ export type GuidedConsultingStepTool<
   ) => GuidedConsultingStepResult<Context>;
 };
 
+export type GuidedConsultingStepValidation<
+  Context extends object,
+  Tools extends object,
+> = {
+  id: GuidedConsultingToolId<Tools>;
+  createInput: (
+    params: GuidedConsultingStepToolInputParams<Context>,
+  ) => unknown;
+  resolve: (params: GuidedConsultingStepToolResultParams<Context>) => string;
+};
+
 export type GuidedConsultingStep<
   Context extends object,
   Tools extends object,
@@ -68,7 +79,7 @@ export type GuidedConsultingStep<
     | GuidedConsultingExplanations
     | ((context: Readonly<Context>) => GuidedConsultingExplanations);
   input: GuidedConsultingInput;
-  validate?: (value: string) => string;
+  validation?: GuidedConsultingStepValidation<Context, Tools>;
   pending?:
     | GuidedConsultingRenderTarget
     | ((params: {
@@ -132,7 +143,7 @@ export type GuidedConsultingScreen<Context extends object> =
   | GuidedConsultingInputScreen
   | GuidedConsultingCompleteScreen<Context>;
 
-export type GuidedConsultingToolCallKind = 'screen' | 'validation' | 'step';
+export type GuidedConsultingToolCallKind = 'screen' | 'tool';
 
 export type GuidedConsultingToolCall = {
   id: string;

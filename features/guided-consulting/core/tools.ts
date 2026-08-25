@@ -30,8 +30,8 @@ type ToolOutput<Schema, Name extends keyof Schema> = Schema[Name] extends {
   : never;
 
 export type GuidedConsultingToolEntry<Input, Output> = {
-  validateInput?: (input: unknown) => boolean;
-  validateOutput?: (output: unknown) => boolean;
+  validateInput?: (input: unknown) => boolean | string;
+  validateOutput?: (output: unknown) => boolean | string;
   execute: (
     input: Input,
     options: { signal: AbortSignal },
@@ -101,10 +101,14 @@ export function createGuidedConsultingTools<
         });
       }
 
-      if (entry.validateInput && !entry.validateInput(request.input)) {
+      const inputValidation = entry.validateInput?.(request.input) ?? true;
+      if (inputValidation !== true) {
         return createGuidedConsultingToolRejectedResponse(request.toolId, {
           code: 'INVALID_INPUT',
-          message: `Tool input 형식이 올바르지 않습니다: ${request.toolId}`,
+          message:
+            typeof inputValidation === 'string'
+              ? inputValidation
+              : `Tool input 형식이 올바르지 않습니다: ${request.toolId}`,
         });
       }
 
@@ -125,10 +129,14 @@ export function createGuidedConsultingTools<
           });
         }
 
-        if (entry.validateOutput && !entry.validateOutput(output)) {
+        const outputValidation = entry.validateOutput?.(output) ?? true;
+        if (outputValidation !== true) {
           return createGuidedConsultingToolRejectedResponse(request.toolId, {
             code: 'INVALID_OUTPUT',
-            message: `Tool output 형식이 올바르지 않습니다: ${request.toolId}`,
+            message:
+              typeof outputValidation === 'string'
+                ? outputValidation
+                : `Tool output 형식이 올바르지 않습니다: ${request.toolId}`,
           });
         }
 

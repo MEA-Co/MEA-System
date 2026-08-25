@@ -29,6 +29,10 @@ export function defineGuidedConsulting<
     if (!step.tool.id.trim()) {
       throw new Error(`Step Tool 이름이 필요합니다: ${step.id}`);
     }
+
+    if (step.validation && !step.validation.id.trim()) {
+      throw new Error(`Validation Tool 이름이 필요합니다: ${step.id}`);
+    }
   }
 
   return definition;
