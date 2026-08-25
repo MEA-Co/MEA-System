@@ -1,5 +1,6 @@
 export type { GuidedConsultingAgentOptions } from '@/features/guided-consulting/core/agent';
 export { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
+export type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
 export { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
 export type {
   GuidedConsultingAgentEvent,
@@ -66,7 +67,6 @@ export type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
   GuidedConsultingDefinition,
-  GuidedConsultingMemory,
   GuidedConsultingModuleCall,
   GuidedConsultingModuleCallKind,
   GuidedConsultingPhase,

@@ -1,3 +1,4 @@
+import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import type { GuidedConsultingRenderTarget } from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
@@ -10,16 +11,6 @@ export type GuidedConsultingToolId<Tools extends object> = Tools extends {
 }
   ? Extract<Id, string>
   : string;
-
-export type GuidedConsultingMemory<Context extends object> = {
-  context: Readonly<Context>;
-  actions: Readonly<Record<string, GuidedConsultingUserAction>>;
-  toolResults: Readonly<Record<string, unknown>>;
-  toolErrors: Readonly<Record<string, GuidedConsultingToolError>>;
-  lastAction: GuidedConsultingUserAction | null;
-  lastToolResult: unknown;
-  lastToolError: GuidedConsultingToolError | null;
-};
 
 export type GuidedConsultingValueResolver<Context extends object, Value> =
   Value | ((memory: GuidedConsultingMemory<Context>) => Value);

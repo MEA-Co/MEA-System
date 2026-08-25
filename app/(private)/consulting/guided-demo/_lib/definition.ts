@@ -4,8 +4,8 @@ import type {
   MergeSortTools,
   ValidateTenNumbersToolOutput,
 } from '@/app/(private)/consulting/guided-demo/_lib/types';
+import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
 import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
-import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/types';
 
 function getSubmittedValue(memory: GuidedConsultingMemory<MergeSortContext>) {
   const action = memory.lastAction;

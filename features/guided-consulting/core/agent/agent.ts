@@ -1,3 +1,8 @@
+import {
+  createGuidedConsultingMemory,
+  type GuidedConsultingMemory,
+  type GuidedConsultingMemoryStore,
+} from '@/features/guided-consulting/core/agent/memory';
 import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/events';
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
@@ -15,7 +20,6 @@ import type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
   GuidedConsultingDefinition,
-  GuidedConsultingMemory,
   GuidedConsultingModuleCall,
   GuidedConsultingModuleCallKind,
   GuidedConsultingPhase,
@@ -33,13 +37,7 @@ type AgentState<Context extends object> = {
   sessionId: number;
   phase: GuidedConsultingPhase;
   currentNodeId: string;
-  context: Context;
-  actions: Record<string, GuidedConsultingUserAction>;
-  toolResults: Record<string, unknown>;
-  toolErrors: Record<string, GuidedConsultingToolError>;
-  lastAction: GuidedConsultingUserAction | null;
-  lastToolResult: unknown;
-  lastToolError: GuidedConsultingToolError | null;
+  memory: GuidedConsultingMemoryStore<Context>;
   error: Error | null;
   screen: GuidedConsultingScreen | null;
   pendingModuleCalls: Array<GuidedConsultingModuleCall>;
@@ -81,35 +79,21 @@ export function createGuidedConsultingAgent<
       sessionId: ++sessionId,
       phase: 'waiting-for-user',
       currentNodeId: definition.entry,
-      context: definition.createInitialContext(),
-      actions: {},
-      toolResults: {},
-      toolErrors: {},
-      lastAction: null,
-      lastToolResult: undefined,
-      lastToolError: null,
+      memory: createGuidedConsultingMemory(definition.createInitialContext()),
       error: null,
       screen: null,
       pendingModuleCalls: [],
     };
   }
 
-  const createMemory = (): GuidedConsultingMemory<Context> => ({
-    context: state.context,
-    actions: state.actions,
-    toolResults: state.toolResults,
-    toolErrors: state.toolErrors,
-    lastAction: state.lastAction,
-    lastToolResult: state.lastToolResult,
-    lastToolError: state.lastToolError,
-  });
+  const readMemory = () => state.memory.read();
 
   const resolveValue = <Value>(
     resolver: GuidedConsultingValueResolver<Context, Value>,
   ): Value =>
     typeof resolver === 'function'
       ? (resolver as (memory: GuidedConsultingMemory<Context>) => Value)(
-          createMemory(),
+          readMemory(),
         )
       : resolver;
 
@@ -203,7 +187,7 @@ export function createGuidedConsultingAgent<
 
       const request = createGuidedConsultingToolRequest(
         node.toolId,
-        node.input(createMemory()),
+        node.input(readMemory()),
       );
       issueModuleCall('tool', node.toolId, node.id, request);
     } catch (cause) {
@@ -211,22 +195,25 @@ export function createGuidedConsultingAgent<
     }
   };
 
-  const createSnapshot = (): GuidedConsultingAgentSnapshot<Context, Tools> => ({
-    definitionId: definition.id,
-    sessionId: state.sessionId,
-    title: definition.title,
-    phase: state.phase,
-    currentNodeId: state.currentNodeId,
-    node: getNode(state.currentNodeId),
-    context: state.context,
-    actions: state.actions,
-    toolResults: state.toolResults,
-    toolErrors: state.toolErrors,
-    error: state.error,
-    isComplete: state.phase === 'complete',
-    screen: state.screen,
-    pendingModuleCalls: [...state.pendingModuleCalls],
-  });
+  const createSnapshot = (): GuidedConsultingAgentSnapshot<Context, Tools> => {
+    const memory = readMemory();
+    return {
+      definitionId: definition.id,
+      sessionId: state.sessionId,
+      title: definition.title,
+      phase: state.phase,
+      currentNodeId: state.currentNodeId,
+      node: getNode(state.currentNodeId),
+      context: memory.context,
+      actions: memory.actions,
+      toolResults: memory.toolResults,
+      toolErrors: memory.toolErrors,
+      error: state.error,
+      isComplete: state.phase === 'complete',
+      screen: state.screen,
+      pendingModuleCalls: [...state.pendingModuleCalls],
+    };
+  };
 
   emitEvent({
     type: 'session.started',
@@ -270,14 +257,13 @@ export function createGuidedConsultingAgent<
       return;
     }
 
-    state.actions = { ...state.actions, [node.id]: input };
-    state.lastAction = input;
+    state.memory.recordUserAction(node.id, input);
     state.error = null;
 
     try {
       const nextNodeId =
         typeof transition === 'function'
-          ? transition({ action: input, memory: createMemory() })
+          ? transition({ action: input, memory: readMemory() })
           : transition;
       enterNode(nextNodeId);
     } catch (cause) {
@@ -309,8 +295,7 @@ export function createGuidedConsultingAgent<
     node: GuidedConsultingToolNode<Context, Tools>,
     error: GuidedConsultingToolError,
   ) => {
-    state.toolErrors = { ...state.toolErrors, [node.id]: error };
-    state.lastToolError = error;
+    state.memory.recordToolError(node.id, error);
     state.error = new Error(error.message);
     enterNode(node.onRejected);
   };
@@ -359,27 +344,24 @@ export function createGuidedConsultingAgent<
         return;
       }
 
-      state.toolResults = {
-        ...state.toolResults,
-        [node.id]: response.output,
-      };
-      state.lastToolResult = response.output;
-      state.lastToolError = null;
+      state.memory.recordToolResult(node.id, response.output);
       state.error = null;
 
+      const memoryAfterResult = readMemory();
       const reduceParams = {
-        context: state.context,
+        context: memoryAfterResult.context,
         output: response.output,
-        memory: createMemory(),
+        memory: memoryAfterResult,
       };
       if (node.reduce) {
-        state.context = node.reduce(reduceParams);
+        state.memory.setContext(node.reduce(reduceParams));
       }
 
+      const memoryForNext = readMemory();
       const nextParams = {
-        context: state.context,
+        context: memoryForNext.context,
         output: response.output,
-        memory: createMemory(),
+        memory: memoryForNext,
       };
       const nextNodeId =
         typeof node.next === 'function' ? node.next(nextParams) : node.next;
