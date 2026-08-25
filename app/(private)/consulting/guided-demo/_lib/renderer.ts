@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { GuidedConsultingMainRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { defaultInputScreen } from '@/app/(private)/consulting/_screens/DefaultInputScreen';
 import { defaultTutorialScreen } from '@/app/(private)/consulting/_screens/DefaultTutorialScreen';
+import { firstSortInputScreen } from '@/app/(private)/consulting/guided-demo/_screens/FirstSortInputScreen';
+import { firstSortWaitingScreen } from '@/app/(private)/consulting/guided-demo/_screens/FirstSortWaitingScreen';
 import { mergeSortCompleteScreen } from '@/app/(private)/consulting/guided-demo/_screens/MergeSortCompleteScreen';
 import { mergeSortPendingScreen } from '@/app/(private)/consulting/guided-demo/_screens/MergeSortPendingScreen';
 import { mergeSortResultScreen } from '@/app/(private)/consulting/guided-demo/_screens/MergeSortResultScreen';
@@ -14,6 +16,8 @@ export const mergeSortRenderer = createGuidedConsultingRenderer<
 >({
   'tutorial.default': defaultTutorialScreen,
   'input.default': defaultInputScreen,
+  'first-sort.input': firstSortInputScreen,
+  'first-sort.waiting': firstSortWaitingScreen,
   'merge-sort.pending': mergeSortPendingScreen,
   'merge-sort.result': mergeSortResultScreen,
   'result.default': mergeSortCompleteScreen,

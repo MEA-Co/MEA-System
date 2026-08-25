@@ -16,6 +16,7 @@ import type {
   GuidedConsultingDefinition,
   GuidedConsultingExplanation,
   GuidedConsultingHistoryFrame,
+  GuidedConsultingInputStatus,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
   GuidedConsultingStep,
@@ -218,7 +219,7 @@ export function createGuidedConsultingAgent<
   };
 
   const presentInput = (
-    status: 'ready' | 'validating' | 'running' | 'error',
+    status: GuidedConsultingInputStatus,
     error: string | null,
     value?: string,
   ) => {
@@ -249,20 +250,31 @@ export function createGuidedConsultingAgent<
           ? step.pending({ value: inputValue, context: state.context })
           : step.pending
         : null;
-    presentScreen({
-      ...createScreenBase(
-        pendingMain ?? {
-          screenId: 'input.default',
-          mode: 'dynamic',
-          data: {
-            stepId: step.id,
-            stepIndex: state.stepIndex,
-            input: step.input,
+    const inputMain = step.inputScreen
+      ? typeof step.inputScreen === 'function'
+        ? step.inputScreen({
             value: inputValue,
             status,
             error,
+            context: state.context,
+          })
+        : step.inputScreen
+      : null;
+    presentScreen({
+      ...createScreenBase(
+        pendingMain ??
+          inputMain ?? {
+            screenId: 'input.default',
+            mode: 'dynamic',
+            data: {
+              stepId: step.id,
+              stepIndex: state.stepIndex,
+              input: step.input,
+              value: inputValue,
+              status,
+              error,
+            },
           },
-        },
         prompter,
       ),
       kind: 'input',

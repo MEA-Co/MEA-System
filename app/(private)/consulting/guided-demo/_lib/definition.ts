@@ -76,6 +76,13 @@ export const mergeSortConsulting = defineGuidedConsulting<
         placeholder: '예: 42, 7, 19, 3, 88, 14, 1, 55, 26, 9',
         maxLength: 160,
       },
+      inputScreen: ({ status }) => ({
+        screenId:
+          status === 'ready' || status === 'error'
+            ? 'first-sort.input'
+            : 'first-sort.waiting',
+        mode: 'static',
+      }),
       validation: tenNumbersValidation,
       tool: {
         id: 'numbers.merge-sort',

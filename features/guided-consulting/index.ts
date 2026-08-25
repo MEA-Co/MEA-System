@@ -62,6 +62,7 @@ export type {
   GuidedConsultingExplanationScreen,
   GuidedConsultingInput,
   GuidedConsultingInputScreen,
+  GuidedConsultingInputStatus,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
   GuidedConsultingStep,

@@ -24,6 +24,9 @@ export type GuidedConsultingInput = {
   maxLength?: number;
 };
 
+export type GuidedConsultingInputStatus =
+  'ready' | 'validating' | 'running' | 'error';
+
 export type GuidedConsultingStepResult<Context extends object> = {
   context?: Partial<Context>;
   next?: string | null;
@@ -79,6 +82,14 @@ export type GuidedConsultingStep<
     | GuidedConsultingExplanations
     | ((context: Readonly<Context>) => GuidedConsultingExplanations);
   input: GuidedConsultingInput;
+  inputScreen?:
+    | GuidedConsultingRenderTarget
+    | ((params: {
+        value: string;
+        status: GuidedConsultingInputStatus;
+        error: string | null;
+        context: Readonly<Context>;
+      }) => GuidedConsultingRenderTarget);
   validation?: GuidedConsultingStepValidation<Context, Tools>;
   pending?:
     | GuidedConsultingRenderTarget
@@ -128,7 +139,7 @@ export type GuidedConsultingInputScreen = GuidedConsultingScreenBase & {
   stepId: string;
   input: GuidedConsultingInput;
   value: string;
-  status: 'ready' | 'validating' | 'running' | 'error';
+  status: GuidedConsultingInputStatus;
   error: string | null;
 };
 
