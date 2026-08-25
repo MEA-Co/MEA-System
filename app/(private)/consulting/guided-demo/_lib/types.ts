@@ -7,15 +7,19 @@ export type MergeSortContext = {
   secondSorted: Array<number>;
 };
 
+export type MergeSortToolInput = {
+  numbers: Array<number>;
+  delayMs: number;
+};
+
+export type MergeSortToolOutput = {
+  sorted: Array<number>;
+};
+
 export type MergeSortToolSchema = {
   'numbers.merge-sort': {
-    input: {
-      numbers: Array<number>;
-      delayMs: number;
-    };
-    output: {
-      sorted: Array<number>;
-    };
+    input: MergeSortToolInput;
+    output: MergeSortToolOutput;
   };
 };
 
