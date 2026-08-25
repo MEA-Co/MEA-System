@@ -1,7 +1,6 @@
 export type { GuidedConsultingAgentOptions } from '@/features/guided-consulting/core/agent';
 export { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
 export type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
-export { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
 export type {
   GuidedConsultingAgentEvent,
   GuidedConsultingAgentEventListener,
@@ -13,6 +12,18 @@ export type {
   GuidedConsultingLogKind,
 } from '@/features/guided-consulting/core/logger';
 export { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
+export type {
+  GuidedConsultingPlan,
+  GuidedConsultingPlanNode,
+  GuidedConsultingPlanTransition,
+  GuidedConsultingScreenNode,
+  GuidedConsultingScreenProgress,
+  GuidedConsultingToolId,
+  GuidedConsultingToolNode,
+  GuidedConsultingToolResultParams,
+  GuidedConsultingValueResolver,
+} from '@/features/guided-consulting/core/plan';
+export { defineGuidedConsultingPlan } from '@/features/guided-consulting/core/plan';
 export type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 export type {
   GuidedConsultingRenderer,
@@ -66,17 +77,8 @@ export {
 export type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
-  GuidedConsultingDefinition,
   GuidedConsultingModuleCall,
   GuidedConsultingModuleCallKind,
   GuidedConsultingPhase,
-  GuidedConsultingPlanNode,
-  GuidedConsultingPlanTransition,
   GuidedConsultingScreen,
-  GuidedConsultingScreenNode,
-  GuidedConsultingScreenProgress,
-  GuidedConsultingToolId,
-  GuidedConsultingToolNode,
-  GuidedConsultingToolResultParams,
-  GuidedConsultingValueResolver,
 } from '@/features/guided-consulting/core/types';

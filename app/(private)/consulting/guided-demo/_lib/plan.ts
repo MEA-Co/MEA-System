@@ -5,7 +5,7 @@ import type {
   ValidateTenNumbersToolOutput,
 } from '@/app/(private)/consulting/guided-demo/_lib/types';
 import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
-import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
+import { defineGuidedConsultingPlan } from '@/features/guided-consulting/core/plan';
 
 function getSubmittedValue(memory: GuidedConsultingMemory<MergeSortContext>) {
   const action = memory.lastAction;
@@ -51,7 +51,7 @@ function getLastError(memory: GuidedConsultingMemory<MergeSortContext>) {
   return memory.lastToolError?.message ?? '작업을 처리하지 못했습니다.';
 }
 
-export const mergeSortConsulting = defineGuidedConsulting<
+export const mergeSortPlan = defineGuidedConsultingPlan<
   MergeSortContext,
   MergeSortTools
 >({

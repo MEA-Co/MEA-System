@@ -13,7 +13,7 @@ import type {
 } from '@/features/guided-consulting/core/types';
 
 type ConsultingDebugConsoleProps<Context extends object> = {
-  definitionId: string;
+  planId: string;
   phase: GuidedConsultingPhase;
   currentNodeId: string;
   node: unknown;
@@ -96,7 +96,7 @@ function DataBlock({
 }
 
 export function ConsultingDebugConsole<Context extends object>({
-  definitionId,
+  planId,
   phase,
   currentNodeId,
   node,
@@ -138,7 +138,7 @@ export function ConsultingDebugConsole<Context extends object>({
         <CardContent className="p-4 md:p-5">
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
             <Badge variant="outline" className="border-zinc-700 text-zinc-300">
-              {definitionId}
+              {planId}
             </Badge>
             <span>{screen?.renderTarget.screenId ?? '화면 없음'}</span>
             <span>·</span>

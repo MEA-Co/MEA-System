@@ -50,7 +50,7 @@ export function createGuidedConsultingLogger(
           nodeId: event.nodeId,
           data: {
             type: event.type,
-            definitionId: event.definitionId,
+            planId: event.planId,
           },
         });
         return;

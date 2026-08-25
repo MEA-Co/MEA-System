@@ -4,7 +4,7 @@ import type { GuidedConsultingModuleCall } from '@/features/guided-consulting/co
 export type GuidedConsultingAgentEvent =
   | {
       type: 'session.started';
-      definitionId: string;
+      planId: string;
       nodeId: string;
     }
   | {

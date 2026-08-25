@@ -4,6 +4,12 @@ import {
   type GuidedConsultingMemoryStore,
 } from '@/features/guided-consulting/core/agent/memory';
 import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/events';
+import type {
+  GuidedConsultingPlan,
+  GuidedConsultingPlanNode,
+  GuidedConsultingToolNode,
+  GuidedConsultingValueResolver,
+} from '@/features/guided-consulting/core/plan';
 import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
@@ -19,14 +25,10 @@ import {
 import type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
-  GuidedConsultingDefinition,
   GuidedConsultingModuleCall,
   GuidedConsultingModuleCallKind,
   GuidedConsultingPhase,
-  GuidedConsultingPlanNode,
   GuidedConsultingScreen,
-  GuidedConsultingToolNode,
-  GuidedConsultingValueResolver,
 } from '@/features/guided-consulting/core/types';
 
 export type GuidedConsultingAgentOptions = {
@@ -61,7 +63,7 @@ export function createGuidedConsultingAgent<
   Context extends object,
   Tools extends GuidedConsultingToolsRuntime,
 >(
-  definition: GuidedConsultingDefinition<Context, Tools>,
+  plan: GuidedConsultingPlan<Context, Tools>,
   tools: Tools,
   options: GuidedConsultingAgentOptions = {},
 ): GuidedConsultingAgent<Context, Tools> {
@@ -78,8 +80,8 @@ export function createGuidedConsultingAgent<
     return {
       sessionId: ++sessionId,
       phase: 'waiting-for-user',
-      currentNodeId: definition.entry,
-      memory: createGuidedConsultingMemory(definition.createInitialContext()),
+      currentNodeId: plan.entry,
+      memory: createGuidedConsultingMemory(plan.createInitialContext()),
       error: null,
       screen: null,
       pendingModuleCalls: [],
@@ -98,7 +100,7 @@ export function createGuidedConsultingAgent<
       : resolver;
 
   const getNode = (nodeId: string) => {
-    const node = definition.nodes[nodeId];
+    const node = plan.nodes[nodeId];
     if (!node) throw new Error(`Plan Node를 찾을 수 없습니다: ${nodeId}`);
     return node;
   };
@@ -134,7 +136,7 @@ export function createGuidedConsultingAgent<
     state.screen = {
       id: `screen-${++screenId}`,
       nodeId,
-      title: definition.title,
+      title: plan.title,
       renderTarget: target,
       availableActions: options.availableActions ?? [],
       progress: options.progress,
@@ -198,9 +200,9 @@ export function createGuidedConsultingAgent<
   const createSnapshot = (): GuidedConsultingAgentSnapshot<Context, Tools> => {
     const memory = readMemory();
     return {
-      definitionId: definition.id,
+      planId: plan.id,
       sessionId: state.sessionId,
-      title: definition.title,
+      title: plan.title,
       phase: state.phase,
       currentNodeId: state.currentNodeId,
       node: getNode(state.currentNodeId),
@@ -217,10 +219,10 @@ export function createGuidedConsultingAgent<
 
   emitEvent({
     type: 'session.started',
-    definitionId: definition.id,
-    nodeId: definition.entry,
+    planId: plan.id,
+    nodeId: plan.entry,
   });
-  enterNode(definition.entry);
+  enterNode(plan.entry);
 
   let snapshot = createSnapshot();
 
@@ -240,7 +242,7 @@ export function createGuidedConsultingAgent<
     if (input.type === 'user.reset') {
       state.pendingModuleCalls = [];
       state = createInitialState();
-      enterNode(definition.entry);
+      enterNode(plan.entry);
       publish();
       return;
     }

@@ -1,7 +1,7 @@
 import type {
-  GuidedConsultingDefinition,
+  GuidedConsultingPlan,
   GuidedConsultingPlanNode,
-} from '@/features/guided-consulting/core/types';
+} from '@/features/guided-consulting/core/plan/types';
 
 function assertTargetExists<Context extends object, Tools extends object>(
   nodes: Readonly<Record<string, GuidedConsultingPlanNode<Context, Tools>>>,
@@ -15,15 +15,15 @@ function assertTargetExists<Context extends object, Tools extends object>(
   }
 }
 
-export function defineGuidedConsulting<
+export function defineGuidedConsultingPlan<
   Context extends object,
   Tools extends object,
 >(
-  definition: GuidedConsultingDefinition<Context, Tools>,
-): GuidedConsultingDefinition<Context, Tools> {
-  const nodes = definition.nodes;
-  if (!nodes[definition.entry]) {
-    throw new Error(`Entry Node를 찾을 수 없습니다: ${definition.entry}`);
+  plan: GuidedConsultingPlan<Context, Tools>,
+): GuidedConsultingPlan<Context, Tools> {
+  const nodes = plan.nodes;
+  if (!nodes[plan.entry]) {
+    throw new Error(`Entry Node를 찾을 수 없습니다: ${plan.entry}`);
   }
 
   for (const [nodeId, node] of Object.entries(nodes)) {
@@ -49,5 +49,5 @@ export function defineGuidedConsulting<
     assertTargetExists(nodes, nodeId, node.onRejected);
   }
 
-  return definition;
+  return plan;
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { createGuidedConsultingAgent } from '@/features/guided-consulting/core/agent';
 import { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
+import type { GuidedConsultingPlan } from '@/features/guided-consulting/core/plan';
 import type {
   GuidedConsultingRendererError,
   GuidedConsultingRenderTarget,
@@ -14,7 +15,6 @@ import {
   parseGuidedConsultingRendererRequest,
 } from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
-import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
 const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
@@ -22,7 +22,7 @@ export function useGuidedConsultingAgent<
   Context extends object,
   Tools extends GuidedConsultingToolsRuntime,
 >(
-  definition: GuidedConsultingDefinition<Context, Tools>,
+  plan: GuidedConsultingPlan<Context, Tools>,
   tools: Tools,
   renderer: {
     validate: (
@@ -32,11 +32,11 @@ export function useGuidedConsultingAgent<
 ) {
   const runtime = useMemo(() => {
     const logger = createGuidedConsultingLogger();
-    const agent = createGuidedConsultingAgent(definition, tools, {
+    const agent = createGuidedConsultingAgent(plan, tools, {
       onEvent: logger.record,
     });
     return { agent, logger };
-  }, [definition, tools]);
+  }, [plan, tools]);
   const { agent, logger } = runtime;
   const runningCallsRef = useRef(new Map<string, AbortController>());
 

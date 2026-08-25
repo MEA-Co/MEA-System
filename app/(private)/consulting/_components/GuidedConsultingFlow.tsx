@@ -8,15 +8,15 @@ import { ConsultingFrame } from '@/app/(private)/consulting/_components/Consulti
 import { useGuidedConsultingAgent } from '@/app/(private)/consulting/_hooks/useGuidedConsultingAgent';
 import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
+import type { GuidedConsultingPlan } from '@/features/guided-consulting/core/plan';
 import type { GuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
-import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
 type GuidedConsultingFlowProps<
   Context extends object,
   Tools extends GuidedConsultingToolsRuntime,
 > = {
-  definition: GuidedConsultingDefinition<Context, Tools>;
+  plan: GuidedConsultingPlan<Context, Tools>;
   tools: Tools;
   renderer: GuidedConsultingRenderer<
     GuidedConsultingScreenRenderEnvironment,
@@ -29,12 +29,12 @@ export function GuidedConsultingFlow<
   Context extends object,
   Tools extends GuidedConsultingToolsRuntime,
 >({
-  definition,
+  plan,
   tools,
   renderer,
   debug = false,
 }: GuidedConsultingFlowProps<Context, Tools>) {
-  const agent = useGuidedConsultingAgent(definition, tools, renderer);
+  const agent = useGuidedConsultingAgent(plan, tools, renderer);
   const [drafts, setDrafts] = useState<{
     sessionId: number;
     values: Record<string, string>;
@@ -46,7 +46,7 @@ export function GuidedConsultingFlow<
 
   const debugConsole = debug ? (
     <ConsultingDebugConsole
-      definitionId={agent.definitionId}
+      planId={agent.planId}
       phase={agent.phase}
       currentNodeId={agent.currentNodeId}
       node={agent.node}
