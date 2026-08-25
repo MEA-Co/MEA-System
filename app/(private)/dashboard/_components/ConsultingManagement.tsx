@@ -6,10 +6,6 @@ import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const consultingItems = [
   {
-    title: '메아 온보딩',
-    href: '/consulting/onboarding',
-  },
-  {
     title: '생활기록부 브랜딩 컨설팅 [재료함 설계]',
     href: '/consulting/material-box',
   },
