@@ -1,6 +1,6 @@
 import type {
   MergeSortContext,
-  MergeSortToolModule,
+  MergeSortTools,
 } from '@/app/(private)/consulting/guided-demo/_lib/types';
 import { defineGuidedConsulting } from '@/features/guided-consulting/core/definition';
 
@@ -27,7 +27,7 @@ function validateNumbers(value: string) {
 
 export const mergeSortConsulting = defineGuidedConsulting<
   MergeSortContext,
-  MergeSortToolModule
+  MergeSortTools
 >({
   id: 'async-merge-sort-demo',
   title: '비동기 머지 소트 실험',
@@ -55,9 +55,9 @@ export const mergeSortConsulting = defineGuidedConsulting<
       validate: validateNumbers,
       tool: {
         name: 'numbers.merge-sort',
-        execute: async ({ value, services, signal }) => {
+        execute: async ({ value, tools, signal }) => {
           const numbers = parseTenNumbers(value);
-          const { sorted } = await services.execute(
+          const { sorted } = await tools.execute(
             'numbers.merge-sort',
             { numbers, delayMs: 1_400 },
             { signal },
@@ -114,9 +114,9 @@ export const mergeSortConsulting = defineGuidedConsulting<
       }),
       tool: {
         name: 'numbers.merge-sort',
-        execute: async ({ value, services, signal }) => {
+        execute: async ({ value, tools, signal }) => {
           const numbers = parseTenNumbers(value);
-          const { sorted } = await services.execute(
+          const { sorted } = await tools.execute(
             'numbers.merge-sort',
             { numbers, delayMs: 2_400 },
             { signal },

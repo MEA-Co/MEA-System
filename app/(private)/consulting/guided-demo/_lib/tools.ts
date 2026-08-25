@@ -1,4 +1,4 @@
-import { createGuidedConsultingToolModule } from '@/features/guided-consulting/core/tool-module';
+import { createGuidedConsultingTools } from '@/features/guided-consulting/core/tools';
 
 import type { MergeSortToolSchema } from './types';
 
@@ -44,10 +44,9 @@ function mergeSort(numbers: Array<number>): Array<number> {
   );
 }
 
-export const mergeSortToolModule =
-  createGuidedConsultingToolModule<MergeSortToolSchema>({
-    'numbers.merge-sort': async ({ numbers, delayMs }, { signal }) => {
-      await wait(delayMs, signal);
-      return { sorted: mergeSort(numbers) };
-    },
-  });
+export const mergeSortTools = createGuidedConsultingTools<MergeSortToolSchema>({
+  'numbers.merge-sort': async ({ numbers, delayMs }, { signal }) => {
+    await wait(delayMs, signal);
+    return { sorted: mergeSort(numbers) };
+  },
+});

@@ -46,8 +46,8 @@ function toError(error: unknown, fallback: string) {
   return error instanceof Error ? error : new Error(fallback);
 }
 
-function resolveExplanations<Context extends object, Services extends object>(
-  definition: GuidedConsultingDefinition<Context, Services>,
+function resolveExplanations<Context extends object, Tools extends object>(
+  definition: GuidedConsultingDefinition<Context, Tools>,
   stepIndex: number,
   context: Context,
 ): ReadonlyArray<GuidedConsultingExplanation> {
@@ -63,12 +63,12 @@ function resolveExplanations<Context extends object, Services extends object>(
 
 export function createGuidedConsultingAgent<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 >(
-  definition: GuidedConsultingDefinition<Context, Services>,
-  services: Services,
+  definition: GuidedConsultingDefinition<Context, Tools>,
+  tools: Tools,
   options: GuidedConsultingAgentOptions = {},
-): GuidedConsultingAgent<Context, Services> {
+): GuidedConsultingAgent<Context, Tools> {
   const listeners = new Set<() => void>();
   const logs: Array<GuidedConsultingAgentLog> = [];
   const maxLogs = options.maxLogs ?? 200;
@@ -297,10 +297,7 @@ export function createGuidedConsultingAgent<
     });
   };
 
-  const createSnapshot = (): GuidedConsultingAgentSnapshot<
-    Context,
-    Services
-  > => ({
+  const createSnapshot = (): GuidedConsultingAgentSnapshot<Context, Tools> => ({
     definitionId: definition.id,
     title: definition.title,
     phase: state.phase,
@@ -492,7 +489,7 @@ export function createGuidedConsultingAgent<
     return step.tool.execute({
       value: input.value,
       context: input.context,
-      services,
+      tools,
       signal,
     });
   };

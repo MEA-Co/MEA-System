@@ -31,21 +31,21 @@ export type GuidedConsultingStepResult<Context extends object> = {
 
 export type GuidedConsultingToolParams<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
   value: string;
   context: Readonly<Context>;
-  services: Services;
+  tools: Tools;
   signal: AbortSignal;
 };
 
 export type GuidedConsultingStepTool<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
   name: string;
   execute: (
-    params: GuidedConsultingToolParams<Context, Services>,
+    params: GuidedConsultingToolParams<Context, Tools>,
   ) =>
     | GuidedConsultingStepResult<Context>
     | Promise<GuidedConsultingStepResult<Context>>;
@@ -53,7 +53,7 @@ export type GuidedConsultingStepTool<
 
 export type GuidedConsultingStep<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
   id: string;
   explain:
@@ -67,17 +67,17 @@ export type GuidedConsultingStep<
         value: string;
         context: Readonly<Context>;
       }) => GuidedConsultingRenderTarget);
-  tool: GuidedConsultingStepTool<Context, Services>;
+  tool: GuidedConsultingStepTool<Context, Tools>;
 };
 
 export type GuidedConsultingDefinition<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
   id: string;
   title: string;
   createInitialContext: () => Context;
-  steps: ReadonlyArray<GuidedConsultingStep<Context, Services>>;
+  steps: ReadonlyArray<GuidedConsultingStep<Context, Tools>>;
 };
 
 export type GuidedConsultingHistoryFrame<Context extends object> = {
@@ -154,14 +154,14 @@ export type GuidedConsultingAgentLog = {
 
 export type GuidedConsultingAgentSnapshot<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
   definitionId: string;
   title: string;
   phase: GuidedConsultingPhase;
   stepIndex: number;
   stepCount: number;
-  step: GuidedConsultingStep<Context, Services> | null;
+  step: GuidedConsultingStep<Context, Tools> | null;
   context: Context;
   answers: Readonly<Record<string, string>>;
   error: Error | null;
@@ -178,9 +178,9 @@ export type GuidedConsultingAgentOptions = {
 
 export type GuidedConsultingAgent<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 > = {
-  getSnapshot: () => GuidedConsultingAgentSnapshot<Context, Services>;
+  getSnapshot: () => GuidedConsultingAgentSnapshot<Context, Tools>;
   subscribe: (listener: () => void) => () => void;
   send: (input: GuidedConsultingUserAction) => void;
   executeToolCall: (callId: string, signal: AbortSignal) => Promise<unknown>;

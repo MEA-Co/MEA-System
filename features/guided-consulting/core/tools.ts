@@ -16,7 +16,7 @@ type GuidedConsultingToolHandlers<Schema> = {
     | Promise<Schema[Name] extends { output: infer Output } ? Output : never>;
 };
 
-export type GuidedConsultingToolModule<Schema> = {
+export type GuidedConsultingTools<Schema> = {
   ids: ReadonlyArray<Extract<keyof Schema, string>>;
   has: (id: string) => id is Extract<keyof Schema, string>;
   execute: <Name extends Extract<keyof Schema, string>>(
@@ -26,11 +26,11 @@ export type GuidedConsultingToolModule<Schema> = {
   ) => Promise<Schema[Name] extends { output: infer Output } ? Output : never>;
 };
 
-export function createGuidedConsultingToolModule<
+export function createGuidedConsultingTools<
   Schema extends GuidedConsultingToolSchema<Schema>,
 >(
   handlers: GuidedConsultingToolHandlers<Schema>,
-): GuidedConsultingToolModule<Schema> {
+): GuidedConsultingTools<Schema> {
   const registry = new Map(
     Object.entries(handlers) as Array<
       [string, GuidedConsultingToolHandlers<Schema>[keyof Schema]]

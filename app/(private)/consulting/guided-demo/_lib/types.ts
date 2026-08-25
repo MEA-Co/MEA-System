@@ -1,4 +1,4 @@
-import type { GuidedConsultingToolModule } from '@/features/guided-consulting/core/tool-module';
+import type { GuidedConsultingTools } from '@/features/guided-consulting/core/tools';
 
 export type MergeSortContext = {
   firstInput: Array<number>;
@@ -19,5 +19,4 @@ export type MergeSortToolSchema = {
   };
 };
 
-export type MergeSortToolModule =
-  GuidedConsultingToolModule<MergeSortToolSchema>;
+export type MergeSortTools = GuidedConsultingTools<MergeSortToolSchema>;

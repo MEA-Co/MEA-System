@@ -32,10 +32,10 @@ export type {
 export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 export type {
   GuidedConsultingToolContract,
-  GuidedConsultingToolModule,
+  GuidedConsultingTools,
   GuidedConsultingToolSchema,
-} from '@/features/guided-consulting/core/tool-module';
-export { createGuidedConsultingToolModule } from '@/features/guided-consulting/core/tool-module';
+} from '@/features/guided-consulting/core/tools';
+export { createGuidedConsultingTools } from '@/features/guided-consulting/core/tools';
 export type {
   GuidedConsultingAgent,
   GuidedConsultingAgentLog,

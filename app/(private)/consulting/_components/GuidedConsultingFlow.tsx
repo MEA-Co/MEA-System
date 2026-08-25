@@ -12,12 +12,9 @@ import { Button } from '@/components/ui/button';
 import type { GuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
-type GuidedConsultingFlowProps<
-  Context extends object,
-  Services extends object,
-> = {
-  definition: GuidedConsultingDefinition<Context, Services>;
-  services: Services;
+type GuidedConsultingFlowProps<Context extends object, Tools extends object> = {
+  definition: GuidedConsultingDefinition<Context, Tools>;
+  tools: Tools;
   renderer: GuidedConsultingRenderer<
     GuidedConsultingMainRenderEnvironment,
     ReactNode
@@ -27,14 +24,14 @@ type GuidedConsultingFlowProps<
 
 export function GuidedConsultingFlow<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 >({
   definition,
-  services,
+  tools,
   renderer,
   debug = false,
-}: GuidedConsultingFlowProps<Context, Services>) {
-  const agent = useGuidedConsultingAgent(definition, services, renderer);
+}: GuidedConsultingFlowProps<Context, Tools>) {
+  const agent = useGuidedConsultingAgent(definition, tools, renderer);
   const [draft, setDraft] = useState({ stepId: '', value: '' });
   const screen = agent.screen;
   const draftValue =

@@ -18,10 +18,10 @@ const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
 export function useGuidedConsultingAgent<
   Context extends object,
-  Services extends object,
+  Tools extends object,
 >(
-  definition: GuidedConsultingDefinition<Context, Services>,
-  services: Services,
+  definition: GuidedConsultingDefinition<Context, Tools>,
+  tools: Tools,
   renderer: {
     validate: (
       request: GuidedConsultingRenderTarget,
@@ -29,8 +29,8 @@ export function useGuidedConsultingAgent<
   },
 ) {
   const agent = useMemo(
-    () => createGuidedConsultingAgent(definition, services),
-    [definition, services],
+    () => createGuidedConsultingAgent(definition, tools),
+    [definition, tools],
   );
   const runningCallsRef = useRef(new Map<string, AbortController>());
 
