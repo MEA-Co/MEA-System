@@ -8,7 +8,7 @@ import type { GuidedConsultingScreenRenderEnvironment } from '@/app/(private)/co
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
 
-function MaterialBoxIdentityScreen({
+function MaterialBoxSelfDefinitionScreen({
   environment,
 }: {
   environment: GuidedConsultingScreenRenderEnvironment;
@@ -24,11 +24,7 @@ function MaterialBoxIdentityScreen({
           message={{
             segments: [
               {
-                text: '바꿔 말하면, 여러분의 생활기록부를 읽었을 때 여러분의 생각, 경험 등으로부터 여러분이 ',
-              },
-              { text: '어떤 학생인지', emphasis: 'accent' },
-              {
-                text: '가 보여야 합니다. 활동들이 나열되어 있는 것만으로는 여러분이 어떤 학생인지 잘 드러나지 않습니다.',
+                text: '그렇게 하기 위해 먼저 여러분이 어떤 사람인지를 여러분 스스로 잘 정의해두어야 합니다.',
               },
             ],
           }}
@@ -45,10 +41,10 @@ function MaterialBoxIdentityScreen({
   );
 }
 
-export const materialBoxIdentityScreen = {
+export const materialBoxSelfDefinitionScreen = {
   mode: 'static',
   render: (_request, environment) => (
-    <MaterialBoxIdentityScreen environment={environment} />
+    <MaterialBoxSelfDefinitionScreen environment={environment} />
   ),
 } satisfies GuidedConsultingRendererEntry<
   GuidedConsultingScreenRenderEnvironment,
