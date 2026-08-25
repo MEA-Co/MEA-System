@@ -8,6 +8,7 @@ import { materialBoxTools } from '@/app/(private)/consulting/material-box/_lib/t
 export function MaterialBoxConsulting() {
   return (
     <GuidedConsultingFlow
+      debug
       plan={materialBoxPlan}
       renderer={materialBoxRenderer}
       tools={materialBoxTools}

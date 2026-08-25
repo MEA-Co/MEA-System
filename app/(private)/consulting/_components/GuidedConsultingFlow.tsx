@@ -51,7 +51,6 @@ export function GuidedConsultingFlow<
       currentNodeId={agent.currentNodeId}
       node={agent.node}
       screen={screen}
-      draftValue={draftValue}
       context={agent.context}
       actions={agent.actions}
       toolResults={agent.toolResults}
@@ -93,7 +92,7 @@ export function GuidedConsultingFlow<
   );
 
   return (
-    <div className="space-y-6">
+    <div>
       <ConsultingFrame
         title={screen.title}
         currentStep={screen.progress?.current}

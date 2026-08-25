@@ -1,9 +1,19 @@
 'use client';
 
-import { Activity, Bot, Bug, Database, Radio } from 'lucide-react';
+import {
+  Bot,
+  Bug,
+  ChevronDown,
+  Database,
+  PanelRightClose,
+  PanelRightOpen,
+  Radio,
+} from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type {
   GuidedConsultingModuleCall,
   GuidedConsultingPhase,
@@ -11,6 +21,7 @@ import type {
 } from '@/features/guided-consulting/core/agent/types';
 import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
 import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
+import { cn } from '@/lib/utils';
 
 type ConsultingDebugConsoleProps<Context extends object> = {
   planId: string;
@@ -18,7 +29,6 @@ type ConsultingDebugConsoleProps<Context extends object> = {
   currentNodeId: string;
   node: unknown;
   screen: GuidedConsultingScreen | null;
-  draftValue: string;
   context: Context;
   actions: Readonly<Record<string, unknown>>;
   toolResults: Readonly<Record<string, unknown>>;
@@ -33,6 +43,14 @@ const logKindLabels: Record<GuidedConsultingLog['kind'], string> = {
   'module.request': 'REQUEST',
   'module.response': 'RESPONSE',
   'module.error': 'ERROR',
+};
+
+const unreadLogClassNames: Record<GuidedConsultingLog['kind'], string> = {
+  'agent.input': 'border-sky-400/50 bg-sky-400/10 ring-sky-400/15',
+  'module.request': 'border-amber-400/50 bg-amber-400/10 ring-amber-400/15',
+  'module.response':
+    'border-emerald-400/50 bg-emerald-400/10 ring-emerald-400/15',
+  'module.error': 'border-rose-400/50 bg-rose-400/10 ring-rose-400/15',
 };
 
 const phaseLabels: Record<GuidedConsultingPhase, string> = {
@@ -75,21 +93,9 @@ function stringify(value: unknown) {
   }
 }
 
-function DataBlock({
-  value,
-  compact = false,
-}: {
-  value: unknown;
-  compact?: boolean;
-}) {
+function DataBlock({ value }: { value: unknown }) {
   return (
-    <pre
-      className={
-        compact
-          ? 'mt-2 max-h-40 overflow-auto rounded-lg bg-black/70 p-3 font-mono text-[0.68rem] leading-5 whitespace-pre-wrap text-zinc-300'
-          : 'mt-3 max-h-64 overflow-auto rounded-lg bg-black/70 p-3 font-mono text-[0.7rem] leading-5 whitespace-pre-wrap text-zinc-300'
-      }
-    >
+    <pre className="mt-2 max-h-52 overflow-auto rounded-lg bg-black/70 p-3 font-mono text-[0.68rem] leading-5 whitespace-pre-wrap text-zinc-300">
       {stringify(value)}
     </pre>
   );
@@ -101,7 +107,6 @@ export function ConsultingDebugConsole<Context extends object>({
   currentNodeId,
   node,
   screen,
-  draftValue,
   context,
   actions,
   toolResults,
@@ -110,142 +115,197 @@ export function ConsultingDebugConsole<Context extends object>({
   pendingModuleCalls,
   logs,
 }: ConsultingDebugConsoleProps<Context>) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [readLogIds, setReadLogIds] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
   const latestLogs = [...logs].reverse();
+  const unreadCount = logs.reduce(
+    (count, log) => count + (readLogIds.has(log.id) ? 0 : 1),
+    0,
+  );
+
+  const markAsRead = (logId: number) => {
+    setReadLogIds((current) => {
+      if (current.has(logId)) return current;
+      const next = new Set(current);
+      next.add(logId);
+      return next;
+    });
+  };
 
   return (
-    <details open className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl border bg-zinc-950 px-4 py-3 text-zinc-100 shadow-sm marker:hidden">
-        <div className="flex items-center gap-3">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-amber-400/15 text-amber-300">
-            <Bug className="size-4" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xs font-bold tracking-[0.12em]">
-              CONSULTING EVENT LOG
-            </p>
-            <p className="mt-0.5 text-[0.7rem] text-zinc-400">
-              User · Agent · Renderer · Tools
-            </p>
-          </div>
-        </div>
-        <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
-          <Radio className="size-3 animate-pulse" aria-hidden="true" />
-          {phaseLabels[phase]}
-        </Badge>
-      </summary>
-
-      <Card className="mt-2 gap-0 rounded-xl border-zinc-800 bg-zinc-900 py-0 text-zinc-100 shadow-sm ring-0">
-        <CardContent className="p-4 md:p-5">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-            <Badge variant="outline" className="border-zinc-700 text-zinc-300">
-              {planId}
+    <div className="hidden lg:block">
+      {!isOpen && (
+        <Button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="fixed top-20 right-4 z-50 h-auto gap-2 rounded-xl bg-zinc-950 px-3 py-2.5 text-zinc-100 shadow-xl hover:bg-zinc-900"
+          aria-label="컨설팅 이벤트 로그 열기"
+        >
+          <PanelRightOpen className="size-4" aria-hidden="true" />
+          Event Log
+          {unreadCount > 0 && (
+            <Badge className="border-amber-300/30 bg-amber-300 text-zinc-950">
+              {unreadCount}
             </Badge>
-            <span>{screen?.renderTarget.screenId ?? '화면 없음'}</span>
-            <span>·</span>
-            <span>{currentNodeId}</span>
-            <span>·</span>
-            <span>Pending modules {pendingModuleCalls.length}</span>
-          </div>
+          )}
+        </Button>
+      )}
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
-            <section className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
-              <h2 className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <Activity className="size-4 text-sky-400" aria-hidden="true" />
-                UI → Agent
-              </h2>
-              <DataBlock
-                value={{
-                  screen: screen
-                    ? {
-                        id: screen.id,
-                        nodeId: screen.nodeId,
-                        availableActions: screen.availableActions,
-                      }
-                    : null,
-                  draftValue,
-                }}
-              />
-            </section>
+      {isOpen && (
+        <Card className="fixed top-20 right-4 bottom-4 z-50 flex w-96 gap-0 overflow-hidden rounded-2xl border-zinc-800 bg-zinc-900 py-0 text-zinc-100 shadow-2xl ring-0 xl:w-112">
+          <header className="shrink-0 border-b border-zinc-800 bg-zinc-950 px-4 py-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/15 text-amber-300">
+                  <Bug className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold tracking-[0.12em]">
+                    CONSULTING EVENT LOG
+                  </p>
+                  <p className="mt-0.5 truncate text-[0.7rem] text-zinc-400">
+                    {planId} · {currentNodeId}
+                  </p>
+                </div>
+              </div>
 
-            <section className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
-              <h2 className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <Bot className="size-4 text-violet-400" aria-hidden="true" />
-                Agent State
-              </h2>
-              <DataBlock
-                value={{
-                  phase,
-                  currentNodeId,
-                  node,
-                  activeScreen: screen,
-                  error,
-                  pendingModuleCalls,
-                }}
-              />
-            </section>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setIsOpen(false)}
+                className="shrink-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                aria-label="컨설팅 이벤트 로그 닫기"
+              >
+                <PanelRightClose aria-hidden="true" />
+              </Button>
+            </div>
 
-            <section className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
-              <h2 className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <Database
-                  className="size-4 text-emerald-400"
-                  aria-hidden="true"
-                />
-                Agent Memory
-              </h2>
-              <DataBlock
-                value={{ context, actions, toolResults, toolErrors }}
-              />
-            </section>
-          </div>
-
-          <section className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xs font-semibold text-zinc-200">
-                Execution Log
-              </h2>
-              <p className="text-[0.7rem] text-zinc-500">
-                {logs.length} entries
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
+                <Radio className="size-3 animate-pulse" aria-hidden="true" />
+                {phaseLabels[phase]}
+              </Badge>
+              <p className="text-[0.7rem] text-zinc-400">
+                {unreadCount > 0 ? `${unreadCount} new` : 'All read'}
               </p>
             </div>
+          </header>
 
-            <div className="mt-3 max-h-128 space-y-2 overflow-auto">
-              {latestLogs.map((log) => (
-                <article
-                  key={log.id}
-                  className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 md:grid-cols-[10rem_minmax(0,1fr)]"
-                >
-                  <div>
-                    <p
-                      className={
-                        log.kind === 'module.request'
-                          ? 'text-xs font-semibold text-amber-300'
-                          : log.kind === 'module.response'
-                            ? 'text-xs font-semibold text-emerald-300'
-                            : 'text-xs font-semibold text-zinc-300'
-                      }
-                    >
-                      #{log.id} {log.text}
-                    </p>
-                    <p className="mt-1 font-mono text-[0.65rem] text-zinc-500">
-                      {logKindLabels[log.kind]}
-                      {log.callId ? ` · ${log.callId}` : ''}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-mono text-xs leading-5 text-zinc-200">
-                      {getLogEvent(log)}
-                      {log.nodeId ? ` · ${log.nodeId}` : ''}
-                    </p>
-                    {log.data !== undefined && (
-                      <DataBlock compact value={log.data} />
-                    )}
-                  </div>
-                </article>
-              ))}
+          <div className="min-h-0 flex-1 overflow-y-auto p-3.5">
+            <div className="grid gap-2">
+              <details className="group rounded-xl border border-zinc-800 bg-zinc-950/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 marker:hidden">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Bot
+                      className="size-4 text-violet-400"
+                      aria-hidden="true"
+                    />
+                    Agent State
+                  </span>
+                  <ChevronDown className="size-4 text-zinc-500 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-zinc-800 px-3.5 pb-3.5">
+                  <DataBlock
+                    value={{
+                      phase,
+                      currentNodeId,
+                      node,
+                      activeScreen: screen,
+                      error,
+                      pendingModuleCalls,
+                    }}
+                  />
+                </div>
+              </details>
+
+              <details className="group rounded-xl border border-zinc-800 bg-zinc-950/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 marker:hidden">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Database
+                      className="size-4 text-emerald-400"
+                      aria-hidden="true"
+                    />
+                    Agent Memory
+                  </span>
+                  <ChevronDown className="size-4 text-zinc-500 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-zinc-800 px-3.5 pb-3.5">
+                  <DataBlock
+                    value={{ context, actions, toolResults, toolErrors }}
+                  />
+                </div>
+              </details>
             </div>
-          </section>
-        </CardContent>
-      </Card>
-    </details>
+
+            <section className="mt-4">
+              <div className="flex items-center justify-between gap-4 px-1">
+                <h2 className="text-xs font-semibold text-zinc-200">
+                  Execution Log
+                </h2>
+                <p className="text-[0.7rem] text-zinc-500">
+                  {logs.length} entries
+                </p>
+              </div>
+
+              <div className="mt-2.5 space-y-2">
+                {latestLogs.map((log) => {
+                  const isUnread = !readLogIds.has(log.id);
+
+                  return (
+                    <button
+                      key={log.id}
+                      type="button"
+                      onClick={() => markAsRead(log.id)}
+                      className={cn(
+                        'block w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-left transition-colors',
+                        isUnread && `ring-2 ${unreadLogClassNames[log.kind]}`,
+                      )}
+                      aria-label={`#${log.id} ${getLogEvent(log)}${isUnread ? ' 새 이벤트' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p
+                            className={cn(
+                              'text-xs font-semibold',
+                              log.kind === 'module.request'
+                                ? 'text-amber-300'
+                                : log.kind === 'module.response'
+                                  ? 'text-emerald-300'
+                                  : log.kind === 'module.error'
+                                    ? 'text-rose-300'
+                                    : 'text-sky-300',
+                            )}
+                          >
+                            #{log.id} {log.text}
+                          </p>
+                          <p className="mt-1 font-mono text-[0.65rem] text-zinc-500">
+                            {logKindLabels[log.kind]}
+                            {log.callId ? ` · ${log.callId}` : ''}
+                          </p>
+                        </div>
+                        {isUnread && (
+                          <Badge className="border-amber-300/20 bg-amber-300/15 text-amber-200">
+                            NEW
+                          </Badge>
+                        )}
+                      </div>
+
+                      <p className="mt-2 font-mono text-xs leading-5 text-zinc-200">
+                        {getLogEvent(log)}
+                        {log.nodeId ? ` · ${log.nodeId}` : ''}
+                      </p>
+                      {log.data !== undefined && <DataBlock value={log.data} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
