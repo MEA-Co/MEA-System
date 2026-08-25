@@ -4,13 +4,13 @@ import { Activity, Bot, Bug, Database, Radio } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
-import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
 import type {
   GuidedConsultingModuleCall,
   GuidedConsultingPhase,
   GuidedConsultingScreen,
-} from '@/features/guided-consulting/core/types';
+} from '@/features/guided-consulting/core/agent/types';
+import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
+import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
 
 type ConsultingDebugConsoleProps<Context extends object> = {
   planId: string;

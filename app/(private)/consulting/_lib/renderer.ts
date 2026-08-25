@@ -1,4 +1,4 @@
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingScreenRenderEnvironment = {
   draftValue: string;

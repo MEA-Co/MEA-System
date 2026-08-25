@@ -1,4 +1,4 @@
-import type { GuidedConsultingAgentEvent } from '@/features/guided-consulting/core/events';
+import type { GuidedConsultingAgentEvent } from '@/features/guided-consulting/core/agent/events';
 
 export type GuidedConsultingLogKind =
   'agent.input' | 'module.request' | 'module.response' | 'module.error';

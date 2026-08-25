@@ -1,6 +1,6 @@
 import type { GuidedConsultingMemory } from '@/features/guided-consulting/core/agent/memory';
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import type { GuidedConsultingRenderTarget } from '@/features/guided-consulting/core/renderer/protocol';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingToolId<Tools extends object> = Tools extends {
   ids: ReadonlyArray<infer Id>;

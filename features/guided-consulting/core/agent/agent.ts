@@ -1,16 +1,23 @@
+import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/agent/events';
 import {
   createGuidedConsultingMemory,
   type GuidedConsultingMemory,
   type GuidedConsultingMemoryStore,
 } from '@/features/guided-consulting/core/agent/memory';
-import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/events';
+import type {
+  GuidedConsultingAgent,
+  GuidedConsultingAgentSnapshot,
+  GuidedConsultingModuleCall,
+  GuidedConsultingModuleCallKind,
+  GuidedConsultingPhase,
+  GuidedConsultingScreen,
+} from '@/features/guided-consulting/core/agent/types';
 import type {
   GuidedConsultingPlan,
   GuidedConsultingPlanNode,
   GuidedConsultingToolNode,
   GuidedConsultingValueResolver,
 } from '@/features/guided-consulting/core/plan';
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
@@ -22,14 +29,7 @@ import {
   parseGuidedConsultingToolRequest,
   parseGuidedConsultingToolResponse,
 } from '@/features/guided-consulting/core/tools/protocol';
-import type {
-  GuidedConsultingAgent,
-  GuidedConsultingAgentSnapshot,
-  GuidedConsultingModuleCall,
-  GuidedConsultingModuleCallKind,
-  GuidedConsultingPhase,
-  GuidedConsultingScreen,
-} from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingAgentOptions = {
   onEvent?: GuidedConsultingAgentEventListener;
