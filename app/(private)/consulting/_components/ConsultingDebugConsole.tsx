@@ -138,7 +138,7 @@ export function ConsultingDebugConsole<
       )}
 
       {isOpen && (
-        <Card className="fixed top-20 right-4 bottom-4 z-50 flex w-96 gap-0 overflow-hidden rounded-2xl border-zinc-800 bg-zinc-900 py-0 text-zinc-100 shadow-2xl ring-0 xl:w-112">
+        <Card className="fixed top-20 right-4 bottom-4 z-50 flex w-96 gap-0 overflow-hidden rounded-2xl border-zinc-800 bg-zinc-900 py-0 text-zinc-100 shadow-2xl ring-0 xl:w-md">
           <header className="shrink-0 border-b border-zinc-800 bg-zinc-950 px-4 py-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
