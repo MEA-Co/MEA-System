@@ -5,7 +5,7 @@ import { Activity, Bot, Bug, Database, Radio } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { GuidedConsultingLog } from '@/features/guided-consulting/core/logger';
-import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
 import type {
   GuidedConsultingModuleCall,
   GuidedConsultingPhase,

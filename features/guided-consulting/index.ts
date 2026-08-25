@@ -12,22 +12,7 @@ export type {
   GuidedConsultingLogKind,
 } from '@/features/guided-consulting/core/logger';
 export { createGuidedConsultingLogger } from '@/features/guided-consulting/core/logger';
-export type {
-  GuidedConsultingToolError,
-  GuidedConsultingToolRejectedResponse,
-  GuidedConsultingToolRequest,
-  GuidedConsultingToolResponse,
-  GuidedConsultingToolSuccessResponse,
-  GuidedConsultingUserAction,
-} from '@/features/guided-consulting/core/protocol';
-export {
-  createGuidedConsultingToolRejectedResponse,
-  createGuidedConsultingToolRequest,
-  createGuidedConsultingToolSuccessResponse,
-  GUIDED_CONSULTING_TOOLS_PROTOCOL,
-  parseGuidedConsultingToolRequest,
-  parseGuidedConsultingToolResponse,
-} from '@/features/guided-consulting/core/protocol';
+export type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 export type {
   GuidedConsultingRenderer,
   GuidedConsultingRendererEntry,
@@ -62,6 +47,21 @@ export type {
   GuidedConsultingToolsRuntime,
 } from '@/features/guided-consulting/core/tools';
 export { createGuidedConsultingTools } from '@/features/guided-consulting/core/tools';
+export type {
+  GuidedConsultingToolError,
+  GuidedConsultingToolRejectedResponse,
+  GuidedConsultingToolRequest,
+  GuidedConsultingToolResponse,
+  GuidedConsultingToolSuccessResponse,
+} from '@/features/guided-consulting/core/tools/protocol';
+export {
+  createGuidedConsultingToolRejectedResponse,
+  createGuidedConsultingToolRequest,
+  createGuidedConsultingToolSuccessResponse,
+  GUIDED_CONSULTING_TOOLS_PROTOCOL,
+  parseGuidedConsultingToolRequest,
+  parseGuidedConsultingToolResponse,
+} from '@/features/guided-consulting/core/tools/protocol';
 export type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,

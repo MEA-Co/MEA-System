@@ -1,18 +1,16 @@
 import type { GuidedConsultingAgentEventListener } from '@/features/guided-consulting/core/events';
-import type {
-  GuidedConsultingToolError,
-  GuidedConsultingUserAction,
-} from '@/features/guided-consulting/core/protocol';
-import {
-  createGuidedConsultingToolRequest,
-  parseGuidedConsultingToolRequest,
-  parseGuidedConsultingToolResponse,
-} from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
 } from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolsRuntime } from '@/features/guided-consulting/core/tools';
+import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
+import {
+  createGuidedConsultingToolRequest,
+  parseGuidedConsultingToolRequest,
+  parseGuidedConsultingToolResponse,
+} from '@/features/guided-consulting/core/tools/protocol';
 import type {
   GuidedConsultingAgent,
   GuidedConsultingAgentSnapshot,
