@@ -12,6 +12,11 @@ type MaterialBoxTableProps = {
   compact?: boolean;
   majorRowCount?: 1 | 3;
   majors?: ReadonlyArray<string>;
+  keyword?: string;
+  careerIdentity?: string;
+  coreValue?: string;
+  fieldStrength?: string;
+  personalStrength?: string;
 };
 
 export function MaterialBoxTable({
@@ -19,6 +24,11 @@ export function MaterialBoxTable({
   compact = false,
   majorRowCount = 1,
   majors = [],
+  keyword = '',
+  careerIdentity = '',
+  coreValue = '',
+  fieldStrength = '',
+  personalStrength = '',
 }: MaterialBoxTableProps) {
   const shouldReduceMotion = useReducedMotion();
   const rowMotion = (delay: number) => ({
@@ -93,7 +103,12 @@ export function MaterialBoxTable({
                       'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
-                  키워드
+                  <span
+                    className="block truncate"
+                    title={keyword && index === 0 ? keyword : undefined}
+                  >
+                    {keyword && index === 0 ? keyword : '키워드'}
+                  </span>
                 </td>
               </motion.tr>
             ))}
@@ -113,7 +128,18 @@ export function MaterialBoxTable({
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
-                학생의 스토리
+                <span className="block">학생의 스토리</span>
+                {careerIdentity && (
+                  <span
+                    className={cn(
+                      'mt-1 block font-medium text-muted-foreground',
+                      compact && 'truncate text-[10px]',
+                    )}
+                    title={careerIdentity}
+                  >
+                    {careerIdentity}
+                  </span>
+                )}
               </th>
             </motion.tr>
             <motion.tr
@@ -141,7 +167,16 @@ export function MaterialBoxTable({
                   'border-b px-2.5 py-3 font-medium',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
                 )}
-              />
+              >
+                {coreValue && (
+                  <span
+                    className={cn('block', compact && 'truncate text-[10px]')}
+                    title={coreValue}
+                  >
+                    {coreValue}
+                  </span>
+                )}
+              </td>
             </motion.tr>
             <motion.tr
               {...rowMotion(0.54 + majorRowCount * 0.18)}
@@ -168,7 +203,19 @@ export function MaterialBoxTable({
                   'px-2.5 py-3 font-medium',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
                 )}
-              />
+              >
+                {[fieldStrength, personalStrength]
+                  .filter(Boolean)
+                  .map((strength) => (
+                    <span
+                      key={strength}
+                      className={cn('block', compact && 'truncate text-[10px]')}
+                      title={strength}
+                    >
+                      {strength}
+                    </span>
+                  ))}
+              </td>
             </motion.tr>
           </tbody>
         </table>

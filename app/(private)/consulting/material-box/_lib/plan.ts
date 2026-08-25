@@ -28,6 +28,55 @@ function getSubmittedMajors(
   return majors as Array<string>;
 }
 
+function getSubmittedText(
+  memory: GuidedConsultingMemory<MaterialBoxContext>,
+  nodeId: string,
+  label: string,
+  maxLength: number,
+) {
+  const action = memory.actions[nodeId];
+  if (action?.type !== 'user.submit') {
+    throw new Error(`확정된 ${label} 입력이 없습니다.`);
+  }
+
+  const value = action.value.trim();
+  if (!value || value.length > maxLength) {
+    throw new Error(`${label} 입력 형식이 올바르지 않습니다.`);
+  }
+
+  return value;
+}
+
+function getProgressScreenData(
+  memory: GuidedConsultingMemory<MaterialBoxContext>,
+) {
+  const getOptionalSubmittedText = (
+    nodeId: string,
+    label: string,
+    maxLength: number,
+  ) =>
+    memory.actions[nodeId]
+      ? getSubmittedText(memory, nodeId, label, maxLength)
+      : undefined;
+
+  return {
+    majors: getSubmittedMajors(memory),
+    keyword: getSubmittedText(memory, 'keyword', '세부 키워드', 80),
+    careerIdentity: getOptionalSubmittedText(
+      'career-identity',
+      '진로 명칭',
+      80,
+    ),
+    coreValue: getOptionalSubmittedText('core-value', '핵심 가치', 180),
+    fieldStrength: getOptionalSubmittedText('field-strength', '분야 강점', 180),
+    personalStrength: getOptionalSubmittedText(
+      'personal-strength',
+      '개인 장점',
+      180,
+    ),
+  };
+}
+
 export const materialBoxPlan = defineGuidedConsultingPlan<
   MaterialBoxContext,
   MaterialBoxTools
@@ -63,6 +112,57 @@ export const materialBoxPlan = defineGuidedConsultingPlan<
         mode: 'dynamic',
         data: { majors: getSubmittedMajors(memory) },
       }),
+      on: { 'user.submit': 'career-identity' },
+    },
+    'career-identity': {
+      id: 'career-identity',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.career-identity',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      on: { 'user.submit': 'core-value' },
+    },
+    'core-value': {
+      id: 'core-value',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.core-value',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      on: { 'user.submit': 'field-strength' },
+    },
+    'field-strength': {
+      id: 'field-strength',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.field-strength',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      on: { 'user.submit': 'personal-strength' },
+    },
+    'personal-strength': {
+      id: 'personal-strength',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.personal-strength',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      on: { 'user.submit': 'complete' },
+    },
+    complete: {
+      id: 'complete',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.complete',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      terminal: true,
     },
   },
 });

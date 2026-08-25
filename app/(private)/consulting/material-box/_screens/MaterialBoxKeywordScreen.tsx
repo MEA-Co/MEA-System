@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
 import {
@@ -44,14 +44,32 @@ const keywordMessages = [
 
 function MaterialBoxKeywordScreen({
   data,
+  environment,
 }: {
   data: MaterialBoxKeywordScreenData;
+  environment: GuidedConsultingScreenRenderEnvironment;
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null,
+  );
   const isExamplesPage = pageIndex === 2;
   const isInputPage = pageIndex === keywordMessages.length - 1;
+
+  const submitKeyword = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedKeyword = keyword.trim();
+
+    if (!normalizedKeyword) {
+      setValidationMessage('관심 가는 세부 키워드를 한 개 입력해주세요.');
+      return;
+    }
+
+    setValidationMessage(null);
+    environment.send({ type: 'user.submit', value: normalizedKeyword });
+  };
 
   return (
     <ConsultingScreenView>
@@ -75,13 +93,19 @@ function MaterialBoxKeywordScreen({
           <KeywordInput
             majors={data.majors}
             keyword={keyword}
-            onKeywordChange={setKeyword}
+            validationMessage={validationMessage}
+            onKeywordChange={(value) => {
+              setKeyword(value);
+              setValidationMessage(null);
+            }}
+            onSubmit={submitKeyword}
           />
           <MaterialBoxTable
             compact
             focus="keyword"
             majorRowCount={3}
             majors={data.majors}
+            keyword={keyword.trim()}
           />
         </div>
       ) : isExamplesPage ? (
@@ -121,9 +145,10 @@ function MaterialBoxKeywordScreen({
 export const materialBoxKeywordScreen = {
   mode: 'dynamic',
   validateData: isMaterialBoxKeywordScreenData,
-  render: (request) => (
+  render: (request, environment) => (
     <MaterialBoxKeywordScreen
       data={request.data as MaterialBoxKeywordScreenData}
+      environment={environment}
     />
   ),
 } satisfies GuidedConsultingRendererEntry<

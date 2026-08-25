@@ -1,22 +1,28 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
+import type { FormEvent } from 'react';
 
 import { Input } from '@/components/ui/input';
+import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 
 export function KeywordInput({
   majors,
   keyword,
+  validationMessage,
   onKeywordChange,
+  onSubmit,
 }: {
   majors: ReadonlyArray<string>;
   keyword: string;
+  validationMessage: string | null;
   onKeywordChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-4xl">
       <motion.section
         initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -64,7 +70,19 @@ export function KeywordInput({
           className="mt-4 bg-background"
           placeholder="예: 인공지능 검색 모델"
         />
+
+        {validationMessage && (
+          <p className="mt-3 text-sm text-destructive" role="alert">
+            {validationMessage}
+          </p>
+        )}
       </motion.section>
-    </div>
+
+      <div className="mt-5 flex justify-end">
+        <ConsultingProgressButton type="submit">
+          키워드 입력하기
+        </ConsultingProgressButton>
+      </div>
+    </form>
   );
 }
