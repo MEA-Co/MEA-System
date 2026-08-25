@@ -17,12 +17,12 @@ export const materialBoxPlan = defineGuidedConsultingPlan<
       id: 'intro',
       type: 'screen',
       screen: { screenId: 'material-box.intro', mode: 'static' },
-      on: { 'user.next-explanation': 'overview-intro' },
+      on: { 'user.next-explanation': 'material-box-overview' },
     },
-    'overview-intro': {
-      id: 'overview-intro',
+    'material-box-overview': {
+      id: 'material-box-overview',
       type: 'screen',
-      screen: { screenId: 'material-box.overview-intro', mode: 'static' },
+      screen: { screenId: 'material-box.overview', mode: 'static' },
     },
   },
 });
