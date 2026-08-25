@@ -1,5 +1,6 @@
 'use client';
 
+import { Eye } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -16,6 +17,7 @@ import {
 import { KeywordExamples } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordExamples';
 import { KeywordInput } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordInput';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
+import { Button } from '@/components/ui/button';
 import { ConsultingProgressButton } from '@/features/consulting/ui/ConsultingProgressButton';
 import type { GuidedConsultingRendererEntry } from '@/features/guided-consulting/core/renderer';
 
@@ -53,6 +55,21 @@ function MaterialBoxKeywordScreen({
 
   return (
     <ConsultingScreenView>
+      {isInputPage && (
+        <Button
+          type="button"
+          variant="outline"
+          className="absolute top-4 right-3 z-30 md:right-5"
+          onClick={() => {
+            setIsTypingComplete(false);
+            setPageIndex(0);
+          }}
+        >
+          <Eye aria-hidden="true" />
+          설명 다시 보기
+        </Button>
+      )}
+
       {isInputPage ? (
         <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
           <KeywordInput
