@@ -7,16 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type {
-  GuidedConsultingAgentInput,
-  GuidedConsultingScreen,
-} from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
+import type { GuidedConsultingScreen } from '@/features/guided-consulting/core/types';
 
 export type GuidedConsultingMainRenderEnvironment<Context extends object> = {
   screen: GuidedConsultingScreen<Context>;
   draftValue: string;
   onDraftChange: (value: string) => void;
-  send: (input: GuidedConsultingAgentInput) => void;
+  send: (input: GuidedConsultingUserAction) => void;
 };
 
 function RendererMismatch({ expected }: { expected: string }) {

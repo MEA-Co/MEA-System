@@ -4,18 +4,13 @@ export {
   defineGuidedStep,
 } from '@/features/guided-consulting/core/definition';
 export type {
-  GuidedConsultingRenderer,
-  GuidedConsultingRenderHandler,
-  GuidedConsultingRenderRequest,
-} from '@/features/guided-consulting/core/renderer';
-export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
-export type {
   GuidedConsultingRendererAction,
   GuidedConsultingRendererRejectedResponse,
   GuidedConsultingRendererRequest,
   GuidedConsultingRendererResponse,
   GuidedConsultingRendererSuccessResponse,
-} from '@/features/guided-consulting/core/renderer-protocol';
+  GuidedConsultingUserAction,
+} from '@/features/guided-consulting/core/protocol';
 export {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererRequest,
@@ -23,7 +18,13 @@ export {
   GUIDED_CONSULTING_RENDERER_PROTOCOL,
   parseGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
-} from '@/features/guided-consulting/core/renderer-protocol';
+} from '@/features/guided-consulting/core/protocol';
+export type {
+  GuidedConsultingRenderer,
+  GuidedConsultingRenderHandler,
+  GuidedConsultingRenderRequest,
+} from '@/features/guided-consulting/core/renderer';
+export { createGuidedConsultingRenderer } from '@/features/guided-consulting/core/renderer';
 export type {
   GuidedConsultingToolContract,
   GuidedConsultingToolModule,
@@ -32,7 +33,6 @@ export type {
 export { createGuidedConsultingToolModule } from '@/features/guided-consulting/core/tool-module';
 export type {
   GuidedConsultingAgent,
-  GuidedConsultingAgentInput,
   GuidedConsultingAgentLog,
   GuidedConsultingAgentLogKind,
   GuidedConsultingAgentOptions,

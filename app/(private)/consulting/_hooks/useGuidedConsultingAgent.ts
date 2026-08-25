@@ -7,7 +7,7 @@ import {
   createGuidedConsultingRendererRejectedResponse,
   createGuidedConsultingRendererSuccessResponse,
   parseGuidedConsultingRendererRequest,
-} from '@/features/guided-consulting/core/renderer-protocol';
+} from '@/features/guided-consulting/core/protocol';
 import type { GuidedConsultingDefinition } from '@/features/guided-consulting/core/types';
 
 const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();

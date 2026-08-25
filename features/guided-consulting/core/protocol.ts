@@ -1,12 +1,22 @@
-import type {
-  GuidedConsultingAgentInput,
-  GuidedConsultingScreen,
-} from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingScreen } from '@/features/guided-consulting/core/types';
+
+// User → Agent
+
+export type GuidedConsultingUserAction =
+  | { type: 'user.next-explanation' }
+  | { type: 'user.previous-explanation' }
+  | { type: 'user.start-input' }
+  | { type: 'user.review-explanation' }
+  | { type: 'user.submit'; value: string }
+  | { type: 'user.back' }
+  | { type: 'user.reset' };
+
+// Agent ↔ Renderer
 
 export const GUIDED_CONSULTING_RENDERER_PROTOCOL =
   'guided-consulting.renderer/v1' as const;
 
-export type GuidedConsultingRendererAction = GuidedConsultingAgentInput['type'];
+export type GuidedConsultingRendererAction = GuidedConsultingUserAction['type'];
 
 export type GuidedConsultingRendererRequest<Context extends object> = {
   protocol: typeof GUIDED_CONSULTING_RENDERER_PROTOCOL;

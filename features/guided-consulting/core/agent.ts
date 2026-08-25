@@ -1,10 +1,10 @@
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import {
   createGuidedConsultingRendererRequest,
   parseGuidedConsultingRendererResponse,
-} from '@/features/guided-consulting/core/renderer-protocol';
+} from '@/features/guided-consulting/core/protocol';
 import type {
   GuidedConsultingAgent,
-  GuidedConsultingAgentInput,
   GuidedConsultingAgentLog,
   GuidedConsultingAgentLogKind,
   GuidedConsultingAgentOptions,
@@ -329,8 +329,8 @@ export function createGuidedConsultingAgent<
     for (const listener of listeners) listener();
   };
 
-  const logAgentInput = (input: GuidedConsultingAgentInput) => {
-    const labels: Record<GuidedConsultingAgentInput['type'], string> = {
+  const logAgentInput = (input: GuidedConsultingUserAction) => {
+    const labels: Record<GuidedConsultingUserAction['type'], string> = {
       'user.next-explanation': '사용자가 다음 설명을 요청했습니다.',
       'user.previous-explanation': '사용자가 이전 설명을 요청했습니다.',
       'user.start-input': '사용자가 입력 화면을 요청했습니다.',
@@ -342,7 +342,7 @@ export function createGuidedConsultingAgent<
     appendLog('agent.input', labels[input.type], { data: input });
   };
 
-  const send = (input: GuidedConsultingAgentInput) => {
+  const send = (input: GuidedConsultingUserAction) => {
     if (disposed) return;
     logAgentInput(input);
 

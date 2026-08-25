@@ -1,3 +1,5 @@
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
+
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';
 
@@ -152,15 +154,6 @@ export type GuidedConsultingAgentLog = {
   data?: unknown;
 };
 
-export type GuidedConsultingAgentInput =
-  | { type: 'user.next-explanation' }
-  | { type: 'user.previous-explanation' }
-  | { type: 'user.start-input' }
-  | { type: 'user.review-explanation' }
-  | { type: 'user.submit'; value: string }
-  | { type: 'user.back' }
-  | { type: 'user.reset' };
-
 export type GuidedConsultingAgentSnapshot<
   Context extends object,
   Services extends object,
@@ -191,7 +184,7 @@ export type GuidedConsultingAgent<
 > = {
   getSnapshot: () => GuidedConsultingAgentSnapshot<Context, Services>;
   subscribe: (listener: () => void) => () => void;
-  send: (input: GuidedConsultingAgentInput) => void;
+  send: (input: GuidedConsultingUserAction) => void;
   executeToolCall: (callId: string, signal: AbortSignal) => Promise<unknown>;
   resolveToolCall: (callId: string, output: unknown) => void;
   rejectToolCall: (callId: string, error: unknown) => void;
