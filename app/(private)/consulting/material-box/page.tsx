@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { MaterialBoxConsulting } from '@/app/(private)/consulting/material-box/_components/MaterialBoxConsulting';
 import { Button } from '@/components/ui/button';
-import { MaterialBoxFlow } from '@/features/material-box-consulting';
 import { requireUserAccess } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 
@@ -33,7 +33,7 @@ export default async function MaterialBoxConsultingPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 md:px-6 md:py-7 lg:px-8">
-        <MaterialBoxFlow />
+        <MaterialBoxConsulting />
       </div>
     </main>
   );
