@@ -1,5 +1,5 @@
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
-import type { GuidedConsultingModuleCall } from '@/features/guided-consulting/core/types';
+import type { GuidedConsultingModuleCall } from '@/features/guided-consulting/core/agent/types';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingAgentEvent =
   | {

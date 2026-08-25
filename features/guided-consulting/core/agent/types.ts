@@ -2,9 +2,9 @@ import type {
   GuidedConsultingPlanNode,
   GuidedConsultingScreenProgress,
 } from '@/features/guided-consulting/core/plan/types';
-import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/protocol';
 import type { GuidedConsultingRenderTarget } from '@/features/guided-consulting/core/renderer/protocol';
 import type { GuidedConsultingToolError } from '@/features/guided-consulting/core/tools/protocol';
+import type { GuidedConsultingUserAction } from '@/features/guided-consulting/core/user/protocol';
 
 export type GuidedConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';
