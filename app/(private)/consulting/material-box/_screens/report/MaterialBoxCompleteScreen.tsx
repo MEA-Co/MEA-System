@@ -45,7 +45,7 @@ function ReportSection({
           <p className="text-[0.68rem] font-bold tracking-[0.16em] text-blue-600">
             {number} · {eyebrow}
           </p>
-          <h2 className="mt-1 text-xl font-bold tracking-[-0.025em] text-slate-950 md:text-2xl">
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
             {title}
           </h2>
         </div>
