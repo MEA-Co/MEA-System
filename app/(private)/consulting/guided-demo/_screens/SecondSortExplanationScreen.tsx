@@ -29,12 +29,14 @@ function SecondSortExplanationScreen({
       </section>
 
       <ConsultingPrompter
-        pageLabel="STEP 2 · 2/2"
         message={{
+          label: 'STEP 2 · 2/2',
           title: '다시 숫자 10개를 입력해 주세요',
-          description:
-            '대기 화면을 먼저 표시하고, 결과가 도착하면 화면을 업데이트합니다.',
-          tips: ['첫 번째와 다른 순서의 숫자를 입력해보세요.'],
+          segments: [
+            {
+              text: '대기 화면을 먼저 표시하고, 결과가 도착하면 화면을 업데이트합니다.',
+            },
+          ],
         }}
       >
         <Button

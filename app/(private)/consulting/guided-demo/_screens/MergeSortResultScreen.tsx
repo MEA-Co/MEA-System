@@ -52,11 +52,14 @@ export const mergeSortResultScreen = {
         label="첫 번째 정렬 결과"
       />
       <ConsultingPrompter
-        pageLabel="RESULT 1 · 1/2"
         message={{
+          label: 'RESULT 1 · 1/2',
           title: '첫 번째 머지 소트가 끝났어요',
-          description:
-            'Agent는 Tool 결과가 도착할 때까지 기다린 후 이 화면을 요청했습니다.',
+          segments: [
+            {
+              text: 'Agent는 Tool 결과가 도착할 때까지 기다린 후 이 화면을 요청했습니다.',
+            },
+          ],
         }}
       >
         <Button

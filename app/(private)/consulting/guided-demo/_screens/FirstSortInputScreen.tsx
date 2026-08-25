@@ -71,14 +71,17 @@ function FirstSortInputScreen({
       </form>
       <ConsultingPrompter
         message={{
-          eyebrow: 'INPUT',
+          label: 'INPUT',
           title: error
             ? '입력 내용을 다시 확인해 주세요'
             : '첫 번째 숫자 10개를 입력해 주세요',
-          description:
-            error ??
-            '쉼표 또는 공백으로 숫자를 구분한 뒤 입력 완료를 눌러주세요.',
-          tips: ['정확히 10개의 숫자를 입력해야 해요.'],
+          segments: [
+            {
+              text:
+                error ??
+                '쉼표 또는 공백으로 숫자를 구분한 뒤 입력 완료를 눌러주세요.',
+            },
+          ],
         }}
       />
     </ConsultingScreenView>

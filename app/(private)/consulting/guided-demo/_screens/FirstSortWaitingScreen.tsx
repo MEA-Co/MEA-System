@@ -22,10 +22,13 @@ function FirstSortWaitingScreen() {
       </section>
       <ConsultingPrompter
         message={{
-          eyebrow: 'WAITING',
+          label: 'WAITING',
           title: '머지 소트를 실행하고 있어요',
-          description:
-            '첫 번째 실행은 Tool 결과를 받은 뒤 다음 화면으로 이동합니다.',
+          segments: [
+            {
+              text: '첫 번째 실행은 Tool 결과를 받은 뒤 다음 화면으로 이동합니다.',
+            },
+          ],
         }}
       />
     </ConsultingScreenView>

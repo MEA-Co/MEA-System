@@ -22,10 +22,13 @@ function SecondSortWaitingScreen() {
       </section>
       <ConsultingPrompter
         message={{
-          eyebrow: 'VALIDATING',
+          label: 'VALIDATING',
           title: 'Validation Tool 결과를 기다리고 있어요',
-          description:
-            'Plan이 Validation Tool 호출을 명시했기 때문에 Agent가 해당 Tool과 통신하고 있습니다.',
+          segments: [
+            {
+              text: 'Plan이 Validation Tool 호출을 명시했기 때문에 Agent가 해당 Tool과 통신하고 있습니다.',
+            },
+          ],
         }}
       />
     </ConsultingScreenView>

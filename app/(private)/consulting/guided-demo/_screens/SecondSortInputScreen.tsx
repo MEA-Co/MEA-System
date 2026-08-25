@@ -72,14 +72,17 @@ function SecondSortInputScreen({
 
       <ConsultingPrompter
         message={{
-          eyebrow: 'INPUT',
+          label: 'INPUT',
           title: error
             ? '입력 내용을 다시 확인해 주세요'
             : '두 번째 숫자 10개를 입력해 주세요',
-          description:
-            error ??
-            '이번에는 대기 화면을 먼저 보여준 뒤 결과 화면으로 업데이트합니다.',
-          tips: ['정확히 10개의 숫자를 입력해야 해요.'],
+          segments: [
+            {
+              text:
+                error ??
+                '이번에는 대기 화면을 먼저 보여준 뒤 결과 화면으로 업데이트합니다.',
+            },
+          ],
         }}
       />
     </ConsultingScreenView>

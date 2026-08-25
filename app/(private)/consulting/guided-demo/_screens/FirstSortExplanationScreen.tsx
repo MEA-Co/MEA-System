@@ -29,12 +29,14 @@ function FirstSortExplanationScreen({
       </section>
 
       <ConsultingPrompter
-        pageLabel="STEP 1 · 1/1"
         message={{
+          label: 'STEP 1 · 1/1',
           title: '정렬할 숫자 10개를 입력해 주세요',
-          description:
-            '첫 번째 실행은 머지 소트 Tool 결과를 기다린 다음 결과 화면을 표시합니다.',
-          tips: ['쉼표 또는 공백으로 숫자를 구분할 수 있어요.'],
+          segments: [
+            {
+              text: '첫 번째 실행은 머지 소트 Tool 결과를 기다린 다음 결과 화면을 표시합니다.',
+            },
+          ],
         }}
       >
         <Button

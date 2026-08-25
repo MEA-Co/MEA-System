@@ -30,10 +30,13 @@ function MergeSortPendingScreen({ data }: { data: MergeSortScreenData }) {
       </section>
       <ConsultingPrompter
         message={{
-          eyebrow: 'UPDATING',
+          label: 'UPDATING',
           title: '결과를 기다리는 동안 화면을 먼저 보여줍니다',
-          description:
-            'Tool 결과가 도착하면 Agent가 결과 화면 ID와 데이터를 새로 전달합니다.',
+          segments: [
+            {
+              text: 'Tool 결과가 도착하면 Agent가 결과 화면 ID와 데이터를 새로 전달합니다.',
+            },
+          ],
         }}
       />
     </ConsultingScreenView>
