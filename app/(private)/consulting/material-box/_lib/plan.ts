@@ -23,6 +23,12 @@ export const materialBoxPlan = defineGuidedConsultingPlan<
       id: 'material-box-overview',
       type: 'screen',
       screen: { screenId: 'material-box.overview', mode: 'static' },
+      on: { 'user.next-explanation': 'major' },
+    },
+    major: {
+      id: 'major',
+      type: 'screen',
+      screen: { screenId: 'material-box.major', mode: 'static' },
     },
   },
 });

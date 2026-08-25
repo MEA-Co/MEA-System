@@ -74,7 +74,7 @@ function MaterialBoxIntroScreen({
             spacebarShortcut
             onClick={goToNextPage}
           >
-            {isLastPage ? '재료함 시작하기' : '다음으로'}
+            다음으로
           </ConsultingProgressButton>
         </ConsultingPrompter>
       </div>
