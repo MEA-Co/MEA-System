@@ -4,6 +4,8 @@ export type MaterialBoxContext = Record<never, never>;
 
 export type MaterialBoxKeywordScreenData = {
   majors: ReadonlyArray<string>;
+  keywords: ReadonlyArray<string>;
+  startAtInput: boolean;
 };
 
 export type MaterialBoxMajorKeyword = {
@@ -90,7 +92,16 @@ export function isMaterialBoxKeywordScreenData(
     value.majors.length <= 3 &&
     value.majors.every(
       (major) => typeof major === 'string' && major.trim().length > 0,
-    )
+    ) &&
+    'keywords' in value &&
+    Array.isArray(value.keywords) &&
+    (value.keywords.length === 0 ||
+      value.keywords.length === value.majors.length) &&
+    value.keywords.every(
+      (keyword) => typeof keyword === 'string' && keyword.trim().length > 0,
+    ) &&
+    'startAtInput' in value &&
+    typeof value.startAtInput === 'boolean'
   );
 }
 

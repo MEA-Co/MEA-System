@@ -1,6 +1,6 @@
 'use client';
 
-import { Undo2 } from 'lucide-react';
+import { Eye, Undo2 } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, type ReactNode } from 'react';
 import { useState } from 'react';
@@ -29,6 +29,27 @@ const majorMessages = [
     ],
   },
 ] satisfies ReadonlyArray<ConsultingPrompterMessage>;
+
+type MaterialBoxMajorScreenData = {
+  majors: ReadonlyArray<string>;
+  startAtInput: boolean;
+};
+
+function isMaterialBoxMajorScreenData(
+  value: unknown,
+): value is MaterialBoxMajorScreenData {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const data = value as Partial<MaterialBoxMajorScreenData>;
+  return (
+    Array.isArray(data.majors) &&
+    data.majors.length <= 3 &&
+    data.majors.every(
+      (major) => typeof major === 'string' && major.trim().length > 0,
+    ) &&
+    typeof data.startAtInput === 'boolean'
+  );
+}
 
 function RankedMajorLabel({ index }: { index: number }) {
   const shouldReduceMotion = useReducedMotion();
@@ -119,13 +140,19 @@ function MajorInput({
 }
 
 function MaterialBoxMajorScreen({
+  data,
   environment,
 }: {
+  data: MaterialBoxMajorScreenData;
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(
+    data.startAtInput ? majorMessages.length - 1 : 0,
+  );
   const [isTypingComplete, setIsTypingComplete] = useState(false);
-  const [majors, setMajors] = useState(['', '', '']);
+  const [majors, setMajors] = useState(() =>
+    [...data.majors, '', '', ''].slice(0, 3),
+  );
   const [isReviewing, setIsReviewing] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
@@ -166,6 +193,21 @@ function MaterialBoxMajorScreen({
 
   return (
     <ConsultingScreenView>
+      {isInputPage && !isReviewing && (
+        <Button
+          type="button"
+          variant="outline"
+          className="absolute top-4 right-3 z-30 md:right-5"
+          onClick={() => {
+            setIsTypingComplete(false);
+            setPageIndex(0);
+          }}
+        >
+          <Eye aria-hidden="true" />
+          설명 다시 보기
+        </Button>
+      )}
+
       {isReviewing ? (
         <MaterialBoxTable
           focus="major"
@@ -253,9 +295,13 @@ function MaterialBoxMajorScreen({
 }
 
 export const materialBoxMajorScreen = {
-  mode: 'static',
-  render: (_request, environment) => (
-    <MaterialBoxMajorScreen environment={environment} />
+  mode: 'dynamic',
+  validateData: isMaterialBoxMajorScreenData,
+  render: (request, environment) => (
+    <MaterialBoxMajorScreen
+      data={request.data as MaterialBoxMajorScreenData}
+      environment={environment}
+    />
   ),
 } satisfies ConsultingRendererEntry<
   ConsultingScreenRenderEnvironment,

@@ -35,7 +35,7 @@ const keywordMessages = [
   {
     segments: [
       {
-        text: '여러분이 희망 전공을 가고 싶다고 생각한 이유, 평소에 관심을 가지던 대상, 무엇이든 여러분만의 세부 키워드가 될 수 있습니다.',
+        text: '여러분이 희망 전공을 가고 싶다고 생각한 이유, 평소에 관심을 가지던 대상, ... 무엇이든 여러분만의 세부 키워드가 될 수 있습니다.',
       },
     ],
   },
@@ -49,11 +49,15 @@ function MaterialBoxKeywordScreen({
   data: MaterialBoxKeywordScreenData;
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(
+    data.startAtInput ? keywordMessages.length - 1 : 0,
+  );
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [keywords, setKeywords] = useState<ReadonlyArray<string>>(() =>
-    data.majors.map(() => ''),
+    data.keywords.length === data.majors.length
+      ? data.keywords
+      : data.majors.map(() => ''),
   );
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,

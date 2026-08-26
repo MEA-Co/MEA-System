@@ -143,18 +143,42 @@ export const materialBoxPlan = defineConsultingPlan<
     major: {
       id: 'major',
       type: 'screen',
-      screen: { screenId: 'material-box.major', mode: 'static' },
+      screen: (memory) => ({
+        screenId: 'material-box.major',
+        mode: 'dynamic',
+        data: {
+          majors:
+            memory.actions.major?.type === 'user.submit'
+              ? getSubmittedMajors(memory)
+              : [],
+          startAtInput: memory.lastAction?.type === 'user.back',
+        },
+      }),
       on: { 'user.submit': 'keyword' },
     },
     keyword: {
       id: 'keyword',
       type: 'screen',
-      screen: (memory) => ({
-        screenId: 'material-box.keyword',
-        mode: 'dynamic',
-        data: { majors: getSubmittedMajors(memory) },
-      }),
-      on: { 'user.submit': 'generate-student-story' },
+      screen: (memory) => {
+        const submittedKeywords =
+          memory.actions.keyword?.type === 'user.submit'
+            ? getSubmittedMajorKeywords(memory).map((entry) => entry.keyword)
+            : [];
+
+        return {
+          screenId: 'material-box.keyword',
+          mode: 'dynamic',
+          data: {
+            majors: getSubmittedMajors(memory),
+            keywords: submittedKeywords,
+            startAtInput: memory.lastAction?.type === 'user.back',
+          },
+        };
+      },
+      on: {
+        'user.submit': 'generate-student-story',
+        'user.back': 'major',
+      },
     },
     'generate-student-story': {
       id: 'generate-student-story',
@@ -194,7 +218,10 @@ export const materialBoxPlan = defineConsultingPlan<
         mode: 'dynamic',
         data: getProgressScreenData(memory),
       }),
-      on: { 'user.next-explanation': 'career-identity' },
+      on: {
+        'user.next-explanation': 'career-identity',
+        'user.back': 'keyword',
+      },
     },
     'career-identity': {
       id: 'career-identity',
