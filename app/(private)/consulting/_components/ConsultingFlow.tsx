@@ -18,10 +18,7 @@ type ConsultingFlowProps<
 > = {
   plan: ConsultingPlan<Context, Tools>;
   tools: Tools;
-  renderer: ConsultingRenderer<
-    ConsultingScreenRenderEnvironment,
-    ReactNode
-  >;
+  renderer: ConsultingRenderer<ConsultingScreenRenderEnvironment, ReactNode>;
   debug?: boolean;
 };
 
@@ -90,8 +87,7 @@ export function ConsultingFlow<
         title={screen.title}
         currentStep={screen.progress?.current}
         stepCount={screen.progress?.total}
-        canGoBack={canGoBack}
-        onBack={() => send({ type: 'user.back' })}
+        onBack={canGoBack ? () => send({ type: 'user.back' }) : undefined}
         topRightAction={
           canReviewExplanation ? (
             <Button

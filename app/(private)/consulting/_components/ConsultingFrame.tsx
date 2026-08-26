@@ -11,7 +11,6 @@ type ConsultingFrameProps = {
   children: ReactNode;
   currentStep?: number;
   stepCount?: number;
-  canGoBack?: boolean;
   onBack?: () => void;
   topRightAction?: ReactNode;
 };
@@ -21,7 +20,6 @@ export function ConsultingFrame({
   children,
   currentStep,
   stepCount,
-  canGoBack = false,
   onBack,
   topRightAction,
 }: ConsultingFrameProps) {
@@ -81,7 +79,6 @@ export function ConsultingFrame({
           type="button"
           variant="ghost"
           size="sm"
-          disabled={!canGoBack}
           onClick={onBack}
           className="absolute top-18 left-3 z-30 text-muted-foreground md:left-5"
           aria-label="이전 단계로 돌아가기"

@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 import type {
-  KeywordRecommendation,
-  KeywordRecommendationsResponse,
-} from '@/features/material-box-consulting/model/types';
+  MaterialBoxKeywordRecommendation,
+  MaterialBoxKeywordRecommendationsResponse,
+} from '@/app/(private)/consulting/material-box/_lib/keyword-recommendations';
 import { getUserAccess, hasRole } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 
@@ -14,11 +14,11 @@ export const maxDuration = 60;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const resultCache = new Map<
   string,
-  { expiresAt: number; data: KeywordRecommendationsResponse }
+  { expiresAt: number; data: MaterialBoxKeywordRecommendationsResponse }
 >();
 const pendingRequests = new Map<
   string,
-  Promise<KeywordRecommendationsResponse>
+  Promise<MaterialBoxKeywordRecommendationsResponse>
 >();
 
 const responseSchema = {
@@ -114,10 +114,10 @@ function isShortText(value: unknown, maxLength: number): value is string {
 function parseRecommendation(
   value: unknown,
   searchedUrls: ReadonlySet<string>,
-): KeywordRecommendation | null {
+): MaterialBoxKeywordRecommendation | null {
   if (!value || typeof value !== 'object') return null;
 
-  const candidate = value as Partial<KeywordRecommendation>;
+  const candidate = value as Partial<MaterialBoxKeywordRecommendation>;
   const departmentUrl = parseHttpsUrl(candidate.departmentUrl);
   const labUrl = parseHttpsUrl(candidate.labUrl);
 
@@ -151,7 +151,7 @@ function parseRecommendation(
 function parseResponse(
   value: unknown,
   searchedUrls: ReadonlySet<string>,
-): KeywordRecommendationsResponse | null {
+): MaterialBoxKeywordRecommendationsResponse | null {
   if (!value || typeof value !== 'object') return null;
 
   const recommendations = (value as { recommendations?: unknown })
@@ -160,7 +160,7 @@ function parseResponse(
 
   const parsed = recommendations
     .map((recommendation) => parseRecommendation(recommendation, searchedUrls))
-    .filter((item): item is KeywordRecommendation => item !== null)
+    .filter((item): item is MaterialBoxKeywordRecommendation => item !== null)
     .filter(
       (item, index, items) =>
         items.findIndex(
@@ -176,7 +176,7 @@ function parseResponse(
 
 async function generateRecommendations(
   majors: Array<string>,
-): Promise<KeywordRecommendationsResponse> {
+): Promise<MaterialBoxKeywordRecommendationsResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY_MISSING');

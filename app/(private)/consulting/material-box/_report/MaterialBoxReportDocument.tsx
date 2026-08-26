@@ -11,7 +11,7 @@ import {
 } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 
-import type { MaterialBoxMemory } from '@/features/material-box-consulting/model/types';
+import type { MaterialBoxReportData } from '@/app/(private)/consulting/material-box/_report/types';
 
 import {
   createMaterialBoxReport,
@@ -317,15 +317,15 @@ function ReportFooter() {
 }
 
 type MaterialBoxReportDocumentProps = {
-  memory: MaterialBoxMemory;
+  data: MaterialBoxReportData;
   issuedAt: Date;
 };
 
 export function createMaterialBoxReportDocument({
-  memory,
+  data,
   issuedAt,
 }: MaterialBoxReportDocumentProps): ReactElement<DocumentProps> {
-  const report = createMaterialBoxReport(memory);
+  const report = createMaterialBoxReport(data);
   const issuedDate = formatMaterialBoxReportDate(issuedAt);
 
   return (

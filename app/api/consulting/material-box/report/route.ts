@@ -1,9 +1,9 @@
 import { renderToBuffer } from '@react-pdf/renderer';
 import { NextResponse } from 'next/server';
 
-import type { MaterialBoxMemory } from '@/features/material-box-consulting/model/types';
-import { materialBoxReportFileName } from '@/features/material-box-consulting/report/content';
-import { createMaterialBoxReportDocument } from '@/features/material-box-consulting/report/MaterialBoxReportDocument';
+import { materialBoxReportFileName } from '@/app/(private)/consulting/material-box/_report/content';
+import { createMaterialBoxReportDocument } from '@/app/(private)/consulting/material-box/_report/MaterialBoxReportDocument';
+import type { MaterialBoxReportData } from '@/app/(private)/consulting/material-box/_report/types';
 import { getUserAccess, hasRole } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 
@@ -17,10 +17,12 @@ function isStringWithinLimit(value: unknown, maxLength = 500) {
   );
 }
 
-function isMaterialBoxMemory(value: unknown): value is MaterialBoxMemory {
+function isMaterialBoxReportData(
+  value: unknown,
+): value is MaterialBoxReportData {
   if (!value || typeof value !== 'object') return false;
 
-  const candidate = value as Partial<MaterialBoxMemory>;
+  const candidate = value as Partial<MaterialBoxReportData>;
   const majors = candidate.majorPreferences;
 
   return (
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isMaterialBoxMemory(body)) {
+  if (!isMaterialBoxReportData(body)) {
     return NextResponse.json(
       { error: '리포트 입력값이 올바르지 않습니다.' },
       { status: 400 },
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
   try {
     const pdfBuffer = await renderToBuffer(
       createMaterialBoxReportDocument({
-        memory: body,
+        data: body,
         issuedAt: new Date(),
       }),
     );
