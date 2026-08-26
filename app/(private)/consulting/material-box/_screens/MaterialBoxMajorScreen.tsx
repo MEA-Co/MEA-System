@@ -1,6 +1,7 @@
 'use client';
 
 import { Undo2 } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, type ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -29,6 +30,37 @@ const majorMessages = [
   },
 ] satisfies ReadonlyArray<ConsultingPrompterMessage>;
 
+function RankedMajorLabel({ index }: { index: number }) {
+  const shouldReduceMotion = useReducedMotion();
+  const delay = shouldReduceMotion ? 0 : 0.9 + index * 0.06;
+
+  return (
+    <span className="relative block">
+      <motion.span
+        aria-hidden="true"
+        className="block"
+        initial={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
+        animate={{ opacity: 0, y: shouldReduceMotion ? 0 : -4 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.25, delay }}
+      >
+        전공
+      </motion.span>
+      <motion.span
+        className="absolute inset-0 block"
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: shouldReduceMotion ? 0 : 0.3,
+          delay,
+          ease: 'easeOut',
+        }}
+      >
+        {index + 1}순위 전공
+      </motion.span>
+    </span>
+  );
+}
+
 function MajorInput({
   majors,
   validationMessage,
@@ -43,7 +75,9 @@ function MajorInput({
   return (
     <form onSubmit={onSubmit} className="mx-auto w-full max-w-4xl">
       <MaterialBoxTable
+        animateEntrance={false}
         focus="major"
+        wideMajorColumn
         majorRowCount={3}
         renderMajorCell={(index) => (
           <div className="min-w-0" key={index}>
@@ -147,8 +181,15 @@ function MaterialBoxMajorScreen({
         />
       ) : (
         <MaterialBoxTable
+          animateEntrance={pageIndex > 0}
           focus="major"
+          initialFocus="approach"
           majorRowCount={pageIndex >= 2 ? 3 : 1}
+          renderMajorCell={
+            pageIndex === 2
+              ? (index) => <RankedMajorLabel index={index} />
+              : undefined
+          }
         />
       )}
 

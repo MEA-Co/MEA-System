@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,10 @@ export type MaterialBoxTableFocus =
 
 type MaterialBoxTableProps = {
   focus: MaterialBoxTableFocus;
+  initialFocus?: MaterialBoxTableFocus;
+  animateEntrance?: boolean;
   compact?: boolean;
+  wideMajorColumn?: boolean;
   majorRowCount?: 1 | 2 | 3;
   majors?: ReadonlyArray<string>;
   keywords?: ReadonlyArray<string>;
@@ -24,7 +27,10 @@ type MaterialBoxTableProps = {
 
 export function MaterialBoxTable({
   focus,
+  initialFocus,
+  animateEntrance = true,
   compact = false,
+  wideMajorColumn = false,
   majorRowCount = 1,
   majors = [],
   keywords = [],
@@ -36,15 +42,49 @@ export function MaterialBoxTable({
   personalStrength = '',
 }: MaterialBoxTableProps) {
   const shouldReduceMotion = useReducedMotion();
+  const [hasAppliedInitialFocus, setHasAppliedInitialFocus] = useState(
+    initialFocus === undefined,
+  );
+  const [hasExpandedMajorColumn, setHasExpandedMajorColumn] = useState(false);
+  const displayedFocus =
+    initialFocus !== undefined && !shouldReduceMotion && !hasAppliedInitialFocus
+      ? initialFocus
+      : focus;
+  const shouldUseWideMajorColumn =
+    wideMajorColumn && (Boolean(shouldReduceMotion) || hasExpandedMajorColumn);
+
+  useEffect(() => {
+    if (initialFocus === undefined || shouldReduceMotion) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setHasAppliedInitialFocus(true);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [initialFocus, shouldReduceMotion]);
+
+  useEffect(() => {
+    if (!wideMajorColumn || shouldReduceMotion) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setHasExpandedMajorColumn(true);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [shouldReduceMotion, wideMajorColumn]);
+
   const rowMotion = (delay: number) => ({
-    initial: shouldReduceMotion ? false : { opacity: 0, y: 8 },
+    initial:
+      shouldReduceMotion || !animateEntrance ? false : { opacity: 0, y: 8 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.3, delay },
   });
 
   return (
     <motion.section
-      initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+      initial={
+        shouldReduceMotion || !animateEntrance ? false : { opacity: 0, y: 18 }
+      }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className={cn(
@@ -67,7 +107,7 @@ export function MaterialBoxTable({
                 {...rowMotion(0.18 + index * 0.18)}
                 className={cn(
                   'transition-colors duration-500',
-                  focus === 'interest' && 'bg-blue-500/10',
+                  displayedFocus === 'interest' && 'bg-blue-500/10',
                 )}
               >
                 {index === 0 && (
@@ -75,11 +115,13 @@ export function MaterialBoxTable({
                     scope="rowgroup"
                     rowSpan={majorRowCount + 1}
                     className={cn(
-                      'border-r border-b px-2.5 py-3 align-middle font-bold leading-5 transition-colors duration-500',
+                      'border-r border-b px-2.5 py-3 align-middle font-bold leading-5 transition-[width,background-color,color] duration-500 ease-out motion-reduce:transition-colors',
                       compact
                         ? 'w-[42%] text-[11px] sm:w-[40%] sm:text-xs'
-                        : 'w-[38%] sm:w-56 sm:px-5 sm:py-5 sm:text-sm',
-                      focus === 'interest'
+                        : shouldUseWideMajorColumn
+                          ? 'w-[32%] sm:w-52 sm:px-5 sm:py-5 sm:text-sm'
+                          : 'w-[38%] sm:w-56 sm:px-5 sm:py-5 sm:text-sm',
+                      displayedFocus === 'interest'
                         ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                         : 'bg-muted/35',
                     )}
@@ -89,11 +131,13 @@ export function MaterialBoxTable({
                 )}
                 <td
                   className={cn(
-                    'border-r border-b px-2.5 py-3 font-semibold transition-colors duration-500',
+                    'border-r border-b px-2.5 py-3 font-semibold transition-[width,background-color,color] duration-500 ease-out motion-reduce:transition-colors',
                     compact
                       ? 'w-[35%] sm:w-[36%]'
-                      : 'w-[29%] sm:w-44 sm:px-5 sm:py-5 sm:text-sm',
-                    focus === 'major' &&
+                      : shouldUseWideMajorColumn
+                        ? 'w-[44%] sm:w-64 sm:px-5 sm:py-5 sm:text-sm'
+                        : 'w-[29%] sm:w-44 sm:px-5 sm:py-5 sm:text-sm',
+                    displayedFocus === 'major' &&
                       'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
@@ -106,7 +150,7 @@ export function MaterialBoxTable({
                   className={cn(
                     'border-b px-2.5 py-3 text-muted-foreground transition-colors duration-500',
                     !compact && 'sm:px-5 sm:py-5 sm:text-sm',
-                    focus === 'keyword' &&
+                    displayedFocus === 'keyword' &&
                       'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
@@ -124,7 +168,7 @@ export function MaterialBoxTable({
               {...rowMotion(0.18 + majorRowCount * 0.18)}
               className={cn(
                 'transition-colors duration-500',
-                focus === 'story' && 'bg-blue-500/10',
+                displayedFocus === 'story' && 'bg-blue-500/10',
               )}
             >
               <th
@@ -133,7 +177,7 @@ export function MaterialBoxTable({
                 className={cn(
                   'border-b px-2.5 py-3 font-semibold transition-colors duration-500',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
-                  focus === 'story' &&
+                  displayedFocus === 'story' &&
                     'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                 )}
               >
@@ -155,7 +199,7 @@ export function MaterialBoxTable({
               {...rowMotion(0.36 + majorRowCount * 0.18)}
               className={cn(
                 'transition-colors duration-500',
-                focus === 'motivation' && 'bg-blue-500/10',
+                displayedFocus === 'motivation' && 'bg-blue-500/10',
               )}
             >
               <th
@@ -163,7 +207,7 @@ export function MaterialBoxTable({
                 className={cn(
                   'border-r border-b px-2.5 py-3 font-bold leading-5 transition-colors duration-500',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
-                  focus === 'motivation'
+                  displayedFocus === 'motivation'
                     ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                     : 'bg-muted/35',
                 )}
@@ -191,7 +235,7 @@ export function MaterialBoxTable({
               {...rowMotion(0.54 + majorRowCount * 0.18)}
               className={cn(
                 'transition-colors duration-500',
-                focus === 'approach' && 'bg-blue-500/10',
+                displayedFocus === 'approach' && 'bg-blue-500/10',
               )}
             >
               <th
@@ -199,7 +243,7 @@ export function MaterialBoxTable({
                 className={cn(
                   'border-r px-2.5 py-3 font-bold leading-5 transition-colors duration-500',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
-                  focus === 'approach'
+                  displayedFocus === 'approach'
                     ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                     : 'bg-muted/35',
                 )}
