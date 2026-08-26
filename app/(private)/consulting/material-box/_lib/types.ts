@@ -6,8 +6,13 @@ export type MaterialBoxKeywordScreenData = {
   majors: ReadonlyArray<string>;
 };
 
-export type MaterialBoxProgressScreenData = MaterialBoxKeywordScreenData & {
+export type MaterialBoxMajorKeyword = {
+  major: string;
   keyword: string;
+};
+
+export type MaterialBoxProgressScreenData = {
+  majorKeywords: ReadonlyArray<MaterialBoxMajorKeyword>;
   careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
@@ -47,11 +52,24 @@ export function isMaterialBoxProgressScreenData(
   };
 
   return (
-    isMaterialBoxKeywordScreenData(value) &&
-    'keyword' in value &&
-    typeof value.keyword === 'string' &&
-    value.keyword.trim().length > 0 &&
-    value.keyword.length <= 80 &&
+    typeof value === 'object' &&
+    value !== null &&
+    'majorKeywords' in value &&
+    Array.isArray(value.majorKeywords) &&
+    value.majorKeywords.length > 0 &&
+    value.majorKeywords.length <= 3 &&
+    value.majorKeywords.every(
+      (entry) =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        'major' in entry &&
+        typeof entry.major === 'string' &&
+        entry.major.trim().length > 0 &&
+        'keyword' in entry &&
+        typeof entry.keyword === 'string' &&
+        entry.keyword.trim().length > 0 &&
+        entry.keyword.length <= 80,
+    ) &&
     isOptionalText('careerIdentity', 80) &&
     isOptionalText('coreValue', 180) &&
     isOptionalText('fieldStrength', 180) &&

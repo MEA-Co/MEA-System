@@ -1,13 +1,12 @@
 import type {
   MaterialBoxContext,
+  MaterialBoxMajorKeyword,
   MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 
-function getSubmittedMajors(
-  memory: ConsultingMemory<MaterialBoxContext>,
-) {
+function getSubmittedMajors(memory: ConsultingMemory<MaterialBoxContext>) {
   const action = memory.actions.major;
   if (action?.type !== 'user.submit') {
     throw new Error('확정된 희망 전공이 없습니다.');
@@ -47,9 +46,38 @@ function getSubmittedText(
   return value;
 }
 
-function getProgressScreenData(
+function getSubmittedMajorKeywords(
   memory: ConsultingMemory<MaterialBoxContext>,
 ) {
+  const action = memory.actions.keyword;
+  if (action?.type !== 'user.submit') {
+    throw new Error('확정된 전공별 세부 키워드가 없습니다.');
+  }
+
+  const majors = getSubmittedMajors(memory);
+  const majorKeywords: unknown = JSON.parse(action.value);
+  if (
+    !Array.isArray(majorKeywords) ||
+    majorKeywords.length !== majors.length ||
+    majorKeywords.some(
+      (entry, index) =>
+        typeof entry !== 'object' ||
+        entry === null ||
+        !('major' in entry) ||
+        entry.major !== majors[index] ||
+        !('keyword' in entry) ||
+        typeof entry.keyword !== 'string' ||
+        entry.keyword.trim().length === 0 ||
+        entry.keyword.length > 80,
+    )
+  ) {
+    throw new Error('전공별 세부 키워드 입력 형식이 올바르지 않습니다.');
+  }
+
+  return majorKeywords as Array<MaterialBoxMajorKeyword>;
+}
+
+function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
   const getOptionalSubmittedText = (
     nodeId: string,
     label: string,
@@ -60,8 +88,7 @@ function getProgressScreenData(
       : undefined;
 
   return {
-    majors: getSubmittedMajors(memory),
-    keyword: getSubmittedText(memory, 'keyword', '세부 키워드', 80),
+    majorKeywords: getSubmittedMajorKeywords(memory),
     careerIdentity: getOptionalSubmittedText(
       'career-identity',
       '진로 명칭',

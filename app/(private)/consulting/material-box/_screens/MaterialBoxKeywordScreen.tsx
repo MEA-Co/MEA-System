@@ -51,24 +51,41 @@ function MaterialBoxKeywordScreen({
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
-  const [keyword, setKeyword] = useState('');
+  const [keywords, setKeywords] = useState<ReadonlyArray<string>>(() =>
+    data.majors.map(() => ''),
+  );
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
   const isExamplesPage = pageIndex === 2;
   const isInputPage = pageIndex === keywordMessages.length - 1;
+  const majorRowCount =
+    data.majors.length === 1 ? 1 : data.majors.length === 2 ? 2 : 3;
 
   const submitKeyword = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const normalizedKeyword = keyword.trim();
+    const normalizedKeywords = keywords.map((keyword) => keyword.trim());
+    const missingKeywordIndex = normalizedKeywords.findIndex(
+      (keyword) => !keyword,
+    );
 
-    if (!normalizedKeyword) {
-      setValidationMessage('관심 가는 세부 키워드를 한 개 입력해주세요.');
+    if (missingKeywordIndex >= 0) {
+      setValidationMessage(
+        `${data.majors[missingKeywordIndex]}의 세부 키워드를 입력해주세요.`,
+      );
       return;
     }
 
     setValidationMessage(null);
-    environment.send({ type: 'user.submit', value: normalizedKeyword });
+    environment.send({
+      type: 'user.submit',
+      value: JSON.stringify(
+        data.majors.map((major, index) => ({
+          major,
+          keyword: normalizedKeywords[index],
+        })),
+      ),
+    });
   };
 
   return (
@@ -92,10 +109,14 @@ function MaterialBoxKeywordScreen({
         <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
           <KeywordInput
             majors={data.majors}
-            keyword={keyword}
+            keywords={keywords}
             validationMessage={validationMessage}
-            onKeywordChange={(value) => {
-              setKeyword(value);
+            onKeywordChange={(index, value) => {
+              setKeywords((current) =>
+                current.map((keyword, keywordIndex) =>
+                  keywordIndex === index ? value : keyword,
+                ),
+              );
               setValidationMessage(null);
             }}
             onSubmit={submitKeyword}
@@ -103,9 +124,9 @@ function MaterialBoxKeywordScreen({
           <MaterialBoxTable
             compact
             focus="keyword"
-            majorRowCount={3}
+            majorRowCount={majorRowCount}
             majors={data.majors}
-            keyword={keyword.trim()}
+            keywords={keywords}
           />
         </div>
       ) : isExamplesPage ? (
@@ -114,7 +135,7 @@ function MaterialBoxKeywordScreen({
         <MaterialBoxTable
           compact
           focus="keyword"
-          majorRowCount={3}
+          majorRowCount={majorRowCount}
           majors={data.majors}
         />
       )}

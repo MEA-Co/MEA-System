@@ -10,9 +10,9 @@ export type MaterialBoxTableFocus =
 type MaterialBoxTableProps = {
   focus: MaterialBoxTableFocus;
   compact?: boolean;
-  majorRowCount?: 1 | 3;
+  majorRowCount?: 1 | 2 | 3;
   majors?: ReadonlyArray<string>;
-  keyword?: string;
+  keywords?: ReadonlyArray<string>;
   careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
@@ -24,7 +24,7 @@ export function MaterialBoxTable({
   compact = false,
   majorRowCount = 1,
   majors = [],
-  keyword = '',
+  keywords = [],
   careerIdentity = '',
   coreValue = '',
   fieldStrength = '',
@@ -105,9 +105,9 @@ export function MaterialBoxTable({
                 >
                   <span
                     className="block truncate"
-                    title={keyword && index === 0 ? keyword : undefined}
+                    title={keywords[index]?.trim() || undefined}
                   >
-                    {keyword && index === 0 ? keyword : '키워드'}
+                    {keywords[index]?.trim() || '키워드'}
                   </span>
                 </td>
               </motion.tr>

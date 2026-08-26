@@ -245,6 +245,14 @@ function MaterialBoxReflectionScreen({
   environment: ConsultingScreenRenderEnvironment;
 }) {
   const content = reflectionContent[reflectionId];
+  const majors = data.majorKeywords.map((entry) => entry.major);
+  const keywords = data.majorKeywords.map((entry) => entry.keyword);
+  const majorRowCount =
+    data.majorKeywords.length === 1
+      ? 1
+      : data.majorKeywords.length === 2
+        ? 2
+        : 3;
   const [isInputPage, setIsInputPage] = useState(false);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   const [value, setValue] = useState('');
@@ -297,9 +305,9 @@ function MaterialBoxReflectionScreen({
           <MaterialBoxTable
             compact
             focus={content.focus}
-            majorRowCount={3}
-            majors={data.majors}
-            keyword={data.keyword}
+            majorRowCount={majorRowCount}
+            majors={majors}
+            keywords={keywords}
             careerIdentity={data.careerIdentity}
             coreValue={data.coreValue}
             fieldStrength={data.fieldStrength}
@@ -310,9 +318,9 @@ function MaterialBoxReflectionScreen({
         <MaterialBoxTable
           compact
           focus={content.focus}
-          majorRowCount={3}
-          majors={data.majors}
-          keyword={data.keyword}
+          majorRowCount={majorRowCount}
+          majors={majors}
+          keywords={keywords}
           careerIdentity={data.careerIdentity}
           coreValue={data.coreValue}
           fieldStrength={data.fieldStrength}
