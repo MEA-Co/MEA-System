@@ -17,10 +17,13 @@ import { ConsultingPrompter } from '@/app/(private)/consulting/_components/Consu
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { isMaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import { createMaterialBoxExampleReportRequest } from '@/app/(private)/consulting/material-box/_report/content';
 import { exampleMaterialBoxReport as engineeringReport } from '@/app/(private)/consulting/material-box/_screens/report/example-report';
 import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(private)/consulting/material-box/_screens/report/humanities-example-report';
-import type { MaterialBoxReportType } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxReportPdf';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
+import { downloadConsultingReport } from '@/features/consulting/report/client';
+
+type MaterialBoxReportType = 'engineering' | 'humanities';
 
 function ReportSection({
   number,
@@ -71,12 +74,16 @@ function MaterialBoxExampleReport() {
     setDownloadingReport(type);
 
     try {
-      const { downloadMaterialBoxReportPdf } =
-        await import('@/app/(private)/consulting/material-box/_screens/report/MaterialBoxReportPdf');
-      await downloadMaterialBoxReportPdf(type);
-    } catch {
+      const selectedReport =
+        type === 'engineering' ? engineeringReport : humanitiesReport;
+      await downloadConsultingReport(
+        createMaterialBoxExampleReportRequest(selectedReport),
+      );
+    } catch (error) {
       setDownloadError(
-        'PDF를 만드는 중 문제가 발생했습니다. 다시 시도해 주세요.',
+        error instanceof Error
+          ? error.message
+          : 'PDF를 만드는 중 문제가 발생했습니다. 다시 시도해 주세요.',
       );
     } finally {
       setDownloadingReport(null);

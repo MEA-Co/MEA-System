@@ -1,4 +1,3 @@
-import { requestConsultingLlm } from '@/app/(private)/consulting/_lib/llm';
 import {
   type GenerateStudentStoryToolInput,
   type GenerateStudentStoryToolOutput,
@@ -6,6 +5,7 @@ import {
   isGenerateStudentStoryToolOutput,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import type { ConsultingToolEntry } from '@/features/consulting/core/tools';
+import { requestLlm } from '@/features/llm';
 
 const responseSchema = {
   type: 'object',
@@ -53,7 +53,7 @@ export const generateStudentStoryTool = {
   validateInput: isGenerateStudentStoryToolInput,
   validateOutput: isGenerateStudentStoryToolOutput,
   execute: async (input, { signal }) => {
-    const response = await requestConsultingLlm(
+    const response = await requestLlm(
       {
         model: 'gpt-5-nano',
         instructions,

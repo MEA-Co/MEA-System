@@ -1,83 +1,66 @@
-import type { MaterialBoxReportData } from '@/app/(private)/consulting/material-box/_report/types';
+import type { ConsultingReportRequest } from '@/features/consulting/report';
 
-export type MaterialBoxReportSection = {
-  number: string;
-  eyebrow: string;
-  title: string;
-  content: string;
-};
-
-export type MaterialBoxReportContent = {
-  careerIdentity: string;
-  keyword: string;
-  majors: Array<string>;
-  sections: Array<MaterialBoxReportSection>;
-  consultantSummary: string;
-  nextSteps: Array<{
-    number: string;
+export type MaterialBoxExampleReportData = {
+  persona: {
+    name: string;
+    grade: string;
+  };
+  fieldMap: ReadonlyArray<{
+    rank: number;
+    major: string;
+    systemSupport: {
+      summary: string;
+    };
+    mentor: {
+      name: string;
+      affiliation: string;
+      advice: string;
+    };
+    selectedKeywords: ReadonlyArray<string>;
+  }>;
+  majorStory: {
+    differentiator: string;
+    explanation: string;
+  };
+  coreValue: {
+    statement: string;
+    guidingQuestions: ReadonlyArray<readonly [string, string]>;
+  };
+  competencies: ReadonlyArray<{
+    type: string;
     title: string;
+    content: string;
+    evidence: string;
+  }>;
+  oneLineBrand: string;
+  schoolRecordStrategy: ReadonlyArray<{
+    title: string;
+    basis: ReadonlyArray<string>;
     description: string;
+  }>;
+  supportingValues: ReadonlyArray<{
+    value: string;
+    role: string;
+    description: string;
+  }>;
+  projectRoadmap: {
+    finalGoal: string;
+    basis: ReadonlyArray<string>;
+    steps: ReadonlyArray<{
+      number: string;
+      stage: string;
+      title: string;
+      question: string;
+      deliverable: string;
+    }>;
+  };
+  courses: ReadonlyArray<{
+    course: string;
+    reason: string;
   }>;
 };
 
-export function createMaterialBoxReport(
-  data: MaterialBoxReportData,
-): MaterialBoxReportContent {
-  return {
-    careerIdentity: data.careerIdentity,
-    keyword: data.keyword,
-    majors: data.majorPreferences.map((preference) => preference.major),
-    sections: [
-      {
-        number: '01',
-        eyebrow: 'CAREER IDENTITY',
-        title: '궁극적으로 그리고 있는 진로',
-        content: data.careerIdentity,
-      },
-      {
-        number: '02',
-        eyebrow: 'CORE VALUE',
-        title: '해결하고 싶은 문제와 핵심 가치',
-        content: data.coreValue,
-      },
-      {
-        number: '03',
-        eyebrow: 'FIELD COMPETENCY',
-        title: '분야에서 발휘할 강점과 역량',
-        content: data.fieldStrength,
-      },
-      {
-        number: '04',
-        eyebrow: 'PERSONAL POTENTIAL',
-        title: '나다운 습관과 잠재 역량',
-        content: data.personalStrength,
-      },
-    ],
-    consultantSummary: `‘${data.keyword}’에 대한 관심을 ‘${data.careerIdentity}’라는 구체적인 진로 방향으로 발전시켰습니다. 앞으로 교과 탐구와 비교과 활동에서 동일한 문제의식을 일관되게 드러내고, 학업 역량과 개인적인 장점을 실제 행동의 근거로 연결하면 자신만의 성장 서사가 더욱 선명해질 것입니다.`,
-    nextSteps: [
-      {
-        number: '1',
-        title: '탐구 질문 만들기',
-        description:
-          '세부 키워드와 핵심 가치가 만나는 지점에서 해결하고 싶은 문제를 한 문장의 탐구 질문으로 바꿔보세요.',
-      },
-      {
-        number: '2',
-        title: '교과 활동으로 증명하기',
-        description:
-          '잘하는 과목과 학습 방식을 활용한 탐구 과정을 남겨 분야 역량이 실제로 드러나게 해보세요.',
-      },
-      {
-        number: '3',
-        title: '나다운 행동 기록하기',
-        description:
-          '평소의 습관과 장점이 팀 활동, 발표, 조사 과정에서 어떤 역할과 행동으로 나타났는지 기록해보세요.',
-      },
-    ],
-  };
-}
-
-export function formatMaterialBoxReportDate(date: Date) {
+function formatReportDate(date: Date) {
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: '2-digit',
@@ -88,4 +71,148 @@ export function formatMaterialBoxReportDate(date: Date) {
     .trim();
 }
 
-export const materialBoxReportFileName = 'MEA_재료함_컨설팅_리포트.pdf';
+export function createMaterialBoxExampleReportRequest(
+  report: MaterialBoxExampleReportData,
+  issuedAt = new Date(),
+): ConsultingReportRequest {
+  const majors = report.fieldMap.map(({ major }) => major);
+  const keywords = report.fieldMap.flatMap(
+    ({ selectedKeywords }) => selectedKeywords,
+  );
+
+  return {
+    fileName: `${report.persona.name}_생활기록부_브랜딩_재료함_설계.pdf`,
+    document: {
+      metadata: {
+        title: '생활기록부 브랜딩 컨설팅 재료함 설계 리포트',
+        author: 'MEA',
+        subject: `${report.persona.name} 학생 예시 컨설팅 리포트`,
+        language: 'ko-KR',
+        creator: 'MEA Consulting',
+      },
+      header: {
+        brand: 'MEA',
+        label: 'MATERIAL BOX CONSULTING REPORT',
+      },
+      footer: '생활기록부 브랜딩 컨설팅 · 재료함 설계 예시',
+      hero: {
+        eyebrow: 'EXAMPLE CONSULTING REPORT',
+        title: report.oneLineBrand,
+        description: `${report.persona.name} · ${report.persona.grade}`,
+        meta: [
+          {
+            label: '희망 전공',
+            value: majors.join(' · '),
+          },
+          {
+            label: '리포트 발행일',
+            value: formatReportDate(issuedAt),
+          },
+        ],
+      },
+      overview: {
+        title: '진로 브랜드 한눈에 보기',
+        caption: 'BRAND SNAPSHOT',
+        cards: [
+          {
+            label: '학생',
+            values: [report.persona.name, report.persona.grade],
+          },
+          {
+            label: '희망 전공',
+            values: majors.map((major, index) => `${index + 1}. ${major}`),
+          },
+          {
+            label: '선택 키워드',
+            values: keywords,
+          },
+        ],
+      },
+      sectionGroups: [
+        {
+          title: '전공 세부 분야 키워드',
+          caption: 'KEYWORDS',
+          sections: report.fieldMap.map((field) => ({
+            number: String(field.rank).padStart(2, '0'),
+            eyebrow: `${field.rank}순위 희망 전공`,
+            title: `${field.major} · ${field.selectedKeywords.join(' · ')}`,
+            content: `${field.systemSupport.summary}\n\n${field.mentor.name} 멘토 (${field.mentor.affiliation})\n${field.mentor.advice}`,
+          })),
+        },
+        {
+          title: '학생의 스토리와 전공 가치관',
+          caption: 'STORY & CORE VALUE',
+          sections: [
+            {
+              number: '01',
+              eyebrow: 'STORYTELLING',
+              title: report.majorStory.differentiator,
+              content: report.majorStory.explanation,
+            },
+            {
+              number: '02',
+              eyebrow: 'CORE VALUE',
+              title: report.coreValue.statement,
+              content: report.coreValue.guidingQuestions
+                .map(([question, answer]) => `${question} ${answer}`)
+                .join('\n'),
+            },
+          ],
+        },
+        {
+          title: '계열 적합 역량',
+          caption: 'COMPETENCY',
+          sections: report.competencies.map((competency, index) => ({
+            number: String(index + 1).padStart(2, '0'),
+            eyebrow: competency.type,
+            title: competency.title,
+            content: `${competency.content}\n\n근거 · ${competency.evidence}`,
+          })),
+        },
+        {
+          title: '생기부 전반 전략',
+          caption: 'SCHOOL RECORD STRATEGY',
+          sections: report.schoolRecordStrategy.map((strategy, index) => ({
+            number: String(index + 1).padStart(2, '0'),
+            eyebrow: strategy.basis.join(' · '),
+            title: strategy.title,
+            content: strategy.description,
+          })),
+        },
+        {
+          title: '브랜드를 구체화하는 보조 가치',
+          caption: 'SUPPORTING VALUES',
+          sections: report.supportingValues.map((item, index) => ({
+            number: String(index + 1).padStart(2, '0'),
+            eyebrow: item.role,
+            title: item.value,
+            content: item.description,
+          })),
+        },
+        {
+          title: '브랜드 기반 선택과목 후보',
+          caption: 'COURSE STRATEGY',
+          sections: report.courses.map((course, index) => ({
+            number: String(index + 1).padStart(2, '0'),
+            title: course.course,
+            content: course.reason,
+          })),
+        },
+      ],
+      callout: {
+        label: 'BRANDING · ONE-LINE BRAND',
+        title: '한 줄 브랜드',
+        content: report.oneLineBrand,
+      },
+      nextSteps: {
+        title: '브랜드 기반 장기 탐구 주제',
+        caption: 'PROJECT ROADMAP',
+        items: report.projectRoadmap.steps.map((step) => ({
+          number: step.number,
+          title: `${step.stage} · ${step.title}`,
+          description: `${step.question}\n확보할 것 · ${step.deliverable}`,
+        })),
+      },
+    },
+  };
+}

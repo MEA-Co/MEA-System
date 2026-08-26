@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-import {
-  isConsultingLlmRequest,
-  isConsultingLlmResponse,
-} from '@/app/(private)/consulting/_lib/llm';
+import { isLlmRequest, isLlmResponse } from '@/features/llm';
 import { getUserAccess, hasRole } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 
@@ -42,7 +39,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isConsultingLlmRequest(body)) {
+  if (!isLlmRequest(body)) {
     return NextResponse.json(
       { error: '언어 모델 요청값이 올바르지 않습니다.' },
       { status: 400 },
@@ -72,7 +69,7 @@ export async function POST(request: Request) {
     });
     const result = { outputText: response.output_text };
 
-    if (!isConsultingLlmResponse(result)) {
+    if (!isLlmResponse(result)) {
       throw new Error('OPENAI_INVALID_RESPONSE');
     }
 

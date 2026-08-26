@@ -1,8 +1,8 @@
-export const CONSULTING_LLM_MODELS = ['gpt-5-nano'] as const;
+export const LLM_MODELS = ['gpt-5-nano'] as const;
 
-export type ConsultingLlmModel = (typeof CONSULTING_LLM_MODELS)[number];
+export type LlmModel = (typeof LLM_MODELS)[number];
 
-export type ConsultingLlmJsonSchemaFormat = {
+export type LlmJsonSchemaFormat = {
   type: 'json_schema';
   name: string;
   description?: string;
@@ -10,19 +10,19 @@ export type ConsultingLlmJsonSchemaFormat = {
   schema: Record<string, unknown>;
 };
 
-export type ConsultingLlmRequest = {
-  model: ConsultingLlmModel;
+export type LlmRequest = {
+  model: LlmModel;
   instructions: string;
   input: string;
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   maxOutputTokens?: number;
   text?: {
-    format?: ConsultingLlmJsonSchemaFormat;
+    format?: LlmJsonSchemaFormat;
     verbosity?: 'low' | 'medium' | 'high';
   };
 };
 
-export type ConsultingLlmResponse = {
+export type LlmResponse = {
   outputText: string;
 };
 
@@ -30,9 +30,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isJsonSchemaFormat(
-  value: unknown,
-): value is ConsultingLlmJsonSchemaFormat {
+function isJsonSchemaFormat(value: unknown): value is LlmJsonSchemaFormat {
   if (
     !isRecord(value) ||
     value.type !== 'json_schema' ||
@@ -54,7 +52,7 @@ function isJsonSchemaFormat(
   }
 }
 
-function isTextConfig(value: unknown): value is ConsultingLlmRequest['text'] {
+function isTextConfig(value: unknown): value is LlmRequest['text'] {
   if (!isRecord(value)) return false;
 
   const verbosity = value.verbosity;
@@ -67,15 +65,13 @@ function isTextConfig(value: unknown): value is ConsultingLlmRequest['text'] {
   );
 }
 
-export function isConsultingLlmRequest(
-  value: unknown,
-): value is ConsultingLlmRequest {
+export function isLlmRequest(value: unknown): value is LlmRequest {
   if (!isRecord(value)) return false;
 
   const reasoningEffort = value.reasoningEffort;
   return (
     typeof value.model === 'string' &&
-    CONSULTING_LLM_MODELS.includes(value.model as ConsultingLlmModel) &&
+    LLM_MODELS.includes(value.model as LlmModel) &&
     typeof value.instructions === 'string' &&
     value.instructions.trim().length > 0 &&
     value.instructions.length <= 16_000 &&
@@ -96,48 +92,11 @@ export function isConsultingLlmRequest(
   );
 }
 
-export function isConsultingLlmResponse(
-  value: unknown,
-): value is ConsultingLlmResponse {
+export function isLlmResponse(value: unknown): value is LlmResponse {
   return (
     isRecord(value) &&
     typeof value.outputText === 'string' &&
     value.outputText.length > 0 &&
     value.outputText.length <= 64_000
   );
-}
-
-function getResponseError(value: unknown) {
-  if (isRecord(value) && typeof value.error === 'string') {
-    return value.error;
-  }
-
-  return null;
-}
-
-export async function requestConsultingLlm(
-  request: ConsultingLlmRequest,
-  options: { signal: AbortSignal },
-) {
-  const response = await fetch('/api/consulting/llm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-    cache: 'no-store',
-    signal: options.signal,
-  });
-  const data: unknown = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(
-      getResponseError(data) ??
-        '언어 모델 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.',
-    );
-  }
-
-  if (!isConsultingLlmResponse(data)) {
-    throw new Error('언어 모델 응답 형식이 올바르지 않습니다.');
-  }
-
-  return data;
 }
