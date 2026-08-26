@@ -141,11 +141,6 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
   return {
     majorKeywords: getSubmittedMajorKeywords(memory),
     studentStory: getGeneratedStudentStory(memory),
-    careerIdentity: getOptionalSubmittedText(
-      'career-identity',
-      '진로 명칭',
-      80,
-    ),
     coreValue: getOptionalSubmittedText('core-value', '핵심 가치', 180),
     fieldStrength: strengths?.pureFieldStrength,
     majorFieldStrength: strengths?.majorFieldStrength,
@@ -297,16 +292,6 @@ export const materialBoxPlan = defineConsultingPlan<
         'user.submit': 'complete',
         'user.previous-explanation': 'core-value',
       },
-    },
-    'personal-strength': {
-      id: 'personal-strength',
-      type: 'screen',
-      screen: (memory) => ({
-        screenId: 'material-box.personal-strength',
-        mode: 'dynamic',
-        data: getProgressScreenData(memory),
-      }),
-      on: { 'user.submit': 'complete' },
     },
     complete: {
       id: 'complete',

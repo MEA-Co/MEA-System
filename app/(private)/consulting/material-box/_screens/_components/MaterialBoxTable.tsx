@@ -29,7 +29,6 @@ type MaterialBoxTableProps = {
   renderStrengthCell?: (index: number) => ReactNode;
   animateStrengthRows?: boolean;
   studentStory?: string;
-  careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
   majorFieldStrength?: string;
@@ -54,7 +53,6 @@ export function MaterialBoxTable({
   renderStrengthCell,
   animateStrengthRows = false,
   studentStory = '',
-  careerIdentity = '',
   coreValue = '',
   fieldStrength = '',
   majorFieldStrength = '',
@@ -211,15 +209,15 @@ export function MaterialBoxTable({
                     {studentStoryContent}
                   </div>
                 ) : (
-                  (studentStory || careerIdentity) && (
+                  studentStory && (
                     <span
                       className={cn(
                         'mt-1 block font-medium text-muted-foreground',
                         compact && 'truncate text-[10px]',
                       )}
-                      title={studentStory || careerIdentity}
+                      title={studentStory}
                     >
-                      {studentStory || careerIdentity}
+                      {studentStory}
                     </span>
                   )
                 )}

@@ -16,7 +16,6 @@ export type MaterialBoxMajorKeyword = {
 export type MaterialBoxProgressScreenData = {
   majorKeywords: ReadonlyArray<MaterialBoxMajorKeyword>;
   studentStory?: string;
-  careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
   majorFieldStrength?: string;
@@ -146,7 +145,6 @@ export function isMaterialBoxProgressScreenData(
     value.majorKeywords.length <= 3 &&
     value.majorKeywords.every(isMaterialBoxMajorKeyword) &&
     isOptionalText('studentStory', 220) &&
-    isOptionalText('careerIdentity', 80) &&
     isOptionalText('coreValue', 180) &&
     isOptionalText('fieldStrength', 180) &&
     isOptionalText('majorFieldStrength', 180) &&
