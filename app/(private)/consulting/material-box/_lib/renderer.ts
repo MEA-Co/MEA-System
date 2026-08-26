@@ -7,6 +7,7 @@ import { materialBoxKeywordScreen } from '@/app/(private)/consulting/material-bo
 import { materialBoxMajorScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxMajorScreen';
 import { materialBoxOverviewScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxOverviewScreen';
 import { createMaterialBoxReflectionScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxReflectionScreen';
+import { materialBoxStrengthScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxStrengthScreen';
 import {
   materialBoxStudentStoryErrorScreen,
   materialBoxStudentStoryPendingScreen,
@@ -29,8 +30,7 @@ export const materialBoxRenderer = createConsultingRenderer<
   'material-box.career-identity':
     createMaterialBoxReflectionScreen('career-identity'),
   'material-box.core-value': materialBoxCoreValueScreen,
-  'material-box.field-strength':
-    createMaterialBoxReflectionScreen('field-strength'),
+  'material-box.field-strength': materialBoxStrengthScreen,
   'material-box.personal-strength':
     createMaterialBoxReflectionScreen('personal-strength'),
   'material-box.complete': materialBoxCompleteScreen,

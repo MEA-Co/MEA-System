@@ -21,10 +21,18 @@ type MaterialBoxTableProps = {
   renderKeywordCell?: (index: number) => ReactNode;
   studentStoryContent?: ReactNode;
   coreValueContent?: ReactNode;
+  strengthItems?: ReadonlyArray<{
+    label: string;
+    value?: string;
+  }>;
+  strengthFocus?: number | null;
+  renderStrengthCell?: (index: number) => ReactNode;
+  animateStrengthRows?: boolean;
   studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
+  majorFieldStrength?: string;
   personalStrength?: string;
 };
 
@@ -41,10 +49,15 @@ export function MaterialBoxTable({
   renderKeywordCell,
   studentStoryContent,
   coreValueContent,
+  strengthItems,
+  strengthFocus = null,
+  renderStrengthCell,
+  animateStrengthRows = false,
   studentStory = '',
   careerIdentity = '',
   coreValue = '',
   fieldStrength = '',
+  majorFieldStrength = '',
   personalStrength = '',
 }: MaterialBoxTableProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -58,6 +71,7 @@ export function MaterialBoxTable({
       : focus;
   const shouldUseWideMajorColumn =
     wideMajorColumn && (Boolean(shouldReduceMotion) || hasExpandedMajorColumn);
+  const shouldSplitStrengthRow = strengthItems?.length === 3;
 
   useEffect(() => {
     if (initialFocus === undefined || shouldReduceMotion) return;
@@ -255,13 +269,15 @@ export function MaterialBoxTable({
               {...rowMotion(0.54 + majorRowCount * 0.18)}
               className={cn(
                 'transition-colors duration-500',
-                displayedFocus === 'approach' && 'bg-blue-500/10',
+                displayedFocus === 'approach' &&
+                  !shouldSplitStrengthRow &&
+                  'bg-blue-500/10',
               )}
             >
               <th
                 scope="row"
                 className={cn(
-                  'border-r px-2.5 py-3 font-bold leading-5 transition-colors duration-500',
+                  'border-r px-2.5 py-3 align-middle font-bold leading-5 transition-colors duration-500',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
                   displayedFocus === 'approach'
                     ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
@@ -273,21 +289,114 @@ export function MaterialBoxTable({
               <td
                 colSpan={2}
                 className={cn(
-                  'px-2.5 py-3 font-medium',
-                  !compact && 'sm:px-5 sm:py-5 sm:text-sm',
+                  'font-medium',
+                  shouldSplitStrengthRow ? 'p-0' : 'px-2.5 py-3',
+                  !shouldSplitStrengthRow &&
+                    !compact &&
+                    'sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
-                {[fieldStrength, personalStrength]
-                  .filter(Boolean)
-                  .map((strength) => (
-                    <span
-                      key={strength}
-                      className={cn('block', compact && 'truncate text-[10px]')}
-                      title={strength}
-                    >
-                      {strength}
-                    </span>
-                  ))}
+                <motion.div
+                  key={shouldSplitStrengthRow ? 'split' : 'single'}
+                  initial={
+                    shouldSplitStrengthRow &&
+                    animateStrengthRows &&
+                    !shouldReduceMotion
+                      ? { height: '2.75rem' }
+                      : false
+                  }
+                  animate={{ height: 'auto' }}
+                  transition={{
+                    duration: shouldReduceMotion ? 0 : 0.65,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className={cn(shouldSplitStrengthRow && 'overflow-hidden')}
+                >
+                  {shouldSplitStrengthRow ? (
+                    strengthItems.map((item, index) => {
+                      const isFocused =
+                        displayedFocus === 'approach' &&
+                        strengthFocus === index;
+
+                      return (
+                        <motion.div
+                          key={item.label}
+                          role="row"
+                          initial={
+                            shouldReduceMotion || !animateStrengthRows
+                              ? false
+                              : {
+                                  opacity: index === 0 ? 1 : 0,
+                                  y: index === 0 ? 0 : -8,
+                                }
+                          }
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: shouldReduceMotion ? 0 : 0.3,
+                            delay: shouldReduceMotion ? 0 : 0.12 + index * 0.14,
+                            ease: 'easeOut',
+                          }}
+                          className={cn(
+                            'grid min-h-14 grid-cols-[42%_minmax(0,1fr)] transition-colors duration-500',
+                            index < 2 && 'border-b',
+                            isFocused && 'bg-blue-500/10',
+                          )}
+                        >
+                          <div
+                            role="rowheader"
+                            className={cn(
+                              'flex items-center border-r px-2.5 py-3 font-semibold leading-5 transition-colors duration-500',
+                              !compact && 'sm:px-5 sm:py-5 sm:text-sm',
+                              isFocused &&
+                                'bg-blue-500/15 text-blue-700 dark:text-blue-300',
+                            )}
+                          >
+                            {item.label}
+                          </div>
+                          <div
+                            role="cell"
+                            className={cn(
+                              'min-w-0 px-2.5 py-3 font-medium transition-colors duration-500',
+                              !compact && 'sm:px-5 sm:py-5 sm:text-sm',
+                              isFocused && 'bg-blue-500/8',
+                            )}
+                          >
+                            {renderStrengthCell ? (
+                              renderStrengthCell(index)
+                            ) : (
+                              <span
+                                className={cn(
+                                  'block',
+                                  compact && 'truncate text-[10px]',
+                                )}
+                                title={item.value}
+                              >
+                                {item.value}
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <div>
+                      {[fieldStrength, majorFieldStrength, personalStrength]
+                        .filter(Boolean)
+                        .map((strength) => (
+                          <span
+                            key={strength}
+                            className={cn(
+                              'block',
+                              compact && 'truncate text-[10px]',
+                            )}
+                            title={strength}
+                          >
+                            {strength}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </motion.div>
               </td>
             </motion.tr>
           </tbody>

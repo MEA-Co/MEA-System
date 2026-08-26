@@ -2,6 +2,7 @@ import {
   isGenerateStudentStoryToolOutput,
   type MaterialBoxContext,
   type MaterialBoxMajorKeyword,
+  type MaterialBoxStrengths,
   type MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
@@ -91,6 +92,37 @@ function getGeneratedStudentStory(
   return result.studentStory;
 }
 
+function getSubmittedStrengths(
+  memory: ConsultingMemory<MaterialBoxContext>,
+): MaterialBoxStrengths {
+  const action = memory.actions['field-strength'];
+  if (action?.type !== 'user.submit') {
+    throw new Error('확정된 계열 적합 역량이 없습니다.');
+  }
+
+  const strengths: unknown = JSON.parse(action.value);
+  if (
+    typeof strengths !== 'object' ||
+    strengths === null ||
+    !('pureFieldStrength' in strengths) ||
+    typeof strengths.pureFieldStrength !== 'string' ||
+    !strengths.pureFieldStrength.trim() ||
+    strengths.pureFieldStrength.length > 180 ||
+    !('majorFieldStrength' in strengths) ||
+    typeof strengths.majorFieldStrength !== 'string' ||
+    !strengths.majorFieldStrength.trim() ||
+    strengths.majorFieldStrength.length > 180 ||
+    !('differentiatingStrength' in strengths) ||
+    typeof strengths.differentiatingStrength !== 'string' ||
+    !strengths.differentiatingStrength.trim() ||
+    strengths.differentiatingStrength.length > 180
+  ) {
+    throw new Error('계열 적합 역량 입력 형식이 올바르지 않습니다.');
+  }
+
+  return strengths as MaterialBoxStrengths;
+}
+
 function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
   const getOptionalSubmittedText = (
     nodeId: string,
@@ -99,6 +131,11 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
   ) =>
     memory.actions[nodeId]?.type === 'user.submit'
       ? getSubmittedText(memory, nodeId, label, maxLength)
+      : undefined;
+
+  const strengths =
+    memory.actions['field-strength']?.type === 'user.submit'
+      ? getSubmittedStrengths(memory)
       : undefined;
 
   return {
@@ -110,12 +147,9 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
       80,
     ),
     coreValue: getOptionalSubmittedText('core-value', '핵심 가치', 180),
-    fieldStrength: getOptionalSubmittedText('field-strength', '분야 강점', 180),
-    personalStrength: getOptionalSubmittedText(
-      'personal-strength',
-      '개인 장점',
-      180,
-    ),
+    fieldStrength: strengths?.pureFieldStrength,
+    majorFieldStrength: strengths?.majorFieldStrength,
+    personalStrength: strengths?.differentiatingStrength,
   };
 }
 
@@ -236,7 +270,9 @@ export const materialBoxPlan = defineConsultingPlan<
         data: {
           ...getProgressScreenData(memory),
           startAtInput:
-            memory.actions['core-value']?.type === 'user.previous-explanation',
+            memory.actions['core-value']?.type ===
+              'user.previous-explanation' ||
+            memory.lastAction?.type === 'user.previous-explanation',
         },
       }),
       on: {
@@ -250,9 +286,17 @@ export const materialBoxPlan = defineConsultingPlan<
       screen: (memory) => ({
         screenId: 'material-box.field-strength',
         mode: 'dynamic',
-        data: getProgressScreenData(memory),
+        data: {
+          ...getProgressScreenData(memory),
+          startAtInput:
+            memory.actions['field-strength']?.type ===
+            'user.previous-explanation',
+        },
       }),
-      on: { 'user.submit': 'personal-strength' },
+      on: {
+        'user.submit': 'complete',
+        'user.previous-explanation': 'core-value',
+      },
     },
     'personal-strength': {
       id: 'personal-strength',

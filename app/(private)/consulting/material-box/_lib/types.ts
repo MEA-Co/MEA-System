@@ -19,11 +19,22 @@ export type MaterialBoxProgressScreenData = {
   careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
+  majorFieldStrength?: string;
   personalStrength?: string;
 };
 
 export type MaterialBoxCoreValueScreenData = MaterialBoxProgressScreenData & {
   startAtInput: boolean;
+};
+
+export type MaterialBoxStrengthScreenData = MaterialBoxProgressScreenData & {
+  startAtInput: boolean;
+};
+
+export type MaterialBoxStrengths = {
+  pureFieldStrength: string;
+  majorFieldStrength: string;
+  differentiatingStrength: string;
 };
 
 export type GenerateStudentStoryToolInput = {
@@ -138,6 +149,7 @@ export function isMaterialBoxProgressScreenData(
     isOptionalText('careerIdentity', 80) &&
     isOptionalText('coreValue', 180) &&
     isOptionalText('fieldStrength', 180) &&
+    isOptionalText('majorFieldStrength', 180) &&
     isOptionalText('personalStrength', 180)
   );
 }
@@ -154,6 +166,16 @@ export function isMaterialBoxStudentStoryScreenData(
 export function isMaterialBoxCoreValueScreenData(
   value: unknown,
 ): value is MaterialBoxCoreValueScreenData {
+  return (
+    isMaterialBoxProgressScreenData(value) &&
+    'startAtInput' in value &&
+    typeof value.startAtInput === 'boolean'
+  );
+}
+
+export function isMaterialBoxStrengthScreenData(
+  value: unknown,
+): value is MaterialBoxStrengthScreenData {
   return (
     isMaterialBoxProgressScreenData(value) &&
     'startAtInput' in value &&
