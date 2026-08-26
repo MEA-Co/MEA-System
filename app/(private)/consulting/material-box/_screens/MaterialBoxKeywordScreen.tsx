@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye } from 'lucide-react';
+import { Eye, Undo2 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -25,17 +25,17 @@ const keywordMessages = [
   {
     segments: [
       {
-        text: '좋습니다! 그런데 전공은 사실 아주 광범위한 내용을 다룬답니다. 여러분이 여러분만의 서사를 담아내려면, 전공 별로 ',
+        text: '좋습니다! 그런데 전공은 사실 아주 광범위한 내용을 다룬답니다. 여러분이 여러분만의 서사를 담아내려면, 전공 안에서 여러분이 특별히 더 관심을 가지는 ',
       },
-      { text: "'세부 키워드'", emphasis: 'strong' },
-      { text: '를 선택해야 해요.' },
+      { text: '세부 키워드', emphasis: 'accent' },
+      { text: '가 있어야 해요.' },
     ],
   },
   { segments: [{ text: '너무 어렵게 생각하지 않아도 됩니다.' }] },
   {
     segments: [
       {
-        text: '이미 여러분만의 관심사가 있을 수도 있고, 조금만 생각해보면 관심 가는 분야가 나올 수도 있어요.',
+        text: '여러분이 희망 전공을 가고 싶다고 생각한 이유, 평소에 관심을 가지던 대상, 무엇이든 여러분만의 세부 키워드가 될 수 있습니다.',
       },
     ],
   },
@@ -51,6 +51,7 @@ function MaterialBoxKeywordScreen({
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [keywords, setKeywords] = useState<ReadonlyArray<string>>(() =>
     data.majors.map(() => ''),
   );
@@ -61,10 +62,10 @@ function MaterialBoxKeywordScreen({
   const isInputPage = pageIndex === keywordMessages.length - 1;
   const majorRowCount =
     data.majors.length === 1 ? 1 : data.majors.length === 2 ? 2 : 3;
+  const normalizedKeywords = keywords.map((keyword) => keyword.trim());
 
-  const submitKeyword = (event: FormEvent<HTMLFormElement>) => {
+  const reviewKeyword = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const normalizedKeywords = keywords.map((keyword) => keyword.trim());
     const missingKeywordIndex = normalizedKeywords.findIndex(
       (keyword) => !keyword,
     );
@@ -77,6 +78,11 @@ function MaterialBoxKeywordScreen({
     }
 
     setValidationMessage(null);
+    setIsTypingComplete(false);
+    setIsReviewing(true);
+  };
+
+  const confirmKeyword = () => {
     environment.send({
       type: 'user.submit',
       value: JSON.stringify(
@@ -90,7 +96,7 @@ function MaterialBoxKeywordScreen({
 
   return (
     <ConsultingScreenView>
-      {isInputPage && (
+      {isInputPage && !isReviewing && (
         <Button
           type="button"
           variant="outline"
@@ -106,35 +112,28 @@ function MaterialBoxKeywordScreen({
       )}
 
       {isInputPage ? (
-        <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
-          <KeywordInput
-            majors={data.majors}
-            keywords={keywords}
-            validationMessage={validationMessage}
-            onKeywordChange={(index, value) => {
-              setKeywords((current) =>
-                current.map((keyword, keywordIndex) =>
-                  keywordIndex === index ? value : keyword,
-                ),
-              );
-              setValidationMessage(null);
-            }}
-            onSubmit={submitKeyword}
-          />
-          <MaterialBoxTable
-            compact
-            focus="keyword"
-            majorRowCount={majorRowCount}
-            majors={data.majors}
-            keywords={keywords}
-          />
-        </div>
+        <KeywordInput
+          isReviewing={isReviewing}
+          majors={data.majors}
+          keywords={isReviewing ? normalizedKeywords : keywords}
+          validationMessage={validationMessage}
+          onKeywordChange={(index, value) => {
+            setKeywords((current) =>
+              current.map((keyword, keywordIndex) =>
+                keywordIndex === index ? value : keyword,
+              ),
+            );
+            setValidationMessage(null);
+          }}
+          onSubmit={reviewKeyword}
+        />
       ) : isExamplesPage ? (
         <KeywordExamples />
       ) : (
         <MaterialBoxTable
-          compact
+          animateEntrance={pageIndex > 0}
           focus="keyword"
+          initialFocus="major"
           majorRowCount={majorRowCount}
           majors={data.majors}
         />
@@ -142,21 +141,57 @@ function MaterialBoxKeywordScreen({
 
       <ConsultingPrompter
         animateTyping
-        message={keywordMessages[pageIndex]}
+        message={
+          isReviewing
+            ? {
+                segments: [
+                  {
+                    text: '잘 작성했나요? 입력한 세부 키워드가 각 희망 전공에서 여러분이 관심 있는 분야를 잘 보여주는지 확인해주세요.',
+                  },
+                ],
+              }
+            : keywordMessages[pageIndex]
+        }
         onTypingComplete={() => setIsTypingComplete(true)}
       >
-        {!isInputPage && (
-          <ConsultingProgressButton
-            compact
-            disabled={!isTypingComplete}
-            spacebarShortcut
-            onClick={() => {
-              setIsTypingComplete(false);
-              setPageIndex((current) => current + 1);
-            }}
-          >
-            다음으로
-          </ConsultingProgressButton>
+        {isReviewing ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              disabled={!isTypingComplete}
+              onClick={() => {
+                setIsTypingComplete(false);
+                setIsReviewing(false);
+              }}
+            >
+              <Undo2 aria-hidden="true" className="size-3.5" />
+              아니오, 수정할게요
+            </Button>
+            <ConsultingProgressButton
+              compact
+              disabled={!isTypingComplete}
+              onClick={confirmKeyword}
+            >
+              네, 잘 작성했어요
+            </ConsultingProgressButton>
+          </>
+        ) : (
+          !isInputPage && (
+            <ConsultingProgressButton
+              compact
+              disabled={!isTypingComplete}
+              spacebarShortcut
+              onClick={() => {
+                setIsTypingComplete(false);
+                setPageIndex((current) => current + 1);
+              }}
+            >
+              다음으로
+            </ConsultingProgressButton>
+          )
         )}
       </ConsultingPrompter>
     </ConsultingScreenView>

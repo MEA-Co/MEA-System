@@ -18,6 +18,7 @@ type MaterialBoxTableProps = {
   majors?: ReadonlyArray<string>;
   keywords?: ReadonlyArray<string>;
   renderMajorCell?: (index: number) => ReactNode;
+  renderKeywordCell?: (index: number) => ReactNode;
   studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
@@ -35,6 +36,7 @@ export function MaterialBoxTable({
   majors = [],
   keywords = [],
   renderMajorCell,
+  renderKeywordCell,
   studentStory = '',
   careerIdentity = '',
   coreValue = '',
@@ -154,12 +156,16 @@ export function MaterialBoxTable({
                       'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
-                  <span
-                    className="block truncate"
-                    title={keywords[index]?.trim() || undefined}
-                  >
-                    {keywords[index]?.trim() || '키워드'}
-                  </span>
+                  {renderKeywordCell ? (
+                    renderKeywordCell(index)
+                  ) : (
+                    <span
+                      className="block truncate"
+                      title={keywords[index]?.trim() || undefined}
+                    >
+                      {keywords[index]?.trim() || '키워드'}
+                    </span>
+                  )}
                 </td>
               </motion.tr>
             ))}
