@@ -13,7 +13,6 @@ import { ConsultingScreenView } from '@/app/(private)/consulting/_components/Con
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
@@ -42,61 +41,45 @@ function MajorInput({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
-    >
-      <Card className="gap-0 rounded-2xl bg-background/95 py-0 shadow-sm ring-0">
-        <CardContent className="p-5 md:p-6">
-          <p className="text-xs font-bold tracking-[0.12em] text-blue-600 dark:text-blue-400">
-            MAJOR
-          </p>
-          <h2 className="mt-1 text-lg font-bold">희망 전공 입력</h2>
-
-          <div className="mt-5 space-y-3">
-            {majors.map((major, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3"
-              >
-                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                  {index + 1}순위
-                </span>
-                <label htmlFor={`major-${index}`} className="sr-only">
-                  {index + 1}순위 희망 전공
-                </label>
-                <Input
-                  id={`major-${index}`}
-                  value={major}
-                  autoFocus={index === 0}
-                  maxLength={60}
-                  placeholder={`${index + 1}순위 희망 전공`}
-                  onChange={(event) => onMajorChange(index, event.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-
-          {validationMessage && (
-            <p className="mt-4 text-sm text-destructive" role="alert">
-              {validationMessage}
-            </p>
-          )}
-
-          <div className="mt-5 flex justify-end border-t pt-5">
-            <ConsultingProgressButton type="submit">
-              입력 확인하기
-            </ConsultingProgressButton>
-          </div>
-        </CardContent>
-      </Card>
-
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-4xl">
       <MaterialBoxTable
-        compact
         focus="major"
         majorRowCount={3}
-        majors={majors}
+        renderMajorCell={(index) => (
+          <div className="min-w-0" key={index}>
+            <label htmlFor={`major-${index}`} className="sr-only">
+              {index + 1}순위 희망 전공
+            </label>
+            <Input
+              id={`major-${index}`}
+              value={majors[index]}
+              autoFocus={index === 0}
+              maxLength={60}
+              aria-invalid={Boolean(validationMessage)}
+              placeholder={
+                index === 0 ? '희망 전공을 입력하세요' : '추가 희망 전공 (선택)'
+              }
+              onChange={(event) => onMajorChange(index, event.target.value)}
+              className="h-9 min-w-0 bg-background font-medium shadow-none"
+            />
+          </div>
+        )}
       />
+
+      {validationMessage && (
+        <p
+          className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {validationMessage}
+        </p>
+      )}
+
+      <div className="mt-4 flex justify-end">
+        <ConsultingProgressButton type="submit">
+          입력 확인하기
+        </ConsultingProgressButton>
+      </div>
     </form>
   );
 }
@@ -115,6 +98,8 @@ function MaterialBoxMajorScreen({
   );
   const isInputPage = pageIndex === majorMessages.length - 1;
   const normalizedMajors = majors.map((major) => major.trim()).filter(Boolean);
+  const confirmedMajorRowCount =
+    normalizedMajors.length === 1 ? 1 : normalizedMajors.length === 2 ? 2 : 3;
 
   const updateMajor = (index: number, value: string) => {
     setValidationMessage(null);
@@ -150,7 +135,7 @@ function MaterialBoxMajorScreen({
       {isReviewing ? (
         <MaterialBoxTable
           focus="major"
-          majorRowCount={3}
+          majorRowCount={confirmedMajorRowCount}
           majors={normalizedMajors}
         />
       ) : isInputPage ? (

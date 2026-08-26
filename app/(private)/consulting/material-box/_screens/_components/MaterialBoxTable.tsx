@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
+import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -13,6 +14,7 @@ type MaterialBoxTableProps = {
   majorRowCount?: 1 | 2 | 3;
   majors?: ReadonlyArray<string>;
   keywords?: ReadonlyArray<string>;
+  renderMajorCell?: (index: number) => ReactNode;
   studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
@@ -26,6 +28,7 @@ export function MaterialBoxTable({
   majorRowCount = 1,
   majors = [],
   keywords = [],
+  renderMajorCell,
   studentStory = '',
   careerIdentity = '',
   coreValue = '',
@@ -94,8 +97,10 @@ export function MaterialBoxTable({
                       'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                   )}
                 >
-                  {majors[index]?.trim() ||
-                    (majorRowCount === 1 ? '전공' : `${index + 1}순위 전공`)}
+                  {renderMajorCell
+                    ? renderMajorCell(index)
+                    : majors[index]?.trim() ||
+                      (majorRowCount === 1 ? '전공' : `${index + 1}순위 전공`)}
                 </td>
                 <td
                   className={cn(
