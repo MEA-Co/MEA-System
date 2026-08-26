@@ -1,7 +1,8 @@
-import type {
-  MaterialBoxContext,
-  MaterialBoxMajorKeyword,
-  MaterialBoxTools,
+import {
+  isGenerateStudentStoryToolOutput,
+  type MaterialBoxContext,
+  type MaterialBoxMajorKeyword,
+  type MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
@@ -77,6 +78,19 @@ function getSubmittedMajorKeywords(
   return majorKeywords as Array<MaterialBoxMajorKeyword>;
 }
 
+function getGeneratedStudentStory(
+  memory: ConsultingMemory<MaterialBoxContext>,
+) {
+  const result = memory.toolResults['generate-student-story'];
+  if (result === undefined) return undefined;
+
+  if (!isGenerateStudentStoryToolOutput(result)) {
+    throw new Error('생성된 학생 스토리 형식이 올바르지 않습니다.');
+  }
+
+  return result.studentStory;
+}
+
 function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
   const getOptionalSubmittedText = (
     nodeId: string,
@@ -89,6 +103,7 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
 
   return {
     majorKeywords: getSubmittedMajorKeywords(memory),
+    studentStory: getGeneratedStudentStory(memory),
     careerIdentity: getOptionalSubmittedText(
       'career-identity',
       '진로 명칭',
@@ -139,7 +154,47 @@ export const materialBoxPlan = defineConsultingPlan<
         mode: 'dynamic',
         data: { majors: getSubmittedMajors(memory) },
       }),
-      on: { 'user.submit': 'career-identity' },
+      on: { 'user.submit': 'generate-student-story' },
+    },
+    'generate-student-story': {
+      id: 'generate-student-story',
+      type: 'tool',
+      toolId: 'student-story.generate',
+      input: (memory) => ({
+        majorKeywords: getSubmittedMajorKeywords(memory),
+      }),
+      pendingScreen: (memory) => ({
+        screenId: 'material-box.student-story-pending',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      next: 'student-story',
+      onRejected: 'student-story-error',
+    },
+    'student-story-error': {
+      id: 'student-story-error',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.student-story-error',
+        mode: 'dynamic',
+        data: {
+          ...getProgressScreenData(memory),
+          error:
+            memory.toolErrors['generate-student-story']?.message ??
+            '학생의 스토리를 만들지 못했습니다.',
+        },
+      }),
+      on: { 'user.next-explanation': 'generate-student-story' },
+    },
+    'student-story': {
+      id: 'student-story',
+      type: 'screen',
+      screen: (memory) => ({
+        screenId: 'material-box.student-story',
+        mode: 'dynamic',
+        data: getProgressScreenData(memory),
+      }),
+      on: { 'user.next-explanation': 'career-identity' },
     },
     'career-identity': {
       id: 'career-identity',

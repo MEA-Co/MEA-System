@@ -308,6 +308,7 @@ function MaterialBoxReflectionScreen({
             majorRowCount={majorRowCount}
             majors={majors}
             keywords={keywords}
+            studentStory={data.studentStory}
             careerIdentity={data.careerIdentity}
             coreValue={data.coreValue}
             fieldStrength={data.fieldStrength}
@@ -321,6 +322,7 @@ function MaterialBoxReflectionScreen({
           majorRowCount={majorRowCount}
           majors={majors}
           keywords={keywords}
+          studentStory={data.studentStory}
           careerIdentity={data.careerIdentity}
           coreValue={data.coreValue}
           fieldStrength={data.fieldStrength}

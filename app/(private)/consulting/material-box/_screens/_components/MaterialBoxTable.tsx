@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export type MaterialBoxTableFocus =
-  'interest' | 'major' | 'keyword' | 'motivation' | 'approach' | null;
+  'interest' | 'major' | 'keyword' | 'story' | 'motivation' | 'approach' | null;
 
 type MaterialBoxTableProps = {
   focus: MaterialBoxTableFocus;
@@ -13,6 +13,7 @@ type MaterialBoxTableProps = {
   majorRowCount?: 1 | 2 | 3;
   majors?: ReadonlyArray<string>;
   keywords?: ReadonlyArray<string>;
+  studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
   fieldStrength?: string;
@@ -25,6 +26,7 @@ export function MaterialBoxTable({
   majorRowCount = 1,
   majors = [],
   keywords = [],
+  studentStory = '',
   careerIdentity = '',
   coreValue = '',
   fieldStrength = '',
@@ -117,27 +119,29 @@ export function MaterialBoxTable({
               {...rowMotion(0.18 + majorRowCount * 0.18)}
               className={cn(
                 'transition-colors duration-500',
-                focus === 'interest' && 'bg-blue-500/10',
+                focus === 'story' && 'bg-blue-500/10',
               )}
             >
               <th
                 scope="row"
                 colSpan={2}
                 className={cn(
-                  'border-b px-2.5 py-3 font-semibold',
+                  'border-b px-2.5 py-3 font-semibold transition-colors duration-500',
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
+                  focus === 'story' &&
+                    'bg-blue-500/15 text-blue-700 dark:text-blue-300',
                 )}
               >
                 <span className="block">학생의 스토리</span>
-                {careerIdentity && (
+                {(studentStory || careerIdentity) && (
                   <span
                     className={cn(
                       'mt-1 block font-medium text-muted-foreground',
                       compact && 'truncate text-[10px]',
                     )}
-                    title={careerIdentity}
+                    title={studentStory || careerIdentity}
                   >
-                    {careerIdentity}
+                    {studentStory || careerIdentity}
                   </span>
                 )}
               </th>
