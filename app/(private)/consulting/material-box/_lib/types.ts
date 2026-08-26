@@ -22,6 +22,10 @@ export type MaterialBoxProgressScreenData = {
   personalStrength?: string;
 };
 
+export type MaterialBoxCoreValueScreenData = MaterialBoxProgressScreenData & {
+  startAtInput: boolean;
+};
+
 export type GenerateStudentStoryToolInput = {
   majorKeywords: ReadonlyArray<MaterialBoxMajorKeyword>;
 };
@@ -144,6 +148,16 @@ export function isMaterialBoxStudentStoryScreenData(
   return (
     isMaterialBoxProgressScreenData(value) &&
     typeof value.studentStory === 'string'
+  );
+}
+
+export function isMaterialBoxCoreValueScreenData(
+  value: unknown,
+): value is MaterialBoxCoreValueScreenData {
+  return (
+    isMaterialBoxProgressScreenData(value) &&
+    'startAtInput' in value &&
+    typeof value.startAtInput === 'boolean'
   );
 }
 

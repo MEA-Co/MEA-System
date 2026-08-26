@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { type FormEvent, type ReactNode } from 'react';
 import { useState } from 'react';
 
+import { ConsultingPreviousButton } from '@/app/(private)/consulting/_components/ConsultingPreviousButton';
 import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
@@ -193,6 +194,11 @@ function MaterialBoxMajorScreen({
 
   return (
     <ConsultingScreenView>
+      <ConsultingPreviousButton
+        disabled={!isInputPage}
+        onClick={() => environment.send({ type: 'user.previous-explanation' })}
+      />
+
       {isInputPage && !isReviewing && (
         <Button
           type="button"

@@ -4,6 +4,7 @@ import { Eye, Undo2 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
+import { ConsultingPreviousButton } from '@/app/(private)/consulting/_components/ConsultingPreviousButton';
 import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import {
   ConsultingPrompter,
@@ -100,6 +101,11 @@ function MaterialBoxKeywordScreen({
 
   return (
     <ConsultingScreenView>
+      <ConsultingPreviousButton
+        disabled={!isInputPage}
+        onClick={() => environment.send({ type: 'user.previous-explanation' })}
+      />
+
       {isInputPage && !isReviewing && (
         <Button
           type="button"

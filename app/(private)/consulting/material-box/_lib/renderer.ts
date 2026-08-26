@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import { materialBoxCoreValueScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxCoreValueScreen';
 import { materialBoxIntroScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxIntroScreen';
 import { materialBoxKeywordScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxKeywordScreen';
 import { materialBoxMajorScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxMajorScreen';
@@ -27,7 +28,7 @@ export const materialBoxRenderer = createConsultingRenderer<
   'material-box.student-story-error': materialBoxStudentStoryErrorScreen,
   'material-box.career-identity':
     createMaterialBoxReflectionScreen('career-identity'),
-  'material-box.core-value': createMaterialBoxReflectionScreen('core-value'),
+  'material-box.core-value': materialBoxCoreValueScreen,
   'material-box.field-strength':
     createMaterialBoxReflectionScreen('field-strength'),
   'material-box.personal-strength':

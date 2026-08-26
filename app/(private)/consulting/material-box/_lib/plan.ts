@@ -97,7 +97,7 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
     label: string,
     maxLength: number,
   ) =>
-    memory.actions[nodeId]
+    memory.actions[nodeId]?.type === 'user.submit'
       ? getSubmittedText(memory, nodeId, label, maxLength)
       : undefined;
 
@@ -151,10 +151,13 @@ export const materialBoxPlan = defineConsultingPlan<
             memory.actions.major?.type === 'user.submit'
               ? getSubmittedMajors(memory)
               : [],
-          startAtInput: memory.lastAction?.type === 'user.back',
+          startAtInput: memory.lastAction?.type === 'user.previous-explanation',
         },
       }),
-      on: { 'user.submit': 'keyword' },
+      on: {
+        'user.submit': 'keyword',
+        'user.previous-explanation': 'material-box-overview',
+      },
     },
     keyword: {
       id: 'keyword',
@@ -171,13 +174,14 @@ export const materialBoxPlan = defineConsultingPlan<
           data: {
             majors: getSubmittedMajors(memory),
             keywords: submittedKeywords,
-            startAtInput: memory.lastAction?.type === 'user.back',
+            startAtInput:
+              memory.lastAction?.type === 'user.previous-explanation',
           },
         };
       },
       on: {
         'user.submit': 'generate-student-story',
-        'user.back': 'major',
+        'user.previous-explanation': 'major',
       },
     },
     'generate-student-story': {
@@ -219,19 +223,9 @@ export const materialBoxPlan = defineConsultingPlan<
         data: getProgressScreenData(memory),
       }),
       on: {
-        'user.next-explanation': 'career-identity',
-        'user.back': 'keyword',
+        'user.next-explanation': 'core-value',
+        'user.previous-explanation': 'keyword',
       },
-    },
-    'career-identity': {
-      id: 'career-identity',
-      type: 'screen',
-      screen: (memory) => ({
-        screenId: 'material-box.career-identity',
-        mode: 'dynamic',
-        data: getProgressScreenData(memory),
-      }),
-      on: { 'user.submit': 'core-value' },
     },
     'core-value': {
       id: 'core-value',
@@ -239,9 +233,16 @@ export const materialBoxPlan = defineConsultingPlan<
       screen: (memory) => ({
         screenId: 'material-box.core-value',
         mode: 'dynamic',
-        data: getProgressScreenData(memory),
+        data: {
+          ...getProgressScreenData(memory),
+          startAtInput:
+            memory.actions['core-value']?.type === 'user.previous-explanation',
+        },
       }),
-      on: { 'user.submit': 'field-strength' },
+      on: {
+        'user.submit': 'field-strength',
+        'user.previous-explanation': 'student-story',
+      },
     },
     'field-strength': {
       id: 'field-strength',

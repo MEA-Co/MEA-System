@@ -20,6 +20,7 @@ type MaterialBoxTableProps = {
   renderMajorCell?: (index: number) => ReactNode;
   renderKeywordCell?: (index: number) => ReactNode;
   studentStoryContent?: ReactNode;
+  coreValueContent?: ReactNode;
   studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
@@ -39,6 +40,7 @@ export function MaterialBoxTable({
   renderMajorCell,
   renderKeywordCell,
   studentStoryContent,
+  coreValueContent,
   studentStory = '',
   careerIdentity = '',
   coreValue = '',
@@ -235,13 +237,17 @@ export function MaterialBoxTable({
                   !compact && 'sm:px-5 sm:py-5 sm:text-sm',
                 )}
               >
-                {coreValue && (
-                  <span
-                    className={cn('block', compact && 'truncate text-[10px]')}
-                    title={coreValue}
-                  >
-                    {coreValue}
-                  </span>
+                {coreValueContent !== undefined ? (
+                  <div aria-live="polite">{coreValueContent}</div>
+                ) : (
+                  coreValue && (
+                    <span
+                      className={cn('block', compact && 'truncate text-[10px]')}
+                      title={coreValue}
+                    >
+                      {coreValue}
+                    </span>
+                  )
                 )}
               </td>
             </motion.tr>
