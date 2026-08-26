@@ -1,6 +1,7 @@
 'use client';
 
-import { CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -19,9 +20,13 @@ import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_scree
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
 function StudentStoryMaterialBox({
+  compact = false,
   data,
+  studentStoryContent,
 }: {
+  compact?: boolean;
   data: MaterialBoxProgressScreenData;
+  studentStoryContent?: ReactNode;
 }) {
   const majors = data.majorKeywords.map((entry) => entry.major);
   const keywords = data.majorKeywords.map((entry) => entry.keyword);
@@ -34,13 +39,86 @@ function StudentStoryMaterialBox({
 
   return (
     <MaterialBoxTable
-      compact
+      animateEntrance={false}
+      compact={compact}
       focus="story"
       majorRowCount={majorRowCount}
       majors={majors}
       keywords={keywords}
-      studentStory={data.studentStory}
+      studentStoryContent={studentStoryContent}
     />
+  );
+}
+
+function StoryLoadingContent() {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.span
+      className="inline-block font-semibold text-muted-foreground"
+      style={
+        shouldReduceMotion
+          ? undefined
+          : {
+              backgroundImage:
+                'linear-gradient(110deg, var(--muted-foreground) 30%, var(--foreground) 50%, var(--muted-foreground) 70%)',
+              backgroundSize: '250% 100%',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            }
+      }
+      animate={
+        shouldReduceMotion
+          ? undefined
+          : { backgroundPosition: ['200% 0', '-100% 0'] }
+      }
+      transition={{
+        duration: 1.8,
+        repeat: Infinity,
+        ease: 'linear',
+      }}
+    >
+      스토리를 만들고 있어요
+    </motion.span>
+  );
+}
+
+function FadingStudentStory({
+  story,
+  onComplete,
+}: {
+  story: string;
+  onComplete: () => void;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const words = story.trim().split(/\s+/);
+
+  return (
+    <span
+      className="block font-medium leading-6 text-foreground"
+      aria-label={story}
+    >
+      {words.map((word, index) => (
+        <motion.span
+          key={`${index}-${word}`}
+          aria-hidden="true"
+          className="mr-1 inline-block"
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: shouldReduceMotion ? 0 : 0.32,
+            delay: shouldReduceMotion ? 0 : index * 0.08,
+            ease: 'easeOut',
+          }}
+          onAnimationComplete={
+            index === words.length - 1 ? onComplete : undefined
+          }
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
   );
 }
 
@@ -51,23 +129,10 @@ function MaterialBoxStudentStoryPendingScreen({
 }) {
   return (
     <ConsultingScreenView>
-      <div className="mx-auto grid w-full max-w-4xl gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
-        <section
-          className="flex min-h-56 flex-col items-center justify-center rounded-2xl border bg-background/90 p-6 text-center shadow-sm"
-          aria-live="polite"
-        >
-          <span className="flex size-12 items-center justify-center rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
-            <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
-          </span>
-          <h1 className="mt-5 text-xl font-bold tracking-[-0.03em]">
-            한 줄 스토리를 만들고 있어요
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            전공과 세부 키워드 사이의 연결점을 찾는 중입니다.
-          </p>
-        </section>
-        <StudentStoryMaterialBox data={data} />
-      </div>
+      <StudentStoryMaterialBox
+        data={data}
+        studentStoryContent={<StoryLoadingContent />}
+      />
 
       <ConsultingPrompter
         message={{
@@ -89,28 +154,33 @@ function MaterialBoxStudentStoryResultScreen({
   data: MaterialBoxProgressScreenData & { studentStory: string };
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [isStoryAnimationComplete, setIsStoryAnimationComplete] =
+    useState(false);
 
   return (
     <ConsultingScreenView>
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-5">
-        <span className="flex size-12 items-center justify-center rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
-          <Sparkles className="size-5" aria-hidden="true" />
-        </span>
-        <StudentStoryMaterialBox data={data} />
-      </div>
+      <StudentStoryMaterialBox
+        data={data}
+        studentStoryContent={
+          <FadingStudentStory
+            story={data.studentStory}
+            onComplete={() => setIsStoryAnimationComplete(true)}
+          />
+        }
+      />
 
       <ConsultingPrompter
-        animateTyping
         message={{
-          label: '학생의 스토리',
-          segments: [{ text: data.studentStory, emphasis: 'strong' }],
+          segments: [
+            { text: '입력한 전공과 키워드에서 ' },
+            { text: `'${data.studentStory}'`, emphasis: 'strong' },
+            { text: '이라는 특색이 보여요.' },
+          ],
         }}
-        onTypingComplete={() => setIsTypingComplete(true)}
       >
         <ConsultingProgressButton
           compact
-          disabled={!isTypingComplete}
+          disabled={!isStoryAnimationComplete}
           spacebarShortcut
           onClick={() => environment.send({ type: 'user.next-explanation' })}
         >
@@ -143,7 +213,7 @@ function MaterialBoxStudentStoryErrorScreen({
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">{data.error}</p>
         </section>
-        <StudentStoryMaterialBox data={data} />
+        <StudentStoryMaterialBox compact data={data} />
       </div>
 
       <ConsultingPrompter

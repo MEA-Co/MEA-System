@@ -19,6 +19,7 @@ type MaterialBoxTableProps = {
   keywords?: ReadonlyArray<string>;
   renderMajorCell?: (index: number) => ReactNode;
   renderKeywordCell?: (index: number) => ReactNode;
+  studentStoryContent?: ReactNode;
   studentStory?: string;
   careerIdentity?: string;
   coreValue?: string;
@@ -37,6 +38,7 @@ export function MaterialBoxTable({
   keywords = [],
   renderMajorCell,
   renderKeywordCell,
+  studentStoryContent,
   studentStory = '',
   careerIdentity = '',
   coreValue = '',
@@ -188,16 +190,22 @@ export function MaterialBoxTable({
                 )}
               >
                 <span className="block">학생의 스토리</span>
-                {(studentStory || careerIdentity) && (
-                  <span
-                    className={cn(
-                      'mt-1 block font-medium text-muted-foreground',
-                      compact && 'truncate text-[10px]',
-                    )}
-                    title={studentStory || careerIdentity}
-                  >
-                    {studentStory || careerIdentity}
-                  </span>
+                {studentStoryContent !== undefined ? (
+                  <div className="mt-1" aria-live="polite">
+                    {studentStoryContent}
+                  </div>
+                ) : (
+                  (studentStory || careerIdentity) && (
+                    <span
+                      className={cn(
+                        'mt-1 block font-medium text-muted-foreground',
+                        compact && 'truncate text-[10px]',
+                      )}
+                      title={studentStory || careerIdentity}
+                    >
+                      {studentStory || careerIdentity}
+                    </span>
+                  )
                 )}
               </th>
             </motion.tr>

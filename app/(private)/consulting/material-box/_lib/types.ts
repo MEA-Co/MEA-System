@@ -76,6 +76,7 @@ export function isGenerateStudentStoryToolOutput(
     typeof value.studentStory === 'string' &&
     value.studentStory.trim().length > 0 &&
     !/[\r\n]/.test(value.studentStory) &&
+    value.studentStory.endsWith('학생') &&
     value.studentStory.length <= 220
   );
 }
