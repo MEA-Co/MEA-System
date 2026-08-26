@@ -1,5 +1,5 @@
-import type { ConsultingToolError } from '@/features/consulting/core/tools/protocol';
-import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
+import type { ConsultingToolError } from '@/features/consulting/core/tools';
+import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingMemory<Context extends object> = {
   context: Readonly<Context>;

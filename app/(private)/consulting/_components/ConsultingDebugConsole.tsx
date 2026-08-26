@@ -14,8 +14,10 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
-import type { ConsultingAgentSnapshot } from '@/features/consulting/core/agent/types';
+import type {
+  ConsultingAgentSnapshot,
+  ConsultingMemory,
+} from '@/features/consulting/core/agent';
 import type { ConsultingLog } from '@/features/consulting/core/logger';
 import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
 import { cn } from '@/lib/utils';

@@ -1,5 +1,5 @@
 import type { ConsultingModuleCall } from '@/features/consulting/core/agent/types';
-import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
+import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingAgentEvent =
   | {

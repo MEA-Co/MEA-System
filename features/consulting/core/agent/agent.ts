@@ -21,15 +21,17 @@ import type {
 import {
   createConsultingRendererRequest,
   parseConsultingRendererResponse,
-} from '@/features/consulting/core/renderer/protocol';
-import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
-import type { ConsultingToolError } from '@/features/consulting/core/tools/protocol';
+} from '@/features/consulting/core/renderer';
+import type {
+  ConsultingToolError,
+  ConsultingToolsRuntime,
+} from '@/features/consulting/core/tools';
 import {
   createConsultingToolRequest,
   parseConsultingToolRequest,
   parseConsultingToolResponse,
-} from '@/features/consulting/core/tools/protocol';
-import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
+} from '@/features/consulting/core/tools';
+import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingAgentOptions = {
   onEvent?: ConsultingAgentEventListener;

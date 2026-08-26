@@ -5,7 +5,7 @@ import {
   type MaterialBoxStrengths,
   type MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
-import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
+import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 
 function getSubmittedMajors(memory: ConsultingMemory<MaterialBoxContext>) {

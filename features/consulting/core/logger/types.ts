@@ -1,4 +1,4 @@
-import type { ConsultingAgentEvent } from '@/features/consulting/core/agent/events';
+import type { ConsultingAgentEvent } from '@/features/consulting/core/agent';
 
 export type ConsultingLogKind =
   'agent.input' | 'module.request' | 'module.response' | 'module.error';

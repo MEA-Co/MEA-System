@@ -8,12 +8,12 @@ import type { ConsultingPlan } from '@/features/consulting/core/plan';
 import type {
   ConsultingRendererError,
   ConsultingRenderTarget,
-} from '@/features/consulting/core/renderer/protocol';
+} from '@/features/consulting/core/renderer';
 import {
   createConsultingRendererRejectedResponse,
   createConsultingRendererSuccessResponse,
   parseConsultingRendererRequest,
-} from '@/features/consulting/core/renderer/protocol';
+} from '@/features/consulting/core/renderer';
 import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
 
 const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();

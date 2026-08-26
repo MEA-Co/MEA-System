@@ -2,9 +2,9 @@ import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
 import type {
   ConsultingPlanNode,
   ConsultingScreenProgress,
-} from '@/features/consulting/core/plan/types';
-import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer/protocol';
-import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
+} from '@/features/consulting/core/plan';
+import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
+import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingPhase =
   'waiting-for-user' | 'running-tools' | 'complete' | 'error';

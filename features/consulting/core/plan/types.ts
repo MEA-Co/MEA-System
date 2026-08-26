@@ -1,6 +1,6 @@
-import type { ConsultingMemory } from '@/features/consulting/core/agent/memory';
-import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer/protocol';
-import type { ConsultingUserAction } from '@/features/consulting/core/user/protocol';
+import type { ConsultingMemory } from '@/features/consulting/core/agent';
+import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
+import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingToolId<Tools extends object> = Tools extends {
   ids: ReadonlyArray<infer Id>;
