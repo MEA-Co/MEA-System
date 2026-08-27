@@ -9,7 +9,7 @@ import { MEMBER_ROLES } from '@/lib/profile';
 export const dynamic = 'force-dynamic';
 
 export default async function MaterialBoxConsultingPage() {
-  await requireUserAccess({ allowedRoles: MEMBER_ROLES });
+  const { role } = await requireUserAccess({ allowedRoles: MEMBER_ROLES });
 
   return (
     <main className="min-h-svh bg-muted/30">
@@ -33,7 +33,7 @@ export default async function MaterialBoxConsultingPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 md:px-6 md:py-7 lg:px-8">
-        <MaterialBoxConsulting />
+        <MaterialBoxConsulting debug={role === 'admin'} />
       </div>
     </main>
   );

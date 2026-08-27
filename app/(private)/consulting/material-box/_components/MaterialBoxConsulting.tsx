@@ -5,10 +5,10 @@ import { materialBoxPlan } from '@/app/(private)/consulting/material-box/_lib/pl
 import { materialBoxRenderer } from '@/app/(private)/consulting/material-box/_lib/renderer';
 import { materialBoxTools } from '@/app/(private)/consulting/material-box/_lib/tools';
 
-export function MaterialBoxConsulting() {
+export function MaterialBoxConsulting({ debug = false }: { debug?: boolean }) {
   return (
     <ConsultingFlow
-      debug
+      debug={debug}
       plan={materialBoxPlan}
       renderer={materialBoxRenderer}
       tools={materialBoxTools}
