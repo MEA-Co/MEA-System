@@ -1,6 +1,5 @@
 'use client';
 
-import { CircleAlert, LoaderCircle, RotateCw, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 
 import {
@@ -66,8 +65,8 @@ export function ConsultingBackgroundStatus() {
               />
             }
           >
-            <LoaderCircle
-              className="size-3.5 animate-spin"
+            <span
+              className="size-2 shrink-0 animate-pulse rounded-full bg-amber-400 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-amber-400)_18%,transparent)]"
               aria-hidden="true"
             />
             <span className="hidden sm:inline">
@@ -107,9 +106,11 @@ export function ConsultingBackgroundStatus() {
               />
             }
           >
-            <CircleAlert className="size-3.5" aria-hidden="true" />
+            <span
+              className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
+              aria-hidden="true"
+            />
             <span className="hidden sm:inline">백그라운드 작업 실패</span>
-            <RotateCw className="size-3" aria-hidden="true" />
             <span className="sr-only">실패한 백그라운드 작업 다시 실행</span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-sm">
@@ -126,27 +127,17 @@ export function ConsultingBackgroundStatus() {
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <div
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-muted/80 px-2.5 text-xs font-medium text-muted-foreground"
-              role="status"
-              aria-live="polite"
-            />
-          }
-        >
-          <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
-          <span className="hidden sm:inline">백그라운드 작업 완료</span>
-          <span className="sr-only sm:hidden">백그라운드 작업 완료</span>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {jobs.map((job) => (
-            <p key={job.id}>{job.label ?? job.toolId}</p>
-          ))}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-muted/80 px-2.5 text-xs font-medium text-muted-foreground"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        className="size-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-emerald-500)_16%,transparent)]"
+        aria-hidden="true"
+      />
+      <span className="hidden sm:inline">백그라운드 작업 완료</span>
+      <span className="sr-only sm:hidden">백그라운드 작업 완료</span>
+    </div>
   );
 }

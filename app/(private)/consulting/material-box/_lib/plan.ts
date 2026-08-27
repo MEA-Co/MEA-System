@@ -75,7 +75,6 @@ function getSubmittedMajorKeywords(
         !('keyword' in entry) ||
         typeof entry.keyword !== 'string' ||
         entry.keyword.trim().length === 0 ||
-        entry.keyword.length > 120 ||
         !('selectedSuggestions' in entry) ||
         !Array.isArray(entry.selectedSuggestions) ||
         entry.selectedSuggestions.length > 5 ||
@@ -203,7 +202,7 @@ export const materialBoxPlan = defineConsultingPlan<
 
           return majors.map((major, majorIndex) => ({
             toolId: 'keyword-suggestions.generate',
-            input: { major },
+            input: { major, majors },
             key: createKeywordSuggestionJobKey(groupId, majorIndex),
             groupId,
             policy: 'reuse',

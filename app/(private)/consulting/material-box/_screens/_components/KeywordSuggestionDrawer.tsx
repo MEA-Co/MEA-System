@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerContent,
-  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
@@ -34,7 +33,7 @@ type KeywordSuggestionDrawerProps = {
   onApply: () => void;
 };
 
-function SuggestionSourceLink({
+function SuggestionSource({
   link,
 }: {
   link: KeywordSuggestion['links'][number];
@@ -43,16 +42,24 @@ function SuggestionSourceLink({
   const Icon = isLaboratory ? FlaskConical : BookOpen;
 
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noreferrer noopener"
-      className="inline-flex min-w-0 items-center gap-1 rounded-md bg-muted/70 px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Icon className="size-3 shrink-0" aria-hidden="true" />
-      <span className="truncate">{link.title}</span>
-      <ExternalLink className="size-2.5 shrink-0" aria-hidden="true" />
-    </a>
+    <div className="min-w-0 rounded-lg bg-muted/55 p-2.5">
+      <p className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+        <Icon className="size-3 shrink-0" aria-hidden="true" />
+        {isLaboratory ? '연구실에서 확인한 키워드' : '학과에서 확인한 키워드'}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-foreground">
+        {link.sourceKeyword}
+      </p>
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="mt-1.5 inline-flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="truncate">{link.title}</span>
+        <ExternalLink className="size-2.5 shrink-0" aria-hidden="true" />
+      </a>
+    </div>
   );
 }
 
@@ -77,10 +84,33 @@ export function KeywordSuggestionDrawer({
       type="button"
       variant="outline"
       disabled={!isReady}
+      className={cn(
+        'group transition-all',
+        isReady
+          ? 'border-violet-400/35 bg-linear-to-r from-violet-500/10 via-fuchsia-500/10 to-sky-500/10 shadow-sm hover:border-violet-400/60 hover:from-violet-500/15 hover:via-fuchsia-500/15 hover:to-sky-500/15 hover:shadow-md'
+          : 'border-border bg-muted text-muted-foreground shadow-none dark:bg-muted',
+      )}
       onClick={() => setOpen(true)}
     >
-      <Sparkles aria-hidden="true" />
-      키워드를 정하기 어려워요
+      <Sparkles
+        className={cn(
+          'transition-transform',
+          isReady
+            ? 'text-violet-500 group-hover:rotate-6 group-hover:scale-110'
+            : 'text-muted-foreground',
+        )}
+        aria-hidden="true"
+      />
+      <span
+        className={cn(
+          'font-semibold',
+          isReady
+            ? 'bg-linear-to-r from-violet-600 via-fuchsia-600 to-sky-600 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-sky-300'
+            : 'text-muted-foreground',
+        )}
+      >
+        키워드를 정하기 어려워요
+      </span>
     </Button>
   );
 
@@ -117,10 +147,6 @@ export function KeywordSuggestionDrawer({
             <Sparkles className="size-4" aria-hidden="true" />
             세부 키워드 제안
           </DrawerTitle>
-          <DrawerDescription>
-            관심 가는 키워드를 여러 개 고를 수 있어요. 대학 공식 학과·연구실
-            페이지도 함께 살펴보세요.
-          </DrawerDescription>
         </DrawerHeader>
 
         {majors.length > 1 && (
@@ -153,10 +179,6 @@ export function KeywordSuggestionDrawer({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="mb-4">
             <p className="text-sm font-semibold">{activeResult?.major}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              제안은 탐색의 출발점이에요. 링크를 확인한 뒤 내 관심에 맞는 분야를
-              선택해보세요.
-            </p>
           </div>
 
           <div className="space-y-3">
@@ -200,9 +222,9 @@ export function KeywordSuggestionDrawer({
                     </span>
                   </button>
 
-                  <div className="mt-3 flex flex-wrap gap-1.5 pl-8">
+                  <div className="mt-3 grid gap-2 pl-8 sm:grid-cols-2">
                     {suggestion.links.map((link) => (
-                      <SuggestionSourceLink
+                      <SuggestionSource
                         key={`${link.type}-${link.url}`}
                         link={link}
                       />
@@ -218,7 +240,7 @@ export function KeywordSuggestionDrawer({
           <p className="text-xs text-muted-foreground">
             {selectedCount > 0
               ? `총 ${selectedCount}개 선택됨`
-              : '관심 가는 키워드를 선택해주세요'}
+              : '관심 가는 키워드를 모두 선택해주세요'}
           </p>
           <Button
             type="button"

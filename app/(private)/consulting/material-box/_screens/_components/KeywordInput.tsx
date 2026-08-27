@@ -48,7 +48,6 @@ export function KeywordInput({
                       id={inputId}
                       value={keywords[index] ?? ''}
                       autoFocus={index === 0}
-                      maxLength={120}
                       aria-invalid={Boolean(validationMessage)}
                       onChange={(event) =>
                         onKeywordChange(index, event.target.value)

@@ -70,7 +70,6 @@ function isMaterialBoxMajorKeyword(
     'keyword' in value &&
     typeof value.keyword === 'string' &&
     value.keyword.trim().length > 0 &&
-    value.keyword.length <= 120 &&
     'selectedSuggestions' in value &&
     Array.isArray(value.selectedSuggestions) &&
     value.selectedSuggestions.length <= 5 &&
