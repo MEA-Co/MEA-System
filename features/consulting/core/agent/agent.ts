@@ -24,7 +24,7 @@ import {
 } from '@/features/consulting/core/renderer';
 import type {
   ConsultingToolError,
-  ConsultingToolsRuntime,
+  ConsultingToolRuntime,
 } from '@/features/consulting/core/tools';
 import {
   createConsultingToolRequest,
@@ -60,10 +60,10 @@ function toToolError(error: unknown, fallback: string): ConsultingToolError {
 
 export function createConsultingAgent<
   Context extends object,
-  Tools extends ConsultingToolsRuntime,
+  Tools extends object,
 >(
   plan: ConsultingPlan<Context, Tools>,
-  tools: Tools,
+  toolRuntime: ConsultingToolRuntime,
   options: ConsultingAgentOptions = {},
 ): ConsultingAgent<Context, Tools> {
   const listeners = new Set<() => void>();
@@ -107,6 +107,10 @@ export function createConsultingAgent<
     toolName: string,
     nodeId: string,
     input: unknown,
+    options: Pick<
+      ConsultingModuleCall,
+      'behavior' | 'runOptions' | 'resultKey'
+    > = {},
   ) => {
     const call: ConsultingModuleCall = {
       id: `call-${++callId}`,
@@ -114,6 +118,7 @@ export function createConsultingAgent<
       toolName,
       nodeId,
       input,
+      ...options,
     };
     state.pendingModuleCalls.push(call);
     emitEvent({ type: 'module.request.sent', call });
@@ -232,6 +237,7 @@ export function createConsultingAgent<
     });
 
     if (input.type === 'user.reset') {
+      toolRuntime.reset();
       state.pendingModuleCalls = [];
       state = createInitialState();
       enterNode(plan.entry);
@@ -255,6 +261,29 @@ export function createConsultingAgent<
     state.error = null;
 
     try {
+      const effects = node.effects?.[input.type]?.({
+        action: input,
+        memory: readMemory(),
+      });
+      for (const effect of effects ?? []) {
+        issueModuleCall(
+          'tool',
+          effect.toolId,
+          node.id,
+          createConsultingToolRequest(effect.toolId, effect.input),
+          {
+            behavior: 'background',
+            runOptions: {
+              key: effect.key,
+              groupId: effect.groupId,
+              policy: effect.policy,
+              label: effect.label,
+            },
+            resultKey: effect.resultKey,
+          },
+        );
+      }
+
       const nextNodeId =
         typeof transition === 'function'
           ? transition({ action: input, memory: readMemory() })
@@ -266,10 +295,7 @@ export function createConsultingAgent<
     publish();
   };
 
-  const executeToolCall = async (
-    callIdToExecute: string,
-    signal: AbortSignal,
-  ) => {
+  const executeToolCall = async (callIdToExecute: string) => {
     const call = state.pendingModuleCalls.find(
       (candidate) => candidate.id === callIdToExecute,
     );
@@ -280,9 +306,13 @@ export function createConsultingAgent<
       throw new Error('screen.render는 Renderer Runtime에서 실행해야 합니다.');
     }
 
-    return tools.execute(parseConsultingToolRequest(call.input), {
-      signal,
-    });
+    return toolRuntime.run(parseConsultingToolRequest(call.input), {
+      key: call.runOptions?.key ?? `agent:${state.sessionId}:${call.id}`,
+      groupId: call.runOptions?.groupId,
+      policy: call.runOptions?.policy ?? 'reuse',
+      executionMode: call.behavior === 'background' ? 'background' : 'blocking',
+      label: call.runOptions?.label,
+    }).result;
   };
 
   const moveToRejectedNode = (
@@ -315,6 +345,28 @@ export function createConsultingAgent<
         }
       } catch (cause) {
         failPlan(cause, '올바르지 않은 Renderer 응답입니다.');
+      }
+      publish();
+      return;
+    }
+
+    if (call.behavior === 'background') {
+      try {
+        const response = parseConsultingToolResponse(output);
+        if (call.resultKey) {
+          if (response.status === 'completed') {
+            state.memory.recordToolResult(call.resultKey, response.output);
+          } else {
+            state.memory.recordToolError(call.resultKey, response.error);
+          }
+        }
+      } catch (cause) {
+        if (call.resultKey) {
+          state.memory.recordToolError(
+            call.resultKey,
+            toToolError(cause, `${call.toolName} 결과 처리에 실패했습니다.`),
+          );
+        }
       }
       publish();
       return;
@@ -388,6 +440,17 @@ export function createConsultingAgent<
       return;
     }
 
+    if (call.behavior === 'background') {
+      if (call.resultKey) {
+        state.memory.recordToolError(
+          call.resultKey,
+          toToolError(error, `${call.toolName} 실행에 실패했습니다.`),
+        );
+      }
+      publish();
+      return;
+    }
+
     const node = getNode(call.nodeId);
     if (node.type === 'tool') {
       moveToRejectedNode(
@@ -414,6 +477,7 @@ export function createConsultingAgent<
     dispose: () => {
       if (disposed) return;
       disposed = true;
+      toolRuntime.dispose();
       state.pendingModuleCalls = [];
       listeners.clear();
     },

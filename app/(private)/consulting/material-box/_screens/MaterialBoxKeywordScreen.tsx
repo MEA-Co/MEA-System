@@ -18,7 +18,9 @@ import {
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import { KeywordExamples } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordExamples';
 import { KeywordInput } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordInput';
+import { KeywordSuggestionDrawer } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordSuggestionDrawer';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
+import type { KeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import { Button } from '@/components/ui/button';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 
@@ -63,11 +65,47 @@ function MaterialBoxKeywordScreen({
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
+  const [selectedSuggestions, setSelectedSuggestions] = useState<
+    ReadonlyArray<ReadonlyArray<KeywordSuggestion>>
+  >(() =>
+    data.selectedSuggestions.length === data.majors.length
+      ? data.selectedSuggestions
+      : data.majors.map(() => []),
+  );
   const isExamplesPage = pageIndex === 2;
   const isInputPage = pageIndex === keywordMessages.length - 1;
   const majorRowCount =
     data.majors.length === 1 ? 1 : data.majors.length === 2 ? 2 : 3;
   const normalizedKeywords = keywords.map((keyword) => keyword.trim());
+
+  const toggleSuggestion = (
+    majorIndex: number,
+    suggestion: KeywordSuggestion,
+  ) => {
+    setSelectedSuggestions((current) =>
+      current.map((items, index) => {
+        if (index !== majorIndex) return items;
+        const isSelected = items.some(
+          (item) => item.keyword === suggestion.keyword,
+        );
+        return isSelected
+          ? items.filter((item) => item.keyword !== suggestion.keyword)
+          : [...items, suggestion];
+      }),
+    );
+  };
+
+  const applySelectedSuggestions = () => {
+    setKeywords((current) =>
+      current.map((keyword, index) => {
+        const selected = selectedSuggestions[index] ?? [];
+        return selected.length > 0
+          ? selected.map((suggestion) => suggestion.keyword).join(', ')
+          : keyword;
+      }),
+    );
+    setValidationMessage(null);
+  };
 
   const reviewKeyword = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,6 +132,7 @@ function MaterialBoxKeywordScreen({
         data.majors.map((major, index) => ({
           major,
           keyword: normalizedKeywords[index],
+          selectedSuggestions: selectedSuggestions[index] ?? [],
         })),
       ),
     });
@@ -136,6 +175,14 @@ function MaterialBoxKeywordScreen({
             setValidationMessage(null);
           }}
           onSubmit={reviewKeyword}
+          keywordSuggestionAction={
+            <KeywordSuggestionDrawer
+              majors={data.majors}
+              selectedSuggestions={selectedSuggestions}
+              onToggle={toggleSuggestion}
+              onApply={applySelectedSuggestions}
+            />
+          }
         />
       ) : isExamplesPage ? (
         <KeywordExamples />

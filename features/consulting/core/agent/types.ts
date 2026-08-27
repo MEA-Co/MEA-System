@@ -4,6 +4,7 @@ import type {
   ConsultingScreenProgress,
 } from '@/features/consulting/core/plan';
 import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
+import type { ConsultingToolRunOptions } from '@/features/consulting/core/tools';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingPhase =
@@ -28,6 +29,9 @@ export type ConsultingModuleCall = {
   toolName: string;
   nodeId: string;
   input: unknown;
+  behavior?: 'blocking' | 'background';
+  runOptions?: ConsultingToolRunOptions;
+  resultKey?: string;
 };
 
 export type ConsultingAgentSnapshot<
@@ -51,7 +55,7 @@ export type ConsultingAgent<Context extends object, Tools extends object> = {
   getMemory: () => ConsultingMemory<Context>;
   subscribe: (listener: () => void) => () => void;
   send: (input: ConsultingUserAction) => void;
-  executeToolCall: (callId: string, signal: AbortSignal) => Promise<unknown>;
+  executeToolCall: (callId: string) => Promise<unknown>;
   resolveModuleCall: (callId: string, output: unknown) => void;
   rejectModuleCall: (callId: string, error: unknown) => void;
   dispose: () => void;

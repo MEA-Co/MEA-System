@@ -8,6 +8,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Radio,
+  Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,7 +20,10 @@ import type {
   ConsultingMemory,
 } from '@/features/consulting/core/agent';
 import type { ConsultingLog } from '@/features/consulting/core/logger';
-import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
+import type {
+  ConsultingToolRuntimeSnapshot,
+  ConsultingToolsRuntime,
+} from '@/features/consulting/core/tools';
 import { cn } from '@/lib/utils';
 
 type ConsultingDebugConsoleProps<
@@ -27,6 +31,7 @@ type ConsultingDebugConsoleProps<
   Tools extends ConsultingToolsRuntime,
 > = {
   snapshot: ConsultingAgentSnapshot<Context, Tools>;
+  toolRuntimeSnapshot: ConsultingToolRuntimeSnapshot;
   memory: ConsultingMemory<Context>;
   logs: ReadonlyArray<ConsultingLog>;
 };
@@ -100,7 +105,12 @@ function DataBlock({ value }: { value: unknown }) {
 export function ConsultingDebugConsole<
   Context extends object,
   Tools extends ConsultingToolsRuntime,
->({ snapshot, memory, logs }: ConsultingDebugConsoleProps<Context, Tools>) {
+>({
+  snapshot,
+  toolRuntimeSnapshot,
+  memory,
+  logs,
+}: ConsultingDebugConsoleProps<Context, Tools>) {
   const [isOpen, setIsOpen] = useState(true);
   const [readLogIds, setReadLogIds] = useState<ReadonlySet<number>>(
     () => new Set(),
@@ -195,6 +205,22 @@ export function ConsultingDebugConsole<
                 </summary>
                 <div className="border-t border-zinc-800 px-3.5 pb-3.5">
                   <DataBlock value={snapshot} />
+                </div>
+              </details>
+
+              <details className="group rounded-xl border border-zinc-800 bg-zinc-950/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 marker:hidden">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Wrench
+                      className="size-4 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    Tool Runtime Jobs
+                  </span>
+                  <ChevronDown className="size-4 text-zinc-500 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-zinc-800 px-3.5 pb-3.5">
+                  <DataBlock value={toolRuntimeSnapshot} />
                 </div>
               </details>
 

@@ -1,4 +1,4 @@
-export const LLM_MODELS = ['gpt-5-nano'] as const;
+export const LLM_MODELS = ['gpt-5-nano', 'gpt-5.4-nano'] as const;
 
 export type LlmModel = (typeof LLM_MODELS)[number];
 
@@ -19,6 +19,10 @@ export type LlmRequest = {
   text?: {
     format?: LlmJsonSchemaFormat;
     verbosity?: 'low' | 'medium' | 'high';
+  };
+  webSearch?: {
+    searchContextSize?: 'low' | 'medium' | 'high';
+    required?: boolean;
   };
 };
 
@@ -65,6 +69,19 @@ function isTextConfig(value: unknown): value is LlmRequest['text'] {
   );
 }
 
+function isWebSearchConfig(value: unknown): value is LlmRequest['webSearch'] {
+  if (!isRecord(value)) return false;
+
+  const searchContextSize = value.searchContextSize;
+  return (
+    (searchContextSize === undefined ||
+      searchContextSize === 'low' ||
+      searchContextSize === 'medium' ||
+      searchContextSize === 'high') &&
+    (value.required === undefined || typeof value.required === 'boolean')
+  );
+}
+
 export function isLlmRequest(value: unknown): value is LlmRequest {
   if (!isRecord(value)) return false;
 
@@ -87,8 +104,9 @@ export function isLlmRequest(value: unknown): value is LlmRequest {
       (Number.isInteger(value.maxOutputTokens) &&
         typeof value.maxOutputTokens === 'number' &&
         value.maxOutputTokens >= 1 &&
-        value.maxOutputTokens <= 4_000)) &&
-    (value.text === undefined || isTextConfig(value.text))
+        value.maxOutputTokens <= 16_000)) &&
+    (value.text === undefined || isTextConfig(value.text)) &&
+    (value.webSearch === undefined || isWebSearchConfig(value.webSearch))
   );
 }
 

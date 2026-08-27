@@ -10,6 +10,7 @@ import type {
 } from '@/features/consulting/core/tools/types';
 
 export * from '@/features/consulting/core/tools/protocol';
+export * from '@/features/consulting/core/tools/runtime';
 export type * from '@/features/consulting/core/tools/types';
 
 function getErrorMessage(error: unknown, fallback: string) {

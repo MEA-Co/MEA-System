@@ -64,9 +64,33 @@ export async function POST(request: Request) {
         ? { effort: body.reasoningEffort }
         : undefined,
       text: body.text,
+      tools: body.webSearch
+        ? [
+            {
+              type: 'web_search',
+              search_context_size: body.webSearch.searchContextSize ?? 'medium',
+              user_location: {
+                type: 'approximate',
+                country: 'KR',
+                timezone: 'Asia/Seoul',
+              },
+            },
+          ]
+        : undefined,
+      tool_choice: body.webSearch?.required ? 'required' : undefined,
       max_output_tokens: body.maxOutputTokens,
       store: false,
     });
+
+    if (response.status !== 'completed') {
+      const reason = response.incomplete_details?.reason;
+      throw new Error(
+        reason === 'max_output_tokens'
+          ? 'OPENAI_MAX_OUTPUT_TOKENS'
+          : 'OPENAI_INCOMPLETE_RESPONSE',
+      );
+    }
+
     const result = { outputText: response.output_text };
 
     if (!isLlmResponse(result)) {
@@ -76,10 +100,14 @@ export async function POST(request: Request) {
     return NextResponse.json(result, {
       headers: { 'Cache-Control': 'private, no-store' },
     });
-  } catch {
+  } catch (cause) {
+    const isOutputLimit =
+      cause instanceof Error && cause.message === 'OPENAI_MAX_OUTPUT_TOKENS';
     return NextResponse.json(
       {
-        error: '언어 모델 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+        error: isOutputLimit
+          ? '언어 모델 응답이 생성 한도를 초과했습니다. 다시 시도해 주세요.'
+          : '언어 모델 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.',
       },
       { status: 502 },
     );

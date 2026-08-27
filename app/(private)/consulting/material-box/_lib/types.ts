@@ -1,3 +1,9 @@
+import {
+  type GenerateKeywordSuggestionsToolInput,
+  type GenerateKeywordSuggestionsToolOutput,
+  isKeywordSuggestion,
+  type KeywordSuggestion,
+} from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import type { ConsultingTools } from '@/features/consulting/core/tools';
 
 export type MaterialBoxContext = Record<never, never>;
@@ -5,12 +11,14 @@ export type MaterialBoxContext = Record<never, never>;
 export type MaterialBoxKeywordScreenData = {
   majors: ReadonlyArray<string>;
   keywords: ReadonlyArray<string>;
+  selectedSuggestions: ReadonlyArray<ReadonlyArray<KeywordSuggestion>>;
   startAtInput: boolean;
 };
 
 export type MaterialBoxMajorKeyword = {
   major: string;
   keyword: string;
+  selectedSuggestions: ReadonlyArray<KeywordSuggestion>;
 };
 
 export type MaterialBoxProgressScreenData = {
@@ -62,7 +70,11 @@ function isMaterialBoxMajorKeyword(
     'keyword' in value &&
     typeof value.keyword === 'string' &&
     value.keyword.trim().length > 0 &&
-    value.keyword.length <= 80
+    value.keyword.length <= 120 &&
+    'selectedSuggestions' in value &&
+    Array.isArray(value.selectedSuggestions) &&
+    value.selectedSuggestions.length <= 5 &&
+    value.selectedSuggestions.every(isKeywordSuggestion)
   );
 }
 
@@ -114,6 +126,16 @@ export function isMaterialBoxKeywordScreenData(
       value.keywords.length === value.majors.length) &&
     value.keywords.every(
       (keyword) => typeof keyword === 'string' && keyword.trim().length > 0,
+    ) &&
+    'selectedSuggestions' in value &&
+    Array.isArray(value.selectedSuggestions) &&
+    (value.selectedSuggestions.length === 0 ||
+      value.selectedSuggestions.length === value.majors.length) &&
+    value.selectedSuggestions.every(
+      (suggestions) =>
+        Array.isArray(suggestions) &&
+        suggestions.length <= 5 &&
+        suggestions.every(isKeywordSuggestion),
     ) &&
     'startAtInput' in value &&
     typeof value.startAtInput === 'boolean'
@@ -193,6 +215,10 @@ export function isMaterialBoxStudentStoryErrorScreenData(
 }
 
 export type MaterialBoxToolSchema = {
+  'keyword-suggestions.generate': {
+    input: GenerateKeywordSuggestionsToolInput;
+    output: GenerateKeywordSuggestionsToolOutput;
+  };
   'student-story.generate': {
     input: GenerateStudentStoryToolInput;
     output: GenerateStudentStoryToolOutput;

@@ -3,8 +3,10 @@
 import { Eye } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
+import { ConsultingBackgroundStatus } from '@/app/(private)/consulting/_components/ConsultingBackgroundStatus';
 import { ConsultingDebugConsole } from '@/app/(private)/consulting/_components/ConsultingDebugConsole';
 import { ConsultingFrame } from '@/app/(private)/consulting/_components/ConsultingFrame';
+import { ConsultingToolRuntimeProvider } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import { useConsultingAgent } from '@/app/(private)/consulting/_hooks/useConsultingAgent';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
@@ -31,11 +33,8 @@ export function ConsultingFlow<
   renderer,
   debug = false,
 }: ConsultingFlowProps<Context, Tools>) {
-  const { snapshot, memory, logs, send } = useConsultingAgent(
-    plan,
-    tools,
-    renderer,
-  );
+  const { snapshot, toolRuntime, toolRuntimeSnapshot, memory, logs, send } =
+    useConsultingAgent(plan, tools, renderer);
   const [drafts, setDrafts] = useState<{
     sessionId: number;
     values: Record<string, string>;
@@ -48,7 +47,12 @@ export function ConsultingFlow<
       : '';
 
   const debugConsole = debug ? (
-    <ConsultingDebugConsole snapshot={snapshot} memory={memory} logs={logs} />
+    <ConsultingDebugConsole
+      snapshot={snapshot}
+      toolRuntimeSnapshot={toolRuntimeSnapshot}
+      memory={memory}
+      logs={logs}
+    />
   ) : null;
 
   if (!screen) return debugConsole;
@@ -82,28 +86,31 @@ export function ConsultingFlow<
   );
 
   return (
-    <div>
-      <ConsultingFrame
-        title={screen.title}
-        currentStep={screen.progress?.current}
-        stepCount={screen.progress?.total}
-        onBack={canGoBack ? () => send({ type: 'user.back' }) : undefined}
-        topRightAction={
-          canReviewExplanation ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => send({ type: 'user.review-explanation' })}
-            >
-              <Eye aria-hidden="true" />
-              설명 다시 보기
-            </Button>
-          ) : undefined
-        }
-      >
-        {renderedScreen}
-      </ConsultingFrame>
-      {debugConsole}
-    </div>
+    <ConsultingToolRuntimeProvider runtime={toolRuntime}>
+      <div>
+        <ConsultingFrame
+          title={screen.title}
+          currentStep={screen.progress?.current}
+          stepCount={screen.progress?.total}
+          headerStatus={<ConsultingBackgroundStatus />}
+          onBack={canGoBack ? () => send({ type: 'user.back' }) : undefined}
+          topRightAction={
+            canReviewExplanation ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => send({ type: 'user.review-explanation' })}
+              >
+                <Eye aria-hidden="true" />
+                설명 다시 보기
+              </Button>
+            ) : undefined
+          }
+        >
+          {renderedScreen}
+        </ConsultingFrame>
+        {debugConsole}
+      </div>
+    </ConsultingToolRuntimeProvider>
   );
 }

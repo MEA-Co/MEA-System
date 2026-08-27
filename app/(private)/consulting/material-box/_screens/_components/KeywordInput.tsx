@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
 import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
@@ -13,6 +13,7 @@ export function KeywordInput({
   validationMessage,
   onKeywordChange,
   onSubmit,
+  keywordSuggestionAction,
 }: {
   isReviewing: boolean;
   majors: ReadonlyArray<string>;
@@ -20,6 +21,7 @@ export function KeywordInput({
   validationMessage: string | null;
   onKeywordChange: (index: number, value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  keywordSuggestionAction?: ReactNode;
 }) {
   const majorRowCount = majors.length === 1 ? 1 : majors.length === 2 ? 2 : 3;
 
@@ -46,7 +48,7 @@ export function KeywordInput({
                       id={inputId}
                       value={keywords[index] ?? ''}
                       autoFocus={index === 0}
-                      maxLength={80}
+                      maxLength={120}
                       aria-invalid={Boolean(validationMessage)}
                       onChange={(event) =>
                         onKeywordChange(index, event.target.value)
@@ -70,7 +72,8 @@ export function KeywordInput({
       )}
 
       {!isReviewing && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          {keywordSuggestionAction ?? <span />}
           <ConsultingProgressButton type="submit">
             입력 확인하기
           </ConsultingProgressButton>

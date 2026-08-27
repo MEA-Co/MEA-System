@@ -5,6 +5,11 @@ import {
   type MaterialBoxStrengths,
   type MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
+import {
+  createKeywordSuggestionGroupId,
+  createKeywordSuggestionJobKey,
+  isKeywordSuggestion,
+} from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 
@@ -70,7 +75,11 @@ function getSubmittedMajorKeywords(
         !('keyword' in entry) ||
         typeof entry.keyword !== 'string' ||
         entry.keyword.trim().length === 0 ||
-        entry.keyword.length > 80,
+        entry.keyword.length > 120 ||
+        !('selectedSuggestions' in entry) ||
+        !Array.isArray(entry.selectedSuggestions) ||
+        entry.selectedSuggestions.length > 5 ||
+        !entry.selectedSuggestions.every(isKeywordSuggestion),
     )
   ) {
     throw new Error('전공별 세부 키워드 입력 형식이 올바르지 않습니다.');
@@ -187,6 +196,21 @@ export const materialBoxPlan = defineConsultingPlan<
         'user.submit': 'keyword',
         'user.previous-explanation': 'material-box-overview',
       },
+      effects: {
+        'user.submit': ({ memory }) => {
+          const majors = getSubmittedMajors(memory);
+          const groupId = createKeywordSuggestionGroupId(majors);
+
+          return majors.map((major, majorIndex) => ({
+            toolId: 'keyword-suggestions.generate',
+            input: { major },
+            key: createKeywordSuggestionJobKey(groupId, majorIndex),
+            groupId,
+            policy: 'reuse',
+            label: `${major} 세부 키워드 제안`,
+          }));
+        },
+      },
     },
     keyword: {
       id: 'keyword',
@@ -203,6 +227,12 @@ export const materialBoxPlan = defineConsultingPlan<
           data: {
             majors: getSubmittedMajors(memory),
             keywords: submittedKeywords,
+            selectedSuggestions:
+              memory.actions.keyword?.type === 'user.submit'
+                ? getSubmittedMajorKeywords(memory).map(
+                    (entry) => entry.selectedSuggestions,
+                  )
+                : [],
             startAtInput:
               memory.lastAction?.type === 'user.previous-explanation',
           },

@@ -12,6 +12,7 @@ type ConsultingFrameProps = {
   currentStep?: number;
   stepCount?: number;
   onBack?: () => void;
+  headerStatus?: ReactNode;
   topRightAction?: ReactNode;
 };
 
@@ -21,6 +22,7 @@ export function ConsultingFrame({
   currentStep,
   stepCount,
   onBack,
+  headerStatus,
   topRightAction,
 }: ConsultingFrameProps) {
   const hasProgress =
@@ -50,11 +52,14 @@ export function ConsultingFrame({
             </p>
           </div>
 
-          {hasProgress && (
-            <p className="shrink-0 text-xs font-medium text-muted-foreground">
-              {currentStep} / {stepCount}
-            </p>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {headerStatus}
+            {hasProgress && (
+              <p className="text-xs font-medium text-muted-foreground">
+                {currentStep} / {stepCount}
+              </p>
+            )}
+          </div>
         </div>
 
         {hasProgress && (

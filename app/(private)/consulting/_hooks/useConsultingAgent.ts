@@ -15,6 +15,7 @@ import {
   parseConsultingRendererRequest,
 } from '@/features/consulting/core/renderer';
 import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
+import { createConsultingToolRuntime } from '@/features/consulting/core/tools';
 
 const pendingDisposals = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
@@ -30,15 +31,16 @@ export function useConsultingAgent<
     ) => ConsultingRendererError | null;
   },
 ) {
-  const runtime = useMemo(() => {
+  const execution = useMemo(() => {
     const logger = createConsultingLogger();
-    const agent = createConsultingAgent(plan, tools, {
+    const toolRuntime = createConsultingToolRuntime(tools);
+    const agent = createConsultingAgent(plan, toolRuntime, {
       onEvent: logger.record,
     });
-    return { agent, logger };
+    return { agent, logger, toolRuntime };
   }, [plan, tools]);
-  const { agent, logger } = runtime;
-  const runningCallsRef = useRef(new Map<string, AbortController>());
+  const { agent, logger, toolRuntime } = execution;
+  const runningCallsRef = useRef(new Map<string, AbortController | null>());
 
   useEffect(() => {
     const runningCalls = runningCallsRef.current;
@@ -50,7 +52,7 @@ export function useConsultingAgent<
 
     return () => {
       for (const controller of runningCalls.values()) {
-        controller.abort();
+        controller?.abort();
       }
       runningCalls.clear();
 
@@ -67,6 +69,11 @@ export function useConsultingAgent<
     agent.getSnapshot,
     agent.getSnapshot,
   );
+  const toolRuntimeSnapshot = useSyncExternalStore(
+    toolRuntime.subscribe,
+    toolRuntime.getSnapshot,
+    toolRuntime.getSnapshot,
+  );
 
   useEffect(() => {
     const pendingCallIds = new Set(
@@ -75,7 +82,7 @@ export function useConsultingAgent<
 
     for (const [callId, controller] of runningCallsRef.current) {
       if (!pendingCallIds.has(callId)) {
-        controller.abort();
+        controller?.abort();
         runningCallsRef.current.delete(callId);
       }
     }
@@ -83,12 +90,15 @@ export function useConsultingAgent<
     for (const call of snapshot.pendingModuleCalls) {
       if (runningCallsRef.current.has(call.id)) continue;
 
-      const controller = new AbortController();
+      const controller = call.kind === 'screen' ? new AbortController() : null;
       runningCallsRef.current.set(call.id, controller);
 
       const executeCall = () => {
         if (call.kind !== 'screen') {
-          return agent.executeToolCall(call.id, controller.signal);
+          return agent.executeToolCall(call.id);
+        }
+        if (!controller) {
+          throw new Error('Renderer 호출을 취소할 Controller가 없습니다.');
         }
 
         const input =
@@ -131,12 +141,12 @@ export function useConsultingAgent<
       void Promise.resolve()
         .then(executeCall)
         .then((output) => {
-          if (!controller.signal.aborted) {
+          if (controller?.signal.aborted !== true) {
             agent.resolveModuleCall(call.id, output);
           }
         })
         .catch((error: unknown) => {
-          if (!controller.signal.aborted) {
+          if (controller?.signal.aborted !== true) {
             agent.rejectModuleCall(call.id, error);
           }
         })
@@ -148,6 +158,8 @@ export function useConsultingAgent<
 
   return {
     snapshot,
+    toolRuntime,
+    toolRuntimeSnapshot,
     memory: agent.getMemory(),
     logs: logger.getSnapshot(),
     send: agent.send,
