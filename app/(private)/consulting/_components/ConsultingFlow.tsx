@@ -3,10 +3,10 @@
 import { Eye } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
-import { ConsultingBackgroundStatus } from '@/app/(private)/consulting/_components/ConsultingBackgroundStatus';
 import { ConsultingDebugConsole } from '@/app/(private)/consulting/_components/ConsultingDebugConsole';
 import { ConsultingFrame } from '@/app/(private)/consulting/_components/ConsultingFrame';
 import { ConsultingToolRuntimeProvider } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
+import { ConsultingToolStatus } from '@/app/(private)/consulting/_components/ConsultingToolStatus';
 import { useConsultingAgent } from '@/app/(private)/consulting/_hooks/useConsultingAgent';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
@@ -92,7 +92,7 @@ export function ConsultingFlow<
           title={screen.title}
           currentStep={screen.progress?.current}
           stepCount={screen.progress?.total}
-          headerStatus={<ConsultingBackgroundStatus />}
+          headerStatus={<ConsultingToolStatus />}
           onBack={canGoBack ? () => send({ type: 'user.back' }) : undefined}
           topRightAction={
             canReviewExplanation ? (

@@ -1,6 +1,9 @@
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
-import type { ConsultingToolRunPolicy } from '@/features/consulting/core/tools';
+import type {
+  ConsultingToolRunOptions,
+  ConsultingToolRunPolicy,
+} from '@/features/consulting/core/tools';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingToolId<Tools extends object> = Tools extends {
@@ -74,6 +77,10 @@ export type ConsultingToolNode<Context extends object, Tools extends object> = {
   type: 'tool';
   toolId: ConsultingToolId<Tools>;
   input: (memory: ConsultingMemory<Context>) => unknown;
+  runOptions?: ConsultingValueResolver<
+    Context,
+    Omit<ConsultingToolRunOptions, 'executionMode'>
+  >;
   pendingScreen?: ConsultingValueResolver<Context, ConsultingRenderTarget>;
   progress?: ConsultingScreenProgress;
   next: string | ((params: ConsultingToolResultParams<Context>) => string);

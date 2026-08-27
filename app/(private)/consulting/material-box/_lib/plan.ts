@@ -249,6 +249,11 @@ export const materialBoxPlan = defineConsultingPlan<
       input: (memory) => ({
         majorKeywords: getSubmittedMajorKeywords(memory),
       }),
+      runOptions: {
+        key: 'material-box:student-story',
+        policy: 'replace',
+        label: '학생 스토리 생성',
+      },
       pendingScreen: (memory) => ({
         screenId: 'material-box.student-story-pending',
         mode: 'dynamic',

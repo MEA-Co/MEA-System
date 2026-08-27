@@ -59,7 +59,7 @@ export const generateStudentStoryTool = {
         instructions,
         input: createInput(input),
         reasoningEffort: 'low',
-        maxOutputTokens: 500,
+        maxOutputTokens: 1500,
         text: {
           format: {
             type: 'json_schema',

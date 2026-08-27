@@ -193,7 +193,9 @@ export function createConsultingAgent<
         node.toolId,
         node.input(readMemory()),
       );
-      issueModuleCall('tool', node.toolId, node.id, request);
+      issueModuleCall('tool', node.toolId, node.id, request, {
+        runOptions: node.runOptions ? resolveValue(node.runOptions) : undefined,
+      });
     } catch (cause) {
       failPlan(cause, `Plan Node 실행에 실패했습니다: ${nodeId}`);
     }

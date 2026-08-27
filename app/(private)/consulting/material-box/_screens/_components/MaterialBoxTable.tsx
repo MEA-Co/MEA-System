@@ -27,6 +27,7 @@ type MaterialBoxTableProps = {
   }>;
   strengthFocus?: number | null;
   renderStrengthCell?: (index: number) => ReactNode;
+  animateMajorRows?: boolean;
   animateStrengthRows?: boolean;
   studentStory?: string;
   coreValue?: string;
@@ -51,6 +52,7 @@ export function MaterialBoxTable({
   strengthItems,
   strengthFocus = null,
   renderStrengthCell,
+  animateMajorRows = false,
   animateStrengthRows = false,
   studentStory = '',
   coreValue = '',
@@ -98,13 +100,37 @@ export function MaterialBoxTable({
     transition: { duration: 0.3, delay },
   });
 
+  const expandingRowMotion = (index: number, enabled: boolean) => ({
+    initial:
+      shouldReduceMotion || !enabled
+        ? false
+        : {
+            opacity: index === 0 ? 1 : 0,
+            y: index === 0 ? 0 : -8,
+          },
+    animate: { opacity: 1, y: 0 },
+    transition: {
+      duration: shouldReduceMotion ? 0 : 0.3,
+      delay: shouldReduceMotion ? 0 : 0.12 + index * 0.14,
+      ease: 'easeOut' as const,
+    },
+  });
+
   return (
     <motion.section
+      layout={animateMajorRows ? 'size' : false}
       initial={
         shouldReduceMotion || !animateEntrance ? false : { opacity: 0, y: 18 }
       }
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      transition={{
+        duration: 0.4,
+        ease: 'easeOut',
+        layout: {
+          duration: shouldReduceMotion ? 0 : 0.65,
+          ease: [0.22, 1, 0.36, 1],
+        },
+      }}
       className={cn(
         'mx-auto flex w-full items-center',
         compact ? 'max-w-md' : 'max-w-4xl',
@@ -122,7 +148,9 @@ export function MaterialBoxTable({
             {Array.from({ length: majorRowCount }, (_, index) => (
               <motion.tr
                 key={`major-row-${index}`}
-                {...rowMotion(0.18 + index * 0.18)}
+                {...(animateMajorRows
+                  ? expandingRowMotion(index, true)
+                  : rowMotion(0.18 + index * 0.18))}
                 className={cn(
                   'transition-colors duration-500',
                   displayedFocus === 'interest' && 'bg-blue-500/10',
@@ -320,20 +348,7 @@ export function MaterialBoxTable({
                         <motion.div
                           key={item.label}
                           role="row"
-                          initial={
-                            shouldReduceMotion || !animateStrengthRows
-                              ? false
-                              : {
-                                  opacity: index === 0 ? 1 : 0,
-                                  y: index === 0 ? 0 : -8,
-                                }
-                          }
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration: shouldReduceMotion ? 0 : 0.3,
-                            delay: shouldReduceMotion ? 0 : 0.12 + index * 0.14,
-                            ease: 'easeOut',
-                          }}
+                          {...expandingRowMotion(index, animateStrengthRows)}
                           className={cn(
                             'grid min-h-14 grid-cols-[42%_minmax(0,1fr)] transition-colors duration-500',
                             index < 2 && 'border-b',

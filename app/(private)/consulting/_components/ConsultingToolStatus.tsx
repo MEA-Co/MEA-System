@@ -14,19 +14,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-export function ConsultingBackgroundStatus() {
+export function ConsultingToolStatus() {
   const runtime = useConsultingToolRuntime();
   const snapshot = useConsultingToolRuntimeSnapshot();
   const jobs = useMemo(() => {
-    const backgroundJobs = snapshot.jobs.filter(
-      (job) => job.executionMode === 'background',
-    );
     const latestGroupByTool = new Map<
       string,
       { groupId: string; createdAt: number }
     >();
 
-    for (const job of backgroundJobs) {
+    for (const job of snapshot.jobs) {
       if (!job.groupId) continue;
       const latestGroup = latestGroupByTool.get(job.toolId);
       if (!latestGroup || job.createdAt >= latestGroup.createdAt) {
@@ -37,7 +34,7 @@ export function ConsultingBackgroundStatus() {
       }
     }
 
-    return backgroundJobs.filter(
+    return snapshot.jobs.filter(
       (job) =>
         !job.groupId ||
         latestGroupByTool.get(job.toolId)?.groupId === job.groupId,
@@ -48,6 +45,9 @@ export function ConsultingBackgroundStatus() {
   );
   const failedJobs = jobs.filter(
     (job) => job.status === 'rejected' || job.status === 'cancelled',
+  );
+  const retryableFailedJobs = failedJobs.filter(
+    (job) => job.executionMode === 'background',
   );
 
   if (jobs.length === 0) return null;
@@ -70,10 +70,10 @@ export function ConsultingBackgroundStatus() {
               aria-hidden="true"
             />
             <span className="hidden sm:inline">
-              백그라운드 작업 {activeJobs.length}개 처리 중
+              작업 {activeJobs.length}개 처리 중
             </span>
             <span className="sr-only sm:hidden">
-              백그라운드 작업 {activeJobs.length}개 처리 중
+              작업 {activeJobs.length}개 처리 중
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom">
@@ -90,28 +90,48 @@ export function ConsultingBackgroundStatus() {
   }
 
   if (failedJobs.length > 0) {
+    const statusContent = (
+      <>
+        <span
+          className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
+          aria-hidden="true"
+        />
+        <span className="hidden sm:inline">작업 실패</span>
+        <span className="sr-only">
+          {retryableFailedJobs.length > 0
+            ? '실패한 백그라운드 작업 다시 실행'
+            : '작업 실패'}
+        </span>
+      </>
+    );
+
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/8 hover:text-destructive"
-                onClick={() => {
-                  for (const job of failedJobs) runtime.retry(job.id);
-                }}
-              />
+              retryableFailedJobs.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/8 hover:text-destructive"
+                  onClick={() => {
+                    for (const job of retryableFailedJobs) {
+                      runtime.retry(job.id);
+                    }
+                  }}
+                />
+              ) : (
+                <div
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/8 px-2.5 text-xs font-medium text-destructive"
+                  role="status"
+                  aria-live="polite"
+                />
+              )
             }
           >
-            <span
-              className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
-              aria-hidden="true"
-            />
-            <span className="hidden sm:inline">백그라운드 작업 실패</span>
-            <span className="sr-only">실패한 백그라운드 작업 다시 실행</span>
+            {statusContent}
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-sm">
             {failedJobs.map((job) => (
@@ -136,8 +156,8 @@ export function ConsultingBackgroundStatus() {
         className="size-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-emerald-500)_16%,transparent)]"
         aria-hidden="true"
       />
-      <span className="hidden sm:inline">백그라운드 작업 완료</span>
-      <span className="sr-only sm:hidden">백그라운드 작업 완료</span>
+      <span className="hidden sm:inline">작업 완료</span>
+      <span className="sr-only sm:hidden">작업 완료</span>
     </div>
   );
 }
