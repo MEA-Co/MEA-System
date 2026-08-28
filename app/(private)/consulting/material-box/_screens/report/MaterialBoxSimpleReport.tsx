@@ -38,10 +38,6 @@ export function MaterialBoxSimpleReport({
 }: {
   data: MaterialBoxProgressScreenData;
 }) {
-  const selectedSuggestionCount = data.majorKeywords.reduce(
-    (count, entry) => count + entry.selectedSuggestions.length,
-    0,
-  );
   const strengths = [
     {
       label: '순수 계열 적합 역량',
@@ -168,7 +164,7 @@ export function MaterialBoxSimpleReport({
           <div className="rounded-2xl border border-slate-200 p-5">
             <div className="flex items-center gap-2 text-blue-700">
               <Target className="size-4" aria-hidden="true" />
-              <p className="text-xs font-bold tracking-[0.1em]">전공 가치관</p>
+              <p className="text-xs font-bold tracking-widest">전공 가치관</p>
             </div>
             <p className="mt-3 text-sm font-semibold leading-7 text-slate-900">
               {data.coreValue ?? '아직 저장된 전공 가치관이 없습니다.'}
