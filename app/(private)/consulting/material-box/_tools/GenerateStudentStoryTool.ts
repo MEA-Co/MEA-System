@@ -7,6 +7,17 @@ import {
 import type { ConsultingToolEntry } from '@/features/consulting/core/tools';
 import { requestLlm } from '@/features/llm';
 
+export const STUDENT_STORY_JOB_PREFIX = 'material-box:student-story:';
+
+export function createStudentStoryJobKey(input: GenerateStudentStoryToolInput) {
+  return `${STUDENT_STORY_JOB_PREFIX}${JSON.stringify(
+    input.majorKeywords.map(({ major, keyword }) => ({
+      major: major.replace(/\s+/g, ' ').trim(),
+      keyword: keyword.replace(/\s+/g, ' ').trim(),
+    })),
+  )}`;
+}
+
 const responseSchema = {
   type: 'object',
   properties: {

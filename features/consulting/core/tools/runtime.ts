@@ -10,13 +10,11 @@ export type ConsultingToolJobStatus =
   'queued' | 'running' | 'completed' | 'rejected' | 'cancelled';
 
 export type ConsultingToolRunPolicy = 'parallel' | 'reuse' | 'replace';
-export type ConsultingToolExecutionMode = 'blocking' | 'background';
 
 export type ConsultingToolRunOptions = {
   key?: string;
   groupId?: string;
   policy?: ConsultingToolRunPolicy;
-  executionMode?: ConsultingToolExecutionMode;
   label?: string;
 };
 
@@ -25,7 +23,6 @@ export type ConsultingToolJob = {
   toolId: string;
   key?: string;
   groupId?: string;
-  executionMode: ConsultingToolExecutionMode;
   label?: string;
   status: ConsultingToolJobStatus;
   input: unknown;
@@ -210,7 +207,6 @@ export function createConsultingToolRuntime(
         toolId: request.toolId,
         key: options.key,
         groupId: options.groupId,
-        executionMode: options.executionMode ?? 'blocking',
         label: options.label,
         status: 'queued',
         input: request.input,

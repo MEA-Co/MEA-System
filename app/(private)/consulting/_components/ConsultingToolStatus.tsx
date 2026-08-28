@@ -2,11 +2,7 @@
 
 import { useMemo } from 'react';
 
-import {
-  useConsultingToolRuntime,
-  useConsultingToolRuntimeSnapshot,
-} from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
-import { Button } from '@/components/ui/button';
+import { useConsultingToolRuntimeSnapshot } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import {
   Tooltip,
   TooltipContent,
@@ -15,7 +11,6 @@ import {
 } from '@/components/ui/tooltip';
 
 export function ConsultingToolStatus() {
-  const runtime = useConsultingToolRuntime();
   const snapshot = useConsultingToolRuntimeSnapshot();
   const jobs = useMemo(() => {
     const latestGroupByTool = new Map<
@@ -45,9 +40,6 @@ export function ConsultingToolStatus() {
   );
   const failedJobs = jobs.filter(
     (job) => job.status === 'rejected' || job.status === 'cancelled',
-  );
-  const retryableFailedJobs = failedJobs.filter(
-    (job) => job.executionMode === 'background',
   );
 
   if (jobs.length === 0) return null;
@@ -90,48 +82,24 @@ export function ConsultingToolStatus() {
   }
 
   if (failedJobs.length > 0) {
-    const statusContent = (
-      <>
-        <span
-          className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
-          aria-hidden="true"
-        />
-        <span className="hidden sm:inline">작업 실패</span>
-        <span className="sr-only">
-          {retryableFailedJobs.length > 0
-            ? '실패한 백그라운드 작업 다시 실행'
-            : '작업 실패'}
-        </span>
-      </>
-    );
-
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
             render={
-              retryableFailedJobs.length > 0 ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/8 hover:text-destructive"
-                  onClick={() => {
-                    for (const job of retryableFailedJobs) {
-                      runtime.retry(job.id);
-                    }
-                  }}
-                />
-              ) : (
-                <div
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/8 px-2.5 text-xs font-medium text-destructive"
-                  role="status"
-                  aria-live="polite"
-                />
-              )
+              <div
+                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/8 px-2.5 text-xs font-medium text-destructive"
+                role="status"
+                aria-live="polite"
+              />
             }
           >
-            {statusContent}
+            <span
+              className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
+              aria-hidden="true"
+            />
+            <span className="hidden sm:inline">작업 실패</span>
+            <span className="sr-only">작업 실패</span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-sm">
             {failedJobs.map((job) => (

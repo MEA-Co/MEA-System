@@ -9,13 +9,13 @@ import { ConsultingPreviousButton } from '@/app/(private)/consulting/_components
 import { ConsultingProgressButton } from '@/app/(private)/consulting/_components/ConsultingProgressButton';
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
+import { useOptionalConsultingToolRuntimeSnapshot } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import {
-  isMaterialBoxProgressScreenData,
-  isMaterialBoxStudentStoryErrorScreenData,
+  isGenerateStudentStoryToolOutput,
   isMaterialBoxStudentStoryScreenData,
   type MaterialBoxProgressScreenData,
-  type MaterialBoxStudentStoryErrorScreenData,
+  type MaterialBoxStudentStoryScreenData,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
@@ -222,9 +222,11 @@ function MaterialBoxStudentStoryResultScreen({
 
 function MaterialBoxStudentStoryErrorScreen({
   data,
+  error,
   environment,
 }: {
-  data: MaterialBoxStudentStoryErrorScreenData;
+  data: MaterialBoxProgressScreenData;
+  error: string;
   environment: ConsultingScreenRenderEnvironment;
 }) {
   return (
@@ -233,7 +235,7 @@ function MaterialBoxStudentStoryErrorScreen({
 
       <StudentStoryMaterialBox
         data={data}
-        studentStoryContent={<StoryErrorContent error={data.error} />}
+        studentStoryContent={<StoryErrorContent error={error} />}
       />
 
       <ConsultingPrompter
@@ -249,7 +251,7 @@ function MaterialBoxStudentStoryErrorScreen({
         <ConsultingProgressButton
           className="border-destructive/25 bg-destructive/8 text-destructive shadow-sm hover:border-destructive/40 hover:bg-destructive/12"
           spacebarShortcut
-          onClick={() => environment.send({ type: 'user.next-explanation' })}
+          onClick={() => environment.send({ type: 'user.retry' })}
         >
           스토리 다시 만들기
         </ConsultingProgressButton>
@@ -258,43 +260,83 @@ function MaterialBoxStudentStoryErrorScreen({
   );
 }
 
-export const materialBoxStudentStoryPendingScreen = {
-  mode: 'dynamic',
-  validateData: isMaterialBoxProgressScreenData,
-  render: (request) => (
-    <MaterialBoxStudentStoryPendingScreen
-      data={request.data as MaterialBoxProgressScreenData}
+type StudentStoryViewState =
+  | { status: 'pending' }
+  | { status: 'completed'; studentStory: string }
+  | { status: 'rejected'; error: string };
+
+function MaterialBoxStudentStoryScreen({
+  data,
+  environment,
+}: {
+  data: MaterialBoxStudentStoryScreenData;
+  environment: ConsultingScreenRenderEnvironment;
+}) {
+  const runtimeSnapshot = useOptionalConsultingToolRuntimeSnapshot();
+  const latestJob = [...runtimeSnapshot.jobs]
+    .reverse()
+    .find((job) => data.jobKey !== undefined && job.key === data.jobKey);
+
+  let viewState: StudentStoryViewState;
+  if (data.taskState?.status === 'pending') {
+    viewState = { status: 'pending' };
+  } else if (data.taskState?.status === 'rejected') {
+    viewState = { status: 'rejected', error: data.taskState.error };
+  } else if (
+    data.taskState?.status === 'completed' &&
+    typeof data.studentStory === 'string'
+  ) {
+    viewState = { status: 'completed', studentStory: data.studentStory };
+  } else if (
+    latestJob?.status === 'completed' &&
+    isGenerateStudentStoryToolOutput(latestJob.output)
+  ) {
+    viewState = {
+      status: 'completed',
+      studentStory: latestJob.output.studentStory,
+    };
+  } else if (
+    latestJob?.status === 'rejected' ||
+    latestJob?.status === 'cancelled'
+  ) {
+    viewState = {
+      status: 'rejected',
+      error: latestJob.error?.message ?? '학생의 스토리를 만들지 못했습니다.',
+    };
+  } else if (typeof data.studentStory === 'string') {
+    viewState = { status: 'completed', studentStory: data.studentStory };
+  } else {
+    viewState = { status: 'pending' };
+  }
+
+  if (viewState.status === 'pending') {
+    return <MaterialBoxStudentStoryPendingScreen data={data} />;
+  }
+
+  if (viewState.status === 'rejected') {
+    return (
+      <MaterialBoxStudentStoryErrorScreen
+        data={data}
+        error={viewState.error}
+        environment={environment}
+      />
+    );
+  }
+
+  return (
+    <MaterialBoxStudentStoryResultScreen
+      data={{ ...data, studentStory: viewState.studentStory }}
+      environment={environment}
     />
-  ),
-} satisfies ConsultingRendererEntry<
-  ConsultingScreenRenderEnvironment,
-  ReactNode
->;
+  );
+}
 
 export const materialBoxStudentStoryScreen = {
   mode: 'dynamic',
   validateData: isMaterialBoxStudentStoryScreenData,
   render: (request, environment) => (
-    <MaterialBoxStudentStoryResultScreen
-      data={
-        request.data as MaterialBoxProgressScreenData & {
-          studentStory: string;
-        }
-      }
-      environment={environment}
-    />
-  ),
-} satisfies ConsultingRendererEntry<
-  ConsultingScreenRenderEnvironment,
-  ReactNode
->;
-
-export const materialBoxStudentStoryErrorScreen = {
-  mode: 'dynamic',
-  validateData: isMaterialBoxStudentStoryErrorScreenData,
-  render: (request, environment) => (
-    <MaterialBoxStudentStoryErrorScreen
-      data={request.data as MaterialBoxStudentStoryErrorScreenData}
+    <MaterialBoxStudentStoryScreen
+      data={request.data as MaterialBoxStudentStoryScreenData}
       environment={environment}
     />
   ),

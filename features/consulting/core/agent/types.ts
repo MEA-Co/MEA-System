@@ -7,8 +7,7 @@ import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer
 import type { ConsultingToolRunOptions } from '@/features/consulting/core/tools';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
-export type ConsultingPhase =
-  'waiting-for-user' | 'running-tools' | 'complete' | 'error';
+export type ConsultingPhase = 'waiting-for-user' | 'complete' | 'error';
 
 export type ConsultingScreen = {
   id: string;
@@ -29,7 +28,6 @@ export type ConsultingModuleCall = {
   toolName: string;
   nodeId: string;
   input: unknown;
-  behavior?: 'blocking' | 'background';
   runOptions?: ConsultingToolRunOptions;
   resultKey?: string;
 };

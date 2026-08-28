@@ -110,14 +110,14 @@ export const materialBoxReviewPlan = {
         },
         {
           id: 'story-pending',
-          nodeId: 'generate-student-story',
+          nodeId: 'student-story',
           stateLabel: '생성 중',
           section: '진행 단계',
           description: '학생 스토리를 생성하는 동안 표시되는 화면',
           renderTarget: {
-            screenId: 'material-box.student-story-pending',
+            screenId: 'material-box.student-story',
             mode: 'dynamic',
-            data: { majorKeywords },
+            data: { majorKeywords, taskState: { status: 'pending' } },
           },
           previousSceneId: 'keyword',
           nextSceneId: 'story-result',
@@ -131,7 +131,11 @@ export const materialBoxReviewPlan = {
           renderTarget: {
             screenId: 'material-box.student-story',
             mode: 'dynamic',
-            data: { majorKeywords, studentStory },
+            data: {
+              majorKeywords,
+              studentStory,
+              taskState: { status: 'completed' },
+            },
           },
           previousSceneId: 'keyword',
           nextSceneId: 'core-value',
@@ -193,22 +197,25 @@ export const materialBoxReviewPlan = {
         },
         {
           id: 'story-error',
-          nodeId: 'student-story-error',
+          nodeId: 'student-story',
           stateLabel: '생성 실패',
           section: '예외 상태',
           description: '스토리 생성에 실패했을 때 표시되는 재시도 화면',
           renderTarget: {
-            screenId: 'material-box.student-story-error',
+            screenId: 'material-box.student-story',
             mode: 'dynamic',
             data: {
               majorKeywords,
-              error:
-                '학생 스토리를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.',
+              taskState: {
+                status: 'rejected',
+                error:
+                  '학생 스토리를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.',
+              },
             },
           },
           previousSceneId: 'keyword',
           nextSceneId: 'story-pending',
-          on: { 'user.next-explanation': 'story-pending' },
+          on: { 'user.retry': 'story-pending' },
         },
       ],
     },

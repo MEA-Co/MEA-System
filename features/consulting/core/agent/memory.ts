@@ -16,6 +16,7 @@ export type ConsultingMemoryStore<Context extends object> = {
   recordUserAction: (nodeId: string, action: ConsultingUserAction) => void;
   recordToolResult: (nodeId: string, result: unknown) => void;
   recordToolError: (nodeId: string, error: ConsultingToolError) => void;
+  clearToolOutcome: (nodeId: string) => void;
   setContext: (context: Context) => void;
 };
 
@@ -54,6 +55,17 @@ export function createConsultingMemory<Context extends object>(
         ...memory,
         toolErrors: { ...memory.toolErrors, [nodeId]: error },
         lastToolError: error,
+      };
+    },
+    clearToolOutcome: (nodeId) => {
+      const { [nodeId]: _result, ...toolResults } = memory.toolResults;
+      const { [nodeId]: _error, ...toolErrors } = memory.toolErrors;
+      memory = {
+        ...memory,
+        toolResults,
+        toolErrors,
+        lastToolResult: undefined,
+        lastToolError: null,
       };
     },
     setContext: (context) => {

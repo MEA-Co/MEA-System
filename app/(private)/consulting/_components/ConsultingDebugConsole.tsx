@@ -56,7 +56,6 @@ const phaseLabels: Record<
   string
 > = {
   'waiting-for-user': 'WAITING FOR USER',
-  'running-tools': 'RUNNING TOOLS',
   complete: 'COMPLETE',
   error: 'ERROR',
 };

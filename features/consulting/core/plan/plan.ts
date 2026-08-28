@@ -1,6 +1,7 @@
 import type {
   ConsultingPlan,
   ConsultingPlanNode,
+  ConsultingPlanTransition,
 } from '@/features/consulting/core/plan/types';
 
 function assertTargetExists<Context extends object, Tools extends object>(
@@ -13,6 +14,15 @@ function assertTargetExists<Context extends object, Tools extends object>(
       `${sourceId}가 참조하는 Node를 찾을 수 없습니다: ${targetId}`,
     );
   }
+}
+
+function getStaticTransitionTarget<Context extends object>(
+  transition: ConsultingPlanTransition<Context> | undefined,
+) {
+  if (!transition) return undefined;
+  const target =
+    typeof transition === 'object' ? transition.target : transition;
+  return typeof target === 'string' ? target : undefined;
 }
 
 export function defineConsultingPlan<
@@ -32,22 +42,12 @@ export function defineConsultingPlan<
       throw new Error(`Node에 label이 필요합니다: ${nodeId}`);
     }
 
-    if (node.type === 'screen') {
-      for (const transition of Object.values(node.on ?? {})) {
-        if (typeof transition === 'string') {
-          assertTargetExists(nodes, nodeId, transition);
-        }
+    for (const transition of Object.values(node.on ?? {})) {
+      const targetId = getStaticTransitionTarget(transition);
+      if (targetId) {
+        assertTargetExists(nodes, nodeId, targetId);
       }
-      continue;
     }
-
-    if (!node.toolId.trim()) {
-      throw new Error(`Tool Node에 toolId가 필요합니다: ${nodeId}`);
-    }
-    if (typeof node.next === 'string') {
-      assertTargetExists(nodes, nodeId, node.next);
-    }
-    assertTargetExists(nodes, nodeId, node.onRejected);
   }
 
   return plan;

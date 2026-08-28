@@ -7,10 +7,16 @@ import {
   useSyncExternalStore,
 } from 'react';
 
-import type { ConsultingToolRuntime } from '@/features/consulting/core/tools';
+import type {
+  ConsultingToolRuntime,
+  ConsultingToolRuntimeSnapshot,
+} from '@/features/consulting/core/tools';
 
 const ConsultingToolRuntimeContext =
   createContext<ConsultingToolRuntime | null>(null);
+const emptySnapshot: ConsultingToolRuntimeSnapshot = { jobs: [] };
+const subscribeToNothing = () => () => undefined;
+const getEmptySnapshot = () => emptySnapshot;
 
 export function ConsultingToolRuntimeProvider({
   runtime,
@@ -42,5 +48,14 @@ export function useConsultingToolRuntimeSnapshot() {
     runtime.subscribe,
     runtime.getSnapshot,
     runtime.getSnapshot,
+  );
+}
+
+export function useOptionalConsultingToolRuntimeSnapshot() {
+  const runtime = useContext(ConsultingToolRuntimeContext);
+  return useSyncExternalStore(
+    runtime?.subscribe ?? subscribeToNothing,
+    runtime?.getSnapshot ?? getEmptySnapshot,
+    runtime?.getSnapshot ?? getEmptySnapshot,
   );
 }

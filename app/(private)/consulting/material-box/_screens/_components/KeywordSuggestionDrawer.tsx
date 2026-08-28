@@ -31,6 +31,7 @@ type KeywordSuggestionDrawerProps = {
   selectedSuggestions: ReadonlyArray<ReadonlyArray<KeywordSuggestion>>;
   onToggle: (majorIndex: number, suggestion: KeywordSuggestion) => void;
   onApply: () => void;
+  onRetry: () => void;
 };
 
 function SuggestionSource({
@@ -68,11 +69,13 @@ export function KeywordSuggestionDrawer({
   selectedSuggestions,
   onToggle,
   onApply,
+  onRetry,
 }: KeywordSuggestionDrawerProps) {
   const { status, results } = useKeywordSuggestions();
   const [open, setOpen] = useState(false);
   const [activeMajorIndex, setActiveMajorIndex] = useState(0);
   const isReady = status === 'ready' && results.length === majors.length;
+  const isError = status === 'error';
   const activeResult = results[activeMajorIndex];
   const selectedCount = useMemo(
     () => selectedSuggestions.reduce((count, items) => count + items.length, 0),
@@ -83,21 +86,31 @@ export function KeywordSuggestionDrawer({
     <Button
       type="button"
       variant="outline"
-      disabled={!isReady}
+      disabled={!isReady && !isError}
       className={cn(
         'group transition-all',
         isReady
           ? 'border-violet-400/35 bg-linear-to-r from-violet-500/10 via-fuchsia-500/10 to-sky-500/10 shadow-sm hover:border-violet-400/60 hover:from-violet-500/15 hover:via-fuchsia-500/15 hover:to-sky-500/15 hover:shadow-md'
-          : 'border-border bg-muted text-muted-foreground shadow-none dark:bg-muted',
+          : isError
+            ? 'border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10'
+            : 'border-border bg-muted text-muted-foreground shadow-none dark:bg-muted',
       )}
-      onClick={() => setOpen(true)}
+      onClick={() => {
+        if (isError) {
+          onRetry();
+          return;
+        }
+        setOpen(true);
+      }}
     >
       <Sparkles
         className={cn(
           'transition-transform',
           isReady
             ? 'text-violet-500 group-hover:rotate-6 group-hover:scale-110'
-            : 'text-muted-foreground',
+            : isError
+              ? 'text-destructive'
+              : 'text-muted-foreground',
         )}
         aria-hidden="true"
       />
@@ -106,17 +119,19 @@ export function KeywordSuggestionDrawer({
           'font-semibold',
           isReady
             ? 'bg-linear-to-r from-violet-600 via-fuchsia-600 to-sky-600 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-sky-300'
-            : 'text-muted-foreground',
+            : isError
+              ? 'text-destructive'
+              : 'text-muted-foreground',
         )}
       >
-        키워드를 정하기 어려워요
+        {isError ? '키워드 제안 다시 받기' : '키워드를 정하기 어려워요'}
       </span>
     </Button>
   );
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      {!isReady ? (
+      {!isReady && !isError ? (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger
@@ -131,9 +146,7 @@ export function KeywordSuggestionDrawer({
               {trigger}
             </TooltipTrigger>
             <TooltipContent side="top">
-              {status === 'error'
-                ? '키워드 제안을 받아오지 못했습니다.'
-                : '추천 키워드를 준비하는 중입니다...'}
+              추천 키워드를 준비하는 중입니다...
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

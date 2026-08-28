@@ -7,11 +7,7 @@ import { materialBoxKeywordScreen } from '@/app/(private)/consulting/material-bo
 import { materialBoxMajorScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxMajorScreen';
 import { materialBoxOverviewScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxOverviewScreen';
 import { materialBoxStrengthScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxStrengthScreen';
-import {
-  materialBoxStudentStoryErrorScreen,
-  materialBoxStudentStoryPendingScreen,
-  materialBoxStudentStoryScreen,
-} from '@/app/(private)/consulting/material-box/_screens/MaterialBoxStudentStoryScreen';
+import { materialBoxStudentStoryScreen } from '@/app/(private)/consulting/material-box/_screens/MaterialBoxStudentStoryScreen';
 import { materialBoxCompleteScreen } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxCompleteScreen';
 import { createConsultingRenderer } from '@/features/consulting/core/renderer';
 
@@ -23,9 +19,7 @@ export const materialBoxRenderer = createConsultingRenderer<
   'material-box.overview': materialBoxOverviewScreen,
   'material-box.major': materialBoxMajorScreen,
   'material-box.keyword': materialBoxKeywordScreen,
-  'material-box.student-story-pending': materialBoxStudentStoryPendingScreen,
   'material-box.student-story': materialBoxStudentStoryScreen,
-  'material-box.student-story-error': materialBoxStudentStoryErrorScreen,
   'material-box.core-value': materialBoxCoreValueScreen,
   'material-box.field-strength': materialBoxStrengthScreen,
   'material-box.complete': materialBoxCompleteScreen,

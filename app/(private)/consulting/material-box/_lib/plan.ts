@@ -10,8 +10,11 @@ import {
   createKeywordSuggestionJobKey,
   isKeywordSuggestion,
 } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
+import { createStudentStoryJobKey } from '@/app/(private)/consulting/material-box/_tools/GenerateStudentStoryTool';
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
+
+const STUDENT_STORY_RESULT_KEY = 'generate-student-story';
 
 function getSubmittedMajors(memory: ConsultingMemory<MaterialBoxContext>) {
   const action = memory.actions.major;
@@ -32,6 +35,22 @@ function getSubmittedMajors(memory: ConsultingMemory<MaterialBoxContext>) {
   }
 
   return majors as Array<string>;
+}
+
+function createKeywordSuggestionEffects(
+  memory: ConsultingMemory<MaterialBoxContext>,
+) {
+  const majors = getSubmittedMajors(memory);
+  const groupId = createKeywordSuggestionGroupId(majors);
+
+  return majors.map((major, majorIndex) => ({
+    toolId: 'keyword-suggestions.generate' as const,
+    input: { major, majors },
+    key: createKeywordSuggestionJobKey(groupId, majorIndex),
+    groupId,
+    policy: 'reuse' as const,
+    label: `${major} 세부 키워드 제안`,
+  }));
 }
 
 function getSubmittedText(
@@ -90,7 +109,7 @@ function getSubmittedMajorKeywords(
 function getGeneratedStudentStory(
   memory: ConsultingMemory<MaterialBoxContext>,
 ) {
-  const result = memory.toolResults['generate-student-story'];
+  const result = memory.toolResults[STUDENT_STORY_RESULT_KEY];
   if (result === undefined) return undefined;
 
   if (!isGenerateStudentStoryToolOutput(result)) {
@@ -98,6 +117,25 @@ function getGeneratedStudentStory(
   }
 
   return result.studentStory;
+}
+
+function createStudentStoryEffect(
+  memory: ConsultingMemory<MaterialBoxContext>,
+) {
+  const input = { majorKeywords: getSubmittedMajorKeywords(memory) };
+  const jobKey = createStudentStoryJobKey(input);
+
+  return [
+    {
+      toolId: 'student-story.generate' as const,
+      input,
+      key: jobKey,
+      groupId: jobKey,
+      policy: 'replace' as const,
+      label: '학생 스토리 생성',
+      resultKey: STUDENT_STORY_RESULT_KEY,
+    },
+  ];
 }
 
 function getSubmittedStrengths(
@@ -199,19 +237,7 @@ export const materialBoxPlan = defineConsultingPlan<
         'user.previous-explanation': 'material-box-overview',
       },
       effects: {
-        'user.submit': ({ memory }) => {
-          const majors = getSubmittedMajors(memory);
-          const groupId = createKeywordSuggestionGroupId(majors);
-
-          return majors.map((major, majorIndex) => ({
-            toolId: 'keyword-suggestions.generate',
-            input: { major, majors },
-            key: createKeywordSuggestionJobKey(groupId, majorIndex),
-            groupId,
-            policy: 'reuse',
-            label: `${major} 세부 키워드 제안`,
-          }));
-        },
+        'user.submit': ({ memory }) => createKeywordSuggestionEffects(memory),
       },
     },
     keyword: {
@@ -242,46 +268,13 @@ export const materialBoxPlan = defineConsultingPlan<
         };
       },
       on: {
-        'user.submit': 'generate-student-story',
+        'user.submit': 'student-story',
         'user.previous-explanation': 'major',
       },
-    },
-    'generate-student-story': {
-      id: 'generate-student-story',
-      label: '학생 스토리',
-      type: 'tool',
-      toolId: 'student-story.generate',
-      input: (memory) => ({
-        majorKeywords: getSubmittedMajorKeywords(memory),
-      }),
-      runOptions: {
-        key: 'material-box:student-story',
-        policy: 'replace',
-        label: '학생 스토리 생성',
+      effects: {
+        'user.submit': ({ memory }) => createStudentStoryEffect(memory),
+        'user.retry': ({ memory }) => createKeywordSuggestionEffects(memory),
       },
-      pendingScreen: (memory) => ({
-        screenId: 'material-box.student-story-pending',
-        mode: 'dynamic',
-        data: getProgressScreenData(memory),
-      }),
-      next: 'student-story',
-      onRejected: 'student-story-error',
-    },
-    'student-story-error': {
-      id: 'student-story-error',
-      label: '학생 스토리',
-      type: 'screen',
-      screen: (memory) => ({
-        screenId: 'material-box.student-story-error',
-        mode: 'dynamic',
-        data: {
-          ...getProgressScreenData(memory),
-          error:
-            memory.toolErrors['generate-student-story']?.message ??
-            '학생의 스토리를 만들지 못했습니다.',
-        },
-      }),
-      on: { 'user.next-explanation': 'generate-student-story' },
     },
     'student-story': {
       id: 'student-story',
@@ -290,11 +283,23 @@ export const materialBoxPlan = defineConsultingPlan<
       screen: (memory) => ({
         screenId: 'material-box.student-story',
         mode: 'dynamic',
-        data: getProgressScreenData(memory),
+        data: {
+          ...getProgressScreenData(memory),
+          jobKey: createStudentStoryJobKey({
+            majorKeywords: getSubmittedMajorKeywords(memory),
+          }),
+        },
       }),
       on: {
-        'user.next-explanation': 'core-value',
+        'user.next-explanation': {
+          target: 'core-value',
+          guard: ({ memory }) => getGeneratedStudentStory(memory) !== undefined,
+        },
         'user.previous-explanation': 'keyword',
+        'user.retry': 'student-story',
+      },
+      effects: {
+        'user.retry': ({ memory }) => createStudentStoryEffect(memory),
       },
     },
     'core-value': {

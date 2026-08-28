@@ -181,6 +181,7 @@ function MaterialBoxKeywordScreen({
               selectedSuggestions={selectedSuggestions}
               onToggle={toggleSuggestion}
               onApply={applySelectedSuggestions}
+              onRetry={() => environment.send({ type: 'user.retry' })}
             />
           }
         />

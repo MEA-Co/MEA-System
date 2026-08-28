@@ -52,9 +52,15 @@ export type GenerateStudentStoryToolOutput = {
   studentStory: string;
 };
 
-export type MaterialBoxStudentStoryErrorScreenData =
+export type MaterialBoxStudentStoryTaskState =
+  | { status: 'pending' }
+  | { status: 'completed' }
+  | { status: 'rejected'; error: string };
+
+export type MaterialBoxStudentStoryScreenData =
   MaterialBoxProgressScreenData & {
-    error: string;
+    jobKey?: string;
+    taskState?: MaterialBoxStudentStoryTaskState;
   };
 
 function isMaterialBoxMajorKeyword(
@@ -175,10 +181,39 @@ export function isMaterialBoxProgressScreenData(
 
 export function isMaterialBoxStudentStoryScreenData(
   value: unknown,
-): value is MaterialBoxProgressScreenData & { studentStory: string } {
+): value is MaterialBoxStudentStoryScreenData {
+  if (!isMaterialBoxProgressScreenData(value)) return false;
+  if (
+    'jobKey' in value &&
+    value.jobKey !== undefined &&
+    (typeof value.jobKey !== 'string' || value.jobKey.length === 0)
+  ) {
+    return false;
+  }
+  if (!('taskState' in value) || value.taskState === undefined) return true;
+  if (typeof value.taskState !== 'object' || value.taskState === null) {
+    return false;
+  }
+  const taskState = value.taskState as Record<string, unknown>;
+
+  if (
+    taskState.status !== 'pending' &&
+    taskState.status !== 'completed' &&
+    taskState.status !== 'rejected'
+  ) {
+    return false;
+  }
+
+  if (
+    taskState.status === 'completed' &&
+    typeof value.studentStory !== 'string'
+  ) {
+    return false;
+  }
+
   return (
-    isMaterialBoxProgressScreenData(value) &&
-    typeof value.studentStory === 'string'
+    taskState.status !== 'rejected' ||
+    (typeof taskState.error === 'string' && taskState.error.trim().length > 0)
   );
 }
 
@@ -199,17 +234,6 @@ export function isMaterialBoxStrengthScreenData(
     isMaterialBoxProgressScreenData(value) &&
     'startAtInput' in value &&
     typeof value.startAtInput === 'boolean'
-  );
-}
-
-export function isMaterialBoxStudentStoryErrorScreenData(
-  value: unknown,
-): value is MaterialBoxStudentStoryErrorScreenData {
-  return (
-    isMaterialBoxProgressScreenData(value) &&
-    'error' in value &&
-    typeof value.error === 'string' &&
-    value.error.trim().length > 0
   );
 }
 

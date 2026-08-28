@@ -1,9 +1,6 @@
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
-import type {
-  ConsultingToolRunOptions,
-  ConsultingToolRunPolicy,
-} from '@/features/consulting/core/tools';
+import type { ConsultingToolRunPolicy } from '@/features/consulting/core/tools';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
 export type ConsultingToolId<Tools extends object> = Tools extends {
@@ -15,12 +12,20 @@ export type ConsultingToolId<Tools extends object> = Tools extends {
 export type ConsultingValueResolver<Context extends object, Value> =
   Value | ((memory: ConsultingMemory<Context>) => Value);
 
+export type ConsultingPlanTransitionParams<Context extends object> = {
+  action: ConsultingUserAction;
+  memory: ConsultingMemory<Context>;
+};
+
+export type ConsultingPlanTransitionTarget<Context extends object> =
+  string | ((params: ConsultingPlanTransitionParams<Context>) => string);
+
 export type ConsultingPlanTransition<Context extends object> =
-  | string
-  | ((params: {
-      action: ConsultingUserAction;
-      memory: ConsultingMemory<Context>;
-    }) => string);
+  | ConsultingPlanTransitionTarget<Context>
+  | {
+      target: ConsultingPlanTransitionTarget<Context>;
+      guard: (params: ConsultingPlanTransitionParams<Context>) => boolean;
+    };
 
 export type ConsultingScreenProgress = {
   current: number;
@@ -67,31 +72,10 @@ export type ConsultingScreenNode<
   terminal?: boolean;
 };
 
-export type ConsultingToolResultParams<Context extends object> = {
-  context: Readonly<Context>;
-  output: unknown;
-  memory: ConsultingMemory<Context>;
-};
-
-export type ConsultingToolNode<Context extends object, Tools extends object> = {
-  id: string;
-  label: string;
-  type: 'tool';
-  toolId: ConsultingToolId<Tools>;
-  input: (memory: ConsultingMemory<Context>) => unknown;
-  runOptions?: ConsultingValueResolver<
-    Context,
-    Omit<ConsultingToolRunOptions, 'executionMode'>
-  >;
-  pendingScreen?: ConsultingValueResolver<Context, ConsultingRenderTarget>;
-  progress?: ConsultingScreenProgress;
-  next: string | ((params: ConsultingToolResultParams<Context>) => string);
-  onRejected: string;
-  reduce?: (params: ConsultingToolResultParams<Context>) => Context;
-};
-
-export type ConsultingPlanNode<Context extends object, Tools extends object> =
-  ConsultingScreenNode<Context, Tools> | ConsultingToolNode<Context, Tools>;
+export type ConsultingPlanNode<
+  Context extends object,
+  Tools extends object,
+> = ConsultingScreenNode<Context, Tools>;
 
 export type ConsultingPlan<Context extends object, Tools extends object> = {
   id: string;

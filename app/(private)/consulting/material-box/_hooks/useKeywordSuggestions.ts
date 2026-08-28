@@ -1,11 +1,8 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import {
-  useConsultingToolRuntime,
-  useConsultingToolRuntimeSnapshot,
-} from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
+import { useOptionalConsultingToolRuntimeSnapshot } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import {
   type GenerateKeywordSuggestionsToolOutput,
   isGenerateKeywordSuggestionsToolOutput,
@@ -15,7 +12,7 @@ import {
 export type KeywordSuggestionStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 function getLatestKeywordSuggestionGroupId(
-  jobs: ReturnType<typeof useConsultingToolRuntimeSnapshot>['jobs'],
+  jobs: ReturnType<typeof useOptionalConsultingToolRuntimeSnapshot>['jobs'],
 ) {
   let latestGroupId: string | null = null;
   let latestCreatedAt = -1;
@@ -31,8 +28,7 @@ function getLatestKeywordSuggestionGroupId(
 }
 
 export function useKeywordSuggestions() {
-  const runtime = useConsultingToolRuntime();
-  const snapshot = useConsultingToolRuntimeSnapshot();
+  const snapshot = useOptionalConsultingToolRuntimeSnapshot();
 
   const state = useMemo(() => {
     const groupId = getLatestKeywordSuggestionGroupId(snapshot.jobs);
@@ -94,10 +90,5 @@ export function useKeywordSuggestions() {
     };
   }, [snapshot.jobs]);
 
-  const retry = useCallback(() => {
-    if (!state.groupId) return;
-    runtime.retryGroup(state.groupId, { failedOnly: true });
-  }, [runtime, state.groupId]);
-
-  return { ...state, retry };
+  return state;
 }
