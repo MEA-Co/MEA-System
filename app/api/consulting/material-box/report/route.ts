@@ -1,8 +1,8 @@
-import { renderToBuffer } from '@react-pdf/renderer';
 import { NextResponse } from 'next/server';
 
 import { createMaterialBoxReportDocument } from '@/app/(private)/consulting/material-box/_report/document';
 import { isMaterialBoxReportRequest } from '@/app/(private)/consulting/material-box/_report/protocol';
+import { createPdfDownloadResponse } from '@/features/consulting/report/server';
 import { getUserAccess, hasRole } from '@/lib/auth';
 import { MEMBER_ROLES } from '@/lib/profile';
 
@@ -47,17 +47,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const pdfBuffer = await renderToBuffer(
+    return await createPdfDownloadResponse(
       createMaterialBoxReportDocument(body.report),
+      body.fileName,
     );
-
-    return new Response(new Uint8Array(pdfBuffer), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(body.fileName)}`,
-        'Cache-Control': 'private, no-store',
-      },
-    });
   } catch {
     return NextResponse.json(
       { error: 'PDF 생성 중 오류가 발생했습니다.' },

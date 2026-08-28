@@ -32,7 +32,6 @@ import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(p
 import { MaterialBoxSimpleReport } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxSimpleReport';
 import { Button } from '@/components/ui/button';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
-import { downloadConsultingReport } from '@/features/consulting/report/client';
 
 type MaterialBoxReportType = 'engineering' | 'humanities';
 
@@ -87,7 +86,7 @@ function MaterialBoxExampleReport() {
     try {
       const selectedReport =
         type === 'engineering' ? engineeringReport : humanitiesReport;
-      await downloadConsultingReport(
+      await downloadMaterialBoxReport(
         createMaterialBoxExampleReportRequest(selectedReport),
       );
     } catch (error) {

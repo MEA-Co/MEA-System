@@ -353,7 +353,7 @@ function MajorCard({
       </View>
       <View style={styles.suggestions}>
         <Text style={styles.suggestionsTitle}>
-          제안 목록에서 내가 선택한 항목
+          MEA의 추천 키워드
         </Text>
         {entry.selectedSuggestions.length > 0 ? (
           <View style={styles.suggestionGrid}>

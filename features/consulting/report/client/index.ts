@@ -1,4 +1,6 @@
-import type { ConsultingReportRequest } from '@/features/consulting/report';
+'use client';
+
+import type { PdfDownloadRequest } from '@/features/consulting/report';
 
 function getResponseError(value: unknown) {
   if (
@@ -12,13 +14,15 @@ function getResponseError(value: unknown) {
   return null;
 }
 
-export async function downloadConsultingReport(
-  request: ConsultingReportRequest,
-) {
-  const response = await fetch('/api/consulting/report', {
+export async function downloadPdfReport({
+  endpoint,
+  fileName,
+  body,
+}: PdfDownloadRequest) {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify(body),
     cache: 'no-store',
   });
 
@@ -35,7 +39,7 @@ export async function downloadConsultingReport(
   const anchor = document.createElement('a');
 
   anchor.href = url;
-  anchor.download = request.fileName;
+  anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
