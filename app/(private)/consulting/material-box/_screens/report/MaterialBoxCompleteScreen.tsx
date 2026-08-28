@@ -16,10 +16,14 @@ import { type ReactNode, useState } from 'react';
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import { ConsultingScreenView } from '@/app/(private)/consulting/_components/ConsultingScreenView';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
-import { isMaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import {
+  isMaterialBoxProgressScreenData,
+  type MaterialBoxProgressScreenData,
+} from '@/app/(private)/consulting/material-box/_lib/types';
 import { createMaterialBoxExampleReportRequest } from '@/app/(private)/consulting/material-box/_report/content';
 import { exampleMaterialBoxReport as engineeringReport } from '@/app/(private)/consulting/material-box/_screens/report/example-report';
 import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(private)/consulting/material-box/_screens/report/humanities-example-report';
+import { MaterialBoxSimpleReport } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxSimpleReport';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 import { downloadConsultingReport } from '@/features/consulting/report/client';
 
@@ -668,16 +672,46 @@ function MaterialBoxExampleReport() {
   );
 }
 
-function MaterialBoxCompleteScreen() {
+function MaterialBoxCompleteScreen({
+  data,
+  showExampleReports,
+}: {
+  data: MaterialBoxProgressScreenData;
+  showExampleReports: boolean;
+}) {
   return (
     <ConsultingScreenView>
-      <MaterialBoxExampleReport />
+      <div className="space-y-12">
+        <MaterialBoxSimpleReport data={data} />
+
+        {showExampleReports ? (
+          <section aria-labelledby="example-reports-title">
+            <div className="mx-auto mb-5 w-full max-w-5xl border-t border-slate-200 pt-8">
+              <p className="text-xs font-bold tracking-[0.14em] text-blue-600">
+                CONSULTANT · ADMIN ONLY
+              </p>
+              <h2
+                id="example-reports-title"
+                className="mt-2 text-xl font-bold tracking-tight text-slate-950 md:text-2xl"
+              >
+                완성형 예시 리포트
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                컨설턴트와 관리자가 결과 확장 방향을 참고할 수 있는 예시입니다.
+              </p>
+            </div>
+            <MaterialBoxExampleReport />
+          </section>
+        ) : null}
+      </div>
       <ConsultingPrompter
         animateTyping
         message={{
           segments: [
             {
-              text: '좋습니다! 진로의 모습, 중요 가치, 분야 역량, 평소의 장점이 어떻게 하나의 브랜드와 생기부 전략으로 이어지는지 리포트 예시로 정리했습니다.',
+              text: showExampleReports
+                ? '좋습니다! 지금까지 입력한 내용은 위의 재료함 리포트에 정리했고, 결과를 더 확장하는 방식은 완성형 예시 리포트로 함께 보여드렸습니다.'
+                : '좋습니다! 지금까지 선택하고 작성한 전공 키워드, 학생 스토리, 가치관과 역량을 나의 재료함 리포트로 정리했습니다.',
             },
           ],
         }}
@@ -689,7 +723,15 @@ function MaterialBoxCompleteScreen() {
 export const materialBoxCompleteScreen = {
   mode: 'dynamic',
   validateData: isMaterialBoxProgressScreenData,
-  render: () => <MaterialBoxCompleteScreen />,
+  render: (request, environment) => (
+    <MaterialBoxCompleteScreen
+      data={request.data as MaterialBoxProgressScreenData}
+      showExampleReports={
+        environment.viewerRole === 'consultant' ||
+        environment.viewerRole === 'admin'
+      }
+    />
+  ),
 } satisfies ConsultingRendererEntry<
   ConsultingScreenRenderEnvironment,
   ReactNode

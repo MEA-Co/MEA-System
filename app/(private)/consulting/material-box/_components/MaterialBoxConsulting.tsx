@@ -10,13 +10,16 @@ import { materialBoxRenderer } from '@/app/(private)/consulting/material-box/_li
 import { materialBoxReviewPlan } from '@/app/(private)/consulting/material-box/_lib/review';
 import { materialBoxTools } from '@/app/(private)/consulting/material-box/_lib/tools';
 import { Button } from '@/components/ui/button';
+import type { MemberRole } from '@/lib/profile';
 
 type MaterialBoxConsultingProps = {
+  role: MemberRole;
   debug?: boolean;
   reviewEnabled?: boolean;
 };
 
 export function MaterialBoxConsulting({
+  role,
   debug = false,
   reviewEnabled = false,
 }: MaterialBoxConsultingProps) {
@@ -58,6 +61,7 @@ export function MaterialBoxConsulting({
           plan={materialBoxPlan}
           review={materialBoxReviewPlan}
           renderer={materialBoxRenderer}
+          viewerRole={role}
         />
       ) : (
         <ConsultingFlow
@@ -65,6 +69,7 @@ export function MaterialBoxConsulting({
           plan={materialBoxPlan}
           renderer={materialBoxRenderer}
           tools={materialBoxTools}
+          viewerRole={role}
         />
       )}
     </div>

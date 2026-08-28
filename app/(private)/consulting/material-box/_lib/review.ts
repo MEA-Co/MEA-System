@@ -2,24 +2,6 @@ import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/m
 import type { GenerateKeywordSuggestionsToolOutput } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import type { ConsultingReviewPlan } from '@/features/consulting/core/review';
 
-const majorKeywords = [
-  {
-    major: '산업공학',
-    keyword: '사람 중심 시스템 설계',
-    selectedSuggestions: [],
-  },
-  {
-    major: '컴퓨터공학',
-    keyword: '설명가능한 인공지능',
-    selectedSuggestions: [],
-  },
-  {
-    major: '심리학',
-    keyword: '인지와 의사결정',
-    selectedSuggestions: [],
-  },
-] as const;
-
 const studentStory =
   '데이터와 기술로 효율적인 답을 찾는 데서 멈추지 않고, 사람이 그 답을 이해하고 주체적으로 선택할 수 있는 시스템을 설계하려는 학생';
 const coreValue =
@@ -99,6 +81,14 @@ const keywordSuggestionResults = [
     ],
   },
 ] satisfies ReadonlyArray<GenerateKeywordSuggestionsToolOutput>;
+
+const majorKeywords = keywordSuggestionResults.map((result) => ({
+  major: result.major,
+  keyword: result.suggestions
+    .map((suggestion) => suggestion.keyword)
+    .join(', '),
+  selectedSuggestions: result.suggestions,
+}));
 
 const keywordScreenData = {
   majors: majorKeywords.map((entry) => entry.major),

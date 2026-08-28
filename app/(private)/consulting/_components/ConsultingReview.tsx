@@ -29,12 +29,14 @@ import type {
   ConsultingReviewTarget,
 } from '@/features/consulting/core/review';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
+import type { MemberRole } from '@/lib/profile';
 import { cn } from '@/lib/utils';
 
 type ConsultingReviewProps = {
   plan: ConsultingReviewSourcePlan;
   review: ConsultingReviewPlan;
   renderer: ConsultingRenderer<ConsultingScreenRenderEnvironment, ReactNode>;
+  viewerRole: MemberRole;
 };
 
 function findStep(steps: ReadonlyArray<ConsultingReviewStep>, stepId: string) {
@@ -45,6 +47,7 @@ export function ConsultingReview({
   plan,
   review,
   renderer,
+  viewerRole,
 }: ConsultingReviewProps) {
   const scenario = review.scenarios[0];
   const [stepId, setStepId] = useState(() => scenario?.steps[0]?.id ?? '');
@@ -131,6 +134,7 @@ export function ConsultingReview({
     ) : (
       renderer.render(state.renderTarget, {
         draftValue: drafts[draftKey] ?? '',
+        viewerRole,
         onDraftChange: (value) =>
           setDrafts((current) => ({ ...current, [draftKey]: value })),
         send: handleScreenAction,

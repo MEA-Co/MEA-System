@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import type { ConsultingPlan } from '@/features/consulting/core/plan';
 import type { ConsultingRenderer } from '@/features/consulting/core/renderer';
 import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
+import type { MemberRole } from '@/lib/profile';
 
 type ConsultingFlowProps<
   Context extends object,
@@ -21,6 +22,7 @@ type ConsultingFlowProps<
   plan: ConsultingPlan<Context, Tools>;
   tools: Tools;
   renderer: ConsultingRenderer<ConsultingScreenRenderEnvironment, ReactNode>;
+  viewerRole: MemberRole;
   debug?: boolean;
 };
 
@@ -31,6 +33,7 @@ export function ConsultingFlow<
   plan,
   tools,
   renderer,
+  viewerRole,
   debug = false,
 }: ConsultingFlowProps<Context, Tools>) {
   const { snapshot, toolRuntime, toolRuntimeSnapshot, memory, logs, send } =
@@ -61,6 +64,7 @@ export function ConsultingFlow<
   const renderedScreen = !rendererError ? (
     renderer.render(screen.renderTarget, {
       draftValue,
+      viewerRole,
       onDraftChange: (value) =>
         setDrafts((current) => ({
           sessionId: snapshot.sessionId,
