@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import type { DocumentProps } from '@react-pdf/renderer';
 import {
   Document,
@@ -12,24 +10,31 @@ import {
 } from '@react-pdf/renderer';
 import type { ReactElement, ReactNode } from 'react';
 
-import type {
-  MaterialBoxReportData,
-  MaterialBoxReportSuggestion,
-} from '@/app/(private)/consulting/material-box/_report/protocol';
+import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import type { KeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
+
+const serverProcess = (
+  globalThis as typeof globalThis & {
+    process?: { cwd?: () => string };
+  }
+).process;
+const fontBasePath = serverProcess?.cwd
+  ? `${serverProcess.cwd()}/public/fonts`
+  : '/fonts';
 
 Font.register({
   family: 'Pretendard',
   fonts: [
     {
-      src: path.join(process.cwd(), 'public/fonts/Pretendard-Regular.otf'),
+      src: `${fontBasePath}/Pretendard-Regular.otf`,
       fontWeight: 400,
     },
     {
-      src: path.join(process.cwd(), 'public/fonts/Pretendard-SemiBold.otf'),
+      src: `${fontBasePath}/Pretendard-SemiBold.otf`,
       fontWeight: 600,
     },
     {
-      src: path.join(process.cwd(), 'public/fonts/Pretendard-Bold.otf'),
+      src: `${fontBasePath}/Pretendard-Bold.otf`,
       fontWeight: 700,
     },
   ],
@@ -311,7 +316,7 @@ function SectionHeading({ number, title }: { number: string; title: string }) {
 function SuggestionCard({
   suggestion,
 }: {
-  suggestion: MaterialBoxReportSuggestion;
+  suggestion: KeywordSuggestion;
 }) {
   return (
     <View style={styles.suggestionCard}>
@@ -336,7 +341,7 @@ function MajorCard({
   entry,
   index,
 }: {
-  entry: MaterialBoxReportData['majorKeywords'][number];
+  entry: MaterialBoxProgressScreenData['majorKeywords'][number];
   index: number;
 }) {
   return (
@@ -352,9 +357,7 @@ function MajorCard({
         </View>
       </View>
       <View style={styles.suggestions}>
-        <Text style={styles.suggestionsTitle}>
-          MEA의 추천 키워드
-        </Text>
+        <Text style={styles.suggestionsTitle}>MEA의 추천 키워드</Text>
         {entry.selectedSuggestions.length > 0 ? (
           <View style={styles.suggestionGrid}>
             {entry.selectedSuggestions.map((suggestion, suggestionIndex) => (
@@ -411,7 +414,7 @@ function KeepTogether({ children }: { children: ReactNode }) {
 }
 
 export function createMaterialBoxReportDocument(
-  report: MaterialBoxReportData,
+  report: MaterialBoxProgressScreenData,
 ): ReactElement<DocumentProps> {
   return (
     <Document

@@ -1,5 +1,4 @@
 import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
-import type { MaterialBoxReportRequest } from '@/app/(private)/consulting/material-box/_report/protocol';
 
 export type MaterialBoxExampleReportData = {
   persona: {
@@ -65,14 +64,7 @@ export type MaterialBoxExampleReportData = {
   }>;
 };
 
-export function createMaterialBoxReportRequest(
-  report: MaterialBoxProgressScreenData,
-  fileName = 'MEA_나의_재료함_리포트.pdf',
-): MaterialBoxReportRequest {
-  return { fileName, report };
-}
-
-function createExampleReportData(
+export function createMaterialBoxExampleReportData(
   example: MaterialBoxExampleReportData,
 ): MaterialBoxProgressScreenData {
   return {
@@ -96,13 +88,4 @@ function createExampleReportData(
     majorFieldStrength: example.competencies[1]?.title,
     personalStrength: example.competencies[2]?.title,
   };
-}
-
-export function createMaterialBoxExampleReportRequest(
-  example: MaterialBoxExampleReportData,
-): MaterialBoxReportRequest {
-  return createMaterialBoxReportRequest(
-    createExampleReportData(example),
-    `${example.persona.name}_나의_재료함_리포트.pdf`,
-  );
 }

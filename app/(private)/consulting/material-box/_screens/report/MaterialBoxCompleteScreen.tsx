@@ -23,10 +23,7 @@ import {
   type MaterialBoxProgressScreenData,
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import { downloadMaterialBoxReport } from '@/app/(private)/consulting/material-box/_report/client';
-import {
-  createMaterialBoxExampleReportRequest,
-  createMaterialBoxReportRequest,
-} from '@/app/(private)/consulting/material-box/_report/content';
+import { createMaterialBoxExampleReportData } from '@/app/(private)/consulting/material-box/_report/content';
 import { exampleMaterialBoxReport as engineeringReport } from '@/app/(private)/consulting/material-box/_screens/report/example-report';
 import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(private)/consulting/material-box/_screens/report/humanities-example-report';
 import { MaterialBoxSimpleReport } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxSimpleReport';
@@ -87,7 +84,8 @@ function MaterialBoxExampleReport() {
       const selectedReport =
         type === 'engineering' ? engineeringReport : humanitiesReport;
       await downloadMaterialBoxReport(
-        createMaterialBoxExampleReportRequest(selectedReport),
+        createMaterialBoxExampleReportData(selectedReport),
+        `${selectedReport.persona.name}_나의_재료함_리포트.pdf`,
       );
     } catch (error) {
       setDownloadError(
@@ -695,7 +693,7 @@ function MaterialBoxCompleteScreen({
     setDownloadingMaterialReport(true);
 
     try {
-      await downloadMaterialBoxReport(createMaterialBoxReportRequest(data));
+      await downloadMaterialBoxReport(data);
     } catch (error) {
       setMaterialReportDownloadError(
         error instanceof Error
