@@ -133,7 +133,7 @@ export function KeywordSuggestionDrawer({
             <TooltipContent side="top">
               {status === 'error'
                 ? '키워드 제안을 받아오지 못했습니다.'
-                : '응답을 받아오는 중입니다...'}
+                : '추천 키워드를 준비하는 중입니다...'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
