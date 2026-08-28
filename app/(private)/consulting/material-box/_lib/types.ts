@@ -1,6 +1,7 @@
 import {
   type GenerateKeywordSuggestionsToolInput,
   type GenerateKeywordSuggestionsToolOutput,
+  isGenerateKeywordSuggestionsToolOutput,
   isKeywordSuggestion,
   type KeywordSuggestion,
 } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
@@ -8,11 +9,20 @@ import type { ConsultingTools } from '@/features/consulting/core/tools';
 
 export type MaterialBoxContext = Record<never, never>;
 
+export type MaterialBoxKeywordSuggestionTaskState =
+  | { status: 'pending' }
+  | {
+      status: 'completed';
+      results: ReadonlyArray<GenerateKeywordSuggestionsToolOutput>;
+    }
+  | { status: 'rejected'; error: string };
+
 export type MaterialBoxKeywordScreenData = {
   majors: ReadonlyArray<string>;
   keywords: ReadonlyArray<string>;
   selectedSuggestions: ReadonlyArray<ReadonlyArray<KeywordSuggestion>>;
   startAtInput: boolean;
+  suggestionTaskState?: MaterialBoxKeywordSuggestionTaskState;
 };
 
 export type MaterialBoxMajorKeyword = {
@@ -115,7 +125,7 @@ export function isGenerateStudentStoryToolOutput(
 export function isMaterialBoxKeywordScreenData(
   value: unknown,
 ): value is MaterialBoxKeywordScreenData {
-  return (
+  if (!(
     typeof value === 'object' &&
     value !== null &&
     'majors' in value &&
@@ -144,6 +154,42 @@ export function isMaterialBoxKeywordScreenData(
     ) &&
     'startAtInput' in value &&
     typeof value.startAtInput === 'boolean'
+  )) {
+    return false;
+  }
+
+  if (
+    !('suggestionTaskState' in value) ||
+    value.suggestionTaskState === undefined
+  ) {
+    return true;
+  }
+  if (
+    typeof value.suggestionTaskState !== 'object' ||
+    value.suggestionTaskState === null
+  ) {
+    return false;
+  }
+
+  const taskState = value.suggestionTaskState as Record<string, unknown>;
+  if (taskState.status === 'pending') return true;
+  if (taskState.status === 'rejected') {
+    return (
+      typeof taskState.error === 'string' && taskState.error.trim().length > 0
+    );
+  }
+  if (taskState.status !== 'completed' || !Array.isArray(taskState.results)) {
+    return false;
+  }
+
+  const majors = value.majors as ReadonlyArray<string>;
+  return (
+    taskState.results.length === majors.length &&
+    taskState.results.every(
+      (result, index) =>
+        isGenerateKeywordSuggestionsToolOutput(result) &&
+        result.major === majors[index],
+    )
   );
 }
 

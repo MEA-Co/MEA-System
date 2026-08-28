@@ -182,6 +182,7 @@ function MaterialBoxKeywordScreen({
               onToggle={toggleSuggestion}
               onApply={applySelectedSuggestions}
               onRetry={() => environment.send({ type: 'user.retry' })}
+              taskState={data.suggestionTaskState}
             />
           }
         />

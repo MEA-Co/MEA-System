@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import { useOptionalConsultingToolRuntimeSnapshot } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
+import type { MaterialBoxKeywordSuggestionTaskState } from '@/app/(private)/consulting/material-box/_lib/types';
 import {
   type GenerateKeywordSuggestionsToolOutput,
   isGenerateKeywordSuggestionsToolOutput,
@@ -27,10 +28,37 @@ function getLatestKeywordSuggestionGroupId(
   return latestGroupId;
 }
 
-export function useKeywordSuggestions() {
+export function useKeywordSuggestions(
+  taskState?: MaterialBoxKeywordSuggestionTaskState,
+) {
   const snapshot = useOptionalConsultingToolRuntimeSnapshot();
 
   const state = useMemo(() => {
+    if (taskState?.status === 'pending') {
+      return {
+        groupId: null,
+        status: 'loading' as const,
+        results: [] as ReadonlyArray<GenerateKeywordSuggestionsToolOutput>,
+        error: null,
+      };
+    }
+    if (taskState?.status === 'completed') {
+      return {
+        groupId: null,
+        status: 'ready' as const,
+        results: taskState.results,
+        error: null,
+      };
+    }
+    if (taskState?.status === 'rejected') {
+      return {
+        groupId: null,
+        status: 'error' as const,
+        results: [] as ReadonlyArray<GenerateKeywordSuggestionsToolOutput>,
+        error: taskState.error,
+      };
+    }
+
     const groupId = getLatestKeywordSuggestionGroupId(snapshot.jobs);
     if (!groupId) {
       return {
@@ -88,7 +116,7 @@ export function useKeywordSuggestions() {
       results,
       error: null,
     };
-  }, [snapshot.jobs]);
+  }, [snapshot.jobs, taskState]);
 
   return state;
 }

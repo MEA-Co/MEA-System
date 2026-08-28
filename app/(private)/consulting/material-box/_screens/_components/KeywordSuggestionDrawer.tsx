@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from 'react';
 
 import { useKeywordSuggestions } from '@/app/(private)/consulting/material-box/_hooks/useKeywordSuggestions';
+import type { MaterialBoxKeywordSuggestionTaskState } from '@/app/(private)/consulting/material-box/_lib/types';
 import type { KeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +33,7 @@ type KeywordSuggestionDrawerProps = {
   onToggle: (majorIndex: number, suggestion: KeywordSuggestion) => void;
   onApply: () => void;
   onRetry: () => void;
+  taskState?: MaterialBoxKeywordSuggestionTaskState;
 };
 
 function SuggestionSource({
@@ -70,8 +72,9 @@ export function KeywordSuggestionDrawer({
   onToggle,
   onApply,
   onRetry,
+  taskState,
 }: KeywordSuggestionDrawerProps) {
-  const { status, results } = useKeywordSuggestions();
+  const { status, results } = useKeywordSuggestions(taskState);
   const [open, setOpen] = useState(false);
   const [activeMajorIndex, setActiveMajorIndex] = useState(0);
   const isReady = status === 'ready' && results.length === majors.length;

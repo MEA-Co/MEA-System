@@ -24,8 +24,9 @@ import {
 import type { ConsultingRenderer } from '@/features/consulting/core/renderer';
 import type {
   ConsultingReviewPlan,
-  ConsultingReviewScene,
   ConsultingReviewSourcePlan,
+  ConsultingReviewStep,
+  ConsultingReviewTarget,
 } from '@/features/consulting/core/review';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 import { cn } from '@/lib/utils';
@@ -36,11 +37,8 @@ type ConsultingReviewProps = {
   renderer: ConsultingRenderer<ConsultingScreenRenderEnvironment, ReactNode>;
 };
 
-function findScene(
-  scenes: ReadonlyArray<ConsultingReviewScene>,
-  sceneId: string,
-) {
-  return scenes.find((scene) => scene.id === sceneId);
+function findStep(steps: ReadonlyArray<ConsultingReviewStep>, stepId: string) {
+  return steps.find((step) => step.id === stepId);
 }
 
 export function ConsultingReview({
@@ -49,10 +47,13 @@ export function ConsultingReview({
   renderer,
 }: ConsultingReviewProps) {
   const scenario = review.scenarios[0];
-  const [sceneId, setSceneId] = useState(() => scenario?.scenes[0]?.id ?? '');
+  const [stepId, setStepId] = useState(() => scenario?.steps[0]?.id ?? '');
+  const [selectedStateIds, setSelectedStateIds] = useState<
+    Record<string, string>
+  >({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  if (!scenario || scenario.scenes.length === 0) {
+  if (!scenario || scenario.steps.length === 0) {
     return (
       <p
         role="alert"
@@ -63,44 +64,78 @@ export function ConsultingReview({
     );
   }
 
-  const scene = findScene(scenario.scenes, sceneId) ?? scenario.scenes[0];
-  const sceneIndex = scenario.scenes.findIndex(
-    (candidate) => candidate.id === scene.id,
+  const step = findStep(scenario.steps, stepId) ?? scenario.steps[0];
+  const stepIndex = scenario.steps.findIndex(
+    (candidate) => candidate.id === step.id,
   );
-  const previousScene = scene.previousSceneId
-    ? findScene(scenario.scenes, scene.previousSceneId)
-    : undefined;
-  const nextScene = scene.nextSceneId
-    ? findScene(scenario.scenes, scene.nextSceneId)
-    : undefined;
-  const rendererError = renderer.validate(scene.renderTarget);
-  const getSceneLabel = (candidate: ConsultingReviewScene) =>
+  const selectedStateId = selectedStateIds[step.id];
+  const state =
+    step.states.find((candidate) => candidate.id === selectedStateId) ??
+    step.states[0];
+  const previousStep = scenario.steps[stepIndex - 1];
+  const nextStep = scenario.steps[stepIndex + 1];
+  const rendererError = state
+    ? renderer.validate(state.renderTarget)
+    : {
+        code: 'INVALID_REQUEST' as const,
+        message: `${step.id} 단계에 검토 상태가 없습니다.`,
+      };
+  const stepLabel = (candidate: ConsultingReviewStep) =>
     plan.nodes[candidate.nodeId]?.label ?? candidate.nodeId;
 
-  const selectScene = (nextSceneId: string) => {
-    if (findScene(scenario.scenes, nextSceneId)) setSceneId(nextSceneId);
+  const selectStep = (nextStepId: string) => {
+    if (findStep(scenario.steps, nextStepId)) setStepId(nextStepId);
+  };
+
+  const selectState = (nextStateId: string) => {
+    if (!step.states.some((candidate) => candidate.id === nextStateId)) return;
+    setSelectedStateIds((current) => ({
+      ...current,
+      [step.id]: nextStateId,
+    }));
+  };
+
+  const followTarget = (target: ConsultingReviewTarget) => {
+    const nextStepId = typeof target === 'string' ? target : target.stepId;
+    const nextStep = findStep(scenario.steps, nextStepId);
+    if (!nextStep) return;
+
+    if (typeof target === 'object' && target.stateId) {
+      if (
+        !nextStep.states.some((candidate) => candidate.id === target.stateId)
+      ) {
+        return;
+      }
+      setSelectedStateIds((current) => ({
+        ...current,
+        [nextStep.id]: target.stateId as string,
+      }));
+    }
+    setStepId(nextStep.id);
   };
 
   const handleScreenAction = (action: ConsultingUserAction) => {
-    const targetSceneId = scene.on?.[action.type];
-    if (targetSceneId) selectScene(targetSceneId);
+    const target = state?.on?.[action.type];
+    if (target) followTarget(target);
   };
 
-  const renderedScreen = rendererError ? (
-    <section
-      role="alert"
-      className="mx-auto w-full max-w-2xl rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive"
-    >
-      {rendererError.message}
-    </section>
-  ) : (
-    renderer.render(scene.renderTarget, {
-      draftValue: drafts[scene.id] ?? '',
-      onDraftChange: (value) =>
-        setDrafts((current) => ({ ...current, [scene.id]: value })),
-      send: handleScreenAction,
-    })
-  );
+  const draftKey = state ? `${step.id}:${state.id}` : step.id;
+  const renderedScreen =
+    rendererError || !state ? (
+      <section
+        role="alert"
+        className="mx-auto w-full max-w-2xl rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive"
+      >
+        {rendererError?.message}
+      </section>
+    ) : (
+      renderer.render(state.renderTarget, {
+        draftValue: drafts[draftKey] ?? '',
+        onDraftChange: (value) =>
+          setDrafts((current) => ({ ...current, [draftKey]: value })),
+        send: handleScreenAction,
+      })
+    );
 
   return (
     <div className="space-y-4">
@@ -126,19 +161,18 @@ export function ConsultingReview({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="md:hidden">
             <Select
-              value={scene.id}
-              onValueChange={(value) => selectScene(String(value))}
+              value={step.id}
+              onValueChange={(value) => selectStep(String(value))}
             >
               <SelectTrigger className="w-full bg-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {scenario.scenes.map((candidate) => (
+                {scenario.steps.map((candidate) => (
                   <SelectItem key={candidate.id} value={candidate.id}>
-                    {getSceneLabel(candidate)}
-                    {candidate.stateLabel ? ` · ${candidate.stateLabel}` : ''}
+                    {stepLabel(candidate)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -151,14 +185,14 @@ export function ConsultingReview({
         <Card className="sticky top-4 hidden gap-0 rounded-2xl p-3 shadow-none ring-0 md:block">
           <div className="flex items-center gap-2 px-2 py-2 text-xs font-semibold tracking-[0.08em] text-muted-foreground">
             <PanelsTopLeft className="size-4" aria-hidden="true" />
-            화면 탐색
+            단계 탐색
           </div>
-          <nav className="mt-1" aria-label="컨설팅 검토 화면">
-            {scenario.scenes.map((candidate, candidateIndex) => {
+          <nav className="mt-1" aria-label="컨설팅 검토 단계">
+            {scenario.steps.map((candidate, candidateIndex) => {
               const showSection =
                 candidate.section !==
-                scenario.scenes[candidateIndex - 1]?.section;
-              const isSelected = candidate.id === scene.id;
+                scenario.steps[candidateIndex - 1]?.section;
+              const isSelected = candidate.id === step.id;
 
               return (
                 <div key={candidate.id}>
@@ -169,8 +203,8 @@ export function ConsultingReview({
                   ) : null}
                   <button
                     type="button"
-                    aria-current={isSelected ? 'page' : undefined}
-                    onClick={() => selectScene(candidate.id)}
+                    aria-current={isSelected ? 'step' : undefined}
+                    onClick={() => selectStep(candidate.id)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-xl px-2.5 py-2.5 text-left text-sm transition-colors',
                       isSelected
@@ -192,22 +226,8 @@ export function ConsultingReview({
                         candidateIndex + 1
                       )}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">
-                        {getSceneLabel(candidate)}
-                      </span>
-                      {candidate.stateLabel ? (
-                        <span
-                          className={cn(
-                            'block text-[0.68rem]',
-                            isSelected
-                              ? 'text-primary-foreground/70'
-                              : 'text-muted-foreground',
-                          )}
-                        >
-                          {candidate.stateLabel}
-                        </span>
-                      ) : null}
+                    <span className="truncate font-medium">
+                      {stepLabel(candidate)}
                     </span>
                   </button>
                 </div>
@@ -217,50 +237,71 @@ export function ConsultingReview({
         </Card>
 
         <div className="min-w-0 space-y-3">
-          <div className="flex flex-col gap-3 rounded-xl border bg-background px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border bg-background px-3 py-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 px-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-semibold">{getSceneLabel(scene)}</p>
-                {scene.stateLabel ? (
-                  <Badge variant="secondary">{scene.stateLabel}</Badge>
+                <p className="font-semibold">{stepLabel(step)}</p>
+                {state?.label ? (
+                  <Badge variant="secondary">{state.label}</Badge>
                 ) : null}
               </div>
-              {scene.description ? (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {scene.description}
+              {(state?.description ?? step.description) ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {state?.description ?? step.description}
                 </p>
               ) : null}
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {step.states.length > 1 ? (
+                <div
+                  className="mr-auto flex rounded-lg bg-muted p-1 lg:mr-2"
+                  role="group"
+                  aria-label={`${stepLabel(step)} 화면 상태`}
+                >
+                  {step.states.map((candidate) => (
+                    <Button
+                      key={candidate.id}
+                      type="button"
+                      variant={candidate.id === state?.id ? 'default' : 'ghost'}
+                      size="sm"
+                      aria-pressed={candidate.id === state?.id}
+                      onClick={() => selectState(candidate.id)}
+                    >
+                      {candidate.label ?? candidate.id}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={!previousScene}
-                onClick={() => previousScene && selectScene(previousScene.id)}
+                disabled={!previousStep}
+                onClick={() => previousStep && selectStep(previousStep.id)}
               >
                 <ArrowLeft aria-hidden="true" />
-                이전 화면
+                이전 단계
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={!nextScene}
-                onClick={() => nextScene && selectScene(nextScene.id)}
+                disabled={!nextStep}
+                onClick={() => nextStep && selectStep(nextStep.id)}
               >
-                다음 화면
+                다음 단계
                 <ArrowRight aria-hidden="true" />
               </Button>
             </div>
           </div>
 
-          <div key={scene.id}>
+          <div key={`${step.id}:${state?.id ?? 'missing'}`}>
             <ConsultingFrame
               title={`${plan.title} · 검토`}
-              currentStep={sceneIndex + 1}
-              stepCount={scenario.scenes.length}
+              currentStep={stepIndex + 1}
+              stepCount={scenario.steps.length}
               headerStatus={<Badge variant="outline">{scenario.label}</Badge>}
             >
               {renderedScreen}

@@ -1,23 +1,30 @@
 import type { ConsultingRenderTarget } from '@/features/consulting/core/renderer';
 import type { ConsultingUserAction } from '@/features/consulting/core/user';
 
-export type ConsultingReviewScene = {
+export type ConsultingReviewTarget =
+  string | { stepId: string; stateId?: string };
+
+export type ConsultingReviewState = {
+  id: string;
+  label?: string;
+  description?: string;
+  renderTarget: ConsultingRenderTarget;
+  on?: Partial<Record<ConsultingUserAction['type'], ConsultingReviewTarget>>;
+};
+
+export type ConsultingReviewStep = {
   id: string;
   nodeId: string;
   description?: string;
   section?: string;
-  stateLabel?: string;
-  renderTarget: ConsultingRenderTarget;
-  previousSceneId?: string;
-  nextSceneId?: string;
-  on?: Partial<Record<ConsultingUserAction['type'], string>>;
+  states: ReadonlyArray<ConsultingReviewState>;
 };
 
 export type ConsultingReviewScenario = {
   id: string;
   label: string;
   description: string;
-  scenes: ReadonlyArray<ConsultingReviewScene>;
+  steps: ReadonlyArray<ConsultingReviewStep>;
 };
 
 export type ConsultingReviewPlan = {
