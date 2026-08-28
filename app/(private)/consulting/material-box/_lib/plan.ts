@@ -167,18 +167,21 @@ export const materialBoxPlan = defineConsultingPlan<
   nodes: {
     intro: {
       id: 'intro',
+      label: '컨설팅 소개',
       type: 'screen',
       screen: { screenId: 'material-box.intro', mode: 'static' },
       on: { 'user.next-explanation': 'material-box-overview' },
     },
     'material-box-overview': {
       id: 'material-box-overview',
+      label: '재료함 안내',
       type: 'screen',
       screen: { screenId: 'material-box.overview', mode: 'static' },
       on: { 'user.next-explanation': 'major' },
     },
     major: {
       id: 'major',
+      label: '희망 전공',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.major',
@@ -213,6 +216,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     keyword: {
       id: 'keyword',
+      label: '세부 키워드',
       type: 'screen',
       screen: (memory) => {
         const submittedKeywords =
@@ -244,6 +248,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     'generate-student-story': {
       id: 'generate-student-story',
+      label: '학생 스토리',
       type: 'tool',
       toolId: 'student-story.generate',
       input: (memory) => ({
@@ -264,6 +269,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     'student-story-error': {
       id: 'student-story-error',
+      label: '학생 스토리',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.student-story-error',
@@ -279,6 +285,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     'student-story': {
       id: 'student-story',
+      label: '학생 스토리',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.student-story',
@@ -292,6 +299,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     'core-value': {
       id: 'core-value',
+      label: '핵심 가치',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.core-value',
@@ -311,6 +319,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     'field-strength': {
       id: 'field-strength',
+      label: '계열 적합 역량',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.field-strength',
@@ -329,6 +338,7 @@ export const materialBoxPlan = defineConsultingPlan<
     },
     complete: {
       id: 'complete',
+      label: '완료 리포트',
       type: 'screen',
       screen: (memory) => ({
         screenId: 'material-box.complete',

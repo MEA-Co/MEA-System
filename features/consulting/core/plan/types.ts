@@ -50,6 +50,7 @@ export type ConsultingScreenNode<
   Tools extends object,
 > = {
   id: string;
+  label: string;
   type: 'screen';
   screen: ConsultingValueResolver<Context, ConsultingRenderTarget>;
   on?: Partial<
@@ -74,6 +75,7 @@ export type ConsultingToolResultParams<Context extends object> = {
 
 export type ConsultingToolNode<Context extends object, Tools extends object> = {
   id: string;
+  label: string;
   type: 'tool';
   toolId: ConsultingToolId<Tools>;
   input: (memory: ConsultingMemory<Context>) => unknown;

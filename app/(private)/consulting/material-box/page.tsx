@@ -33,7 +33,10 @@ export default async function MaterialBoxConsultingPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 md:px-6 md:py-7 lg:px-8">
-        <MaterialBoxConsulting debug={role === 'admin'} />
+        <MaterialBoxConsulting
+          debug={role === 'admin'}
+          reviewEnabled={role === 'admin' || role === 'consultant'}
+        />
       </div>
     </main>
   );

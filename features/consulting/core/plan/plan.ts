@@ -28,6 +28,9 @@ export function defineConsultingPlan<
     if (node.id !== nodeId) {
       throw new Error(`Node key와 id가 일치하지 않습니다: ${nodeId}`);
     }
+    if (!node.label.trim()) {
+      throw new Error(`Node에 label이 필요합니다: ${nodeId}`);
+    }
 
     if (node.type === 'screen') {
       for (const transition of Object.values(node.on ?? {})) {
