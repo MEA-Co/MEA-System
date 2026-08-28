@@ -1,3 +1,5 @@
+import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import type { MaterialBoxReportRequest } from '@/app/(private)/consulting/material-box/_report/protocol';
 import type { ConsultingReportRequest } from '@/features/consulting/report';
 
 export type MaterialBoxExampleReportData = {
@@ -69,6 +71,15 @@ function formatReportDate(date: Date) {
     .format(date)
     .replace(/\. /g, '. ')
     .trim();
+}
+
+export function createMaterialBoxReportRequest(
+  report: MaterialBoxProgressScreenData,
+): MaterialBoxReportRequest {
+  return {
+    fileName: 'MEA_나의_재료함_리포트.pdf',
+    report,
+  };
 }
 
 export function createMaterialBoxExampleReportRequest(

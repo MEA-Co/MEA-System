@@ -3,6 +3,7 @@
 import {
   BookOpen,
   BrainCircuit,
+  Check,
   Compass,
   Download,
   ExternalLink,
@@ -11,6 +12,7 @@ import {
   Target,
 } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
+import Link from 'next/link';
 import { type ReactNode, useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
@@ -20,10 +22,15 @@ import {
   isMaterialBoxProgressScreenData,
   type MaterialBoxProgressScreenData,
 } from '@/app/(private)/consulting/material-box/_lib/types';
-import { createMaterialBoxExampleReportRequest } from '@/app/(private)/consulting/material-box/_report/content';
+import { downloadMaterialBoxReport } from '@/app/(private)/consulting/material-box/_report/client';
+import {
+  createMaterialBoxExampleReportRequest,
+  createMaterialBoxReportRequest,
+} from '@/app/(private)/consulting/material-box/_report/content';
 import { exampleMaterialBoxReport as engineeringReport } from '@/app/(private)/consulting/material-box/_screens/report/example-report';
 import { humanitiesExampleMaterialBoxReport as humanitiesReport } from '@/app/(private)/consulting/material-box/_screens/report/humanities-example-report';
 import { MaterialBoxSimpleReport } from '@/app/(private)/consulting/material-box/_screens/report/MaterialBoxSimpleReport';
+import { Button } from '@/components/ui/button';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
 import { downloadConsultingReport } from '@/features/consulting/report/client';
 
@@ -679,10 +686,62 @@ function MaterialBoxCompleteScreen({
   data: MaterialBoxProgressScreenData;
   showExampleReports: boolean;
 }) {
+  const [downloadingMaterialReport, setDownloadingMaterialReport] =
+    useState(false);
+  const [materialReportDownloadError, setMaterialReportDownloadError] =
+    useState<string | null>(null);
+
+  const handleMaterialReportDownload = async () => {
+    setMaterialReportDownloadError(null);
+    setDownloadingMaterialReport(true);
+
+    try {
+      await downloadMaterialBoxReport(createMaterialBoxReportRequest(data));
+    } catch (error) {
+      setMaterialReportDownloadError(
+        error instanceof Error
+          ? error.message
+          : 'PDF를 만드는 중 문제가 발생했습니다. 다시 시도해 주세요.',
+      );
+    } finally {
+      setDownloadingMaterialReport(false);
+    }
+  };
+
   return (
     <ConsultingScreenView>
       <div className="space-y-12">
-        <MaterialBoxSimpleReport data={data} />
+        <section aria-labelledby="material-box-report-title">
+          <div className="mx-auto mb-4 flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
+            <p
+              id="material-box-report-title"
+              className="text-xs font-bold tracking-[0.12em] text-slate-500"
+            >
+              나의 재료함 리포트
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={downloadingMaterialReport}
+              onClick={handleMaterialReportDownload}
+            >
+              <Download aria-hidden="true" />
+              {downloadingMaterialReport ? 'PDF 생성 중' : 'PDF 다운로드'}
+            </Button>
+          </div>
+
+          {materialReportDownloadError ? (
+            <p
+              className="mx-auto mb-4 w-full max-w-5xl rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+              role="alert"
+            >
+              {materialReportDownloadError}
+            </p>
+          ) : null}
+
+          <MaterialBoxSimpleReport data={data} />
+        </section>
 
         {showExampleReports ? (
           <section aria-labelledby="example-reports-title">
@@ -715,7 +774,16 @@ function MaterialBoxCompleteScreen({
             },
           ],
         }}
-      />
+      >
+        <Button
+          render={<Link href="/dashboard?view=consulting" />}
+          nativeButton={false}
+          size="lg"
+        >
+          <Check aria-hidden="true" />
+          컨설팅 완료
+        </Button>
+      </ConsultingPrompter>
     </ConsultingScreenView>
   );
 }

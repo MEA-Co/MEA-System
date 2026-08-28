@@ -36,7 +36,7 @@ export function ConsultingManagement() {
                 nativeButton={false}
                 className="w-full"
               >
-                체험하기
+                시작하기
                 <ArrowUpRight />
               </Button>
             </CardFooter>
