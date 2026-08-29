@@ -1,7 +1,13 @@
 'use client';
 
 import { Eye } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { ConsultingDebugConsole } from '@/app/(private)/consulting/_components/ConsultingDebugConsole';
 import { ConsultingFrame } from '@/app/(private)/consulting/_components/ConsultingFrame';
@@ -10,6 +16,7 @@ import { ConsultingToolStatus } from '@/app/(private)/consulting/_components/Con
 import { useConsultingAgent } from '@/app/(private)/consulting/_hooks/useConsultingAgent';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
+import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import type { ConsultingPlan } from '@/features/consulting/core/plan';
 import type { ConsultingRenderer } from '@/features/consulting/core/renderer';
 import type { ConsultingToolsRuntime } from '@/features/consulting/core/tools';
@@ -23,6 +30,11 @@ type ConsultingFlowProps<
   tools: Tools;
   renderer: ConsultingRenderer<ConsultingScreenRenderEnvironment, ReactNode>;
   viewerRole: MemberRole;
+  onComplete?: (completion: {
+    planId: string;
+    title: string;
+    memory: ConsultingMemory<Context>;
+  }) => Promise<void>;
   debug?: boolean;
 };
 
@@ -34,6 +46,7 @@ export function ConsultingFlow<
   tools,
   renderer,
   viewerRole,
+  onComplete,
   debug = false,
 }: ConsultingFlowProps<Context, Tools>) {
   const { snapshot, toolRuntime, toolRuntimeSnapshot, memory, logs, send } =
@@ -42,12 +55,56 @@ export function ConsultingFlow<
     sessionId: number;
     values: Record<string, string>;
   }>({ sessionId: snapshot.sessionId, values: {} });
+  const [completionState, setCompletionState] = useState<{
+    status: 'idle' | 'saving' | 'saved' | 'error';
+    error: string | null;
+  }>({ status: 'idle', error: null });
+  const attemptedCompletionSessionRef = useRef<number | null>(null);
   const screen = snapshot.screen;
   const draftKey = screen?.draftKey ?? screen?.nodeId ?? '';
   const draftValue =
     drafts.sessionId === snapshot.sessionId
       ? (drafts.values[draftKey] ?? '')
       : '';
+
+  const saveCompletion = useCallback(async () => {
+    if (!snapshot.isComplete || !onComplete) return;
+
+    setCompletionState({ status: 'saving', error: null });
+    try {
+      await onComplete({
+        planId: snapshot.planId,
+        title: snapshot.title,
+        memory,
+      });
+      setCompletionState({ status: 'saved', error: null });
+    } catch (error) {
+      setCompletionState({
+        status: 'error',
+        error:
+          error instanceof Error
+            ? error.message
+            : '완료 결과를 저장하지 못했습니다. 다시 시도해 주세요.',
+      });
+    }
+  }, [
+    memory,
+    onComplete,
+    snapshot.isComplete,
+    snapshot.planId,
+    snapshot.title,
+  ]);
+
+  useEffect(() => {
+    if (!snapshot.isComplete || !onComplete) {
+      attemptedCompletionSessionRef.current = null;
+      return;
+    }
+    if (attemptedCompletionSessionRef.current === snapshot.sessionId) return;
+
+    attemptedCompletionSessionRef.current = snapshot.sessionId;
+    void saveCompletion();
+  }, [onComplete, saveCompletion, snapshot.isComplete, snapshot.sessionId]);
 
   const debugConsole = debug ? (
     <ConsultingDebugConsole
@@ -74,6 +131,13 @@ export function ConsultingFlow<
           },
         })),
       send,
+      completion:
+        snapshot.isComplete && onComplete
+          ? {
+              ...completionState,
+              retry: () => void saveCompletion(),
+            }
+          : null,
     })
   ) : (
     <section

@@ -676,12 +676,14 @@ function MaterialBoxExampleReport() {
   );
 }
 
-function MaterialBoxCompleteScreen({
+export function MaterialBoxCompleteScreen({
   data,
   showExampleReports,
+  completion,
 }: {
   data: MaterialBoxProgressScreenData;
   showExampleReports: boolean;
+  completion: ConsultingScreenRenderEnvironment['completion'];
 }) {
   const [downloadingMaterialReport, setDownloadingMaterialReport] =
     useState(false);
@@ -772,14 +774,42 @@ function MaterialBoxCompleteScreen({
           ],
         }}
       >
-        <Button
-          render={<Link href="/dashboard?view=consulting" />}
-          nativeButton={false}
-          size="lg"
-        >
-          <Check aria-hidden="true" />
-          컨설팅 완료
-        </Button>
+        {completion?.status === 'error' ? (
+          <div
+            className="w-full rounded-xl border border-red-200 bg-red-50 p-4"
+            role="alert"
+          >
+            <p className="text-sm font-medium text-red-700">
+              {completion.error ??
+                '완료 결과를 저장하지 못했습니다. 다시 시도해 주세요.'}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={completion.retry}
+            >
+              저장 다시 시도
+            </Button>
+          </div>
+        ) : null}
+
+        {completion === null || completion.status === 'saved' ? (
+          <Button
+            render={<Link href="/dashboard?view=consulting" />}
+            nativeButton={false}
+            size="lg"
+          >
+            <Check aria-hidden="true" />
+            컨설팅 완료
+          </Button>
+        ) : (
+          <Button type="button" size="lg" disabled>
+            {completion.status === 'saving'
+              ? '완료 결과 저장 중'
+              : '완료 결과 저장 준비 중'}
+          </Button>
+        )}
       </ConsultingPrompter>
     </ConsultingScreenView>
   );
@@ -791,6 +821,7 @@ export const materialBoxCompleteScreen = {
   render: (request, environment) => (
     <MaterialBoxCompleteScreen
       data={request.data as MaterialBoxProgressScreenData}
+      completion={environment.completion}
       showExampleReports={
         environment.viewerRole === 'consultant' ||
         environment.viewerRole === 'admin'

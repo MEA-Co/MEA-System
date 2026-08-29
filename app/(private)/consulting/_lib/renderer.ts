@@ -6,4 +6,9 @@ export type ConsultingScreenRenderEnvironment = {
   onDraftChange: (value: string) => void;
   send: (input: ConsultingUserAction) => void;
   viewerRole: MemberRole;
+  completion: {
+    status: 'idle' | 'saving' | 'saved' | 'error';
+    error: string | null;
+    retry: () => void;
+  } | null;
 };

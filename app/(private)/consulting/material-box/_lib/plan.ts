@@ -7,6 +7,10 @@ import {
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import { isKeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import { createStudentStoryJobKey } from '@/app/(private)/consulting/material-box/_tools/GenerateStudentStoryTool';
+import {
+  MATERIAL_BOX_CONSULTING_ID,
+  MATERIAL_BOX_CONSULTING_TITLE,
+} from '@/features/consulting/completion';
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 import {
@@ -175,7 +179,9 @@ function getSubmittedStrengths(
   return strengths as MaterialBoxStrengths;
 }
 
-function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
+export function getMaterialBoxProgressScreenData(
+  memory: ConsultingMemory<MaterialBoxContext>,
+) {
   const getOptionalSubmittedText = (
     nodeId: string,
     label: string,
@@ -202,10 +208,8 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
     majorFieldStrength: strengths?.majorFieldStrength,
     personalStrength: strengths?.differentiatingStrength,
     coreValueDraft: createCoreValueDraft(explorationStates),
-    pureFieldStrengthDraft:
-      createPureFieldStrengthDraft(explorationStates),
-    majorFieldStrengthDraft:
-      createMajorFieldStrengthDraft(explorationStates),
+    pureFieldStrengthDraft: createPureFieldStrengthDraft(explorationStates),
+    majorFieldStrengthDraft: createMajorFieldStrengthDraft(explorationStates),
   };
 }
 
@@ -213,8 +217,8 @@ export const materialBoxPlan = defineConsultingPlan<
   MaterialBoxContext,
   MaterialBoxTools
 >({
-  id: 'material-box-consulting',
-  title: '생활기록부 브랜딩 컨설팅 · 재료함 설계',
+  id: MATERIAL_BOX_CONSULTING_ID,
+  title: MATERIAL_BOX_CONSULTING_TITLE,
   entry: 'intro',
   createInitialContext: () => ({}),
   nodes: {
@@ -304,7 +308,7 @@ export const materialBoxPlan = defineConsultingPlan<
         screenId: 'material-box.student-story',
         mode: 'dynamic',
         data: {
-          ...getProgressScreenData(memory),
+          ...getMaterialBoxProgressScreenData(memory),
           jobKey: createStudentStoryJobKey({
             majorKeywords: getStudentStoryInput(memory).majorKeywords,
           }),
@@ -330,7 +334,7 @@ export const materialBoxPlan = defineConsultingPlan<
         screenId: 'material-box.core-value',
         mode: 'dynamic',
         data: {
-          ...getProgressScreenData(memory),
+          ...getMaterialBoxProgressScreenData(memory),
           startAtInput:
             memory.actions['core-value']?.type ===
               'user.previous-explanation' ||
@@ -350,7 +354,7 @@ export const materialBoxPlan = defineConsultingPlan<
         screenId: 'material-box.field-strength',
         mode: 'dynamic',
         data: {
-          ...getProgressScreenData(memory),
+          ...getMaterialBoxProgressScreenData(memory),
           startAtInput:
             memory.actions['field-strength']?.type ===
             'user.previous-explanation',
@@ -368,7 +372,7 @@ export const materialBoxPlan = defineConsultingPlan<
       screen: (memory) => ({
         screenId: 'material-box.complete',
         mode: 'dynamic',
-        data: getProgressScreenData(memory),
+        data: getMaterialBoxProgressScreenData(memory),
       }),
       terminal: true,
     },

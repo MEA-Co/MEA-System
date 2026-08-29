@@ -138,6 +138,7 @@ export function ConsultingReview({
         onDraftChange: (value) =>
           setDrafts((current) => ({ ...current, [draftKey]: value })),
         send: handleScreenAction,
+        completion: null,
       })
     );
 

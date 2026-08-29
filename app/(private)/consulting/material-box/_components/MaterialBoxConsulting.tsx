@@ -9,7 +9,9 @@ import { materialBoxPlan } from '@/app/(private)/consulting/material-box/_lib/pl
 import { materialBoxRenderer } from '@/app/(private)/consulting/material-box/_lib/renderer';
 import { materialBoxReviewPlan } from '@/app/(private)/consulting/material-box/_lib/review';
 import { materialBoxTools } from '@/app/(private)/consulting/material-box/_lib/tools';
+import type { MaterialBoxContext } from '@/app/(private)/consulting/material-box/_lib/types';
 import { Button } from '@/components/ui/button';
+import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import type { MemberRole } from '@/lib/profile';
 
 type MaterialBoxConsultingProps = {
@@ -17,6 +19,33 @@ type MaterialBoxConsultingProps = {
   debug?: boolean;
   reviewEnabled?: boolean;
 };
+
+async function saveMaterialBoxCompletion({
+  planId,
+  memory,
+}: {
+  planId: string;
+  memory: ConsultingMemory<MaterialBoxContext>;
+}) {
+  const response = await fetch('/api/consulting/material-box/completion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planId, memory }),
+  });
+
+  if (response.ok) return;
+
+  let message = '완료 결과를 저장하지 못했습니다. 다시 시도해 주세요.';
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    if (typeof body.error === 'string' && body.error.trim()) {
+      message = body.error;
+    }
+  } catch {
+    // 응답 본문을 읽지 못해도 학생에게 재시도 가능한 메시지를 보여준다.
+  }
+  throw new Error(message);
+}
 
 export function MaterialBoxConsulting({
   role,
@@ -66,6 +95,9 @@ export function MaterialBoxConsulting({
       ) : (
         <ConsultingFlow
           debug={debug}
+          onComplete={
+            role === 'student' ? saveMaterialBoxCompletion : undefined
+          }
           plan={materialBoxPlan}
           renderer={materialBoxRenderer}
           tools={materialBoxTools}

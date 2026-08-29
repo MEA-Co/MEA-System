@@ -11,11 +11,13 @@ import { ConsultingManagement } from './ConsultingManagement';
 type StudentDashboardProps = {
   studentName: string;
   studentPeriod: StudentPeriod;
+  completedConsultingIds: ReadonlyArray<string>;
 };
 
 export function StudentDashboard({
   studentName,
   studentPeriod,
+  completedConsultingIds,
 }: StudentDashboardProps) {
   return (
     <main className="min-h-svh bg-white">
@@ -48,7 +50,9 @@ export function StudentDashboard({
         </div>
 
         <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
-          <ConsultingManagement />
+          <ConsultingManagement
+            completedConsultingIds={completedConsultingIds}
+          />
         </div>
       </section>
     </main>

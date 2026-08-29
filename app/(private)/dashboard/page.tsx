@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  TEMP_STUDENT_CONSULTING_RESULTS_TABLE,
+  type TempStudentConsultingResultRow,
+} from '@/features/consulting/completion';
 import { requireUserAccess } from '@/lib/auth';
 import type { StudentPeriod } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
@@ -23,7 +27,7 @@ type HomeProps = {
 };
 
 export default async function DashboardPage({ searchParams }: HomeProps) {
-  const { profile, role } = await requireUserAccess();
+  const { profile, role, user } = await requireUserAccess();
 
   if (role === 'admin') {
     const { view: requestedView } = await searchParams;
@@ -56,8 +60,27 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
 
   if (role === 'student') {
     const studentPeriod = profile.student_period as StudentPeriod;
+    const supabase = createClient(await cookies());
+    const completionResult = await supabase
+      .from(TEMP_STUDENT_CONSULTING_RESULTS_TABLE)
+      .select('consulting_id')
+      .eq('student_id', user.id)
+      .overrideTypes<
+        Pick<TempStudentConsultingResultRow, 'consulting_id'>[],
+        { merge: false }
+      >();
+
+    if (completionResult.error) {
+      throw new Error('Failed to load completed consulting results.', {
+        cause: completionResult.error,
+      });
+    }
+
     return (
       <StudentDashboard
+        completedConsultingIds={(completionResult.data ?? []).map(
+          (completion) => completion.consulting_id,
+        )}
         studentName={profile.name}
         studentPeriod={studentPeriod}
       />
