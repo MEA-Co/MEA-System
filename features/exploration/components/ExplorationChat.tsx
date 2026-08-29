@@ -1,6 +1,13 @@
 'use client';
 
-import { Check, LoaderCircle, MessageCircle, RotateCcw, Send } from 'lucide-react';
+import {
+  Check,
+  Lightbulb,
+  LoaderCircle,
+  MessageCircle,
+  RotateCcw,
+  Send,
+} from 'lucide-react';
 import {
   type FormEvent,
   useCallback,
@@ -24,9 +31,7 @@ import { cn } from '@/lib/utils';
 type RequestStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 function replaceAt<T>(current: ReadonlyArray<T>, index: number, value: T) {
-  return current.map((item, itemIndex) =>
-    itemIndex === index ? value : item,
-  );
+  return current.map((item, itemIndex) => (itemIndex === index ? value : item));
 }
 
 async function requestExploration(body: unknown): Promise<ExplorationResponse> {
@@ -191,7 +196,10 @@ export function ExplorationChat({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <MessageCircle aria-hidden="true" className="size-4 text-primary" />
+              <MessageCircle
+                aria-hidden="true"
+                className="size-4 text-primary"
+              />
               전공 탐구 코치
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -200,14 +208,35 @@ export function ExplorationChat({
           </div>
           <Badge variant="secondary">
             {
-              states.filter(
-                (state) => state !== null && state.profile !== null,
-              ).length
+              states.filter((state) => state !== null && state.profile !== null)
+                .length
             }
-            /
-            {departments.length} 완료
+            /{departments.length} 완료
           </Badge>
         </div>
+
+        <aside className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-blue-950 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <Lightbulb aria-hidden="true" className="size-4" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">
+                눈에 띄는 탐구는 구체적인 문제의식에서 시작해요.
+              </p>
+              <div className="mt-2 space-y-1 text-sm leading-6 text-blue-900/80">
+                <p>
+                  무엇이 문제인지, 왜 궁금한지 서둘러 정하지 말고 깊게
+                  생각해보세요.
+                </p>
+                <p>
+                  코치가 보여주는 예시나 제안을 무조건 따라갈 필요는 없어요.
+                  자신만의 의문과 생각을 적극적으로 적어주세요.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
 
         <div className="flex gap-2 overflow-x-auto" role="tablist">
           {departments.map((department, index) => {
@@ -238,7 +267,10 @@ export function ExplorationChat({
         >
           {!activeState && activeStatus === 'loading' && (
             <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
               {departments[activeIndex]}의 탐구 지도를 준비하고 있어요.
             </div>
           )}
@@ -266,7 +298,10 @@ export function ExplorationChat({
 
           {activeState && activeStatus === 'loading' && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
               답변을 정리하고 있어요.
             </div>
           )}
@@ -297,11 +332,15 @@ export function ExplorationChat({
         <div className="border-t px-4 py-4 md:px-6">
           {activeState?.profile ? (
             <p className="rounded-xl bg-primary/8 px-4 py-3 text-sm font-medium text-primary">
-              이 전공의 탐구 목표가 정리됐어요. 다른 전공 탭의 대화도 마쳐주세요.
+              이 전공의 탐구 목표가 정리됐어요. 다른 전공 탭의 대화도
+              마쳐주세요.
             </p>
           ) : (
             <form onSubmit={sendMessage} className="flex items-end gap-2">
-              <label htmlFor={`exploration-message-${activeIndex}`} className="sr-only">
+              <label
+                htmlFor={`exploration-message-${activeIndex}`}
+                className="sr-only"
+              >
                 {departments[activeIndex]} 탐구 코치에게 답하기
               </label>
               <Textarea
