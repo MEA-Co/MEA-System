@@ -33,7 +33,7 @@ export async function generateCoachResponse(input: {
       latestResearch: input.state.latestResearch,
       outputRequirement:
         input.phase === 'introduction'
-          ? '학과의 분야와 키워드를 쉽게 소개한 뒤 관심 키워드 하나를 고르도록 질문한다.'
+          ? '학과의 일반적이고 통상적인 성격과 주요 분야·키워드를 먼저 설명한다. 그 다음 고등학교 과목·수업·동아리·탐구 활동 연결은 예시로만 짧게 덧붙이고, 관심 키워드 하나를 고르도록 질문한다.'
           : '현재 nextTarget 하나를 구체화한다. ready이면 최종 목표만 정리한다.',
     }),
     { maxTurns: 2 },

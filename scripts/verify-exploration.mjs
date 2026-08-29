@@ -9,8 +9,10 @@ import {
   enforceGoalReadiness,
   shouldResearchIssues,
 } from '../features/exploration/domain.ts';
+import { DEPARTMENT_MAPPER_INSTRUCTIONS } from '../features/exploration/prompts/department-mapper.ts';
 import { EXPLORATION_COACH_INSTRUCTIONS } from '../features/exploration/prompts/exploration-coach.ts';
 import { GOAL_EVALUATOR_INSTRUCTIONS } from '../features/exploration/prompts/goal-evaluator.ts';
+import { DepartmentMapSchema } from '../features/exploration/schemas/exploration.ts';
 
 const clearSlot = (value, ownership = 'student_explicit') => ({
   value,
@@ -100,6 +102,58 @@ test('평가기와 코치는 세부 변인·지표 설계를 완료 조건으로
   assert.match(GOAL_EVALUATOR_INSTRUCTIONS, /미완성 처리하지 않는다/);
   assert.match(EXPLORATION_COACH_INSTRUCTIONS, /계속 질문하지 않는다/);
   assert.match(EXPLORATION_COACH_INSTRUCTIONS, /이 대화에서 확정할 필요가 없다/);
+});
+
+test('학과 소개는 일반 설명 뒤에 학교 맥락 예시를 배치한다', () => {
+  const generalRuleIndex = DEPARTMENT_MAPPER_INSTRUCTIONS.indexOf(
+    '일반적이고 통상적인 학과 설명',
+  );
+  const schoolExampleIndex = DEPARTMENT_MAPPER_INSTRUCTIONS.indexOf(
+    'schoolContextExamples에는',
+  );
+
+  assert.ok(generalRuleIndex >= 0);
+  assert.ok(schoolExampleIndex > generalRuleIndex);
+  assert.match(EXPLORATION_COACH_INSTRUCTIONS, /특정 학교나 교내 활동 이야기로 시작하지 않는다/);
+});
+
+test('학과 지도는 일반 분야와 분리된 학교 맥락 예시를 포함한다', () => {
+  const parsed = DepartmentMapSchema.safeParse({
+    department: '산업공학과',
+    overview: '사람, 정보, 기술이 함께 움직이는 시스템을 효율적으로 설계하는 학문이다.',
+    fields: [
+      {
+        fieldName: '시스템 설계',
+        explanation: '복잡한 과정의 구성 요소와 흐름을 살핀다.',
+        keywords: [
+          { keyword: '공정 개선', explanation: '과정의 낭비를 줄인다.', exampleTopic: null },
+          { keyword: '최적화', explanation: '조건에 맞는 선택을 찾는다.', exampleTopic: null },
+        ],
+      },
+      {
+        fieldName: '데이터 분석',
+        explanation: '자료에서 의사결정에 필요한 패턴을 찾는다.',
+        keywords: [
+          { keyword: '예측', explanation: '미래 변화를 추정한다.', exampleTopic: null },
+          { keyword: '품질 관리', explanation: '결과의 차이를 분석한다.', exampleTopic: null },
+        ],
+      },
+      {
+        fieldName: '인간 중심 설계',
+        explanation: '사람이 시스템을 사용하는 방식을 살핀다.',
+        keywords: [
+          { keyword: '인간공학', explanation: '사람에게 맞는 환경을 설계한다.', exampleTopic: null },
+          { keyword: '사용자 경험', explanation: '이용 과정의 어려움을 개선한다.', exampleTopic: null },
+        ],
+      },
+    ],
+    schoolContextExamples: [
+      '수학 시간에 여러 조건을 비교하는 활동으로 연결해볼 수 있다.',
+      '동아리에서 교내 이동 동선을 관찰하는 탐구를 해볼 수 있다.',
+    ],
+  });
+
+  assert.equal(parsed.success, true);
 });
 
 test('현재성이 의미 있는 키워드가 새로 명확해졌을 때만 조사한다', () => {

@@ -1,13 +1,17 @@
 import {
+  BookOpen,
   BrainCircuit,
   Compass,
   ExternalLink,
+  MessageSquareText,
+  School,
   Sparkles,
   Target,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import { createExplorationReportSections } from '@/app/(private)/consulting/material-box/_report/exploration';
 
 function SimpleReportSection({
   number,
@@ -38,6 +42,7 @@ export function MaterialBoxSimpleReport({
 }: {
   data: MaterialBoxProgressScreenData;
 }) {
+  const explorationSections = createExplorationReportSections(data);
   const strengths = [
     {
       label: '순수 계열 적합 역량',
@@ -104,7 +109,9 @@ export function MaterialBoxSimpleReport({
 
               <div className="border-t border-slate-200 p-4 md:p-5">
                 <p className="text-xs font-bold text-blue-700">
-                  MEA의 추천 키워드
+                  {entry.explorationState
+                    ? '탐구 대화로 정리한 키워드'
+                    : 'MEA의 추천 키워드'}
                 </p>
                 {entry.selectedSuggestions.length > 0 ? (
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -141,7 +148,9 @@ export function MaterialBoxSimpleReport({
                   </div>
                 ) : (
                   <p className="mt-2 text-xs leading-5 text-slate-500">
-                    추천 항목을 선택하지 않고 직접 작성한 키워드입니다.
+                    {entry.explorationState
+                      ? '전공 탐구 코치와의 대화에서 출발해 학생이 확인하고 수정한 키워드입니다.'
+                      : '추천 항목을 선택하지 않고 직접 작성한 키워드입니다.'}
                   </p>
                 )}
               </div>
@@ -150,7 +159,136 @@ export function MaterialBoxSimpleReport({
         </div>
       </SimpleReportSection>
 
-      <SimpleReportSection number="02" title="나의 탐구 방향">
+      {explorationSections.length > 0 && (
+        <SimpleReportSection number="02" title="전공 탐구 대화 결과">
+          <div className="space-y-6">
+            {explorationSections.map(({ state, goalStatement, profileItems }) => (
+              <article
+                key={state.department}
+                className="overflow-hidden rounded-2xl border border-slate-200"
+              >
+                <div className="bg-slate-50 p-5">
+                  <p className="text-[0.65rem] font-bold tracking-[0.12em] text-blue-600">
+                    GENERAL DEPARTMENT OVERVIEW
+                  </p>
+                  <h3 className="mt-1 text-lg font-bold text-slate-950">
+                    {state.department}
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    {state.departmentMap?.overview}
+                  </p>
+                </div>
+
+                {state.departmentMap && (
+                  <div className="border-t border-slate-200 p-5">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <BookOpen aria-hidden="true" className="size-4" />
+                      <p className="text-xs font-bold">일반적인 주요 분야</p>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      {state.departmentMap.fields.map((field) => (
+                        <div
+                          key={field.fieldName}
+                          className="rounded-xl border border-slate-200 p-4"
+                        >
+                          <p className="text-sm font-bold text-slate-900">
+                            {field.fieldName}
+                          </p>
+                          <p className="mt-1.5 text-xs leading-5 text-slate-600">
+                            {field.explanation}
+                          </p>
+                          <p className="mt-2 text-[0.68rem] leading-5 text-blue-700">
+                            {field.keywords
+                              .map((item) => item.keyword)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 rounded-xl bg-blue-50 p-4">
+                      <div className="flex items-center gap-2 text-blue-700">
+                        <School aria-hidden="true" className="size-4" />
+                        <p className="text-xs font-bold">학교 맥락의 연결 예시</p>
+                      </div>
+                      <ul className="mt-2 space-y-1.5 text-xs leading-5 text-slate-600">
+                        {state.departmentMap.schoolContextExamples.map(
+                          (example) => (
+                            <li key={example}>• {example}</li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-200 p-5">
+                  <div className="rounded-xl bg-slate-950 p-4 text-white">
+                    <p className="text-[0.65rem] font-bold tracking-wide text-blue-300">
+                      최종 탐구 목표
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-7">
+                      {goalStatement}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    {profileItems.map(({ title, trait }) => (
+                      <div
+                        key={title}
+                        className="rounded-xl border border-blue-100 bg-blue-50/60 p-4"
+                      >
+                        <p className="text-[0.65rem] font-bold text-blue-700">
+                          {title}
+                        </p>
+                        <p className="mt-1.5 text-sm font-bold text-slate-900">
+                          {trait.label}
+                        </p>
+                        <p className="mt-2 text-xs leading-5 text-slate-600">
+                          {trait.description}
+                        </p>
+                        <p className="mt-2 border-t border-blue-100 pt-2 text-[0.68rem] leading-5 text-slate-500">
+                          근거 · {trait.evidence}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <details className="mt-4 rounded-xl border border-slate-200 p-4">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-bold text-slate-900">
+                      <MessageSquareText
+                        aria-hidden="true"
+                        className="size-4 text-blue-700"
+                      />
+                      학생과 탐구 코치의 전체 대화
+                    </summary>
+                    <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                      {state.conversation.map((turn, index) => (
+                        <div
+                          key={`${turn.role}-${index}`}
+                          className="grid gap-1 md:grid-cols-[4rem_minmax(0,1fr)]"
+                        >
+                          <p className="text-[0.68rem] font-bold text-blue-700">
+                            {turn.role === 'student' ? '학생' : '탐구 코치'}
+                          </p>
+                          <p className="whitespace-pre-wrap text-xs leading-5 text-slate-600">
+                            {turn.content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SimpleReportSection>
+      )}
+
+      <SimpleReportSection
+        number={explorationSections.length > 0 ? '03' : '02'}
+        title="나의 탐구 방향"
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
             <div className="flex items-center gap-2 text-blue-700">
@@ -173,7 +311,10 @@ export function MaterialBoxSimpleReport({
         </div>
       </SimpleReportSection>
 
-      <SimpleReportSection number="03" title="나의 계열 적합 역량">
+      <SimpleReportSection
+        number={explorationSections.length > 0 ? '04' : '03'}
+        title="나의 계열 적합 역량"
+      >
         <div className="grid gap-3 lg:grid-cols-3">
           {strengths.map((strength) => (
             <div

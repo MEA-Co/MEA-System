@@ -66,6 +66,10 @@ export const DepartmentMapSchema = z.object({
   department: z.string().trim().min(1).max(120),
   overview: z.string().trim().min(1).max(500),
   fields: z.array(FieldGroupSchema).min(3).max(6),
+  schoolContextExamples: z
+    .array(z.string().trim().min(1).max(300))
+    .min(2)
+    .max(4),
 });
 
 export const ResearchSourceSchema = z.object({

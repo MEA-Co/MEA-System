@@ -11,6 +11,10 @@ import {
 import type { ReactElement, ReactNode } from 'react';
 
 import type { MaterialBoxProgressScreenData } from '@/app/(private)/consulting/material-box/_lib/types';
+import {
+  createExplorationReportSections,
+  type MaterialBoxExplorationReportSection,
+} from '@/app/(private)/consulting/material-box/_report/exploration';
 import type { KeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 
 const serverProcess = (
@@ -65,17 +69,18 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 1.55,
   },
-  footer: {
+  footerRule: {
     position: 'absolute',
     right: 42,
-    bottom: 22,
+    bottom: 35,
     left: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderTopWidth: 0.7,
     borderTopColor: colors.border,
-    paddingTop: 7,
+  },
+  footerLabel: {
+    position: 'absolute',
+    bottom: 22,
+    left: 42,
     color: colors.slate,
     fontSize: 7,
   },
@@ -259,6 +264,129 @@ const styles = StyleSheet.create({
     color: colors.slate,
     fontSize: 7.5,
   },
+  explorationCard: {
+    marginBottom: 12,
+    borderWidth: 0.8,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 14,
+  },
+  explorationDepartment: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  explorationOverview: {
+    marginTop: 6,
+    color: '#475569',
+    fontSize: 8,
+    lineHeight: 1.65,
+  },
+  explorationSubheading: {
+    marginTop: 12,
+    color: colors.blueDark,
+    fontSize: 7,
+    fontWeight: 700,
+    letterSpacing: 0.45,
+  },
+  explorationList: {
+    marginTop: 5,
+    gap: 4,
+  },
+  explorationListItem: {
+    color: '#475569',
+    fontSize: 7.5,
+    lineHeight: 1.55,
+  },
+  schoolExampleBox: {
+    marginTop: 10,
+    borderRadius: 7,
+    backgroundColor: colors.blueSoft,
+    padding: 10,
+  },
+  goalBox: {
+    marginTop: 12,
+    borderRadius: 8,
+    backgroundColor: colors.navy,
+    padding: 12,
+    color: '#FFFFFF',
+  },
+  goalLabel: {
+    color: '#93C5FD',
+    fontSize: 6.5,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+  },
+  goalValue: {
+    marginTop: 6,
+    fontSize: 8.5,
+    fontWeight: 600,
+    lineHeight: 1.65,
+  },
+  profileGrid: {
+    marginTop: 9,
+    flexDirection: 'row',
+    gap: 7,
+  },
+  profileCard: {
+    flexGrow: 1,
+    flexBasis: 0,
+    borderWidth: 0.7,
+    borderColor: colors.blueBorder,
+    borderRadius: 7,
+    backgroundColor: '#F7FAFF',
+    padding: 9,
+  },
+  profileLabel: {
+    color: colors.blueDark,
+    fontSize: 6.2,
+    fontWeight: 700,
+  },
+  profileValue: {
+    marginTop: 4,
+    color: colors.ink,
+    fontSize: 8,
+    fontWeight: 700,
+  },
+  profileDescription: {
+    marginTop: 4,
+    color: '#475569',
+    fontSize: 6.8,
+    lineHeight: 1.5,
+  },
+  profileEvidence: {
+    marginTop: 5,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.blueBorder,
+    paddingTop: 4,
+    color: colors.slate,
+    fontSize: 6.2,
+    lineHeight: 1.45,
+  },
+  transcript: {
+    marginTop: 10,
+    borderTopWidth: 0.7,
+    borderTopColor: colors.border,
+    paddingTop: 8,
+  },
+  transcriptTurn: {
+    marginBottom: 5,
+    flexDirection: 'row',
+    gap: 7,
+  },
+  transcriptRole: {
+    width: 42,
+    color: colors.blueDark,
+    fontSize: 6.5,
+    fontWeight: 700,
+  },
+  transcriptContent: {
+    flexGrow: 1,
+    flexBasis: 0,
+    color: '#475569',
+    fontSize: 6.8,
+    lineHeight: 1.55,
+  },
   cardRow: {
     flexDirection: 'row',
     gap: 9,
@@ -357,7 +485,11 @@ function MajorCard({
         </View>
       </View>
       <View style={styles.suggestions}>
-        <Text style={styles.suggestionsTitle}>MEA의 추천 키워드</Text>
+        <Text style={styles.suggestionsTitle}>
+          {entry.explorationState
+            ? '탐구 대화로 정리한 키워드'
+            : 'MEA의 추천 키워드'}
+        </Text>
         {entry.selectedSuggestions.length > 0 ? (
           <View style={styles.suggestionGrid}>
             {entry.selectedSuggestions.map((suggestion, suggestionIndex) => (
@@ -369,9 +501,86 @@ function MajorCard({
           </View>
         ) : (
           <Text style={styles.directKeyword}>
-            추천 항목을 선택하지 않고 직접 작성한 키워드입니다.
+            {entry.explorationState
+              ? '전공 탐구 코치와의 대화에서 출발해 학생이 확인하고 수정한 키워드입니다.'
+              : '추천 항목을 선택하지 않고 직접 작성한 키워드입니다.'}
           </Text>
         )}
+      </View>
+    </View>
+  );
+}
+
+function ExplorationDetail({
+  section,
+}: {
+  section: MaterialBoxExplorationReportSection;
+}) {
+  const { state, goalStatement, profileItems } = section;
+  const departmentMap = state.departmentMap;
+
+  return (
+    <View style={styles.explorationCard}>
+      <Text style={styles.explorationDepartment}>{state.department}</Text>
+      {departmentMap ? (
+        <>
+          <Text style={styles.explorationOverview}>
+            {departmentMap.overview}
+          </Text>
+          <Text style={styles.explorationSubheading}>
+            일반적인 주요 분야
+          </Text>
+          <View style={styles.explorationList}>
+            {departmentMap.fields.map((field) => (
+              <Text key={field.fieldName} style={styles.explorationListItem}>
+                • {field.fieldName} — {field.explanation} (
+                {field.keywords.map((item) => item.keyword).join(' · ')})
+              </Text>
+            ))}
+          </View>
+          <View style={styles.schoolExampleBox}>
+            <Text style={styles.explorationSubheading}>학교 맥락의 연결 예시</Text>
+            <View style={styles.explorationList}>
+              {departmentMap.schoolContextExamples.map((example) => (
+                <Text key={example} style={styles.explorationListItem}>
+                  • {example}
+                </Text>
+              ))}
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      <View style={styles.goalBox} wrap={false}>
+        <Text style={styles.goalLabel}>최종 탐구 목표</Text>
+        <Text style={styles.goalValue}>{goalStatement}</Text>
+      </View>
+
+      <View style={styles.profileGrid} wrap={false}>
+        {profileItems.map(({ title, trait }) => (
+          <View key={title} style={styles.profileCard}>
+            <Text style={styles.profileLabel}>{title}</Text>
+            <Text style={styles.profileValue}>{trait.label}</Text>
+            <Text style={styles.profileDescription}>{trait.description}</Text>
+            <Text style={styles.profileEvidence}>근거 · {trait.evidence}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.transcript}>
+        <Text style={styles.explorationSubheading}>
+          학생과 탐구 코치의 전체 대화
+        </Text>
+        <View style={styles.explorationList}>
+          {state.conversation.map((turn, index) => (
+            <View key={`${turn.role}-${index}`} style={styles.transcriptTurn}>
+              <Text style={styles.transcriptRole}>
+                {turn.role === 'student' ? '학생' : '탐구 코치'}
+              </Text>
+              <Text style={styles.transcriptContent}>{turn.content}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -416,6 +625,8 @@ function KeepTogether({ children }: { children: ReactNode }) {
 export function createMaterialBoxReportDocument(
   report: MaterialBoxProgressScreenData,
 ): ReactElement<DocumentProps> {
+  const explorationSections = createExplorationReportSections(report);
+
   return (
     <Document
       title="나의 재료함 리포트"
@@ -425,6 +636,10 @@ export function createMaterialBoxReportDocument(
       creator="MEA Consulting"
     >
       <Page size="A4" style={styles.page} wrap>
+        <View style={styles.footerRule} fixed />
+        <Text style={styles.footerLabel} fixed>
+          나의 재료함 리포트
+        </Text>
         <View style={styles.hero} wrap={false}>
           <Text style={styles.heroEyebrow}>MEA</Text>
           <Text style={styles.heroTitle}>나의 재료함</Text>
@@ -442,8 +657,23 @@ export function createMaterialBoxReportDocument(
           />
         ))}
 
+        {explorationSections.length > 0 ? (
+          <>
+            <SectionHeading number="02" title="전공 탐구 대화 결과" />
+            {explorationSections.map((section, index) => (
+              <ExplorationDetail
+                key={`${section.state.department}-${index}`}
+                section={section}
+              />
+            ))}
+          </>
+        ) : null}
+
         <KeepTogether>
-          <SectionHeading number="02" title="나의 탐구 방향" />
+          <SectionHeading
+            number={explorationSections.length > 0 ? '03' : '02'}
+            title="나의 탐구 방향"
+          />
           <View style={styles.cardRow}>
             <DirectionCard
               blue
@@ -460,7 +690,10 @@ export function createMaterialBoxReportDocument(
         </KeepTogether>
 
         <KeepTogether>
-          <SectionHeading number="03" title="나의 계열 적합 역량" />
+          <SectionHeading
+            number={explorationSections.length > 0 ? '04' : '03'}
+            title="나의 계열 적합 역량"
+          />
           <View style={styles.cardRow}>
             <StrengthCard
               label="순수 계열 적합 역량"
@@ -479,14 +712,6 @@ export function createMaterialBoxReportDocument(
           </View>
         </KeepTogether>
 
-        <View style={styles.footer} fixed>
-          <Text>나의 재료함 리포트</Text>
-          <Text
-            render={({ pageNumber, totalPages }) =>
-              `${pageNumber} / ${totalPages}`
-            }
-          />
-        </View>
       </Page>
     </Document>
   );
