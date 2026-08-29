@@ -94,6 +94,7 @@ const keywordScreenData = {
   majors: majorKeywords.map((entry) => entry.major),
   keywords: majorKeywords.map((entry) => entry.keyword),
   selectedSuggestions: majorKeywords.map((entry) => entry.selectedSuggestions),
+  explorationStates: [],
   startAtInput: true,
 };
 

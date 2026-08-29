@@ -6,6 +6,10 @@ import {
   type KeywordSuggestion,
 } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import type { ConsultingTools } from '@/features/consulting/core/tools';
+import {
+  type ExplorationState,
+  ExplorationStateSchema,
+} from '@/features/exploration/schemas/exploration';
 
 export type MaterialBoxContext = Record<never, never>;
 
@@ -21,6 +25,7 @@ export type MaterialBoxKeywordScreenData = {
   majors: ReadonlyArray<string>;
   keywords: ReadonlyArray<string>;
   selectedSuggestions: ReadonlyArray<ReadonlyArray<KeywordSuggestion>>;
+  explorationStates: ReadonlyArray<ExplorationState>;
   startAtInput: boolean;
   suggestionTaskState?: MaterialBoxKeywordSuggestionTaskState;
 };
@@ -29,6 +34,7 @@ export type MaterialBoxMajorKeyword = {
   major: string;
   keyword: string;
   selectedSuggestions: ReadonlyArray<KeywordSuggestion>;
+  explorationState?: ExplorationState;
 };
 
 export type MaterialBoxProgressScreenData = {
@@ -38,6 +44,9 @@ export type MaterialBoxProgressScreenData = {
   fieldStrength?: string;
   majorFieldStrength?: string;
   personalStrength?: string;
+  coreValueDraft?: string;
+  pureFieldStrengthDraft?: string;
+  majorFieldStrengthDraft?: string;
 };
 
 export type MaterialBoxCoreValueScreenData = MaterialBoxProgressScreenData & {
@@ -73,6 +82,14 @@ export type MaterialBoxStudentStoryScreenData =
     taskState?: MaterialBoxStudentStoryTaskState;
   };
 
+function isExplorationStateForDepartment(
+  value: unknown,
+  department: string,
+): value is ExplorationState {
+  const result = ExplorationStateSchema.safeParse(value);
+  return result.success && result.data.department === department;
+}
+
 function isMaterialBoxMajorKeyword(
   value: unknown,
 ): value is MaterialBoxMajorKeyword {
@@ -89,7 +106,10 @@ function isMaterialBoxMajorKeyword(
     'selectedSuggestions' in value &&
     Array.isArray(value.selectedSuggestions) &&
     value.selectedSuggestions.length <= 5 &&
-    value.selectedSuggestions.every(isKeywordSuggestion)
+    value.selectedSuggestions.every(isKeywordSuggestion) &&
+    (!('explorationState' in value) ||
+      value.explorationState === undefined ||
+      isExplorationStateForDepartment(value.explorationState, value.major))
   );
 }
 
@@ -151,6 +171,18 @@ export function isMaterialBoxKeywordScreenData(
         Array.isArray(suggestions) &&
         suggestions.length <= 5 &&
         suggestions.every(isKeywordSuggestion),
+    ) &&
+    'explorationStates' in value &&
+    Array.isArray(value.explorationStates) &&
+    (value.explorationStates.length === 0 ||
+      value.explorationStates.length === value.majors.length) &&
+    value.explorationStates.every(
+      (state, index) =>
+        typeof (value.majors as ReadonlyArray<unknown>)[index] === 'string' &&
+        isExplorationStateForDepartment(
+          state,
+          (value.majors as ReadonlyArray<string>)[index],
+        ),
     ) &&
     'startAtInput' in value &&
     typeof value.startAtInput === 'boolean'
@@ -221,7 +253,10 @@ export function isMaterialBoxProgressScreenData(
     isOptionalText('coreValue', 180) &&
     isOptionalText('fieldStrength', 180) &&
     isOptionalText('majorFieldStrength', 180) &&
-    isOptionalText('personalStrength', 180)
+    isOptionalText('personalStrength', 180) &&
+    isOptionalText('coreValueDraft', 180) &&
+    isOptionalText('pureFieldStrengthDraft', 180) &&
+    isOptionalText('majorFieldStrengthDraft', 180)
   );
 }
 

@@ -93,7 +93,8 @@ function MaterialBoxCoreValueScreen({
       : data.majorKeywords.length === 2
         ? 2
         : 3;
-  const value = environment.draftValue || data.coreValue || '';
+  const value =
+    environment.draftValue || data.coreValue || data.coreValueDraft || '';
   const isLastExplanation = pageIndex === coreValueMessages.length - 1;
 
   const reviewValue = (event: FormEvent<HTMLFormElement>) => {
@@ -151,6 +152,12 @@ function MaterialBoxCoreValueScreen({
           coreValueContent={
             isInputPage && !isReviewing ? (
               <div className="min-w-0">
+                {data.coreValueDraft && !data.coreValue && (
+                  <p className="mb-2 text-xs font-medium text-primary">
+                    탐구 대화에서 정리된 가치관 초안입니다. 학생의 생각에 맞게
+                    수정해주세요.
+                  </p>
+                )}
                 <label htmlFor="core-value" className="sr-only">
                   전공 가치관
                 </label>

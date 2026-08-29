@@ -5,14 +5,19 @@ import {
   type MaterialBoxStrengths,
   type MaterialBoxTools,
 } from '@/app/(private)/consulting/material-box/_lib/types';
-import {
-  createKeywordSuggestionGroupId,
-  createKeywordSuggestionJobKey,
-  isKeywordSuggestion,
-} from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
+import { isKeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import { createStudentStoryJobKey } from '@/app/(private)/consulting/material-box/_tools/GenerateStudentStoryTool';
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
+import {
+  createCoreValueDraft,
+  createMajorFieldStrengthDraft,
+  createPureFieldStrengthDraft,
+} from '@/features/exploration/domain';
+import {
+  type ExplorationState,
+  ExplorationStateSchema,
+} from '@/features/exploration/schemas/exploration';
 
 const STUDENT_STORY_RESULT_KEY = 'generate-student-story';
 
@@ -35,22 +40,6 @@ function getSubmittedMajors(memory: ConsultingMemory<MaterialBoxContext>) {
   }
 
   return majors as Array<string>;
-}
-
-function createKeywordSuggestionEffects(
-  memory: ConsultingMemory<MaterialBoxContext>,
-) {
-  const majors = getSubmittedMajors(memory);
-  const groupId = createKeywordSuggestionGroupId(majors);
-
-  return majors.map((major, majorIndex) => ({
-    toolId: 'keyword-suggestions.generate' as const,
-    input: { major, majors },
-    key: createKeywordSuggestionJobKey(groupId, majorIndex),
-    groupId,
-    policy: 'reuse' as const,
-    label: `${major} 세부 키워드 제안`,
-  }));
 }
 
 function getSubmittedText(
@@ -97,7 +86,12 @@ function getSubmittedMajorKeywords(
         !('selectedSuggestions' in entry) ||
         !Array.isArray(entry.selectedSuggestions) ||
         entry.selectedSuggestions.length > 5 ||
-        !entry.selectedSuggestions.every(isKeywordSuggestion),
+        !entry.selectedSuggestions.every(isKeywordSuggestion) ||
+        !('explorationState' in entry) ||
+        !ExplorationStateSchema.safeParse(entry.explorationState).success ||
+        (entry.explorationState as ExplorationState).department !==
+          majors[index] ||
+        (entry.explorationState as ExplorationState).profile === null,
     )
   ) {
     throw new Error('전공별 세부 키워드 입력 형식이 올바르지 않습니다.');
@@ -122,7 +116,7 @@ function getGeneratedStudentStory(
 function createStudentStoryEffect(
   memory: ConsultingMemory<MaterialBoxContext>,
 ) {
-  const input = { majorKeywords: getSubmittedMajorKeywords(memory) };
+  const input = getStudentStoryInput(memory);
   const jobKey = createStudentStoryJobKey(input);
 
   return [
@@ -136,6 +130,18 @@ function createStudentStoryEffect(
       resultKey: STUDENT_STORY_RESULT_KEY,
     },
   ];
+}
+
+function getStudentStoryInput(memory: ConsultingMemory<MaterialBoxContext>) {
+  return {
+    majorKeywords: getSubmittedMajorKeywords(memory).map(
+      ({ major, keyword, selectedSuggestions }) => ({
+        major,
+        keyword,
+        selectedSuggestions,
+      }),
+    ),
+  };
 }
 
 function getSubmittedStrengths(
@@ -183,14 +189,23 @@ function getProgressScreenData(memory: ConsultingMemory<MaterialBoxContext>) {
     memory.actions['field-strength']?.type === 'user.submit'
       ? getSubmittedStrengths(memory)
       : undefined;
+  const majorKeywords = getSubmittedMajorKeywords(memory);
+  const explorationStates = majorKeywords
+    .map((entry) => entry.explorationState)
+    .filter((state): state is ExplorationState => state !== undefined);
 
   return {
-    majorKeywords: getSubmittedMajorKeywords(memory),
+    majorKeywords,
     studentStory: getGeneratedStudentStory(memory),
     coreValue: getOptionalSubmittedText('core-value', '핵심 가치', 180),
     fieldStrength: strengths?.pureFieldStrength,
     majorFieldStrength: strengths?.majorFieldStrength,
     personalStrength: strengths?.differentiatingStrength,
+    coreValueDraft: createCoreValueDraft(explorationStates),
+    pureFieldStrengthDraft:
+      createPureFieldStrengthDraft(explorationStates),
+    majorFieldStrengthDraft:
+      createMajorFieldStrengthDraft(explorationStates),
   };
 }
 
@@ -236,9 +251,6 @@ export const materialBoxPlan = defineConsultingPlan<
         'user.submit': 'keyword',
         'user.previous-explanation': 'material-box-overview',
       },
-      effects: {
-        'user.submit': ({ memory }) => createKeywordSuggestionEffects(memory),
-      },
     },
     keyword: {
       id: 'keyword',
@@ -248,6 +260,14 @@ export const materialBoxPlan = defineConsultingPlan<
         const submittedKeywords =
           memory.actions.keyword?.type === 'user.submit'
             ? getSubmittedMajorKeywords(memory).map((entry) => entry.keyword)
+            : [];
+        const submittedExplorationStates =
+          memory.actions.keyword?.type === 'user.submit'
+            ? getSubmittedMajorKeywords(memory)
+                .map((entry) => entry.explorationState)
+                .filter(
+                  (state): state is ExplorationState => state !== undefined,
+                )
             : [];
 
         return {
@@ -262,6 +282,7 @@ export const materialBoxPlan = defineConsultingPlan<
                     (entry) => entry.selectedSuggestions,
                   )
                 : [],
+            explorationStates: submittedExplorationStates,
             startAtInput:
               memory.lastAction?.type === 'user.previous-explanation',
           },
@@ -273,7 +294,6 @@ export const materialBoxPlan = defineConsultingPlan<
       },
       effects: {
         'user.submit': ({ memory }) => createStudentStoryEffect(memory),
-        'user.retry': ({ memory }) => createKeywordSuggestionEffects(memory),
       },
     },
     'student-story': {
@@ -286,7 +306,7 @@ export const materialBoxPlan = defineConsultingPlan<
         data: {
           ...getProgressScreenData(memory),
           jobKey: createStudentStoryJobKey({
-            majorKeywords: getSubmittedMajorKeywords(memory),
+            majorKeywords: getStudentStoryInput(memory).majorKeywords,
           }),
         },
       }),

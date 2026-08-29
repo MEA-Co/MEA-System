@@ -18,11 +18,11 @@ import {
 } from '@/app/(private)/consulting/material-box/_lib/types';
 import { KeywordExamples } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordExamples';
 import { KeywordInput } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordInput';
-import { KeywordSuggestionDrawer } from '@/app/(private)/consulting/material-box/_screens/_components/KeywordSuggestionDrawer';
 import { MaterialBoxTable } from '@/app/(private)/consulting/material-box/_screens/_components/MaterialBoxTable';
-import type { KeywordSuggestion } from '@/app/(private)/consulting/material-box/_tools/GenerateKeywordSuggestionsTool';
 import { Button } from '@/components/ui/button';
 import type { ConsultingRendererEntry } from '@/features/consulting/core/renderer';
+import { ExplorationChat } from '@/features/exploration/components/ExplorationChat';
+import type { ExplorationState } from '@/features/exploration/schemas/exploration';
 
 const keywordMessages = [
   {
@@ -42,7 +42,13 @@ const keywordMessages = [
       },
     ],
   },
-  { segments: [{ text: '이제 세부 키워드를 입력해주세요!' }] },
+  {
+    segments: [
+      {
+        text: '이제 전공별 탐구 코치와 대화하며 관심 키워드에서 출발한 문제의식과 탐구 방법을 구체화해볼게요.',
+      },
+    ],
+  },
 ] satisfies ReadonlyArray<ConsultingPrompterMessage>;
 
 function MaterialBoxKeywordScreen({
@@ -65,46 +71,43 @@ function MaterialBoxKeywordScreen({
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
-  const [selectedSuggestions, setSelectedSuggestions] = useState<
-    ReadonlyArray<ReadonlyArray<KeywordSuggestion>>
-  >(() =>
+  const [explorationStates, setExplorationStates] = useState<
+    ReadonlyArray<ExplorationState>
+  >(() => data.explorationStates);
+  const selectedSuggestions =
     data.selectedSuggestions.length === data.majors.length
       ? data.selectedSuggestions
-      : data.majors.map(() => []),
-  );
+      : data.majors.map(() => []);
+  const hasCompletedExplorations =
+    explorationStates.length === data.majors.length &&
+    explorationStates.every((state) => state.profile !== null);
+  const isExplorationComplete =
+    hasCompletedExplorations || data.keywords.length === data.majors.length;
+  const interestKeywordSummary =
+    explorationStates
+      .map((state) => state.profile?.interestKeyword.label)
+      .filter((keyword): keyword is string => Boolean(keyword))
+      .join(', ') || data.keywords.join(', ');
   const isExamplesPage = pageIndex === 2;
   const isInputPage = pageIndex === keywordMessages.length - 1;
   const majorRowCount =
     data.majors.length === 1 ? 1 : data.majors.length === 2 ? 2 : 3;
   const normalizedKeywords = keywords.map((keyword) => keyword.trim());
 
-  const toggleSuggestion = (
-    majorIndex: number,
-    suggestion: KeywordSuggestion,
+  const applyExplorationResults = (
+    completedStates: ReadonlyArray<ExplorationState>,
   ) => {
-    setSelectedSuggestions((current) =>
-      current.map((items, index) => {
-        if (index !== majorIndex) return items;
-        const isSelected = items.some(
-          (item) => item.keyword === suggestion.keyword,
+    setExplorationStates(completedStates);
+    setKeywords(
+      data.majors.map((major) => {
+        const state = completedStates.find(
+          (candidate) => candidate.department === major,
         );
-        return isSelected
-          ? items.filter((item) => item.keyword !== suggestion.keyword)
-          : [...items, suggestion];
-      }),
-    );
-  };
-
-  const applySelectedSuggestions = () => {
-    setKeywords((current) =>
-      current.map((keyword, index) => {
-        const selected = selectedSuggestions[index] ?? [];
-        return selected.length > 0
-          ? selected.map((suggestion) => suggestion.keyword).join(', ')
-          : keyword;
+        return state?.profile?.interestKeyword.label ?? '';
       }),
     );
     setValidationMessage(null);
+    setIsTypingComplete(false);
   };
 
   const reviewKeyword = (event: FormEvent<HTMLFormElement>) => {
@@ -133,6 +136,7 @@ function MaterialBoxKeywordScreen({
           major,
           keyword: normalizedKeywords[index],
           selectedSuggestions: selectedSuggestions[index] ?? [],
+          explorationState: explorationStates[index],
         })),
       ),
     });
@@ -161,31 +165,38 @@ function MaterialBoxKeywordScreen({
       )}
 
       {isInputPage ? (
-        <KeywordInput
-          isReviewing={isReviewing}
-          majors={data.majors}
-          keywords={isReviewing ? normalizedKeywords : keywords}
-          validationMessage={validationMessage}
-          onKeywordChange={(index, value) => {
-            setKeywords((current) =>
-              current.map((keyword, keywordIndex) =>
-                keywordIndex === index ? value : keyword,
-              ),
-            );
-            setValidationMessage(null);
-          }}
-          onSubmit={reviewKeyword}
-          keywordSuggestionAction={
-            <KeywordSuggestionDrawer
+        isExplorationComplete ? (
+          <div className="mx-auto w-full max-w-4xl">
+            {!isReviewing && (
+              <p className="mb-4 rounded-2xl bg-primary/8 px-4 py-3 text-sm leading-6 text-primary">
+                대화를 통해 관심 키워드가{' '}
+                <strong>{interestKeywordSummary}</strong>로 나타났어요. 아래
+                초안을 자유롭게 수정할 수 있습니다.
+              </p>
+            )}
+            <KeywordInput
+              isReviewing={isReviewing}
               majors={data.majors}
-              selectedSuggestions={selectedSuggestions}
-              onToggle={toggleSuggestion}
-              onApply={applySelectedSuggestions}
-              onRetry={() => environment.send({ type: 'user.retry' })}
-              taskState={data.suggestionTaskState}
+              keywords={isReviewing ? normalizedKeywords : keywords}
+              validationMessage={validationMessage}
+              onKeywordChange={(index, value) => {
+                setKeywords((current) =>
+                  current.map((keyword, keywordIndex) =>
+                    keywordIndex === index ? value : keyword,
+                  ),
+                );
+                setValidationMessage(null);
+              }}
+              onSubmit={reviewKeyword}
             />
-          }
-        />
+          </div>
+        ) : (
+          <ExplorationChat
+            departments={data.majors}
+            initialStates={explorationStates}
+            onComplete={applyExplorationResults}
+          />
+        )
       ) : isExamplesPage ? (
         <KeywordExamples />
       ) : (
@@ -209,7 +220,15 @@ function MaterialBoxKeywordScreen({
                   },
                 ],
               }
-            : keywordMessages[pageIndex]
+            : isInputPage && !isExplorationComplete
+              ? {
+                  segments: [
+                    {
+                      text: '각 전공 탭에서 코치와 대화를 마쳐주세요. 대화가 끝나면 관심 키워드와 다음 단계의 초안이 자동으로 정리됩니다.',
+                    },
+                  ],
+                }
+              : keywordMessages[pageIndex]
         }
         onTypingComplete={() => setIsTypingComplete(true)}
       >

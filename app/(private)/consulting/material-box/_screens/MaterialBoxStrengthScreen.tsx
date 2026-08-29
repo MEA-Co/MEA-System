@@ -122,8 +122,8 @@ function parseDraft(
   }
 
   return [
-    data.fieldStrength ?? '',
-    data.majorFieldStrength ?? '',
+    data.fieldStrength ?? data.pureFieldStrengthDraft ?? '',
+    data.majorFieldStrength ?? data.majorFieldStrengthDraft ?? '',
     data.personalStrength ?? '',
   ];
 }
@@ -250,6 +250,17 @@ function MaterialBoxStrengthScreen({
             isInputPage && !isReviewing
               ? (index) => (
                   <div className="min-w-0" key={strengthLabels[index]}>
+                    {index < 2 &&
+                      ((index === 0 && data.pureFieldStrengthDraft) ||
+                        (index === 1 && data.majorFieldStrengthDraft)) &&
+                      !(
+                        (index === 0 && data.fieldStrength) ||
+                        (index === 1 && data.majorFieldStrength)
+                      ) && (
+                        <p className="mb-2 text-xs font-medium text-primary">
+                          탐구 대화에서 정리된 수정 가능한 초안
+                        </p>
+                      )}
                     <label htmlFor={`strength-${index}`} className="sr-only">
                       {strengthLabels[index]}
                     </label>
