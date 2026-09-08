@@ -5,6 +5,11 @@ export const MATERIAL_BOX_CONSULTING_ID = 'material-box-consulting' as const;
 export const MATERIAL_BOX_CONSULTING_TITLE =
   '생활기록부 브랜딩 컨설팅 · 재료함 설계' as const;
 
+export const SUBJECT_SELECTION_CONSULTING_ID =
+  'subject-selection-consulting' as const;
+export const SUBJECT_SELECTION_CONSULTING_TITLE =
+  '선택과목 컨설팅' as const;
+
 export type TempStudentConsultingResultRow = {
   student_id: string;
   consulting_id: string;

@@ -4,13 +4,21 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { MATERIAL_BOX_CONSULTING_ID } from '@/features/consulting/completion';
+import {
+  MATERIAL_BOX_CONSULTING_ID,
+  SUBJECT_SELECTION_CONSULTING_ID,
+} from '@/features/consulting/completion';
 
 const consultingItems = [
   {
     id: MATERIAL_BOX_CONSULTING_ID,
     title: '생활기록부 브랜딩 컨설팅 [재료함 설계]',
     href: '/consulting/material-box',
+  },
+  {
+    id: SUBJECT_SELECTION_CONSULTING_ID,
+    title: '선택과목 컨설팅',
+    href: '/consulting/subject-selection',
   },
 ] as const;
 
