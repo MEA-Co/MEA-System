@@ -1,6 +1,11 @@
 'use client';
 
-import { BriefcaseBusiness, GraduationCap, MessagesSquare } from 'lucide-react';
+import {
+  BriefcaseBusiness,
+  GraduationCap,
+  MessagesSquare,
+  PanelsTopLeft,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -85,6 +90,20 @@ export function AdminNavigation({
               >
                 <MessagesSquare />
                 <span>컨설팅 관리</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={
+                  <Link
+                    href="/dashboard?view=preview"
+                    onClick={() => setOpenMobile(false)}
+                  />
+                }
+                isActive={view === 'preview'}
+              >
+                <PanelsTopLeft />
+                <span>회원 화면 미리보기</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

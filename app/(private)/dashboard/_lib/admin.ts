@@ -1,6 +1,6 @@
 import type { MemberRole, StudentPeriod } from '@/lib/profile';
 
-export type AdminView = 'students' | 'consultants' | 'consulting';
+export type AdminView = 'students' | 'consultants' | 'consulting' | 'preview';
 
 export type ManagedMember = {
   id: string;

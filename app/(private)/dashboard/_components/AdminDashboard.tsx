@@ -16,8 +16,11 @@ import { signOut } from '../../_actions/sign-out';
 import type { AdminView, ManagedMember } from '../_lib/admin';
 
 import { AdminNavigation } from './AdminNavigation';
+import { ConsultantDashboard } from './ConsultantDashboard';
 import { ConsultantManagement } from './ConsultantManagement';
 import { ConsultingManagement } from './ConsultingManagement';
+import { DashboardPreview } from './DashboardPreview';
+import { StudentDashboard } from './StudentDashboard';
 import { StudentManagement } from './StudentManagement';
 
 type AdminDashboardProps = {
@@ -93,6 +96,17 @@ export function AdminDashboard({
               <StudentManagement students={students} />
             ) : view === 'consultants' ? (
               <ConsultantManagement consultants={consultants} />
+            ) : view === 'preview' ? (
+              <DashboardPreview
+                student={
+                  <StudentDashboard
+                    studentName="김학생"
+                    studentPeriod="1학년 1학기"
+                    completedConsultingIds={[]}
+                  />
+                }
+                consultant={<ConsultantDashboard consultantName="이컨설턴트" />}
+              />
             ) : (
               <ConsultingManagement />
             )}
