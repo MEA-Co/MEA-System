@@ -50,6 +50,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `/consulting/branding` → `app/(private)/consulting/branding/`. 기존 `/consulting/material-box`와 독립된 컨설팅이며 Plan ID는 `branding-consulting`이다.
 - 진행 순서: **도입 → 전공 세부 키워드 → 전공 가치관 → 계열 적합 역량 → 한 줄 서사 → 모아보기**. `_lib/plan.ts`에 단계·산출물 계약·전환을, `_components/BrandingConsulting.tsx`에 입력 화면·Renderer를 둔다.
 - 도입은 `_components/BrandingIntro.tsx`에서 세특 선택 → 타이핑 설명과 강조 → 선행·후속 탐구 연결을 표시한다. Plan의 `intro` 노드는 진행률 `0/4`이며 `user.start-input`으로 `primary-major`에 진입한다. 도입 내부 설명 순서와 선택은 화면 로컬 상태이며 공통 코어에 넣지 않는다. 타이핑은 공통 `ConsultingPrompter`의 `flat` 스타일을 사용한다.
-- 전공 세부 키워드는 `primary-major`(1순위 필수) → `additional-majors`(2·3순위 선택) → `keywords` 순서이며 모두 진행률 `1/4`다. `_components/BrandingMajorScreen.tsx`가 전공 입력을 담당하며 전공은 노드별 Memory actions, 작성 중 값은 Flow draft로 보존한다. 이후 화면에서는 `readMajors`로 읽어 브랜딩 노트에 표시한다.
+- 전공 세부 키워드는 `primary-major`(1순위 필수) → `additional-majors`(2·3순위 선택) → `major-confirmation` → `keyword-guide` → `keywords` 순서이며 모두 진행률 `1/4`다. `_components/BrandingMajorScreen.tsx`가 전공 입력을 담당하며 전공은 노드별 Memory actions, 작성 중 값은 Flow draft로 보존한다. 이후 화면에서는 `readMajors`로 읽어 브랜딩 노트에 표시한다.
+- `major-confirmation`의 `user.start-input`에서 전공별 `major-overview.generate`를 실행한다. `_tools/GenerateMajorOverviewTool.ts`는 `gpt-5.6-terra`와 필수 웹 검색으로 공식 학과 링크 및 5개 대주제를 생성한다. `_components/BrandingKeywordGuide.tsx`가 확인·안내·예시 및 Runtime 결과/재시도를 표시한다. 상단 상태는 공통 `ConsultingToolStatus`를 사용한다.
 - 이전 이동도 누적 산출물과 방향을 담은 `user.submit`으로 처리한다. 일반 `user.back`은 노드의 기존 입력을 덮어쓰므로, 이 구조 변경 시 입력 보존을 확인한다. 공통 Flow의 단계별 draft를 사용하며 현재 AI 도구·영속 저장은 연결하지 않았다.
 - 전체 검토는 관리자·컨설턴트에게 제공하며 `_lib/review.ts`에서 도입 → 4개 산출물 → 모아보기로 구성한다. `전공 세부 키워드`의 하위 화면은 `1순위 전공`, `추가 전공`, `키워드 작성`을 같은 검토 단계의 `states`로 묶는다. 실제 Plan의 전공 입력 노드를 별도 최상위 검토 단계로 나열하지 않는다.

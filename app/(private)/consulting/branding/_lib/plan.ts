@@ -4,6 +4,11 @@ import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 import { createConsultingTools } from '@/features/consulting/core/tools';
 
+import {
+  generateMajorOverviewTool,
+  majorOverviewKey,
+} from '../_tools/GenerateMajorOverviewTool';
+
 export const brandingSteps = [
   {
     id: 'keywords',
@@ -67,7 +72,28 @@ function readOutputs(
   );
 }
 
-export const brandingTools = createConsultingTools({});
+export const brandingTools = createConsultingTools<{
+  'major-overview.generate': {
+    input: { major: string };
+    output: Awaited<ReturnType<typeof generateMajorOverviewTool.execute>>;
+  };
+}>({ 'major-overview.generate': generateMajorOverviewTool });
+
+export const majorListSchema = z.object({
+  first: z.string(),
+  second: z.string().optional(),
+  third: z.string().optional(),
+});
+export type MajorList = z.infer<typeof majorListSchema>;
+export function majorNames(majors: MajorList) {
+  return [
+    ...new Set(
+      [majors.first, majors.second, majors.third].filter(
+        (major): major is string => !!major?.trim(),
+      ),
+    ),
+  ];
+}
 
 export const additionalMajorsSchema = z.object({
   second: z.string().trim(),
@@ -134,12 +160,51 @@ export const brandingPlan = defineConsultingPlan<
       screen: { screenId: 'branding.additional-majors', mode: 'static' },
       on: {
         'user.submit': {
-          target: 'keywords',
+          target: 'major-confirmation',
           guard: ({ action }) =>
             action.type === 'user.submit' &&
             parseAdditionalMajors(action.value) !== null,
         },
       },
+    },
+    'major-confirmation': {
+      id: 'major-confirmation',
+      label: '희망 전공 확인',
+      type: 'screen',
+      progress: { current: 1, total: 4 },
+      screen: (memory) => ({
+        screenId: 'branding.major-confirmation',
+        mode: 'dynamic',
+        data: readMajors(memory),
+      }),
+      on: {
+        'user.start-input': 'keyword-guide',
+        'user.previous-explanation': 'primary-major',
+      },
+      effects: {
+        'user.start-input': ({ memory }) =>
+          majorNames(readMajors(memory)).map((major) => ({
+            toolId: 'major-overview.generate' as const,
+            input: { major },
+            key: majorOverviewKey(major),
+            groupId: `branding-overviews:${JSON.stringify(majorNames(readMajors(memory)))}`,
+            label: `${major} · 학과 안내 준비`,
+            resultKey: majorOverviewKey(major),
+            policy: 'reuse' as const,
+          })),
+      },
+    },
+    'keyword-guide': {
+      id: 'keyword-guide',
+      label: '전공 세부 키워드 안내',
+      type: 'screen',
+      progress: { current: 1, total: 4 },
+      screen: (memory) => ({
+        screenId: 'branding.keyword-guide',
+        mode: 'dynamic',
+        data: readMajors(memory),
+      }),
+      on: { 'user.start-input': 'keywords' },
     },
     ...Object.fromEntries(
       brandingSteps.map((step, index) => [

@@ -1,0 +1,32 @@
+.loadingText {
+  color: #7c3aed;
+  background: linear-gradient(
+    100deg,
+    #6d28d9 20%,
+    #c4b5fd 40%,
+    #8b5cf6 60%,
+    #6d28d9 80%
+  );
+  background-size: 240% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingText {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}

@@ -2,6 +2,7 @@ export const LLM_MODELS = [
   'gpt-5-nano',
   'gpt-5.4-nano',
   'gpt-5.6-luna',
+  'gpt-5.6-terra',
 ] as const;
 
 export type LlmModel = (typeof LLM_MODELS)[number];

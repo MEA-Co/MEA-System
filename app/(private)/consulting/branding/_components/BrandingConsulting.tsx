@@ -11,6 +11,8 @@ import {
   brandingScreenSchema,
   brandingSteps,
   brandingTools,
+  majorListSchema,
+  majorNames,
 } from '@/app/(private)/consulting/branding/_lib/plan';
 import { brandingReviewPlan } from '@/app/(private)/consulting/branding/_lib/review';
 import { Button } from '@/components/ui/button';
@@ -19,6 +21,7 @@ import { createConsultingRenderer } from '@/features/consulting/core/renderer';
 import type { MemberRole } from '@/lib/profile';
 
 import { BrandingIntro } from './BrandingIntro';
+import { BrandingKeywordGuide, MajorOverviews } from './BrandingKeywordGuide';
 import { BrandingMajorScreen } from './BrandingMajorScreen';
 
 function BrandingScreen({
@@ -40,6 +43,86 @@ function BrandingScreen({
         outputs: step ? { ...outputs, [step.id]: currentValue } : outputs,
       }),
     });
+
+  if (index === 0 && step) {
+    const names = majorNames(majors);
+    const entries = names.map((major, position) => {
+      const marker = `[${major}]\n`;
+      const start = currentValue.indexOf(marker);
+      if (start < 0)
+        return position === 0 &&
+          !names.some((name) => currentValue.includes(`[${name}]\n`))
+          ? currentValue
+          : '';
+      const contentStart = start + marker.length;
+      const next = names
+        .map((name) => currentValue.indexOf(`\n\n[${name}]\n`, contentStart))
+        .filter((offset) => offset >= 0);
+      return currentValue.slice(
+        contentStart,
+        next.length ? Math.min(...next) : undefined,
+      );
+    });
+    const valid = entries.length > 0 && entries.every((entry) => entry.trim());
+    return (
+      <div className="mx-auto max-w-5xl space-y-6">
+        <form
+          className="space-y-5 rounded-2xl border border-violet-100 bg-white p-6 md:p-8"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (valid) navigate('next');
+          }}
+        >
+          <div className="space-y-2">
+            <h1 className="text-lg font-semibold text-slate-900">
+              나의 세부 키워드
+            </h1>
+            <p id="keyword-hint" className="text-sm leading-6 text-slate-500">
+              전공마다 관심이 가는 분야나 궁금한 문제를 적어주세요.
+            </p>
+          </div>
+          {names.map((major, position) => (
+            <div key={major} className="space-y-3">
+              <label
+                htmlFor={`branding-keywords-${position}`}
+                className="text-sm font-medium text-violet-800"
+              >
+                {major}
+              </label>
+              <Textarea
+                id={`branding-keywords-${position}`}
+                aria-describedby="keyword-hint"
+                value={entries[position]}
+                onChange={(event) =>
+                  onDraftChange(
+                    names
+                      .map(
+                        (name, i) =>
+                          `[${name}]\n${i === position ? event.target.value : entries[i]}`,
+                      )
+                      .join('\n\n'),
+                  )
+                }
+                required
+                placeholder={`${major}에서 관심 있는 세부 키워드를 적어주세요.`}
+                className="min-h-40 rounded-xl border-violet-100 bg-violet-50/30 p-4 text-base leading-7 shadow-none placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-200"
+              />
+            </div>
+          ))}
+          <div className="flex justify-end border-t border-violet-100 pt-5">
+            <Button
+              type="submit"
+              disabled={!valid}
+              className="rounded-xl bg-violet-700 text-white hover:bg-violet-800"
+            >
+              다음 <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+        </form>
+        <MajorOverviews majors={majors} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -209,6 +292,29 @@ const brandingRenderer = createConsultingRenderer<
     ),
   },
   'branding.input': screenEntry,
+  'branding.major-confirmation': {
+    mode: 'dynamic',
+    validateData: (data) => majorListSchema.safeParse(data).success,
+    render: (request, environment) => (
+      <BrandingKeywordGuide
+        key="confirmation"
+        confirmation
+        majors={majorListSchema.parse(request.data)}
+        environment={environment}
+      />
+    ),
+  },
+  'branding.keyword-guide': {
+    mode: 'dynamic',
+    validateData: (data) => majorListSchema.safeParse(data).success,
+    render: (request, environment) => (
+      <BrandingKeywordGuide
+        key="guide"
+        majors={majorListSchema.parse(request.data)}
+        environment={environment}
+      />
+    ),
+  },
   'branding.primary-major': {
     mode: 'static',
     render: (_request, environment) => (
