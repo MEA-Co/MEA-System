@@ -46,5 +46,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ### 별도 컨설팅: 생활기록부 브랜딩
 
 - `/consulting/branding` → `app/(private)/consulting/branding/`. 기존 `/consulting/material-box`와 독립된 컨설팅이며 Plan ID는 `branding-consulting`이다.
-- 산출물 순서: **세부 키워드 → 전공 가치관 → 계열 적합 역량 → 한 줄 서사 → 모아보기**. `_lib/plan.ts`에 단계·산출물 계약·전환을, `_components/BrandingConsulting.tsx`에 입력 화면·Renderer를 둔다.
+- 진행 순서: **도입 → 전공 세부 키워드 → 전공 가치관 → 계열 적합 역량 → 한 줄 서사 → 모아보기**. `_lib/plan.ts`에 단계·산출물 계약·전환을, `_components/BrandingConsulting.tsx`에 입력 화면·Renderer를 둔다.
+- 도입은 `_components/BrandingIntro.tsx`에서 세특 선택 → 타이핑 설명과 강조 → 선행·후속 탐구 연결을 표시한다. Plan의 `intro` 노드는 진행률 `0/4`이며 `user.start-input`으로 키워드 입력에 진입한다. 도입 내부 설명 순서와 선택은 화면 로컬 상태이며 공통 코어에 넣지 않는다. 타이핑은 공통 `ConsultingPrompter`의 `flat` 스타일을 사용한다.
 - 이전 이동도 누적 산출물과 방향을 담은 `user.submit`으로 처리한다. 일반 `user.back`은 노드의 기존 입력을 덮어쓰므로, 이 구조 변경 시 입력 보존을 확인한다. 공통 Flow의 단계별 draft를 사용하며 현재 AI 도구·영속 저장은 연결하지 않았다.

@@ -110,7 +110,7 @@ export function ConsultingDebugConsole<
   memory,
   logs,
 }: ConsultingDebugConsoleProps<Context, Tools>) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [readLogIds, setReadLogIds] = useState<ReadonlySet<number>>(
     () => new Set(),
   );

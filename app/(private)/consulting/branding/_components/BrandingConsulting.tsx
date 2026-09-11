@@ -16,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { createConsultingRenderer } from '@/features/consulting/core/renderer';
 import type { MemberRole } from '@/lib/profile';
 
+import { BrandingIntro } from './BrandingIntro';
+
 function BrandingScreen({
   data,
   environment,
@@ -147,7 +149,7 @@ function BrandingScreen({
                   <dt className="mb-2 text-xs font-semibold text-violet-800">
                     {item.title}
                   </dt>
-                  <dd className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                  <dd className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-slate-700">
                     {outputs[item.id]}
                   </dd>
                 </div>
@@ -180,7 +182,18 @@ const screenEntry = {
 const brandingRenderer = createConsultingRenderer<
   ConsultingScreenRenderEnvironment,
   ReactNode
->({ 'branding.input': screenEntry, 'branding.complete': screenEntry });
+>({
+  'branding.intro': {
+    mode: 'static',
+    render: (_request, environment) => (
+      <BrandingIntro
+        onStart={() => environment.send({ type: 'user.start-input' })}
+      />
+    ),
+  },
+  'branding.input': screenEntry,
+  'branding.complete': screenEntry,
+});
 
 export function BrandingConsulting({ role }: { role: MemberRole }) {
   return (

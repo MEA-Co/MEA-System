@@ -75,11 +75,19 @@ export const brandingPlan = defineConsultingPlan<
 >({
   id: 'branding-consulting',
   title: '생활기록부 브랜딩 컨설팅',
-  entry: brandingSteps[0].id,
+  entry: 'intro',
   createInitialContext: () => ({
     outputs: { keywords: '', values: '', competencies: '', story: '' },
   }),
   nodes: {
+    intro: {
+      id: 'intro',
+      label: '생활기록부 브랜딩 소개',
+      type: 'screen',
+      progress: { current: 0, total: brandingSteps.length },
+      screen: { screenId: 'branding.intro', mode: 'static' },
+      on: { 'user.start-input': brandingSteps[0].id },
+    },
     ...Object.fromEntries(
       brandingSteps.map((step, index) => [
         step.id,
