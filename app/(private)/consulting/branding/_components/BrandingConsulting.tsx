@@ -143,7 +143,7 @@ function BrandingScreen({
                     <dt className="shrink-0 text-violet-700">
                       {position + 1}순위
                     </dt>
-                    <dd className="break-words text-slate-700">{major}</dd>
+                    <dd className="wrap-break-word text-slate-700">{major}</dd>
                   </div>
                 ) : null,
             )}
