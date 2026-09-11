@@ -7,7 +7,7 @@ import { createConsultingTools } from '@/features/consulting/core/tools';
 export const brandingSteps = [
   {
     id: 'keywords',
-    title: '세부 키워드',
+    title: '전공 세부 키워드',
     description: '나의 관심과 탐구 방향을 나타내는 세부 키워드를 적어주세요.',
     placeholder: '관심 있는 주제나 문제를 구체적인 키워드로 작성해주세요.',
   },

@@ -35,18 +35,18 @@ function BrandingConsultingCard({
   estimatedDuration?: string;
 }) {
   return (
-    <Card className="gap-0 rounded-2xl border border-teal-900/15 bg-white py-0 shadow-sm ring-0 transition-shadow hover:shadow-md">
-      <div className="border-b border-teal-900/10 bg-linear-to-br from-teal-50 via-teal-50/60 to-amber-50/70 px-6 py-5">
+    <Card className="gap-0 rounded-2xl border border-violet-900/15 bg-white py-0 shadow-sm ring-0 transition-shadow hover:shadow-md">
+      <div className="border-b border-violet-900/10 bg-linear-to-br from-violet-50 via-violet-50/60 to-amber-50/70 px-6 py-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl border border-teal-800/10 bg-white/80 text-teal-800">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-violet-800/10 bg-white/80 text-violet-800">
               <Compass className="size-5" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-widest text-teal-700">
+              <p className="text-[11px] font-semibold tracking-widest text-violet-700">
                 STEP 01
               </p>
-              <p className="mt-0.5 text-sm font-medium text-teal-950">
+              <p className="mt-0.5 text-sm font-medium text-violet-950">
                 나만의 방향 찾기
               </p>
             </div>
@@ -68,7 +68,7 @@ function BrandingConsultingCard({
         </p>
         <Badge
           variant="outline"
-          className="mt-1 h-auto gap-1.5 rounded-full border-teal-100 bg-teal-50 px-2.5 py-1 text-teal-800"
+          className="mt-1 h-auto gap-1.5 rounded-full border-violet-100 bg-violet-50 px-2.5 py-1 text-violet-800"
         >
           <Clock3 aria-hidden="true" />
           <span>예상 소요 시간</span>
@@ -83,18 +83,21 @@ function BrandingConsultingCard({
           함께 완성할 4가지
         </p>
         <ol className="grid grid-cols-2 gap-x-3 gap-y-3">
-          {['세부 키워드', '전공 가치관', '계열 적합 역량', '한 줄 서사'].map(
-            (output, index) => (
-              <li key={output} className="flex items-center gap-2">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-white text-[10px] font-semibold text-teal-700 ring-1 ring-slate-200/70">
-                  {index + 1}
-                </span>
-                <span className="text-xs font-medium text-slate-700">
-                  {output}
-                </span>
-              </li>
-            ),
-          )}
+          {[
+            '전공 세부 키워드',
+            '전공 가치관',
+            '계열 적합 역량',
+            '한 줄 서사',
+          ].map((output, index) => (
+            <li key={output} className="flex items-center gap-2">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-white text-[10px] font-semibold text-violet-700 ring-1 ring-slate-200/70">
+                {index + 1}
+              </span>
+              <span className="text-xs font-medium text-slate-700">
+                {output}
+              </span>
+            </li>
+          ))}
         </ol>
       </div>
 
@@ -102,7 +105,7 @@ function BrandingConsultingCard({
         <Button
           render={<Link href={href} />}
           nativeButton={false}
-          className="h-11 w-full justify-between rounded-xl bg-teal-800 px-4 text-white hover:bg-teal-900 focus-visible:ring-teal-600/30"
+          className="h-11 w-full justify-between rounded-xl bg-violet-800 px-4 text-white hover:bg-violet-900 focus-visible:ring-violet-600/30"
         >
           {isCompleted ? '결과 보기' : '브랜딩 시작하기'}
           <ArrowRight aria-hidden="true" />

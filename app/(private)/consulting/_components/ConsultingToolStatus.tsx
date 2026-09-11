@@ -58,7 +58,7 @@ export function ConsultingToolStatus() {
             }
           >
             <span
-              className="size-2 shrink-0 animate-pulse rounded-full bg-amber-400 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-amber-400)_18%,transparent)]"
+              className="size-2 shrink-0 animate-pulse rounded-full bg-amber-400"
               aria-hidden="true"
             />
             <span className="hidden sm:inline">
@@ -95,7 +95,7 @@ export function ConsultingToolStatus() {
             }
           >
             <span
-              className="size-2 shrink-0 rounded-full bg-destructive shadow-[0_0_0_3px_color-mix(in_oklch,var(--destructive)_14%,transparent)]"
+              className="size-2 shrink-0 rounded-full bg-destructive"
               aria-hidden="true"
             />
             <span className="hidden sm:inline">작업 실패</span>
@@ -121,7 +121,7 @@ export function ConsultingToolStatus() {
       aria-live="polite"
     >
       <span
-        className="size-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-emerald-500)_16%,transparent)]"
+        className="size-2 shrink-0 rounded-full bg-emerald-500"
         aria-hidden="true"
       />
       <span className="hidden sm:inline">작업 완료</span>
