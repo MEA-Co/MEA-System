@@ -17,6 +17,7 @@ import { createConsultingRenderer } from '@/features/consulting/core/renderer';
 import type { MemberRole } from '@/lib/profile';
 
 import { BrandingIntro } from './BrandingIntro';
+import { BrandingMajorScreen } from './BrandingMajorScreen';
 
 function BrandingScreen({
   data,
@@ -25,7 +26,7 @@ function BrandingScreen({
   data: unknown;
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const { index, outputs } = brandingScreenSchema.parse(data);
+  const { index, outputs, majors } = brandingScreenSchema.parse(data);
   const step = brandingSteps[index];
   const { draftValue, onDraftChange, send } = environment;
   const navigate = (direction: 'next' | 'back') =>
@@ -134,6 +135,19 @@ function BrandingScreen({
               {step ? '나의 브랜딩 노트' : '생활기록부 브랜딩 컨설팅'}
             </h2>
           </div>
+          <dl className="mb-5 space-y-2 border-b border-violet-200 pb-5">
+            {[majors.first, majors.second, majors.third].map(
+              (major, position) =>
+                major ? (
+                  <div key={position} className="flex gap-3 text-sm">
+                    <dt className="shrink-0 text-violet-700">
+                      {position + 1}순위
+                    </dt>
+                    <dd className="break-words text-slate-700">{major}</dd>
+                  </div>
+                ) : null,
+            )}
+          </dl>
           {index === 0 ? (
             <p className="text-sm leading-6 text-muted-foreground">
               전공 세부 키워드부터 시작해 나의 가치관, 역량, 한 줄 서사를 차례로
@@ -192,6 +206,22 @@ const brandingRenderer = createConsultingRenderer<
     ),
   },
   'branding.input': screenEntry,
+  'branding.primary-major': {
+    mode: 'static',
+    render: (_request, environment) => (
+      <BrandingMajorScreen key="primary" environment={environment} />
+    ),
+  },
+  'branding.additional-majors': {
+    mode: 'static',
+    render: (_request, environment) => (
+      <BrandingMajorScreen
+        key="additional"
+        additional
+        environment={environment}
+      />
+    ),
+  },
   'branding.complete': screenEntry,
 });
 

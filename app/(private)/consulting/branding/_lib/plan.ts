@@ -69,6 +69,28 @@ function readOutputs(
 
 export const brandingTools = createConsultingTools({});
 
+export const additionalMajorsSchema = z.object({
+  second: z.string().trim(),
+  third: z.string().trim(),
+});
+export function parseAdditionalMajors(value: string) {
+  try {
+    return additionalMajorsSchema.parse(JSON.parse(value));
+  } catch {
+    return null;
+  }
+}
+function readMajors(memory: ConsultingMemory<BrandingContext>) {
+  const primary = memory.actions['primary-major'];
+  const additional = memory.actions['additional-majors'];
+  return {
+    first: primary?.type === 'user.submit' ? primary.value.trim() : '',
+    ...(additional?.type === 'user.submit'
+      ? parseAdditionalMajors(additional.value)
+      : null),
+  };
+}
+
 export const brandingPlan = defineConsultingPlan<
   BrandingContext,
   typeof brandingTools
@@ -86,7 +108,38 @@ export const brandingPlan = defineConsultingPlan<
       type: 'screen',
       progress: { current: 0, total: brandingSteps.length },
       screen: { screenId: 'branding.intro', mode: 'static' },
-      on: { 'user.start-input': brandingSteps[0].id },
+      on: { 'user.start-input': 'primary-major' },
+    },
+    'primary-major': {
+      id: 'primary-major',
+      label: '전공 세부 키워드',
+      type: 'screen',
+      draftKey: 'primary-major',
+      progress: { current: 1, total: brandingSteps.length },
+      screen: { screenId: 'branding.primary-major', mode: 'static' },
+      on: {
+        'user.submit': {
+          target: 'additional-majors',
+          guard: ({ action }) =>
+            action.type === 'user.submit' && action.value.trim().length > 0,
+        },
+      },
+    },
+    'additional-majors': {
+      id: 'additional-majors',
+      label: '전공 세부 키워드',
+      type: 'screen',
+      draftKey: 'additional-majors',
+      progress: { current: 1, total: brandingSteps.length },
+      screen: { screenId: 'branding.additional-majors', mode: 'static' },
+      on: {
+        'user.submit': {
+          target: 'keywords',
+          guard: ({ action }) =>
+            action.type === 'user.submit' &&
+            parseAdditionalMajors(action.value) !== null,
+        },
+      },
     },
     ...Object.fromEntries(
       brandingSteps.map((step, index) => [
@@ -100,7 +153,11 @@ export const brandingPlan = defineConsultingPlan<
           screen: (memory: ConsultingMemory<BrandingContext>) => ({
             screenId: 'branding.input',
             mode: 'dynamic' as const,
-            data: { index, outputs: readOutputs(memory) },
+            data: {
+              index,
+              outputs: readOutputs(memory),
+              majors: readMajors(memory),
+            },
           }),
           on: {
             // Both directions submit the cumulative outputs so going back preserves edits.
@@ -151,7 +208,11 @@ export const brandingPlan = defineConsultingPlan<
       screen: (memory) => ({
         screenId: 'branding.complete',
         mode: 'dynamic',
-        data: { index: brandingSteps.length, outputs: readOutputs(memory) },
+        data: {
+          index: brandingSteps.length,
+          outputs: readOutputs(memory),
+          majors: readMajors(memory),
+        },
       }),
       on: {
         'user.submit': {
@@ -168,4 +229,9 @@ export const brandingPlan = defineConsultingPlan<
 export const brandingScreenSchema = z.object({
   index: z.number().int().min(0).max(brandingSteps.length),
   outputs: outputsSchema,
+  majors: z.object({
+    first: z.string(),
+    second: z.string().optional(),
+    third: z.string().optional(),
+  }),
 });
