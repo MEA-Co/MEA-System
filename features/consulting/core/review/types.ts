@@ -17,6 +17,7 @@ export type ConsultingReviewStep = {
   nodeId: string;
   description?: string;
   section?: string;
+  statePresentation?: 'tabs' | 'substeps';
   states: ReadonlyArray<ConsultingReviewState>;
 };
 

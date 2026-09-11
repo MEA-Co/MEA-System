@@ -228,6 +228,7 @@ export const brandingPlan = defineConsultingPlan<
 
 export const brandingScreenSchema = z.object({
   index: z.number().int().min(0).max(brandingSteps.length),
+  isReview: z.boolean().optional(),
   outputs: outputsSchema,
   majors: z.object({
     first: z.string(),

@@ -1,9 +1,10 @@
 'use client';
 
-import { ArrowRight, NotebookPen } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ArrowRight, Eye, NotebookPen, Play } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
 import { ConsultingFlow } from '@/app/(private)/consulting/_components/ConsultingFlow';
+import { ConsultingReview } from '@/app/(private)/consulting/_components/ConsultingReview';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import {
   brandingPlan,
@@ -11,6 +12,7 @@ import {
   brandingSteps,
   brandingTools,
 } from '@/app/(private)/consulting/branding/_lib/plan';
+import { brandingReviewPlan } from '@/app/(private)/consulting/branding/_lib/review';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createConsultingRenderer } from '@/features/consulting/core/renderer';
@@ -26,15 +28,16 @@ function BrandingScreen({
   data: unknown;
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const { index, outputs, majors } = brandingScreenSchema.parse(data);
+  const { index, isReview, outputs, majors } = brandingScreenSchema.parse(data);
   const step = brandingSteps[index];
   const { draftValue, onDraftChange, send } = environment;
+  const currentValue = step && isReview ? outputs[step.id] : draftValue;
   const navigate = (direction: 'next' | 'back') =>
     send({
       type: 'user.submit',
       value: JSON.stringify({
         direction,
-        outputs: step ? { ...outputs, [step.id]: draftValue } : outputs,
+        outputs: step ? { ...outputs, [step.id]: currentValue } : outputs,
       }),
     });
 
@@ -65,7 +68,7 @@ function BrandingScreen({
             className="space-y-7 p-6 md:p-8 lg:border-r lg:border-slate-200"
             onSubmit={(event) => {
               event.preventDefault();
-              if (draftValue.trim()) navigate('next');
+              if (currentValue.trim()) navigate('next');
             }}
           >
             <div className="space-y-3">
@@ -85,7 +88,7 @@ function BrandingScreen({
             <Textarea
               id={`branding-${step.id}`}
               aria-describedby="branding-description"
-              value={draftValue}
+              value={currentValue}
               onChange={(event) => onDraftChange(event.target.value)}
               placeholder={step.placeholder}
               className="min-h-52 rounded-xl border-slate-200 bg-violet-50/30 px-4 py-4 text-base leading-7 placeholder:text-slate-400 focus-visible:border-violet-700 focus-visible:ring-violet-700/15"
@@ -107,7 +110,7 @@ function BrandingScreen({
               <Button
                 type="submit"
                 className="rounded-xl bg-violet-800 hover:bg-violet-900"
-                disabled={!draftValue.trim()}
+                disabled={!currentValue.trim()}
               >
                 {index === brandingSteps.length - 1
                   ? '산출물 모아보기'
@@ -226,14 +229,57 @@ const brandingRenderer = createConsultingRenderer<
 });
 
 export function BrandingConsulting({ role }: { role: MemberRole }) {
+  const [mode, setMode] = useState<'experience' | 'review'>('experience');
+  const reviewEnabled = role === 'admin' || role === 'consultant';
+
   return (
-    <ConsultingFlow
-      progressLabels={brandingSteps.map((step) => step.title)}
-      plan={brandingPlan}
-      renderer={brandingRenderer}
-      tools={brandingTools}
-      viewerRole={role}
-      debug={role === 'admin'}
-    />
+    <div className="space-y-4">
+      {reviewEnabled ? (
+        <div
+          className="flex w-fit rounded-xl border bg-background p-1 shadow-sm"
+          role="group"
+          aria-label="컨설팅 확인 방식"
+        >
+          <Button
+            type="button"
+            variant={mode === 'experience' ? 'default' : 'ghost'}
+            size="sm"
+            aria-pressed={mode === 'experience'}
+            onClick={() => setMode('experience')}
+          >
+            <Play aria-hidden="true" />
+            직접 체험
+          </Button>
+          <Button
+            type="button"
+            variant={mode === 'review' ? 'default' : 'ghost'}
+            size="sm"
+            aria-pressed={mode === 'review'}
+            onClick={() => setMode('review')}
+          >
+            <Eye aria-hidden="true" />
+            전체 검토
+          </Button>
+        </div>
+      ) : null}
+
+      {mode === 'review' && reviewEnabled ? (
+        <ConsultingReview
+          plan={brandingPlan}
+          review={brandingReviewPlan}
+          renderer={brandingRenderer}
+          viewerRole={role}
+        />
+      ) : (
+        <ConsultingFlow
+          progressLabels={brandingSteps.map((step) => step.title)}
+          plan={brandingPlan}
+          renderer={brandingRenderer}
+          tools={brandingTools}
+          viewerRole={role}
+          debug={role === 'admin'}
+        />
+      )}
+    </div>
   );
 }

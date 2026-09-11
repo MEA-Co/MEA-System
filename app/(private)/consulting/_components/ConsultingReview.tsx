@@ -235,6 +235,36 @@ export function ConsultingReview({
                       {stepLabel(candidate)}
                     </span>
                   </button>
+                  {candidate.statePresentation === 'substeps' &&
+                  candidate.states.length > 1 ? (
+                    <ul
+                      className="my-2 ml-5 space-y-1 border-l border-border pl-3"
+                      aria-label={`${stepLabel(candidate)} 하위 단계`}
+                    >
+                      {candidate.states.map((child) => {
+                        const childSelected = isSelected && state?.id === child.id;
+                        return (
+                          <li key={child.id}>
+                            <button
+                              type="button"
+                              aria-current={childSelected ? 'step' : undefined}
+                              onClick={() =>
+                                followTarget({ stepId: candidate.id, stateId: child.id })
+                              }
+                              className={cn(
+                                'w-full rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
+                                childSelected
+                                  ? 'bg-primary/10 font-semibold text-primary'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                              )}
+                            >
+                              {child.label ?? child.id}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                 </div>
               );
             })}
@@ -260,7 +290,10 @@ export function ConsultingReview({
             <div className="flex flex-wrap items-center gap-2">
               {step.states.length > 1 ? (
                 <div
-                  className="mr-auto flex rounded-lg bg-muted p-1 lg:mr-2"
+                  className={cn(
+                    'mr-auto flex flex-wrap rounded-lg bg-muted p-1 lg:mr-2',
+                    step.statePresentation === 'substeps' && 'md:hidden',
+                  )}
                   role="group"
                   aria-label={`${stepLabel(step)} 화면 상태`}
                 >
