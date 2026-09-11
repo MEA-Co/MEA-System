@@ -12,6 +12,11 @@ const consultingItems = [
     title: '생활기록부 브랜딩 컨설팅 [재료함 설계]',
     href: '/consulting/material-box',
   },
+  {
+    id: 'branding-consulting',
+    title: '생활기록부 브랜딩 컨설팅',
+    href: '/consulting/branding',
+  },
 ] as const;
 
 export function ConsultingManagement({
