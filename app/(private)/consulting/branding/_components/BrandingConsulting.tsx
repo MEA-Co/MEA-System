@@ -6,6 +6,7 @@ import { type ReactNode, useState } from 'react';
 import { ConsultingFlow } from '@/app/(private)/consulting/_components/ConsultingFlow';
 import { ConsultingReview } from '@/app/(private)/consulting/_components/ConsultingReview';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import { BrandingMajorSearchProvider } from '@/app/(private)/consulting/branding/_context/BrandingMajorSearchContext';
 import {
   brandingPlan,
   brandingScreenSchema,
@@ -369,23 +370,25 @@ export function BrandingConsulting({ role }: { role: MemberRole }) {
         </div>
       ) : null}
 
-      {mode === 'review' && reviewEnabled ? (
-        <ConsultingReview
-          plan={brandingPlan}
-          review={brandingReviewPlan}
-          renderer={brandingRenderer}
-          viewerRole={role}
-        />
-      ) : (
-        <ConsultingFlow
-          progressLabels={brandingSteps.map((step) => step.title)}
-          plan={brandingPlan}
-          renderer={brandingRenderer}
-          tools={brandingTools}
-          viewerRole={role}
-          debug={role === 'admin'}
-        />
-      )}
+      <BrandingMajorSearchProvider key={mode}>
+        {mode === 'review' && reviewEnabled ? (
+          <ConsultingReview
+            plan={brandingPlan}
+            review={brandingReviewPlan}
+            renderer={brandingRenderer}
+            viewerRole={role}
+          />
+        ) : (
+          <ConsultingFlow
+            progressLabels={brandingSteps.map((step) => step.title)}
+            plan={brandingPlan}
+            renderer={brandingRenderer}
+            tools={brandingTools}
+            viewerRole={role}
+            debug={role === 'admin'}
+          />
+        )}
+      </BrandingMajorSearchProvider>
     </div>
   );
 }

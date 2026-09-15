@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ConsultingMemory } from '@/features/consulting/core/agent';
 import { defineConsultingPlan } from '@/features/consulting/core/plan';
 import { createConsultingTools } from '@/features/consulting/core/tools';
+import { parseMajorDraft } from '@/features/keywords/major-search/domain';
 
 import {
   generateMajorOverviewTool,
@@ -110,10 +111,22 @@ function readMajors(memory: ConsultingMemory<BrandingContext>) {
   const primary = memory.actions['primary-major'];
   const additional = memory.actions['additional-majors'];
   return {
-    first: primary?.type === 'user.submit' ? primary.value.trim() : '',
-    ...(additional?.type === 'user.submit'
-      ? parseAdditionalMajors(additional.value)
-      : null),
+    first:
+      primary?.type === 'user.submit'
+        ? (parseMajorDraft(primary.value)?.confirmed?.name ??
+          primary.value.trim())
+        : '',
+    ...Object.fromEntries(
+      Object.entries(
+        additional?.type === 'user.submit'
+          ? (parseAdditionalMajors(additional.value) ?? {})
+          : {},
+      ).map(([key, value]) => [
+        key,
+        parseMajorDraft(value)?.confirmed?.name ??
+          (parseMajorDraft(value) ? '' : value),
+      ]),
+    ),
   };
 }
 
@@ -147,7 +160,8 @@ export const brandingPlan = defineConsultingPlan<
         'user.submit': {
           target: 'additional-majors',
           guard: ({ action }) =>
-            action.type === 'user.submit' && action.value.trim().length > 0,
+            action.type === 'user.submit' &&
+            !!parseMajorDraft(action.value)?.confirmed,
         },
       },
     },
@@ -163,7 +177,14 @@ export const brandingPlan = defineConsultingPlan<
           target: 'major-confirmation',
           guard: ({ action }) =>
             action.type === 'user.submit' &&
-            parseAdditionalMajors(action.value) !== null,
+            parseAdditionalMajors(action.value) !== null &&
+            Object.values(parseAdditionalMajors(action.value)!).every(
+              (value) =>
+                !value ||
+                (!!parseMajorDraft(value) &&
+                  (!parseMajorDraft(value)!.input.trim() ||
+                    !!parseMajorDraft(value)!.confirmed)),
+            ),
         },
       },
     },

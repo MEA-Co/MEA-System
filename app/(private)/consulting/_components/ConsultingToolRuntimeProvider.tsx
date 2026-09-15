@@ -32,8 +32,12 @@ export function ConsultingToolRuntimeProvider({
   );
 }
 
+export function useOptionalConsultingToolRuntime() {
+  return useContext(ConsultingToolRuntimeContext);
+}
+
 export function useConsultingToolRuntime() {
-  const runtime = useContext(ConsultingToolRuntimeContext);
+  const runtime = useOptionalConsultingToolRuntime();
   if (!runtime) {
     throw new Error(
       'useConsultingToolRuntime은 ConsultingToolRuntimeProvider 안에서 사용해야 합니다.',

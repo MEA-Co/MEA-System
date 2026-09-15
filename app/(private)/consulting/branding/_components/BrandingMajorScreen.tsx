@@ -5,9 +5,10 @@ import { useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
+import { BrandingMajorSearchInput } from '@/app/(private)/consulting/branding/_components/BrandingMajorSearchInput';
 import { parseAdditionalMajors } from '@/app/(private)/consulting/branding/_lib/plan';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { parseMajorDraft } from '@/features/keywords/major-search/domain';
 
 export function BrandingMajorScreen({
   additional = false,
@@ -19,7 +20,15 @@ export function BrandingMajorScreen({
   const [ready, setReady] = useState(false);
   const { draftValue, onDraftChange, send } = environment;
   const others = parseAdditionalMajors(draftValue) ?? { second: '', third: '' };
-  const valid = additional || draftValue.trim().length > 0;
+  const valid = additional
+    ? [others.second, others.third].every(
+        (value) =>
+          !value ||
+          (!!parseMajorDraft(value) &&
+            (!parseMajorDraft(value)!.input.trim() ||
+              !!parseMajorDraft(value)!.confirmed)),
+      )
+    : !!parseMajorDraft(draftValue)?.confirmed;
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <ConsultingPrompter
@@ -57,38 +66,23 @@ export function BrandingMajorScreen({
             </p>
             {(['second', 'third'] as const).map((key, index) => (
               <div key={key} className="space-y-2">
-                <label htmlFor={`major-${key}`} className="text-sm font-medium">
-                  {index + 2}순위{' '}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    선택
-                  </span>
-                </label>
-                <Input
-                  id={`major-${key}`}
+                <BrandingMajorSearchInput
+                  label={`${index + 2}순위 희망 전공 (선택)`}
                   value={others[key]}
-                  onChange={(event) =>
-                    onDraftChange(
-                      JSON.stringify({ ...others, [key]: event.target.value }),
-                    )
+                  onChange={(value) =>
+                    onDraftChange(JSON.stringify({ ...others, [key]: value }))
                   }
-                  placeholder="전공명을 입력해 주세요"
-                  className="h-12 rounded-xl focus-visible:border-violet-500 focus-visible:ring-violet-200"
                 />
               </div>
             ))}
           </>
         ) : (
           <div className="space-y-2">
-            <label htmlFor="major-first" className="text-sm font-medium">
-              1순위 희망 전공
-            </label>
-            <Input
-              id="major-first"
-              required
+            <BrandingMajorSearchInput
+              label="1순위 희망 전공"
               value={draftValue}
-              onChange={(event) => onDraftChange(event.target.value)}
-              placeholder="예: 경영학과, 기계공학과, 심리학과"
-              className="h-12 rounded-xl focus-visible:border-violet-500 focus-visible:ring-violet-200"
+              onChange={onDraftChange}
+              onConfirmed={(value) => send({ type: 'user.submit', value })}
             />
           </div>
         )}

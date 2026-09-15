@@ -6,8 +6,8 @@ import { useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
 import {
-  useConsultingToolRuntime,
-  useConsultingToolRuntimeSnapshot,
+  useOptionalConsultingToolRuntime,
+  useOptionalConsultingToolRuntimeSnapshot,
 } from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
@@ -45,10 +45,13 @@ const examples = [
 ];
 
 export function MajorOverviews({ majors }: { majors: MajorList }) {
-  const { jobs } = useConsultingToolRuntimeSnapshot();
-  const runtime = useConsultingToolRuntime();
+  const { jobs } = useOptionalConsultingToolRuntimeSnapshot();
+  const runtime = useOptionalConsultingToolRuntime();
   return (
-    <Tabs.Root className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
+    <Tabs.Root
+      defaultValue={majorNames(majors)[0]}
+      className="overflow-hidden rounded-2xl border border-violet-100 bg-white"
+    >
       <Tabs.List
         aria-label="희망 전공별 안내"
         activateOnFocus
@@ -107,6 +110,11 @@ export function MajorOverviews({ majors }: { majors: MajorList }) {
                   ))}
                 </ol>
               </>
+            ) : !runtime ? (
+              <p className="mt-6 text-sm leading-7 text-slate-600">
+                실제 컨설팅에서는 선택한 전공의 공식 학과 자료와 5개 대주제를
+                이곳에서 확인할 수 있어요.
+              </p>
             ) : failed ? (
               <div role="alert" className="mt-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
@@ -115,7 +123,7 @@ export function MajorOverviews({ majors }: { majors: MajorList }) {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    if (job) {
+                    if (job && runtime) {
                       const run = runtime.retry(job.id);
                       void run?.result.catch(() => undefined);
                     }
