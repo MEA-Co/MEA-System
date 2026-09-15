@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { BrandingConsulting } from '@/app/(private)/consulting/branding/_components/BrandingConsulting';
 import { Button } from '@/components/ui/button';
 import { requireUserAccess } from '@/lib/auth';
-import { MEMBER_ROLES } from '@/lib/profile';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BrandingPage() {
-  const { role } = await requireUserAccess({ allowedRoles: MEMBER_ROLES });
+  const { role } = await requireUserAccess({
+    allowedRoles: ['consultant', 'admin'],
+    unauthorizedRedirectTo: '/dashboard?view=consulting',
+  });
   return (
     <main className="min-h-svh bg-muted/30">
       <header className="border-b bg-background">

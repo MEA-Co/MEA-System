@@ -108,7 +108,7 @@ export function AdminDashboard({
                 consultant={<ConsultantDashboard consultantName="이컨설턴트" />}
               />
             ) : (
-              <ConsultingManagement />
+              <ConsultingManagement role="admin" />
             )}
           </div>
         </div>

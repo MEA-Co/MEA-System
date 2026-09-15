@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { MATERIAL_BOX_CONSULTING_ID } from '@/features/consulting/completion';
+import type { MemberRole } from '@/lib/profile';
 
 const consultingItems: ReadonlyArray<{
   id: string;
@@ -116,9 +117,11 @@ function BrandingConsultingCard({
 }
 
 export function ConsultingManagement({
+  role,
   completedConsultingIds = [],
 }: {
   completedConsultingIds?: ReadonlyArray<string>;
+  role: MemberRole;
 }) {
   return (
     <>
@@ -130,53 +133,60 @@ export function ConsultingManagement({
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {consultingItems.map((consulting) => {
-          const isCompleted = completedConsultingIds.includes(consulting.id);
-          const href = isCompleted
-            ? `${consulting.href}/result`
-            : consulting.href;
+        {consultingItems
+          .filter(
+            (item) =>
+              item.id !== 'branding-consulting' ||
+              role === 'consultant' ||
+              role === 'admin',
+          )
+          .map((consulting) => {
+            const isCompleted = completedConsultingIds.includes(consulting.id);
+            const href = isCompleted
+              ? `${consulting.href}/result`
+              : consulting.href;
 
-          if (consulting.id === 'branding-consulting') {
+            if (consulting.id === 'branding-consulting') {
+              return (
+                <BrandingConsultingCard
+                  key={consulting.id}
+                  href={href}
+                  isCompleted={isCompleted}
+                  estimatedDuration={consulting.estimatedDuration}
+                />
+              );
+            }
+
             return (
-              <BrandingConsultingCard
-                key={consulting.id}
-                href={href}
-                isCompleted={isCompleted}
-                estimatedDuration={consulting.estimatedDuration}
-              />
+              <Card
+                key={consulting.href}
+                className="gap-0 rounded-xl border py-0 shadow-none ring-0"
+              >
+                <CardHeader className="py-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="leading-6">
+                      {consulting.title}
+                    </CardTitle>
+                    {isCompleted ? (
+                      <Badge className="shrink-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                        완료
+                      </Badge>
+                    ) : null}
+                  </div>
+                </CardHeader>
+                <CardFooter className="border-t px-6 py-4">
+                  <Button
+                    render={<Link href={href} />}
+                    nativeButton={false}
+                    className="w-full"
+                  >
+                    {isCompleted ? '결과 보기' : '시작하기'}
+                    <ArrowUpRight />
+                  </Button>
+                </CardFooter>
+              </Card>
             );
-          }
-
-          return (
-            <Card
-              key={consulting.href}
-              className="gap-0 rounded-xl border py-0 shadow-none ring-0"
-            >
-              <CardHeader className="py-5">
-                <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="leading-6">
-                    {consulting.title}
-                  </CardTitle>
-                  {isCompleted ? (
-                    <Badge className="shrink-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                      완료
-                    </Badge>
-                  ) : null}
-                </div>
-              </CardHeader>
-              <CardFooter className="border-t px-6 py-4">
-                <Button
-                  render={<Link href={href} />}
-                  nativeButton={false}
-                  className="w-full"
-                >
-                  {isCompleted ? '결과 보기' : '시작하기'}
-                  <ArrowUpRight />
-                </Button>
-              </CardFooter>
-            </Card>
-          );
-        })}
+          })}
       </div>
     </>
   );

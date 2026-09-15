@@ -62,7 +62,7 @@ export function ConsultantDashboard({
         </div>
 
         <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
-          <ConsultingManagement />
+          <ConsultingManagement role="consultant" />
         </div>
       </section>
     </main>

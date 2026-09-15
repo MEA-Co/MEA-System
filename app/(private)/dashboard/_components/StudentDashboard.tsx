@@ -51,6 +51,7 @@ export function StudentDashboard({
 
         <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
           <ConsultingManagement
+            role="student"
             completedConsultingIds={completedConsultingIds}
           />
         </div>
