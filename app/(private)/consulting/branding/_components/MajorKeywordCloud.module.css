@@ -1,0 +1,95 @@
+.explorer {
+  margin-top: 1.5rem;
+}
+.cloud {
+  min-width: 0;
+  background: radial-gradient(ellipse at center, #f5f3ff 0%, #fff 75%);
+}
+.viewport {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.viewport svg {
+  display: block;
+  margin: auto;
+}
+.word {
+  cursor: pointer;
+  transition:
+    fill 220ms ease,
+    opacity 220ms ease;
+}
+.word:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+.loading {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  color: #7c3aed;
+  font-size: 0.875rem;
+}
+.mobileHint {
+  display: none;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0.5rem;
+}
+.overflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+@keyframes appear {
+  from {
+    opacity: 0.3;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 680px) {
+  .mobileHint {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word {
+    transition: none;
+  }
+}
+.tooltip {
+  position: fixed;
+  z-index: 80;
+  width: min(320px, calc(100vw - 24px));
+  border: 1px solid #ddd6fe;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 28px #4c1d9526;
+  padding: 16px;
+  animation: appear 140ms ease-out;
+}
+.tooltipContent {
+  max-height: min(320px, 60dvh);
+  overflow-y: auto;
+}
+.tooltipArrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  background: white;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    animation: none;
+  }
+}

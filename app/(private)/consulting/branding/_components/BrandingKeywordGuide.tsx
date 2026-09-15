@@ -1,26 +1,15 @@
 'use client';
 
-import { Tabs } from '@base-ui/react/tabs';
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
-import {
-  useOptionalConsultingToolRuntime,
-  useOptionalConsultingToolRuntimeSnapshot,
-} from '@/app/(private)/consulting/_components/ConsultingToolRuntimeProvider';
 import type { ConsultingScreenRenderEnvironment } from '@/app/(private)/consulting/_lib/renderer';
 import { Button } from '@/components/ui/button';
 
-import { type MajorList, majorNames } from '../_lib/plan';
-import {
-  majorOverviewKey,
-  majorOverviewSchema,
-} from '../_tools/GenerateMajorOverviewTool';
+import { type MajorList } from '../_lib/plan';
 
-import { DepartmentWebsitePreview } from './DepartmentWebsitePreview';
-
-import styles from './MajorOverviews.module.css';
+export { MajorOverviews } from './MajorOverviews';
 
 const messages = [
   '좋습니다. 여러분만의 이야기를 하려면, 희망 전공에서 한 걸음 더 나아가 전공별로 세부 키워드를 정해야 합니다.',
@@ -43,109 +32,6 @@ const examples = [
   ],
   ['청소년 언어', '친구들이 같은 말을 상황마다 다르게 쓰는 게 신기해.'],
 ];
-
-export function MajorOverviews({ majors }: { majors: MajorList }) {
-  const { jobs } = useOptionalConsultingToolRuntimeSnapshot();
-  const runtime = useOptionalConsultingToolRuntime();
-  return (
-    <Tabs.Root
-      defaultValue={majorNames(majors)[0]}
-      className="overflow-hidden rounded-2xl border border-violet-100 bg-white"
-    >
-      <Tabs.List
-        aria-label="희망 전공별 안내"
-        activateOnFocus
-        className="flex gap-1 overflow-x-auto border-b border-violet-100 bg-violet-50/50 p-2"
-      >
-        {majorNames(majors).map((major) => (
-          <Tabs.Tab
-            key={major}
-            value={major}
-            className="shrink-0 rounded-lg px-4 py-3 text-sm font-medium text-slate-500 transition-colors hover:bg-violet-100/60 focus-visible:outline-2 focus-visible:outline-violet-500 data-active:bg-violet-100 data-active:text-violet-800"
-          >
-            {major}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
-      {majorNames(majors).map((major) => {
-        const job = [...jobs]
-          .reverse()
-          .find((item) => item.key === majorOverviewKey(major));
-        const result = majorOverviewSchema.safeParse(job?.output);
-        const failed =
-          job?.status === 'rejected' ||
-          job?.status === 'cancelled' ||
-          (job?.status === 'completed' && !result.success);
-        return (
-          <Tabs.Panel
-            key={major}
-            value={major}
-            className="min-h-48 p-5 focus-visible:outline-2 focus-visible:outline-violet-500 sm:p-6"
-          >
-            <h2 className="text-lg font-semibold text-violet-900">{major}</h2>
-            {job?.status === 'completed' && result.success ? (
-              <>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {result.data.department}의 공식 자료를 참고한 안내입니다.
-                  대학마다 교육과정은 다를 수 있어요.
-                </p>
-                <DepartmentWebsitePreview
-                  department={result.data.department}
-                  url={result.data.url}
-                  previewSites={result.data.previewSites}
-                />
-                <ol className="divide-y divide-violet-100">
-                  {result.data.topics.map((topic, index) => (
-                    <li key={topic.title} className="py-4">
-                      <h3 className="font-medium">
-                        <span className="mr-2 text-violet-600">
-                          {index + 1}.
-                        </span>
-                        {topic.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {topic.description}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </>
-            ) : !runtime ? (
-              <p className="mt-6 text-sm leading-7 text-slate-600">
-                실제 컨설팅에서는 선택한 전공의 공식 학과 자료와 5개 대주제를
-                이곳에서 확인할 수 있어요.
-              </p>
-            ) : failed ? (
-              <div role="alert" className="mt-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  학과 안내를 가져오지 못했습니다. 다시 시도해 주세요.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (job && runtime) {
-                      const run = runtime.retry(job.id);
-                      void run?.result.catch(() => undefined);
-                    }
-                  }}
-                >
-                  다시 시도
-                </Button>
-              </div>
-            ) : (
-              <p
-                role="status"
-                className={`mt-6 text-sm leading-7 ${styles.loadingText}`}
-              >
-                공식 학과 자료에서 5개 대주제를 정리하고 있어요.
-              </p>
-            )}
-          </Tabs.Panel>
-        );
-      })}
-    </Tabs.Root>
-  );
-}
 
 export function BrandingKeywordGuide({
   majors,
@@ -234,8 +120,6 @@ export function BrandingKeywordGuide({
             </article>
           ))}
         </div>
-      ) : index === 3 ? (
-        <MajorOverviews majors={majors} />
       ) : null}
     </div>
   );

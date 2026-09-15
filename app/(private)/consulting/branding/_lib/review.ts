@@ -5,9 +5,9 @@ import {
 import type { ConsultingReviewPlan } from '@/features/consulting/core/review';
 
 const majors = {
-  first: '산업공학과',
-  second: '컴퓨터공학과',
-  third: '심리학과',
+  first: '산업공학',
+  second: '컴퓨터·소프트웨어공학',
+  third: '심리학',
 };
 
 const outputs = {

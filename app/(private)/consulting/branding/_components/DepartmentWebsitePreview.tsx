@@ -1,7 +1,7 @@
 'use client';
 
 import { ExternalLink, PanelsTopLeft } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,7 @@ export function DepartmentWebsitePreview({
   url: string;
   previewSites: { department: string; url: string }[];
 }) {
+  const selectId = useId();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(0);
   const preview = previewSites[selected] ?? previewSites[0];
@@ -32,7 +33,7 @@ export function DepartmentWebsitePreview({
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 rounded text-sm font-medium text-violet-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-violet-500"
     >
-      {department} 출처 보기{' '}
+      {department} 새 탭에서 보기{' '}
       <ExternalLink className="size-3.5" aria-hidden="true" />
     </a>
   );
@@ -57,15 +58,15 @@ export function DepartmentWebsitePreview({
               </DialogTitle>
               <DialogDescription>
                 학교의 보안 설정에 따라 미리보기가 제한될 수 있어요. 사이트가
-                보이지 않으면 다른 대학을 선택하거나 새 탭에서 열어주세요. 아래
-                사이트는 설명의 출처와 별도로 제공하는 탐색 자료입니다.
+                보이지 않으면 다른 대학을 선택하거나 새 탭에서 열어주세요.
+                등록된 학과 참고 사이트를 자유롭게 살펴보세요.
               </DialogDescription>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label className="sr-only" htmlFor="preview-university">
+                <label className="sr-only" htmlFor={selectId}>
                   미리보기 대학
                 </label>
                 <select
-                  id="preview-university"
+                  id={selectId}
                   value={selected}
                   onChange={(event) => setSelected(Number(event.target.value))}
                   className="max-w-full rounded-lg border border-violet-200 bg-white p-2 text-violet-800"

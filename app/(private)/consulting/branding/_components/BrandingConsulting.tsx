@@ -23,6 +23,7 @@ import type { MemberRole } from '@/lib/profile';
 
 import { BrandingIntro } from './BrandingIntro';
 import { BrandingKeywordGuide, MajorOverviews } from './BrandingKeywordGuide';
+import { BrandingKeywordInput } from './BrandingKeywordInput';
 import { BrandingMajorScreen } from './BrandingMajorScreen';
 
 function BrandingScreen({
@@ -35,7 +36,8 @@ function BrandingScreen({
   const { index, isReview, outputs, majors } = brandingScreenSchema.parse(data);
   const step = brandingSteps[index];
   const { draftValue, onDraftChange, send } = environment;
-  const currentValue = step && isReview ? outputs[step.id] : draftValue;
+  const currentValue =
+    step && isReview ? draftValue || outputs[step.id] : draftValue;
   const navigate = (direction: 'next' | 'back') =>
     send({
       type: 'user.submit',
@@ -64,7 +66,14 @@ function BrandingScreen({
         next.length ? Math.min(...next) : undefined,
       );
     });
-    const valid = entries.length > 0 && entries.every((entry) => entry.trim());
+    const keywordLists = entries.map((entry) =>
+      entry
+        .split('\n')
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
+    const valid =
+      keywordLists.length > 0 && keywordLists.every((list) => list.length > 0);
     return (
       <div className="mx-auto max-w-5xl space-y-6">
         <form
@@ -74,42 +83,26 @@ function BrandingScreen({
             if (valid) navigate('next');
           }}
         >
-          <div className="space-y-2">
-            <h1 className="text-lg font-semibold text-slate-900">
-              나의 세부 키워드
-            </h1>
-            <p id="keyword-hint" className="text-sm leading-6 text-slate-500">
-              전공마다 관심이 가는 분야나 궁금한 문제를 적어주세요.
-            </p>
-          </div>
-          {names.map((major, position) => (
-            <div key={major} className="space-y-3">
-              <label
-                htmlFor={`branding-keywords-${position}`}
-                className="text-sm font-medium text-violet-800"
-              >
-                {major}
-              </label>
-              <Textarea
-                id={`branding-keywords-${position}`}
-                aria-describedby="keyword-hint"
-                value={entries[position]}
-                onChange={(event) =>
+          <MajorOverviews
+            majors={majors}
+            completed={names.filter((_, i) => keywordLists[i].length > 0)}
+            renderInput={(major) => (
+              <BrandingKeywordInput
+                major={major}
+                keywords={keywordLists[names.indexOf(major)]}
+                onChange={(keywords) =>
                   onDraftChange(
                     names
                       .map(
                         (name, i) =>
-                          `[${name}]\n${i === position ? event.target.value : entries[i]}`,
+                          `[${name}]\n${(name === major ? keywords : keywordLists[i]).join('\n')}`,
                       )
                       .join('\n\n'),
                   )
                 }
-                required
-                placeholder={`${major}에서 관심 있는 세부 키워드를 적어주세요.`}
-                className="min-h-40 rounded-xl border-violet-100 bg-violet-50/30 p-4 text-base leading-7 shadow-none placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-200"
               />
-            </div>
-          ))}
+            )}
+          />
           <div className="flex justify-end border-t border-violet-100 pt-5">
             <Button
               type="submit"
@@ -120,7 +113,6 @@ function BrandingScreen({
             </Button>
           </div>
         </form>
-        <MajorOverviews majors={majors} />
       </div>
     );
   }

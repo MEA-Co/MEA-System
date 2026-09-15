@@ -5,11 +5,6 @@ import { defineConsultingPlan } from '@/features/consulting/core/plan';
 import { createConsultingTools } from '@/features/consulting/core/tools';
 import { parseMajorDraft } from '@/features/keywords/major-search/domain';
 
-import {
-  generateMajorOverviewTool,
-  majorOverviewKey,
-} from '../_tools/GenerateMajorOverviewTool';
-
 export const brandingSteps = [
   {
     id: 'keywords',
@@ -73,14 +68,10 @@ function readOutputs(
   );
 }
 
-export const brandingTools = createConsultingTools<{
-  'major-overview.generate': {
-    input: { major: string };
-    output: Awaited<ReturnType<typeof generateMajorOverviewTool.execute>>;
-  };
-}>({ 'major-overview.generate': generateMajorOverviewTool });
+export const brandingTools = createConsultingTools({});
 
 export const majorListSchema = z.object({
+  ids: z.record(z.string(), z.string().uuid()).optional(),
   first: z.string(),
   second: z.string().optional(),
   third: z.string().optional(),
@@ -110,7 +101,18 @@ export function parseAdditionalMajors(value: string) {
 function readMajors(memory: ConsultingMemory<BrandingContext>) {
   const primary = memory.actions['primary-major'];
   const additional = memory.actions['additional-majors'];
+  const stored = [
+    primary?.type === 'user.submit' ? primary.value : '',
+    ...Object.values(
+      additional?.type === 'user.submit'
+        ? (parseAdditionalMajors(additional.value) ?? {})
+        : {},
+    ),
+  ]
+    .map((value) => parseMajorDraft(value)?.confirmed)
+    .filter((value) => !!value);
   return {
+    ids: Object.fromEntries(stored.map((major) => [major.name, major.id])),
     first:
       primary?.type === 'user.submit'
         ? (parseMajorDraft(primary.value)?.confirmed?.name ??
@@ -201,18 +203,6 @@ export const brandingPlan = defineConsultingPlan<
       on: {
         'user.start-input': 'keyword-guide',
         'user.previous-explanation': 'primary-major',
-      },
-      effects: {
-        'user.start-input': ({ memory }) =>
-          majorNames(readMajors(memory)).map((major) => ({
-            toolId: 'major-overview.generate' as const,
-            input: { major },
-            key: majorOverviewKey(major),
-            groupId: `branding-overviews:${JSON.stringify(majorNames(readMajors(memory)))}`,
-            label: `${major} · 학과 안내 준비`,
-            resultKey: majorOverviewKey(major),
-            policy: 'reuse' as const,
-          })),
       },
     },
     'keyword-guide': {
@@ -316,9 +306,5 @@ export const brandingScreenSchema = z.object({
   index: z.number().int().min(0).max(brandingSteps.length),
   isReview: z.boolean().optional(),
   outputs: outputsSchema,
-  majors: z.object({
-    first: z.string(),
-    second: z.string().optional(),
-    third: z.string().optional(),
-  }),
+  majors: majorListSchema,
 });
