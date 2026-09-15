@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Eye, NotebookPen, Play } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, NotebookPen, Play } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 import { ConsultingFlow } from '@/app/(private)/consulting/_components/ConsultingFlow';
@@ -103,7 +103,20 @@ function BrandingScreen({
               />
             )}
           />
-          <div className="flex justify-end border-t border-violet-100 pt-5">
+          <div className="flex justify-between border-t border-violet-100 pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50"
+              onClick={() =>
+                isReview
+                  ? send({ type: 'user.previous-explanation' })
+                  : navigate('back')
+              }
+            >
+              <ArrowLeft aria-hidden="true" />
+              이전
+            </Button>
             <Button
               type="submit"
               disabled={!valid}

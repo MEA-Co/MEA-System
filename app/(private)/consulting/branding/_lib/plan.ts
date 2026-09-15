@@ -159,6 +159,7 @@ export const brandingPlan = defineConsultingPlan<
       progress: { current: 1, total: brandingSteps.length },
       screen: { screenId: 'branding.primary-major', mode: 'static' },
       on: {
+        'user.previous-explanation': 'intro',
         'user.submit': {
           target: 'additional-majors',
           guard: ({ action }) =>
@@ -175,6 +176,7 @@ export const brandingPlan = defineConsultingPlan<
       progress: { current: 1, total: brandingSteps.length },
       screen: { screenId: 'branding.additional-majors', mode: 'static' },
       on: {
+        'user.previous-explanation': 'primary-major',
         'user.submit': {
           target: 'major-confirmation',
           guard: ({ action }) =>
@@ -250,7 +252,7 @@ export const brandingPlan = defineConsultingPlan<
                 return (
                   !!submission &&
                   (submission.direction === 'back'
-                    ? index > 0
+                    ? true
                     : brandingSteps
                         .slice(0, index + 1)
                         .every(
@@ -268,7 +270,9 @@ export const brandingPlan = defineConsultingPlan<
                     ? parseBrandingSubmission(action.value)
                     : null;
                 return submission?.direction === 'back'
-                  ? brandingSteps[index - 1].id
+                  ? index === 0
+                    ? 'primary-major'
+                    : brandingSteps[index - 1].id
                   : (brandingSteps[index + 1]?.id ?? 'complete');
               },
             },

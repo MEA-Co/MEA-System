@@ -65,6 +65,7 @@ export const brandingReviewPlan = {
                       mode: 'static' as const,
                     },
                     on: {
+                      'user.previous-explanation': 'intro',
                       'user.submit': {
                         stepId: 'keywords',
                         stateId: 'additional-majors',
@@ -80,6 +81,10 @@ export const brandingReviewPlan = {
                       mode: 'static' as const,
                     },
                     on: {
+                      'user.previous-explanation': {
+                        stepId: 'keywords',
+                        stateId: 'primary-major',
+                      },
                       'user.submit': {
                         stepId: 'keywords',
                         stateId: 'default',
@@ -90,7 +95,17 @@ export const brandingReviewPlan = {
               : []),
             {
               id: 'default',
-              ...(index === 0 ? { label: '키워드 작성' } : {}),
+              ...(index === 0
+                ? {
+                    label: '키워드 작성',
+                    on: {
+                      'user.previous-explanation': {
+                        stepId: 'keywords',
+                        stateId: 'primary-major',
+                      },
+                    },
+                  }
+                : {}),
               renderTarget: {
                 screenId: 'branding.input',
                 mode: 'dynamic' as const,

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConsultingPrompter } from '@/app/(private)/consulting/_components/ConsultingPrompter';
@@ -86,7 +86,16 @@ export function BrandingMajorScreen({
             />
           </div>
         )}
-        <div className="flex justify-end border-t pt-5">
+        <div className="flex justify-between border-t pt-5">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50"
+            onClick={() => send({ type: 'user.previous-explanation' })}
+          >
+            <ArrowLeft aria-hidden="true" />
+            이전
+          </Button>
           <Button
             type="submit"
             disabled={!ready || !valid}
