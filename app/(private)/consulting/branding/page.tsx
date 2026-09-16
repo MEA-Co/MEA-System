@@ -8,7 +8,7 @@ import { requireUserAccess } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export default async function BrandingPage() {
-  const { role } = await requireUserAccess({
+  const { role, user } = await requireUserAccess({
     allowedRoles: ['consultant', 'admin'],
     unauthorizedRedirectTo: '/dashboard?view=consulting',
   });
@@ -29,7 +29,7 @@ export default async function BrandingPage() {
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-7 lg:px-8">
-        <BrandingConsulting role={role} />
+        <BrandingConsulting role={role} userId={user.id} />
       </div>
     </main>
   );

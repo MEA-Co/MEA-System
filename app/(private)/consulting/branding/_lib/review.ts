@@ -3,6 +3,13 @@ import {
   brandingSteps,
 } from '@/app/(private)/consulting/branding/_lib/plan';
 import type { ConsultingReviewPlan } from '@/features/consulting/core/review';
+import {
+  appendStudentTurn,
+  applyValuesReply,
+  createValuesContext,
+  finishEarly,
+  initialValuesState,
+} from '@/features/major-values/domain';
 
 const majors = {
   first: '산업공학',
@@ -11,7 +18,8 @@ const majors = {
 };
 
 const outputs = {
-  keywords: '인간 중심 시스템 설계와 설명 가능한 인공지능',
+  keywords:
+    '[산업공학]\n인간 중심 시스템 설계\n\n[컴퓨터·소프트웨어공학]\n설명 가능한 인공지능\n\n[심리학]\n의사결정',
   values:
     '기술이 효율을 높이는 데서 멈추지 않고, 누구나 이해하고 주체적으로 선택할 수 있게 만드는 가치를 추구하고 싶다.',
   competencies:
@@ -19,6 +27,59 @@ const outputs = {
   story:
     '나는 사람이 이해하고 선택할 수 있는 기술을 설계하기 위해, 데이터를 분석하고 다양한 관점을 연결하는 사람이다.',
 } satisfies BrandingOutputs;
+
+const valuesContext = createValuesContext(majors, outputs.keywords);
+const firstInterest = valuesContext.interests[0].id;
+const sampleAnswer =
+  '시스템이 효율적이어도 사용자가 이해하지 못하면 스스로 선택하기 어려워요. 그래서 사람이 이해하고 주체적으로 선택할 수 있는 시스템을 중요하게 생각해요.';
+const samplePending = appendStudentTurn(
+  initialValuesState(valuesContext),
+  sampleAnswer,
+  [firstInterest],
+);
+const sampleEvidence = [
+  { turnId: samplePending.pendingTurnId!, quote: sampleAnswer },
+];
+const sampleValues = finishEarly(
+  applyValuesReply(
+    samplePending,
+    {
+      observations: samplePending.observations.map((o) =>
+        o.interestId === firstInterest
+          ? {
+              ...o,
+              focus: '사용자가 이해할 수 있는 시스템',
+              direction: '주체적인 선택',
+              reason: '이해하지 못하면 스스로 선택하기 어렵기 때문',
+              evidence: sampleEvidence,
+            }
+          : o,
+      ),
+      hypotheses: [
+        {
+          id: 'sample-value',
+          statement:
+            '사용자가 이해하고 주체적으로 선택할 수 있는 시스템을 중요하게 생각한다.',
+          interestIds: [firstInterest],
+          coreValueIds: [],
+          basis: 'student-explicit',
+          pattern: 'specific',
+          evidence: sampleEvidence,
+          conditions: [],
+          revisionEvidence: [],
+        },
+      ],
+      connections: [],
+      next: {
+        stage: 'next-interest',
+        interestIds: [valuesContext.interests[1].id],
+        message: '다른 관심사도 이어서 살펴볼까요?',
+        metadataIds: [],
+      },
+    },
+    { coreValueIds: [], metadataIds: [], version: 'review-sample' },
+  ),
+);
 
 export const brandingReviewPlan = {
   id: 'branding-consulting-review',
@@ -54,6 +115,41 @@ export const brandingReviewPlan = {
           statePresentation: 'substeps' as const,
           description: `샘플 학생의 ${step.title}을 작성하는 단계`,
           states: [
+            ...(step.id === 'values'
+              ? [
+                  {
+                    id: 'guide',
+                    label: '가치관 안내',
+                    renderTarget: {
+                      screenId: 'branding.values-guide',
+                      mode: 'dynamic' as const,
+                      data: { index, outputs, majors },
+                    },
+                    on: {
+                      'user.submit': {
+                        stepId: 'values',
+                        stateId: 'conversation',
+                      },
+                    },
+                  },
+                  {
+                    id: 'conversation',
+                    label: '가치관 대화',
+                    description:
+                      '선택한 키워드가 중요한 이유를 대화로 정리합니다.',
+                    renderTarget: {
+                      screenId: 'branding.input',
+                      mode: 'dynamic' as const,
+                      data: {
+                        index,
+                        isReview: true,
+                        outputs: { ...outputs, values: '' },
+                        majors,
+                      },
+                    },
+                  },
+                ]
+              : []),
             ...(index === 0
               ? [
                   {
@@ -112,6 +208,9 @@ export const brandingReviewPlan = {
                 data: {
                   index,
                   isReview: true,
+                  ...(step.id === 'values'
+                    ? { valuesSession: JSON.stringify(sampleValues) }
+                    : {}),
                   outputs,
                   majors,
                 },

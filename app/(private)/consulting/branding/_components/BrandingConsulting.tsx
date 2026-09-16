@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowLeft, ArrowRight, Eye, NotebookPen, Play } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import { ConsultingFlow } from '@/app/(private)/consulting/_components/ConsultingFlow';
 import { ConsultingReview } from '@/app/(private)/consulting/_components/ConsultingReview';
@@ -15,16 +15,25 @@ import {
   majorListSchema,
   majorNames,
 } from '@/app/(private)/consulting/branding/_lib/plan';
+import { resumeBrandingValues } from '@/app/(private)/consulting/branding/_lib/resume';
 import { brandingReviewPlan } from '@/app/(private)/consulting/branding/_lib/review';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createConsultingRenderer } from '@/features/consulting/core/renderer';
+import { MajorValuesChat } from '@/features/major-values/components/MajorValuesChat';
+import { ValuesResumeNotice } from '@/features/major-values/components/ValuesResumeNotice';
+import { ValuesSessionProvider } from '@/features/major-values/components/ValuesSessionProvider';
+import {
+  createValuesContext,
+  type ValuesState,
+} from '@/features/major-values/domain';
 import type { MemberRole } from '@/lib/profile';
 
 import { BrandingIntro } from './BrandingIntro';
 import { BrandingKeywordGuide, MajorOverviews } from './BrandingKeywordGuide';
 import { BrandingKeywordInput } from './BrandingKeywordInput';
 import { BrandingMajorScreen } from './BrandingMajorScreen';
+import { BrandingValuesGuide } from './BrandingValuesGuide';
 
 function BrandingScreen({
   data,
@@ -33,7 +42,8 @@ function BrandingScreen({
   data: unknown;
   environment: ConsultingScreenRenderEnvironment;
 }) {
-  const { index, isReview, outputs, majors } = brandingScreenSchema.parse(data);
+  const { index, isReview, outputs, majors, valuesSession } =
+    brandingScreenSchema.parse(data);
   const step = brandingSteps[index];
   const { draftValue, onDraftChange, send } = environment;
   const currentValue =
@@ -46,6 +56,28 @@ function BrandingScreen({
         outputs: step ? { ...outputs, [step.id]: currentValue } : outputs,
       }),
     });
+
+  if (step?.id === 'values') {
+    const context = createValuesContext(majors, outputs.keywords);
+    const submitValues = (direction: 'next' | 'back', value: string) =>
+      send({
+        type: 'user.submit',
+        value: JSON.stringify({
+          direction,
+          outputs: { ...outputs, values: value },
+        }),
+      });
+    return (
+      <MajorValuesChat
+        key={JSON.stringify(context)}
+        context={context}
+        draftValue={draftValue || (isReview ? (valuesSession ?? '') : '')}
+        onDraftChange={onDraftChange}
+        onBack={(value) => submitValues('back', value)}
+        onComplete={(value) => submitValues('next', value)}
+      />
+    );
+  }
 
   if (index === 0 && step) {
     const names = majorNames(majors);
@@ -298,6 +330,24 @@ const brandingRenderer = createConsultingRenderer<
     ),
   },
   'branding.input': screenEntry,
+  'branding.values-guide': {
+    mode: 'dynamic',
+    validateData: (data) => brandingScreenSchema.safeParse(data).success,
+    render: (request, environment) => {
+      const { outputs } = brandingScreenSchema.parse(request.data);
+      const navigate = (direction: 'next' | 'back') =>
+        environment.send({
+          type: 'user.submit',
+          value: JSON.stringify({ direction, outputs }),
+        });
+      return (
+        <BrandingValuesGuide
+          onStart={() => navigate('next')}
+          onBack={() => navigate('back')}
+        />
+      );
+    },
+  },
   'branding.major-confirmation': {
     mode: 'dynamic',
     validateData: (data) => majorListSchema.safeParse(data).success,
@@ -340,8 +390,19 @@ const brandingRenderer = createConsultingRenderer<
   'branding.complete': screenEntry,
 });
 
-export function BrandingConsulting({ role }: { role: MemberRole }) {
+export function BrandingConsulting({
+  role,
+  userId,
+}: {
+  role: MemberRole;
+  userId: string;
+}) {
   const [mode, setMode] = useState<'experience' | 'review'>('experience');
+  const [resumed, setResumed] = useState<ValuesState | null>(null);
+  const experiencePlan = useMemo(
+    () => (resumed ? resumeBrandingValues(resumed) : brandingPlan),
+    [resumed],
+  );
   const reviewEnabled = role === 'admin' || role === 'consultant';
 
   return (
@@ -375,25 +436,31 @@ export function BrandingConsulting({ role }: { role: MemberRole }) {
         </div>
       ) : null}
 
-      <BrandingMajorSearchProvider key={mode}>
-        {mode === 'review' && reviewEnabled ? (
-          <ConsultingReview
-            plan={brandingPlan}
-            review={brandingReviewPlan}
-            renderer={brandingRenderer}
-            viewerRole={role}
-          />
-        ) : (
-          <ConsultingFlow
-            progressLabels={brandingSteps.map((step) => step.title)}
-            plan={brandingPlan}
-            renderer={brandingRenderer}
-            tools={brandingTools}
-            viewerRole={role}
-            debug={role === 'admin'}
-          />
+      <ValuesSessionProvider ownerId={mode === 'experience' ? userId : null}>
+        {mode === 'experience' && !resumed && (
+          <ValuesResumeNotice ownerId={userId} onResume={setResumed} />
         )}
-      </BrandingMajorSearchProvider>
+        <BrandingMajorSearchProvider key={mode}>
+          {mode === 'review' && reviewEnabled ? (
+            <ConsultingReview
+              plan={brandingPlan}
+              review={brandingReviewPlan}
+              renderer={brandingRenderer}
+              viewerRole={role}
+            />
+          ) : (
+            <ConsultingFlow
+              key={resumed?.source ?? 'new'}
+              progressLabels={brandingSteps.map((step) => step.title)}
+              plan={experiencePlan}
+              renderer={brandingRenderer}
+              tools={brandingTools}
+              viewerRole={role}
+              debug={role === 'admin'}
+            />
+          )}
+        </BrandingMajorSearchProvider>
+      </ValuesSessionProvider>
     </div>
   );
 }

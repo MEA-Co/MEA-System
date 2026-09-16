@@ -16,7 +16,7 @@ export const brandingSteps = [
     id: 'values',
     title: '전공 가치관',
     description:
-      '선택한 키워드를 바탕으로, 전공을 통해 추구하고 싶은 가치를 적어주세요.',
+      '선택한 키워드가 나에게 왜 중요한지 대화하며 전공 가치관을 정리해보세요.',
     placeholder:
       '이 분야에서 무엇을 중요하게 생각하고, 어떤 변화를 만들고 싶나요?',
   },
@@ -43,7 +43,10 @@ const outputsSchema = z.object({
   story: z.string(),
 });
 export type BrandingOutputs = z.infer<typeof outputsSchema>;
-export type BrandingContext = { outputs: BrandingOutputs };
+export type BrandingContext = {
+  outputs: BrandingOutputs;
+  resumedMajors?: MajorList;
+};
 const submissionSchema = z.object({
   outputs: outputsSchema,
   direction: z.enum(['next', 'back']),
@@ -101,6 +104,8 @@ export function parseAdditionalMajors(value: string) {
 function readMajors(memory: ConsultingMemory<BrandingContext>) {
   const primary = memory.actions['primary-major'];
   const additional = memory.actions['additional-majors'];
+  if (!primary && memory.context.resumedMajors)
+    return memory.context.resumedMajors;
   const stored = [
     primary?.type === 'user.submit' ? primary.value : '',
     ...Object.values(
@@ -219,6 +224,33 @@ export const brandingPlan = defineConsultingPlan<
       }),
       on: { 'user.start-input': 'keywords' },
     },
+    'values-guide': {
+      id: 'values-guide',
+      label: '전공 가치관 안내',
+      type: 'screen',
+      progress: { current: 2, total: 4 },
+      screen: (memory) => ({
+        screenId: 'branding.values-guide',
+        mode: 'dynamic',
+        data: {
+          index: 1,
+          outputs: readOutputs(memory),
+          majors: readMajors(memory),
+        },
+      }),
+      on: {
+        'user.submit': {
+          guard: ({ action }) =>
+            action.type === 'user.submit' &&
+            parseBrandingSubmission(action.value) !== null,
+          target: ({ action }) =>
+            action.type === 'user.submit' &&
+            parseBrandingSubmission(action.value)?.direction === 'back'
+              ? 'keywords'
+              : 'values',
+        },
+      },
+    },
     ...Object.fromEntries(
       brandingSteps.map((step, index) => [
         step.id,
@@ -273,7 +305,9 @@ export const brandingPlan = defineConsultingPlan<
                   ? index === 0
                     ? 'primary-major'
                     : brandingSteps[index - 1].id
-                  : (brandingSteps[index + 1]?.id ?? 'complete');
+                  : index === 0
+                    ? 'values-guide'
+                    : (brandingSteps[index + 1]?.id ?? 'complete');
               },
             },
           },
@@ -309,6 +343,7 @@ export const brandingPlan = defineConsultingPlan<
 export const brandingScreenSchema = z.object({
   index: z.number().int().min(0).max(brandingSteps.length),
   isReview: z.boolean().optional(),
+  valuesSession: z.string().optional(),
   outputs: outputsSchema,
   majors: majorListSchema,
 });
