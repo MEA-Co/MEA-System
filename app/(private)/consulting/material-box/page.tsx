@@ -36,7 +36,11 @@ export default async function MaterialBoxConsultingPage() {
         <MaterialBoxConsulting
           role={role}
           debug={role === 'admin'}
-          reviewEnabled={role === 'admin' || role === 'consultant'}
+          reviewEnabled={
+            role === 'admin' ||
+            role === 'consultant' ||
+            role === 'consultant_lead'
+          }
         />
       </div>
     </main>

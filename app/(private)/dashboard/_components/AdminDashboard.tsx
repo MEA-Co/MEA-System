@@ -11,6 +11,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { MEMBER_ROLE_LABELS } from '@/lib/profile';
 
 import { signOut } from '../../_actions/sign-out';
 import type { AdminView, ManagedMember } from '../_lib/admin';
@@ -25,12 +26,14 @@ import { StudentManagement } from './StudentManagement';
 
 type AdminDashboardProps = {
   adminName: string;
+  role?: 'admin' | 'consultant_lead';
   members: ManagedMember[];
   view: AdminView;
 };
 
 export function AdminDashboard({
   adminName,
+  role = 'admin',
   members,
   view,
 }: AdminDashboardProps) {
@@ -48,7 +51,7 @@ export function AdminDashboard({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">MEA</p>
               <p className="truncate text-xs text-muted-foreground">
-                관리자 페이지
+                {MEMBER_ROLE_LABELS[role]} 페이지
               </p>
             </div>
           </div>
@@ -56,6 +59,7 @@ export function AdminDashboard({
 
         <SidebarContent>
           <AdminNavigation
+            role={role}
             consultantCount={consultants.length}
             studentCount={students.length}
             view={view}
@@ -69,7 +73,9 @@ export function AdminDashboard({
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{adminName}</p>
-              <p className="text-xs text-muted-foreground">관리자</p>
+              <p className="text-xs text-muted-foreground">
+                {MEMBER_ROLE_LABELS[role]}
+              </p>
             </div>
             <form action={signOut}>
               <Button
@@ -92,11 +98,11 @@ export function AdminDashboard({
 
         <div className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-            {view === 'students' ? (
+            {role === 'admin' && view === 'students' ? (
               <StudentManagement students={students} />
             ) : view === 'consultants' ? (
               <ConsultantManagement consultants={consultants} />
-            ) : view === 'preview' ? (
+            ) : role === 'admin' && view === 'preview' ? (
               <DashboardPreview
                 student={
                   <StudentDashboard
@@ -108,7 +114,7 @@ export function AdminDashboard({
                 consultant={<ConsultantDashboard consultantName="이컨설턴트" />}
               />
             ) : (
-              <ConsultingManagement role="admin" />
+              <ConsultingManagement role={role} />
             )}
           </div>
         </div>

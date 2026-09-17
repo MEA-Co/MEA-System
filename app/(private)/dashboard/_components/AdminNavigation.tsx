@@ -22,12 +22,14 @@ import {
 import type { AdminView } from '../_lib/admin';
 
 type AdminNavigationProps = {
+  role?: 'admin' | 'consultant_lead';
   consultantCount: number;
   studentCount: number;
   view: AdminView;
 };
 
 export function AdminNavigation({
+  role = 'admin',
   consultantCount,
   studentCount,
   view,
@@ -40,21 +42,23 @@ export function AdminNavigation({
         <SidebarGroupLabel>회원 관리</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=students"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'students'}
-              >
-                <GraduationCap />
-                <span>학생 관리</span>
-              </SidebarMenuButton>
-              <SidebarMenuBadge>{studentCount}</SidebarMenuBadge>
-            </SidebarMenuItem>
+            {role === 'admin' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=students"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'students'}
+                >
+                  <GraduationCap />
+                  <span>학생 관리</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge>{studentCount}</SidebarMenuBadge>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={
@@ -92,20 +96,22 @@ export function AdminNavigation({
                 <span>컨설팅 관리</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=preview"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'preview'}
-              >
-                <PanelsTopLeft />
-                <span>회원 화면 미리보기</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {role === 'admin' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=preview"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'preview'}
+                >
+                  <PanelsTopLeft />
+                  <span>회원 화면 미리보기</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

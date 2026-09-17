@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MEMBER_ROLE_LABELS } from '@/lib/profile';
 
 import type { ManagedMember } from '../_lib/admin';
 
@@ -38,9 +39,7 @@ export function ConsultantManagement({
             emptyMemberLabel="컨설턴트"
             members={consultants}
             secondaryColumnLabel="회원 유형"
-            secondaryValue={(consultant) =>
-              consultant.role === 'admin' ? '관리자' : '컨설턴트'
-            }
+            secondaryValue={(consultant) => MEMBER_ROLE_LABELS[consultant.role]}
           />
         </CardContent>
       </Card>

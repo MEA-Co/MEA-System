@@ -23,7 +23,7 @@ export async function continueMajorValues(
     if (
       !access.user ||
       !access.isOnboarded ||
-      !hasRole(access, ['consultant', 'admin'])
+      !hasRole(access, ['consultant', 'consultant_lead', 'admin'])
     )
       return { error: '컨설턴트 또는 관리자 로그인이 필요합니다.' };
     const parsed = valuesRequestSchema.safeParse(input);

@@ -12,6 +12,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 컨설팅 작업은 아래 지도로 필요한 파일부터 읽는다. 전체 폴더 탐색보다 관련 구현을 우선 확인한다. 개별 컨설팅의 문구·단계·분석 내용은 공통 코어에 넣지 않는다.
 
+## 공통 실행 규칙
+
+실제 브라우저 테스트는 별도 요청이 없으면 진행하지 않는다.
+
 ### 구조와 책임
 
 - **Plan → Agent ↔ Memory → Renderer / Tools**. 사용자 행동이 Agent에 들어오고, Agent가 Plan에 따라 화면 요청·도구 요청·단계 전환을 처리한다.
@@ -31,15 +35,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ### 작업별 진입점
 
-| 변경 대상 | 먼저 읽을 위치 |
-| --- | --- |
-| 공통 실행·상태·전환 | `features/consulting/core/agent/agent.ts`, `core/plan/types.ts` (후자는 `features/consulting/` 기준) |
-| UI와 엔진 연결 | `app/(private)/consulting/_hooks/useConsultingAgent.ts` — Agent·Runtime·Logger 생성, 요청 실행, 상태 구독. 화면 요청 처리는 검증/응답이며 실제 화면 표시는 UI가 담당 |
-| 공통 화면·버튼·작업 상태 | `app/(private)/consulting/_components/` — `ConsultingFlow`, `ConsultingScreenView`, `ConsultingFrame`, `ConsultingToolStatus` 등 |
-| 개별 컨설팅 추가·수정 | `app/(private)/consulting/<컨설팅>/` — `_lib/plan.ts`, `_lib/renderer.ts`, `_lib/tools.ts`, `_lib/types.ts`, `_screens/`, `_tools/`. 현재 참고 구현은 `material-box` |
-| 시나리오별 화면 검토 | `features/consulting/core/review/types.ts`, 공통 `ConsultingReview.tsx`, 개별 `_lib/review.ts` |
-| 실행 로그 | `features/consulting/core/logger/`, 공통 `ConsultingDebugConsole.tsx` |
-| 결과 저장·보고서 | `features/consulting/completion.ts`, `features/consulting/report/`, 개별 `_lib/completion.ts`·`_report/`. 저장·보고서 내용은 코어 밖에서 연결 |
+| 변경 대상                | 먼저 읽을 위치                                                                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 공통 실행·상태·전환      | `features/consulting/core/agent/agent.ts`, `core/plan/types.ts` (후자는 `features/consulting/` 기준)                                                                 |
+| UI와 엔진 연결           | `app/(private)/consulting/_hooks/useConsultingAgent.ts` — Agent·Runtime·Logger 생성, 요청 실행, 상태 구독. 화면 요청 처리는 검증/응답이며 실제 화면 표시는 UI가 담당 |
+| 공통 화면·버튼·작업 상태 | `app/(private)/consulting/_components/` — `ConsultingFlow`, `ConsultingScreenView`, `ConsultingFrame`, `ConsultingToolStatus` 등                                     |
+| 개별 컨설팅 추가·수정    | `app/(private)/consulting/<컨설팅>/` — `_lib/plan.ts`, `_lib/renderer.ts`, `_lib/tools.ts`, `_lib/types.ts`, `_screens/`, `_tools/`. 현재 참고 구현은 `material-box` |
+| 시나리오별 화면 검토     | `features/consulting/core/review/types.ts`, 공통 `ConsultingReview.tsx`, 개별 `_lib/review.ts`                                                                       |
+| 실행 로그                | `features/consulting/core/logger/`, 공통 `ConsultingDebugConsole.tsx`                                                                                                |
+| 결과 저장·보고서         | `features/consulting/completion.ts`, `features/consulting/report/`, 개별 `_lib/completion.ts`·`_report/`. 저장·보고서 내용은 코어 밖에서 연결                        |
 
 새 컨설팅은 **Plan + 초기 데이터 구조 + 화면/Renderer 등록 + Tools**를 조립하고 공통 실행 엔진을 재사용한다. 위 내용은 현재 구현의 탐색 지도이며, 변경 시 관련 코드와 이 요약을 함께 갱신한다.
 

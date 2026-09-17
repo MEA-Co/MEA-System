@@ -10,7 +10,7 @@
 
 서버의 `get_major_value_context(p_major_ids, p_include_keywords=true)` 호출로 기존 전공 설명·키워드·예시와 disciplinary perspective, inquiry dimensions, effective thinking modes, value lenses 및 core value references, value tensions를 함께 조회한다. `inherit/refine/add` 및 부모를 대체하는 결합은 기존 RPC/뷰에 맡긴다. 전공 렌즈에 부모의 core value를 임의로 합치지 않는다.
 
-서버 함수는 로그인·온보딩 및 consultant/admin 권한을 확인한다. 제품의 조회에는 로그인 사용자의 Supabase 클라이언트를 사용하여 SECURITY INVOKER/RLS를 유지한다. 서버 키를 브라우저에 전달하지 않는다. 선택한 전공 이름·ID와 선택적 keywordId 소속도 조회 시 검증한다.
+서버 함수는 로그인·온보딩 및 consultant/consultant_lead/admin 권한을 확인한다. 제품의 조회에는 로그인 사용자의 Supabase 클라이언트를 사용하여 SECURITY INVOKER/RLS를 유지한다. 서버 키를 브라우저에 전달하지 않는다. 선택한 전공 이름·ID와 선택적 keywordId 소속도 조회 시 검증한다.
 
 ## 동작
 

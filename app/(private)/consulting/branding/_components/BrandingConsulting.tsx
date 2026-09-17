@@ -403,7 +403,8 @@ export function BrandingConsulting({
     () => (resumed ? resumeBrandingValues(resumed) : brandingPlan),
     [resumed],
   );
-  const reviewEnabled = role === 'admin' || role === 'consultant';
+  const reviewEnabled =
+    role === 'admin' || role === 'consultant' || role === 'consultant_lead';
 
   return (
     <div className="space-y-4">

@@ -138,6 +138,7 @@ export function ConsultingManagement({
             (item) =>
               item.id !== 'branding-consulting' ||
               role === 'consultant' ||
+              role === 'consultant_lead' ||
               role === 'admin',
           )
           .map((consulting) => {

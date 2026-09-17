@@ -14,7 +14,12 @@ export const STUDENT_PERIODS = [
   '3학년 겨울방학',
 ] as const;
 
-export const MEMBER_ROLES = ['student', 'consultant', 'admin'] as const;
+export const MEMBER_ROLES = [
+  'student',
+  'consultant',
+  'consultant_lead',
+  'admin',
+] as const;
 export const ONBOARDING_ROLES = ['student', 'consultant'] as const;
 
 export type MemberRole = (typeof MEMBER_ROLES)[number];
@@ -31,7 +36,11 @@ export type Profile = {
 export function isProfileComplete(profile: Profile | null): profile is Profile {
   if (!profile?.name?.trim()) return false;
 
-  if (profile.role === 'consultant' || profile.role === 'admin') {
+  if (
+    profile.role === 'consultant' ||
+    profile.role === 'consultant_lead' ||
+    profile.role === 'admin'
+  ) {
     return profile.student_period === null;
   }
 
@@ -41,3 +50,10 @@ export function isProfileComplete(profile: Profile | null): profile is Profile {
 export function isOnboardingRole(value: string): value is OnboardingRole {
   return ONBOARDING_ROLES.some((role) => role === value);
 }
+
+export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
+  student: '학생',
+  consultant: '컨설턴트',
+  consultant_lead: '컨설턴트 리드',
+  admin: '관리자',
+};

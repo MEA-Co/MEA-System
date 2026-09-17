@@ -5,7 +5,7 @@ import {
   type TempStudentConsultingResultRow,
 } from '@/features/consulting/completion';
 import { requireUserAccess } from '@/lib/auth';
-import type { StudentPeriod } from '@/lib/profile';
+import { MEMBER_ROLES, type StudentPeriod } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
 
 import { AdminDashboard } from './_components/AdminDashboard';
@@ -24,19 +24,24 @@ type HomeProps = {
 export default async function DashboardPage({ searchParams }: HomeProps) {
   const { profile, role, user } = await requireUserAccess();
 
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'consultant_lead') {
     const { view: requestedView } = await searchParams;
     const view: AdminView =
       requestedView === 'consultants' ||
       requestedView === 'consulting' ||
-      requestedView === 'preview'
+      (role === 'admin' && requestedView === 'preview')
         ? requestedView
-        : 'students';
+        : role === 'admin'
+          ? 'students'
+          : 'consultants';
     const supabase = createClient(await cookies());
     const memberResult = await supabase
       .from('profiles')
       .select('id, role, name, student_period, created_at')
-      .in('role', ['student', 'consultant', 'admin'])
+      .in(
+        'role',
+        role === 'admin' ? MEMBER_ROLES : ['consultant', 'consultant_lead'],
+      )
       .order('created_at', { ascending: false })
       .overrideTypes<ManagedMember[], { merge: false }>();
 
@@ -49,6 +54,7 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
     return (
       <AdminDashboard
         adminName={profile.name}
+        role={role}
         members={memberResult.data ?? []}
         view={view}
       />

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function BrandingPage() {
   const { role, user } = await requireUserAccess({
-    allowedRoles: ['consultant', 'admin'],
+    allowedRoles: ['consultant', 'consultant_lead', 'admin'],
     unauthorizedRedirectTo: '/dashboard?view=consulting',
   });
   return (
