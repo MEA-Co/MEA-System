@@ -134,7 +134,7 @@ export function DashboardNavigation({
                   isActive={view === 'questionnaire'}
                 >
                   <FilePenLine />
-                  <span>질문지 제작</span>
+                  <span>질문지 관리</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}

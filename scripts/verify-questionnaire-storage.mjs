@@ -8,7 +8,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
-function load(path, imports = {}) {
+function load(path, imports = {}, globals = {}) {
   const exports = {};
   vm.runInNewContext(
     ts.transpileModule(readFileSync(path, 'utf8'), {
@@ -21,6 +21,7 @@ function load(path, imports = {}) {
       exports,
       TextEncoder,
       structuredClone,
+      ...globals,
       require: (name) => {
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
@@ -38,6 +39,141 @@ const { QuestionnaireSaveSession } = load(
   'features/questionnaires/save-session.ts',
 );
 const { saveQuestionnaireSchema } = load('features/questionnaires/schema.ts');
+
+test('first autosave synchronizes the saved URL without refresh and retains later edits for the next tick', async () => {
+  const slots = [];
+  let cursor = 0;
+  let effects = [];
+  let tick;
+  let finishSave;
+  const requests = [];
+  const historyWrites = [];
+  const windowMock = {
+    location: {
+      href: 'https://example.test/dashboard?view=questionnaire&draft=new',
+    },
+    history: {
+      state: { __NA: true },
+      replaceState(state, _, url) {
+        assert.equal(
+          state,
+          null,
+          'Next must synchronize the URL instead of treating it as an internal history write',
+        );
+        historyWrites.push(url.toString());
+        windowMock.location.href = url.toString();
+      },
+    },
+    setInterval(callback, delay) {
+      assert.equal(delay, 10000);
+      tick = callback;
+      return 1;
+    },
+    clearInterval() {},
+    addEventListener() {},
+    removeEventListener() {},
+    document: { addEventListener() {}, removeEventListener() {} },
+  };
+  const react = {
+    useState(initial) {
+      const index = cursor++;
+      if (!(index in slots))
+        slots[index] = typeof initial === 'function' ? initial() : initial;
+      return [
+        slots[index],
+        (value) => {
+          slots[index] = value;
+        },
+      ];
+    },
+    useRef(initial) {
+      const index = cursor++;
+      slots[index] ??= { current: initial };
+      return slots[index];
+    },
+    useEffect(callback, dependencies) {
+      const index = cursor++;
+      if (
+        !slots[index] ||
+        dependencies.some((value, i) => !Object.is(value, slots[index][i]))
+      ) {
+        slots[index] = dependencies;
+        effects.push(callback);
+      }
+    },
+    useEffectEvent(callback) {
+      const ref = react.useRef(callback);
+      ref.current = callback;
+      return (...args) => ref.current(...args);
+    },
+  };
+  const { useQuestionnaireSave: runSaveHook } = load(
+    'app/(private)/dashboard/_hooks/useQuestionnaireSave.ts',
+    {
+      react,
+      'next/navigation': {
+        useRouter: () => ({
+          refresh: () => assert.fail('Saving must not refresh the editor'),
+        }),
+      },
+      '@/components/ui/toast': {
+        toast: { add: () => 'toast', update() {}, close() {} },
+      },
+      '@/features/questionnaires/save-session': { QuestionnaireSaveSession },
+      '../_actions/save-questionnaire': {
+        saveQuestionnaire: (request) => {
+          requests.push(request);
+          return new Promise((resolve) => {
+            finishSave = resolve;
+          });
+        },
+      },
+    },
+    { window: windowMock, URL, crypto: { randomUUID } },
+  );
+  const blank = document();
+  const initialDraft = { ...blank, revision: 0, savedAt: null };
+  function render(current) {
+    cursor = 0;
+    effects = [];
+    const result = runSaveHook(current, initialDraft);
+    for (const effect of effects) effect();
+    return result;
+  }
+  render(blank);
+  tick();
+  assert.equal(requests.length, 0);
+  const first = { ...blank, title: '작성한 제목' };
+  render(first);
+  tick();
+  assert.equal(requests.length, 1);
+  const latest = structuredClone(first);
+  latest.sections[0].questions[0].text = '저장 중 추가로 입력한 질문';
+  render(latest);
+  finishSave({ ok: true, revision: 1, savedAt: 'first save' });
+  await new Promise(setImmediate);
+  assert.equal(
+    new URL(historyWrites[0]).searchParams.get('draft'),
+    blank.versionId,
+  );
+  assert.equal(
+    render(latest).dirty,
+    true,
+    'Newer edits must remain unsaved, not be replaced',
+  );
+  tick();
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].expectedRevision, 1);
+  assert.equal(
+    requests[1].document.sections[0].questions[0].text,
+    latest.sections[0].questions[0].text,
+  );
+  finishSave({ ok: true, revision: 2, savedAt: 'second save' });
+  await new Promise(setImmediate);
+  assert.equal(render(latest).dirty, false);
+  assert.equal(historyWrites.length, 1);
+});
+
 const document = () => ({
   questionnaireId: randomUUID(),
   versionId: randomUUID(),

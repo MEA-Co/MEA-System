@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { toast } from '@/components/ui/toast';
@@ -16,7 +15,6 @@ export function useQuestionnaireSave(
   document: QuestionnaireDocument,
   initialDraft: QuestionnaireDraft,
 ) {
-  const router = useRouter();
   const [session] = useState(
     () => new QuestionnaireSaveSession(document, initialDraft.revision),
   );
@@ -80,8 +78,9 @@ export function useQuestionnaireSave(
       const url = new URL(window.location.href);
       if (url.searchParams.get('draft') !== document.versionId) {
         url.searchParams.set('draft', document.versionId);
-        window.history.replaceState(window.history.state, '', url);
-        router.refresh();
+        // Passing Next's internal history state skips its URL synchronization.
+        // Update the URL without refetching/remounting the actively edited draft.
+        window.history.replaceState(null, '', url);
       }
       return !session.hasChanges(document);
     } catch {
