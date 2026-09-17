@@ -38,7 +38,10 @@ export function AdminDashboard({
   view,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
-  const consultants = members.filter((member) => member.role !== 'student');
+  const consultants = members.filter(
+    (member) =>
+      member.role === 'consultant' || member.role === 'consultant_lead',
+  );
 
   return (
     <SidebarProvider>
@@ -101,7 +104,10 @@ export function AdminDashboard({
             {role === 'admin' && view === 'students' ? (
               <StudentManagement students={students} />
             ) : view === 'consultants' ? (
-              <ConsultantManagement consultants={consultants} />
+              <ConsultantManagement
+                canManageRoles={role === 'admin'}
+                consultants={consultants}
+              />
             ) : role === 'admin' && view === 'preview' ? (
               <DashboardPreview
                 student={

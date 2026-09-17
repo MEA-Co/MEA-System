@@ -30,8 +30,34 @@ end $$;
 reset role;
 select set_config('request.jwt.claim.sub', (select id::text from lead_role_fixtures where role='admin'), true);
 set local role authenticated;
-do $$ begin
+do $$
+begin
   if (select count(*) from public.profiles where id in (select id from lead_role_fixtures)) <> 4 then raise exception 'Admin must see all fixtures'; end if;
+  perform public.update_consultant_role(
+    (select id from lead_role_fixtures where role = 'consultant'),
+    'consultant_lead'
+  );
+  if (
+    select role from public.profiles
+    where id = (select id from lead_role_fixtures where role = 'consultant')
+  ) <> 'consultant_lead' then
+    raise exception 'Admin must be able to assign the consultant lead role';
+  end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub', (select id::text from lead_role_fixtures where role='student'), true);
+set local role authenticated;
+do $$
+begin
+  begin
+    perform public.update_consultant_role(
+      (select id from lead_role_fixtures where role = 'consultant_lead'),
+      'consultant'
+    );
+    raise exception 'Non-admin must not change consultant roles';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 reset role;
 select 'All role visibility and promotion checks passed' as result;

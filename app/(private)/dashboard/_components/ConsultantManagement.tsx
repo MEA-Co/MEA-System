@@ -9,13 +9,16 @@ import { MEMBER_ROLE_LABELS } from '@/lib/profile';
 
 import type { ManagedMember } from '../_lib/admin';
 
+import { ConsultantRoleSelect } from './ConsultantRoleSelect';
 import { MemberManagementTable } from './MemberManagementTable';
 
 type ConsultantManagementProps = {
+  canManageRoles?: boolean;
   consultants: ManagedMember[];
 };
 
 export function ConsultantManagement({
+  canManageRoles = false,
   consultants,
 }: ConsultantManagementProps) {
   return (
@@ -38,8 +41,21 @@ export function ConsultantManagement({
           <MemberManagementTable
             emptyMemberLabel="컨설턴트"
             members={consultants}
-            secondaryColumnLabel="회원 유형"
+            secondaryColumnLabel="직책"
             secondaryValue={(consultant) => MEMBER_ROLE_LABELS[consultant.role]}
+            secondaryContent={
+              canManageRoles
+                ? (consultant) =>
+                    consultant.role === 'consultant' ||
+                    consultant.role === 'consultant_lead' ? (
+                      <ConsultantRoleSelect
+                        memberId={consultant.id}
+                        memberName={consultant.name}
+                        role={consultant.role}
+                      />
+                    ) : null
+                : undefined
+            }
           />
         </CardContent>
       </Card>

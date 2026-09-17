@@ -8,6 +8,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## 회원 역할
+
+- `consultant_lead`는 컨설턴트 기능과 컨설턴트 관리 목록 조회 권한을 가진다. 리드는 학생·관리자 프로필을 조회하거나 회원 유형을 변경할 수 없다.
+- 가입 화면에서는 학생·컨설턴트만 선택한다. 관리자는 대시보드의 컨설턴트 관리 화면에서 컨설턴트와 컨설턴트 리드 사이를 변경할 수 있다.
+- 역할 변경은 `public.update_consultant_role` RPC가 관리자 여부, 대상의 현재 역할, 새 역할을 검증한다. 일반 사용자는 `profiles.role` 열을 직접 수정할 수 없다.
+- 역할 선택 UI는 변경할 때만 저장·취소 버튼을 표시하고 저장 중에는 중복 입력을 막는다. 서버에서 갱신된 직책을 선택값에 반영한다. 저장 중·성공·실패는 `components/ui/toast.tsx`의 shadcn Base UI Toast 하나를 갱신해 안내하며, 공통 Toaster는 루트 레이아웃에 둔다.
+- 역할 권한 검증은 `supabase/tests/consultant_lead_roles.sql`, 서버 함수 검증은 `node --test scripts/verify-consultant-role-action.mjs`에 둔다.
+
 ## 컨설팅 공통 아키텍처 — 빠른 참조
 
 컨설팅 작업은 아래 지도로 필요한 파일부터 읽는다. 전체 폴더 탐색보다 관련 구현을 우선 확인한다. 개별 컨설팅의 문구·단계·분석 내용은 공통 코어에 넣지 않는다.
