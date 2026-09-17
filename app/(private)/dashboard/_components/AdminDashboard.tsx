@@ -6,6 +6,7 @@ import { ConsultantManagement } from './ConsultantManagement';
 import { ConsultingManagement } from './ConsultingManagement';
 import { DashboardNavigation } from './DashboardNavigation';
 import { DashboardShell } from './DashboardShell';
+import { QuestionnaireWorkspace } from './QuestionnaireWorkspace';
 import { StudentManagement } from './StudentManagement';
 
 type AdminDashboardProps = {
@@ -14,6 +15,7 @@ type AdminDashboardProps = {
   members: ManagedMember[];
   view: AdminView;
   headerActions?: ReactNode;
+  questionnaireId?: string;
 };
 
 export function AdminDashboard({
@@ -22,6 +24,7 @@ export function AdminDashboard({
   members,
   view,
   headerActions,
+  questionnaireId,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
   const consultants = members.filter(
@@ -43,7 +46,9 @@ export function AdminDashboard({
         />
       }
     >
-      {role === 'admin' && view === 'students' ? (
+      {role === 'consultant_lead' && view === 'questionnaire' ? (
+        <QuestionnaireWorkspace requestedId={questionnaireId} />
+      ) : role === 'admin' && view === 'students' ? (
         <StudentManagement students={students} />
       ) : view === 'consultants' ? (
         <ConsultantManagement

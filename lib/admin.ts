@@ -13,7 +13,8 @@ import { createClient } from '@/lib/supabase/server';
 
 import 'server-only';
 
-export type AdminView = 'students' | 'consultants' | 'consulting';
+export type AdminView =
+  'students' | 'consultants' | 'consulting' | 'questionnaire';
 
 export type ManagedMember = {
   id: string;

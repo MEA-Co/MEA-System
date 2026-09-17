@@ -2,6 +2,7 @@
 
 import {
   BriefcaseBusiness,
+  FilePenLine,
   GraduationCap,
   MessagesSquare,
   UserRound,
@@ -121,6 +122,22 @@ export function DashboardNavigation({
                 <span>컨설팅 관리</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {role === 'consultant_lead' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=questionnaire"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'questionnaire'}
+                >
+                  <FilePenLine />
+                  <span>질문지 제작</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

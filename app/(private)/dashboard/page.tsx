@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic';
 type HomeProps = {
   searchParams: Promise<{
     view?: string | string[];
+    draft?: string;
   }>;
 };
 
@@ -27,11 +28,12 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   const role = await getViewRole(actualRole);
   const roleTabs =
     actualRole === 'admin' ? <AdminRoleTabs role={role} /> : null;
-  const { view: requestedView } = await searchParams;
+  const { view: requestedView, draft } = await searchParams;
 
   if (role === 'admin' || role === 'consultant_lead') {
     const view: AdminView =
       requestedView === 'consultants' ||
+      (requestedView === 'questionnaire' && role === 'consultant_lead') ||
       (requestedView === 'students' && role === 'admin')
         ? requestedView
         : 'consulting';
@@ -59,6 +61,7 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
         headerActions={roleTabs}
         members={memberResult.data ?? []}
         view={view}
+        questionnaireId={typeof draft === 'string' ? draft : undefined}
       />
     );
   }

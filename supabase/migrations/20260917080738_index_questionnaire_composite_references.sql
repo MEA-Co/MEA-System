@@ -1,0 +1,2 @@
+create index questionnaire_questions_section_version_idx on public.questionnaire_questions(section_id, version_id);
+create index questionnaire_answers_response_version_idx on public.questionnaire_answers(response_id, version_id);
