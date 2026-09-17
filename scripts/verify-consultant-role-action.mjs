@@ -30,6 +30,7 @@ function fixture({
   const calls = [];
   const refreshes = [];
   const imports = {
+    'server-only': {},
     'next/cache': { revalidatePath: (path) => refreshes.push(path) },
     'next/headers': { cookies: async () => ({}) },
     '@/lib/auth': {
@@ -54,10 +55,24 @@ function fixture({
       }),
     },
   };
+  const adminExports = {};
+  vm.runInNewContext(
+    ts.transpileModule(readFileSync('lib/admin.ts', 'utf8'), {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+    {
+      exports: adminExports,
+      require: (name) => imports[name] ?? require(name),
+    },
+  );
   const exports = {};
   vm.runInNewContext(source, {
     exports,
-    require: (name) => imports[name] ?? require(name),
+    require: (name) =>
+      name === '@/lib/admin' ? adminExports : (imports[name] ?? require(name)),
   });
   return {
     calls,

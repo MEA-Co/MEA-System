@@ -1,4 +1,5 @@
 import { LayoutDashboard, LogOut } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -11,17 +12,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import type { AdminView, ManagedMember } from '@/lib/admin';
 import { MEMBER_ROLE_LABELS } from '@/lib/profile';
 
 import { signOut } from '../../_actions/sign-out';
-import type { AdminView, ManagedMember } from '../_lib/admin';
 
 import { AdminNavigation } from './AdminNavigation';
-import { ConsultantDashboard } from './ConsultantDashboard';
 import { ConsultantManagement } from './ConsultantManagement';
 import { ConsultingManagement } from './ConsultingManagement';
-import { DashboardPreview } from './DashboardPreview';
-import { StudentDashboard } from './StudentDashboard';
 import { StudentManagement } from './StudentManagement';
 
 type AdminDashboardProps = {
@@ -29,6 +27,7 @@ type AdminDashboardProps = {
   role?: 'admin' | 'consultant_lead';
   members: ManagedMember[];
   view: AdminView;
+  headerActions?: ReactNode;
 };
 
 export function AdminDashboard({
@@ -36,6 +35,7 @@ export function AdminDashboard({
   role = 'admin',
   members,
   view,
+  headerActions,
 }: AdminDashboardProps) {
   const students = members.filter((member) => member.role === 'student');
   const consultants = members.filter(
@@ -45,6 +45,7 @@ export function AdminDashboard({
 
   return (
     <SidebarProvider>
+      {headerActions}
       <Sidebar>
         <SidebarHeader className="border-b p-4">
           <div className="flex items-center gap-3">
@@ -96,7 +97,7 @@ export function AdminDashboard({
 
       <SidebarInset className="min-w-0">
         <header className="flex h-14 shrink-0 items-center px-4 md:px-6 md:hidden">
-          <SidebarTrigger className="-ml-1" aria-label="메뉴 열기" />
+          <SidebarTrigger className="-ml-1 md:hidden" aria-label="메뉴 열기" />
         </header>
 
         <div className="flex-1 p-4 md:p-6 lg:p-8">
@@ -107,17 +108,6 @@ export function AdminDashboard({
               <ConsultantManagement
                 canManageRoles={role === 'admin'}
                 consultants={consultants}
-              />
-            ) : role === 'admin' && view === 'preview' ? (
-              <DashboardPreview
-                student={
-                  <StudentDashboard
-                    studentName="김학생"
-                    studentPeriod="1학년 1학기"
-                    completedConsultingIds={[]}
-                  />
-                }
-                consultant={<ConsultantDashboard consultantName="이컨설턴트" />}
               />
             ) : (
               <ConsultingManagement role={role} />

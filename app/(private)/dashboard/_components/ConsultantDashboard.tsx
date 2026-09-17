@@ -1,4 +1,5 @@
 import { LogOut } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,29 +10,38 @@ import { ConsultingManagement } from './ConsultingManagement';
 
 export function ConsultantDashboard({
   consultantName,
+  headerActions,
 }: {
   consultantName: string;
+  headerActions?: ReactNode;
 }) {
   const roleLabel = '컨설턴트';
 
   return (
     <main className="min-h-svh bg-white">
+      {headerActions}
       <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 md:px-8 lg:px-10">
+        <div
+          className={`mx-auto flex min-h-16 max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-8 lg:px-10 ${headerActions ? 'pt-24 sm:pt-3' : ''}`}
+        >
           <div className="text-sm font-semibold tracking-wide text-black">
             MEA
           </div>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="rounded-md text-neutral-600 hover:bg-neutral-100 hover:text-black"
-            >
-              <LogOut className="size-4" />
-              로그아웃
-            </Button>
-          </form>
+          <div
+            className={`flex flex-wrap items-center gap-2 ${headerActions ? 'mr-auto' : 'ml-auto justify-end'}`}
+          >
+            <form action={signOut}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="rounded-md text-neutral-600 hover:bg-neutral-100 hover:text-black"
+              >
+                <LogOut className="size-4" />
+                로그아웃
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 

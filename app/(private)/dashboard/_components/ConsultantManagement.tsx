@@ -5,9 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import type { ManagedMember } from '@/lib/admin';
 import { MEMBER_ROLE_LABELS } from '@/lib/profile';
-
-import type { ManagedMember } from '../_lib/admin';
 
 import { ConsultantRoleSelect } from './ConsultantRoleSelect';
 import { MemberManagementTable } from './MemberManagementTable';
@@ -24,7 +23,7 @@ export function ConsultantManagement({
   return (
     <>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">회원 관리</p>
+        <p className="text-sm font-medium text-muted-foreground">구성원 관리</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           컨설턴트 관리
         </h1>

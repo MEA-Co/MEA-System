@@ -4,14 +4,16 @@ import {
   TEMP_STUDENT_CONSULTING_RESULTS_TABLE,
   type TempStudentConsultingResultRow,
 } from '@/features/consulting/completion';
+import type { AdminView, ManagedMember } from '@/lib/admin';
+import { getViewRole } from '@/lib/admin';
 import { requireUserAccess } from '@/lib/auth';
-import { MEMBER_ROLES, type StudentPeriod } from '@/lib/profile';
+import { MEMBER_ROLES } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
 
 import { AdminDashboard } from './_components/AdminDashboard';
+import { AdminRoleTabs } from './_components/AdminRoleTabs';
 import { ConsultantDashboard } from './_components/ConsultantDashboard';
 import { StudentDashboard } from './_components/StudentDashboard';
-import type { AdminView, ManagedMember } from './_lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,14 +24,15 @@ type HomeProps = {
 };
 
 export default async function DashboardPage({ searchParams }: HomeProps) {
-  const { profile, role, user } = await requireUserAccess();
+  const { profile, role: actualRole, user } = await requireUserAccess();
+  const role = await getViewRole(actualRole);
+  const roleTabs =
+    actualRole === 'admin' ? <AdminRoleTabs role={role} /> : null;
 
   if (role === 'admin' || role === 'consultant_lead') {
     const { view: requestedView } = await searchParams;
     const view: AdminView =
-      requestedView === 'consultants' ||
-      requestedView === 'consulting' ||
-      (role === 'admin' && requestedView === 'preview')
+      requestedView === 'consultants' || requestedView === 'consulting'
         ? requestedView
         : role === 'admin'
           ? 'students'
@@ -55,6 +58,7 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
       <AdminDashboard
         adminName={profile.name}
         role={role}
+        headerActions={roleTabs}
         members={memberResult.data ?? []}
         view={view}
       />
@@ -62,7 +66,6 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   }
 
   if (role === 'student') {
-    const studentPeriod = profile.student_period as StudentPeriod;
     const supabase = createClient(await cookies());
     const completionResult = await supabase
       .from(TEMP_STUDENT_CONSULTING_RESULTS_TABLE)
@@ -85,10 +88,16 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
           (completion) => completion.consulting_id,
         )}
         studentName={profile.name}
-        studentPeriod={studentPeriod}
+        studentPeriod={profile.student_period}
+        headerActions={roleTabs}
       />
     );
   }
 
-  return <ConsultantDashboard consultantName={profile.name} />;
+  return (
+    <ConsultantDashboard
+      consultantName={profile.name}
+      headerActions={roleTabs}
+    />
+  );
 }

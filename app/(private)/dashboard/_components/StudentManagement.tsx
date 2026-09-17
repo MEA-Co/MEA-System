@@ -5,8 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-
-import type { ManagedMember } from '../_lib/admin';
+import type { ManagedMember } from '@/lib/admin';
 
 import { MemberManagementTable } from './MemberManagementTable';
 
@@ -18,7 +17,7 @@ export function StudentManagement({ students }: StudentManagementProps) {
   return (
     <>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">회원 관리</p>
+        <p className="text-sm font-medium text-muted-foreground">구성원 관리</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           학생 관리
         </h1>

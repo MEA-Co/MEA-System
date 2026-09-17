@@ -10,8 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-import type { ManagedMember } from '../_lib/admin';
+import type { ManagedMember } from '@/lib/admin';
 
 type MemberManagementTableProps = {
   emptyMemberLabel: string;

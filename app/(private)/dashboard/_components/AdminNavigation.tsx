@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  BriefcaseBusiness,
-  GraduationCap,
-  MessagesSquare,
-  PanelsTopLeft,
-} from 'lucide-react';
+import { BriefcaseBusiness, GraduationCap, MessagesSquare } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -18,8 +13,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-
-import type { AdminView } from '../_lib/admin';
+import type { AdminView } from '@/lib/admin';
 
 type AdminNavigationProps = {
   role?: 'admin' | 'consultant_lead';
@@ -39,7 +33,7 @@ export function AdminNavigation({
   return (
     <>
       <SidebarGroup>
-        <SidebarGroupLabel>회원 관리</SidebarGroupLabel>
+        <SidebarGroupLabel>구성원 관리</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {role === 'admin' && (
@@ -96,22 +90,6 @@ export function AdminNavigation({
                 <span>컨설팅 관리</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {role === 'admin' && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=preview"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'preview'}
-                >
-                  <PanelsTopLeft />
-                  <span>회원 화면 미리보기</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

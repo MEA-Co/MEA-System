@@ -1,4 +1,5 @@
 import { LogOut } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { ConsultingManagement } from './ConsultingManagement';
 
 type StudentDashboardProps = {
   studentName: string;
-  studentPeriod: StudentPeriod;
+  studentPeriod: StudentPeriod | null;
+  headerActions?: ReactNode;
   completedConsultingIds: ReadonlyArray<string>;
 };
 
@@ -18,18 +20,26 @@ export function StudentDashboard({
   studentName,
   studentPeriod,
   completedConsultingIds,
+  headerActions,
 }: StudentDashboardProps) {
   return (
     <main className="min-h-svh bg-white">
+      {headerActions}
       <header className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 md:px-8 lg:px-10">
+        <div
+          className={`mx-auto flex min-h-16 max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-8 lg:px-10 ${headerActions ? 'pt-24 sm:pt-3' : ''}`}
+        >
           <p className="text-sm font-semibold tracking-wide">MEA</p>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              <LogOut className="size-4" />
-              로그아웃
-            </Button>
-          </form>
+          <div
+            className={`flex flex-wrap items-center gap-2 ${headerActions ? 'mr-auto' : 'ml-auto justify-end'}`}
+          >
+            <form action={signOut}>
+              <Button type="submit" variant="ghost" size="sm">
+                <LogOut className="size-4" />
+                로그아웃
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -44,9 +54,11 @@ export function StudentDashboard({
               MEA와 함께 입시 여정을 준비해 보세요.
             </p>
           </div>
-          <Badge variant="outline" className="w-fit">
-            {studentPeriod}
-          </Badge>
+          {studentPeriod ? (
+            <Badge variant="outline" className="w-fit">
+              {studentPeriod}
+            </Badge>
+          ) : null}
         </div>
 
         <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
