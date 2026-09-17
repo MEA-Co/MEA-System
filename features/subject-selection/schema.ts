@@ -8,6 +8,8 @@ const text = z.string().max(2000);
 export const extractionSchema = z.object({
   table_found: z.boolean(),
   table_title: text.nullable(),
+  track_matched: z.boolean().nullable(),
+  track_evidence: text.nullable(),
   cohort: z.number().int().min(2000).max(2100).nullable(),
   cohort_evidence: text.nullable(),
   structure_clear: z.boolean(),
@@ -103,14 +105,27 @@ export type ImportResult = Extraction &
     };
   };
 
+export function requiresTrackVerification(track?: string) {
+  return /과학\s*중점/.test(track?.replaceAll(/\s+/g, '') ?? '');
+}
+
 export function validateExtraction(
   data: Extraction,
   expectedCohort: number,
   parserWarnings: string[] = [],
+  requestedTrack = '',
 ) {
   const issues = [...parserWarnings, ...data.warnings];
+  const trackRequired = requiresTrackVerification(requestedTrack);
+  const trackMatch =
+    !trackRequired ||
+    (data.track_matched === true && Boolean(data.track_evidence?.trim()));
   const cohortMatch =
     data.cohort === expectedCohort && Boolean(data.cohort_evidence?.trim());
+  if (!trackMatch)
+    issues.push(
+      `${requestedTrack} 표를 원문 근거로 확인하지 못했습니다. 다른 과정 표가 섞일 수 있어 확정할 수 없습니다.`,
+    );
   if (!data.table_found)
     issues.push('원문에서 교육과정 편제표를 찾지 못했습니다.');
   if (!cohortMatch)
@@ -261,7 +276,7 @@ export function validateExtraction(
   }
   const creditMatch = terms.length > 0 && terms.every((t) => t.matches);
   return {
-    status: (!data.table_found || !data.curriculum.length
+    status: (!data.table_found || !data.curriculum.length || !trackMatch
       ? 'failed'
       : issues.length
         ? 'review_required'

@@ -1,6 +1,10 @@
 export type PriorityProfileId =
   | 'math'
   | 'math-computing'
+  | 'computing-engineering'
+  | 'bio-engineering'
+  | 'environmental-engineering'
+  | 'architecture'
   | 'physics-chemistry'
   | 'physics-earth'
   | 'physics-chemistry-combined'
@@ -27,7 +31,129 @@ export type PriorityProfile = {
   subCore: string[];
   recommendCourses?: string[];
   recommendDomains: string[];
+  coreChoices?: CoreChoice[];
 };
+
+export type CoreChoice = {
+  id: string;
+  label: string;
+  courses: string[];
+  choose: number;
+  include?: { courses: string[]; choose: number; label: string };
+};
+
+const physicsAdvanced = ['역학과 에너지', '전자기와 양자'];
+const chemistryAdvanced = ['물질과 에너지', '화학 반응의 세계'];
+const biologyAdvanced = ['세포와 물질대사', '생물의 유전'];
+const earthAdvanced = ['지구시스템과학', '행성우주과학'];
+
+function applyCorePolicy(
+  profile: PriorityProfile,
+  department: string,
+): PriorityProfile {
+  const core = [...profile.core];
+  const choices: CoreChoice[] = [];
+  const addChoice = (
+    courses: string[],
+    choose: number,
+    include?: CoreChoice['include'],
+  ) =>
+    choices.push({
+      id: 'science-depth',
+      label: '심화 Core 선택',
+      courses,
+      choose,
+      include,
+    });
+  const matches = (names: string[]) =>
+    names.some(
+      (name) => normalizeDepartment(name) === normalizeDepartment(department),
+    );
+  if (profile.id === 'physics-chemistry') {
+    if (matches(['물리학과'])) core.push(...physicsAdvanced);
+    else
+      core.push(
+        matches(['전기전자공학과', '전자공학과', '반도체공학과'])
+          ? '전자기와 양자'
+          : '역학과 에너지',
+      );
+  } else if (profile.id === 'physics-earth') core.push('역학과 에너지');
+  else if (profile.id === 'physics-chemistry-combined') {
+    if (matches(['에너지공학과', '원자력공학과'])) {
+      core.push('역학과 에너지');
+      addChoice(['전자기와 양자', ...chemistryAdvanced], 1);
+    } else
+      addChoice(
+        [...physicsAdvanced, ...chemistryAdvanced],
+        2,
+        matches(['화학공학과', '화학생명공학과', '화공생명공학과'])
+          ? {
+              courses: chemistryAdvanced,
+              choose: 1,
+              label: '화학 심화 최소 1과목',
+            }
+          : undefined,
+      );
+  } else if (profile.id === 'physics-earth-combined') {
+    if (matches(['도시공학과', '건설환경공학과'])) core.push('역학과 에너지');
+    else addChoice(earthAdvanced, 1);
+  } else if (profile.id === 'bio-engineering') addChoice(biologyAdvanced, 1);
+  else if (profile.id === 'environmental-engineering')
+    addChoice(chemistryAdvanced, 1);
+  else if (profile.id === 'chemistry') core.push(...chemistryAdvanced);
+  else if (profile.id === 'biology') core.push(...biologyAdvanced);
+  else if (profile.id === 'earth') addChoice(earthAdvanced, 1);
+  else if (profile.id === 'chemistry-biology')
+    addChoice([...biologyAdvanced, ...chemistryAdvanced], 2);
+  return {
+    ...profile,
+    core: [...new Set(core)],
+    subCore: profile.subCore.filter((name) => !core.includes(name)),
+    coreChoices: choices,
+  };
+}
+
+export function coreChoiceStatuses(
+  profile: PriorityProfile | null,
+  completed: readonly { name: string }[],
+) {
+  const names = new Set(
+    completed.map((course) => normalizeCourseName(course.name)),
+  );
+  return (profile?.coreChoices ?? []).map((rule) => {
+    const count = new Set(
+      rule.courses.map(normalizeCourseName).filter((name) => names.has(name)),
+    ).size;
+    const included = rule.include
+      ? new Set(
+          rule.include.courses
+            .map(normalizeCourseName)
+            .filter((name) => names.has(name)),
+        ).size
+      : 0;
+    return {
+      ...rule,
+      count,
+      included,
+      satisfied:
+        count >= rule.choose &&
+        (!rule.include || included >= rule.include.choose),
+    };
+  });
+}
+
+export function courseDomainMatches(
+  expectedDomain: string,
+  actualDomain: string,
+) {
+  const expected = expectedDomain.replaceAll(/\s+/g, '');
+  const actual = actualDomain.replaceAll(/\s+/g, '');
+  return (
+    expected === actual ||
+    expected.includes(actual) ||
+    actual.includes(expected)
+  );
+}
 
 export type RecommendationRule = {
   category: 'core' | 'recommended';
@@ -58,24 +184,30 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '수학형',
     departments: ['수학과', '응용수학과', '수학교육과'],
     core: ['미적분 II', '기하'],
-    subCore: ['수학', '정보'],
-    recommendCourses: ['경제수학', '직무 수학'],
-    recommendDomains: ['과학'],
+    subCore: ['인공지능 수학', '수학과제 탐구'],
+    recommendDomains: ['수학', '정보', '과학'],
   },
   {
     id: 'math-computing',
     label: '수학·정보형',
+    departments: ['통계학과', '데이터과학과'],
+    core: ['미적분 II', '기하', '정보'],
+    subCore: ['인공지능 수학', '데이터 과학', '인공지능 기초'],
+    recommendDomains: ['과학'],
+  },
+  {
+    id: 'computing-engineering',
+    label: '컴퓨팅·산업공학형',
     departments: [
-      '통계학과',
       '컴퓨터공학과',
       '컴퓨터과학과',
       '소프트웨어학과',
-      '데이터과학과',
       '인공지능학과',
       '정보보안학과',
+      '산업공학과',
     ],
     core: ['미적분 II', '기하', '정보'],
-    subCore: ['인공지능 수학', '데이터 과학', '인공지능 기초'],
+    subCore: ['물리학', '인공지능 수학', '데이터 과학', '인공지능 기초'],
     recommendDomains: ['과학'],
   },
   {
@@ -90,21 +222,20 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
       '항공우주공학과',
     ],
     core: ['미적분 II', '기하', '물리학'],
-    subCore: ['화학'],
+    subCore: ['역학과 에너지', '전자기와 양자', '화학'],
     recommendDomains: ['과학', '수학', '정보'],
   },
   {
     id: 'physics-earth',
     label: '물리형(지구)',
     departments: [
-      '건축학과',
       '건축공학과',
       '토목공학과',
       '조선해양공학과',
       '사회환경공학과',
     ],
     core: ['미적분 II', '기하', '물리학'],
-    subCore: ['지구과학'],
+    subCore: ['역학과 에너지', '전자기와 양자', '지구과학'],
     recommendDomains: ['과학', '수학', '정보'],
   },
   {
@@ -112,13 +243,20 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '물리·화학형',
     departments: [
       '화학공학과',
+      '화학생명공학과',
+      '화공생명공학과',
       '에너지공학과',
       '원자력공학과',
       '신소재공학과',
       '재료공학과',
     ],
     core: ['미적분 II', '기하', '물리학', '화학'],
-    subCore: [],
+    subCore: [
+      '물질과 에너지',
+      '화학 반응의 세계',
+      '역학과 에너지',
+      '전자기와 양자',
+    ],
     recommendDomains: ['과학', '수학', '정보'],
   },
   {
@@ -126,26 +264,33 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '물리·지구형',
     departments: ['천문학과', '우주과학과', '도시공학과', '건설환경공학과'],
     core: ['미적분 II', '기하', '물리학', '지구과학'],
-    subCore: [],
+    subCore: [
+      '역학과 에너지',
+      '전자기와 양자',
+      '지구시스템과학',
+      '행성우주과학',
+    ],
     recommendDomains: ['과학', '수학', '정보'],
   },
   {
     id: 'chemistry-biology',
     label: '화학·생물형',
     departments: [
-      '화학생명공학과',
-      '생명공학과',
       '의학과',
       '의예과',
       '치의예과',
       '한의예과',
       '약학과',
-      '환경공학과',
-      '식품공학과',
       '간호학과',
     ],
     core: ['미적분 II', '화학', '생명과학'],
-    subCore: ['기하'],
+    subCore: [
+      '기하',
+      '세포와 물질대사',
+      '생물의 유전',
+      '물질과 에너지',
+      '화학 반응의 세계',
+    ],
     recommendDomains: ['과학', '수학'],
   },
   {
@@ -153,7 +298,13 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '화학형',
     departments: ['화학과', '응용화학과'],
     core: ['미적분 II', '화학'],
-    subCore: ['기하', '물리학', '생명과학'],
+    subCore: [
+      '물질과 에너지',
+      '화학 반응의 세계',
+      '기하',
+      '물리학',
+      '생명과학',
+    ],
     recommendDomains: ['과학', '수학'],
   },
   {
@@ -161,7 +312,7 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '생물형',
     departments: ['생물학과', '생명과학과', '생화학과'],
     core: ['미적분 II', '생명과학'],
-    subCore: ['기하', '화학'],
+    subCore: ['세포와 물질대사', '생물의 유전', '기하', '화학'],
     recommendDomains: ['과학', '수학'],
   },
   {
@@ -169,8 +320,50 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '지구형',
     departments: ['지구과학과', '지질학과', '대기과학과', '지리학과'],
     core: ['미적분 II', '기하', '지구과학'],
-    subCore: ['물리학'],
+    subCore: ['지구시스템과학', '행성우주과학', '물리학'],
     recommendDomains: ['과학', '수학'],
+  },
+  {
+    id: 'bio-engineering',
+    label: '생명·식품공학형',
+    departments: [
+      '생명공학과',
+      '시스템생명공학과',
+      '바이오공학과',
+      '식품공학과',
+    ],
+    core: ['미적분 II', '화학', '생명과학'],
+    subCore: [
+      '물리학',
+      '세포와 물질대사',
+      '생물의 유전',
+      '물질과 에너지',
+      '화학 반응의 세계',
+      '기하',
+    ],
+    recommendDomains: ['과학', '수학', '정보'],
+  },
+  {
+    id: 'environmental-engineering',
+    label: '환경공학형',
+    departments: ['환경공학과', '환경에너지공학과'],
+    core: ['미적분 II', '기하', '물리학', '화학'],
+    subCore: [
+      '생명과학',
+      '지구과학',
+      '물질과 에너지',
+      '화학 반응의 세계',
+      '역학과 에너지',
+    ],
+    recommendDomains: ['과학', '수학', '정보'],
+  },
+  {
+    id: 'architecture',
+    label: '건축학형',
+    departments: ['건축학과'],
+    core: ['미적분 II', '기하'],
+    subCore: ['물리학', '역학과 에너지', '지구과학'],
+    recommendDomains: ['과학', '수학', '예술', '사회'],
   },
   {
     id: 'language',
@@ -1168,19 +1361,45 @@ export function findPriorityProfile(department: string) {
     );
     if (!best || score > best.score) best = { profile, score };
   }
-  return best && best.score >= 0.32 ? best : null;
+  if (!best || best.score < 0.32) return null;
+  const matchedDepartment = [...best.profile.departments].sort(
+    (a, b) =>
+      departmentSimilarity(department, b) - departmentSimilarity(department, a),
+  )[0];
+  return { ...best, profile: applyCorePolicy(best.profile, matchedDepartment) };
 }
 
 export function findUniversityMatches(
   department: string,
   profileId: PriorityProfileId | null,
 ) {
+  // MEA's finer categories still use the original university matching families.
+  // Official course rules below are independent of internal Core/Sub core policy.
+  const matchingFamilies: Partial<
+    Record<PriorityProfileId, PriorityProfileId[]>
+  > = {
+    'computing-engineering': ['math-computing'],
+    'bio-engineering': ['chemistry-biology'],
+    'environmental-engineering': [
+      'chemistry-biology',
+      'physics-earth',
+      'physics-earth-combined',
+    ],
+    architecture: ['physics-earth'],
+  };
+  const acceptedProfiles = profileId
+    ? [profileId, ...(matchingFamilies[profileId] ?? [])]
+    : [];
   const matches: UniversityMatch[] = [];
   for (const university of ['고려대', '연세대', '경희대', '중앙대'] as const) {
     let best: UniversityMatch | null = null;
     for (const recommendation of UNIVERSITY_RECOMMENDATIONS) {
       if (recommendation.university !== university) continue;
-      if (profileId && !recommendation.profileIds.includes(profileId)) continue;
+      if (
+        profileId &&
+        !acceptedProfiles.some((id) => recommendation.profileIds.includes(id))
+      )
+        continue;
       const candidates = [
         ...recommendation.departments,
         ...(recommendation.matchTerms ?? []),
@@ -1221,7 +1440,11 @@ export function ruleMatchesCourse(
     (candidate) =>
       normalizeCourseName(candidate) === normalizeCourseName(course.name),
   );
-  const domainMatch = rule.domain === course.domain;
+  const domainMatch = Boolean(
+    rule.domain &&
+    course.domain &&
+    courseDomainMatches(rule.domain, course.domain),
+  );
   const typeMatch =
     !rule.selectionType || rule.selectionType === course.selectionType;
   return Boolean(courseMatch || (domainMatch && typeMatch));

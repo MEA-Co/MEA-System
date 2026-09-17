@@ -4,15 +4,6 @@ import { Check, CheckCircle2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo, useRef, useState } from 'react';
 
-import type { ConfirmedCurriculum } from '@/app/(private)/consulting/subject-selection/_lib/curriculum';
-import {
-  SUBJECT_SELECTION_TERMS,
-  SUBJECT_SELECTION_TYPES,
-  type SubjectSelectionCourse,
-  subjectSelectionCourses,
-  type SubjectSelectionTermId,
-  type SubjectSelectionType,
-} from '@/app/(private)/consulting/subject-selection/_lib/subjects';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +14,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+
+import type { ConfirmedCurriculum } from '../_lib/curriculum';
+import {
+  SUBJECT_SELECTION_TERMS,
+  SUBJECT_SELECTION_TYPES,
+  type SubjectSelectionCourse,
+  subjectSelectionCourses,
+  type SubjectSelectionTermId,
+  type SubjectSelectionType,
+} from '../_lib/subjects';
 
 type CandidatePlan = Record<SubjectSelectionTermId, string[]>;
 type ManualGroup = {
@@ -129,7 +130,7 @@ function CourseInfoTooltip({
   );
 }
 
-export function SubjectSelectionPlanner({
+export function ManualCurriculumScreen({
   onConfirm,
 }: {
   onConfirm: (curriculum: ConfirmedCurriculum) => void;

@@ -1,3 +1,9 @@
+import { execFile as execFileCallback } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 import { inflateRawSync } from 'node:zlib';
 
 import * as CFB from 'cfb';
@@ -12,8 +18,41 @@ export type ParsedDocument = {
   text: string | null;
   warnings: string[];
 };
+type HwpRecord = {
+  tag: number;
+  level: number;
+  text?: string;
+  cell_header?: string;
+  table_header?: string;
+};
+type HwpSection = {
+  section: string;
+  records: HwpRecord[];
+};
+type HwpTableCell = {
+  row: number;
+  col: number;
+  rowSpan: number;
+  colSpan: number;
+  text: string;
+};
+type HwpTableGrid = {
+  section: string;
+  rows: number;
+  columns: number;
+  cells: HwpTableCell[];
+};
 const MAX_EXPANDED = 32 * 1024 * 1024;
 const MAX_TEXT = 240_000;
+const MAX_CONVERTED_PDF_PAGES = 120;
+const HWP_CONTEXT_RADII = [240, 120, 60, 24] as const;
+const execFile = promisify(execFileCallback);
+
+function countPdfPages(bytes: Buffer) {
+  return (
+    bytes.toString('latin1').match(/\/Type\s*\/Page(?!s)\b/g)?.length ?? 0
+  );
+}
 
 function boundedText(
   format: string,
@@ -74,6 +113,194 @@ function hwpText(data: Buffer) {
   return text;
 }
 
+function hwpAnchorScore(record: HwpRecord) {
+  const text = record.text?.replaceAll(/\s+/g, '') ?? '';
+  if (!text) return 0;
+  let score = 0;
+  if (/교육과정|교과과정|편제표|교과편제|학점배당|이수학점|이수단위/.test(text))
+    score += 12;
+  if (/과목명|교과목|선택과목|필수과목|학년별|학기별/.test(text)) score += 8;
+  if (/(?:1|2|3)학년|(?:1|2)학기|[123]-[12]/.test(text)) score += 3;
+  if (/학점|단위|총계|합계/.test(text)) score += 2;
+  return score;
+}
+
+function hwpContext(
+  sections: HwpSection[],
+  anchors: { sectionIndex: number; recordIndex: number; score: number }[],
+  radius: number,
+  maxWindows: number,
+) {
+  const selected = new Map<number, Set<number>>();
+  const picked: typeof anchors = [];
+  for (const anchor of [...anchors].sort((left, right) => right.score - left.score)) {
+    if (picked.length >= maxWindows) break;
+    if (
+      picked.some(
+        (previous) =>
+          previous.sectionIndex === anchor.sectionIndex &&
+          Math.abs(previous.recordIndex - anchor.recordIndex) < radius * 2,
+      )
+    ) {
+      continue;
+    }
+    picked.push(anchor);
+  }
+  for (const anchor of picked) {
+    const recordIndexes = selected.get(anchor.sectionIndex) ?? new Set<number>();
+    const records = sections[anchor.sectionIndex].records;
+    for (
+      let index = Math.max(0, anchor.recordIndex - radius);
+      index <= Math.min(records.length - 1, anchor.recordIndex + radius);
+      index++
+    ) {
+      recordIndexes.add(index);
+    }
+    selected.set(anchor.sectionIndex, recordIndexes);
+  }
+  return sections
+    .map((section, sectionIndex) => ({
+      section: section.section,
+      records: section.records.filter((_, recordIndex) =>
+        selected.get(sectionIndex)?.has(recordIndex),
+      ),
+    }))
+    .filter((section) => section.records.length);
+}
+
+function capHwpContext(sections: HwpSection[], maxText: number) {
+  const budget = Math.max(1, maxText - 4_000);
+  let used = 0;
+  const compact: HwpSection[] = [];
+  for (const section of sections) {
+    const records: HwpRecord[] = [];
+    for (const record of section.records) {
+      const limited =
+        record.text && record.text.length > 8_000
+          ? { ...record, text: `${record.text.slice(0, 8_000)} [이하 생략]` }
+          : record;
+      const size = JSON.stringify(limited).length + 1;
+      if (used + size > budget) break;
+      records.push(limited);
+      used += size;
+    }
+    if (records.length) compact.push({ section: section.section, records });
+    if (used >= budget) break;
+  }
+  return compact;
+}
+
+export function preprocessHwpSections(sections: HwpSection[], maxText = MAX_TEXT) {
+  if (JSON.stringify(sections).length <= maxText)
+    return { sections, warnings: [] as string[] };
+
+  const anchors = sections.flatMap((section, sectionIndex) =>
+    section.records
+      .map((record, recordIndex) => ({
+        sectionIndex,
+        recordIndex,
+        score: hwpAnchorScore(record),
+      }))
+      .filter((anchor) => anchor.score > 0),
+  );
+  const priorityAnchors = anchors.filter((anchor) => anchor.score >= 8);
+  const contextAnchors = priorityAnchors.length ? priorityAnchors : anchors;
+  if (contextAnchors.length) {
+    for (const radius of HWP_CONTEXT_RADII) {
+      const context = hwpContext(sections, contextAnchors, radius, 10);
+      if (JSON.stringify(context).length <= maxText)
+        return {
+          sections: context,
+          warnings: [
+            'HWP 원문이 커서 교육과정·편제·학점 표제 주변을 우선 분석했습니다. 원문과 대조가 필요합니다.',
+          ],
+        };
+    }
+  }
+
+  const context = contextAnchors.length
+    ? hwpContext(sections, contextAnchors, 24, 10)
+    : [];
+  const fallback = capHwpContext(context.length ? context : sections, maxText);
+  return {
+    sections: fallback,
+    warnings: [
+      'HWP 원문이 커서 교육과정·편제·학점 후보 일부만 분석했습니다. 원문과 대조가 필요합니다.',
+    ],
+  };
+}
+
+function parseHwpTableCell(header: string) {
+  const bytes = Buffer.from(header, 'hex');
+  if (bytes.length < 16) return null;
+  const col = bytes.readUInt16LE(8);
+  const row = bytes.readUInt16LE(10);
+  const colSpan = bytes.readUInt16LE(12);
+  const rowSpan = bytes.readUInt16LE(14);
+  if (!colSpan || !rowSpan) return null;
+  return { row, col, rowSpan, colSpan };
+}
+
+export function extractHwpTableGrids(sections: HwpSection[]) {
+  const tables: HwpTableGrid[] = [];
+  for (const section of sections) {
+    for (let start = 0; start < section.records.length; start++) {
+      const tableRecord = section.records[start];
+      if (tableRecord.tag !== 77 || !tableRecord.table_header) continue;
+      const header = Buffer.from(tableRecord.table_header, 'hex');
+      if (header.length < 8) continue;
+      const rows = header.readUInt16LE(4);
+      const columns = header.readUInt16LE(6);
+      if (!rows || !columns || rows > 1_000 || columns > 100) continue;
+
+      const cells: HwpTableCell[] = [];
+      let current: HwpTableCell | null = null;
+      for (let index = start + 1; index < section.records.length; index++) {
+        const record = section.records[index];
+        if (record.tag === 77 && record.level <= tableRecord.level) break;
+        if (record.tag === 72 && record.level === tableRecord.level) {
+          const position = record.cell_header && parseHwpTableCell(record.cell_header);
+          current = position
+            ? { ...position, text: '' }
+            : null;
+          if (current) cells.push(current);
+          continue;
+        }
+        if (current && record.tag === 67 && record.level > tableRecord.level)
+          current.text += record.text ?? '';
+      }
+      const populatedCells = cells
+        .map((cell) => ({ ...cell, text: cell.text.replaceAll(/\s+/g, ' ').trim() }))
+        .filter((cell) => cell.text);
+      if (populatedCells.length)
+        tables.push({ section: section.section, rows, columns, cells: populatedCells });
+    }
+  }
+  return tables;
+}
+
+function hwpTableScore(table: HwpTableGrid) {
+  const text = table.cells.map((cell) => cell.text).join(' ');
+  let score = 0;
+  if (/2026학년도\s*입학생/.test(text)) score += 40;
+  if (/과학중점/.test(text)) score += 30;
+  if (/교육과정|편제|학점배당/.test(text)) score += 12;
+  if (/과목|학점/.test(text)) score += 4;
+  return score;
+}
+
+function hwpTableContext(tables: HwpTableGrid[]) {
+  const selected: HwpTableGrid[] = [];
+  let used = 0;
+  for (const table of [...tables].sort((left, right) => hwpTableScore(right) - hwpTableScore(left))) {
+    const size = JSON.stringify(table).length;
+    if (size > 90_000 || used + size > 170_000) continue;
+    selected.push(table);
+    used += size;
+  }
+  return selected;
+}
+
 function readHwp(container: CFB.CFB$Container) {
   const header = Buffer.from(
     CFB.find(container, 'FileHeader')!.content as Uint8Array,
@@ -102,12 +329,7 @@ function readHwp(container: CFB.CFB$Container) {
     expanded += bytes.length;
     if (expanded > MAX_EXPANDED)
       throw new ImportError('HWP 압축 해제 크기가 너무 큽니다.');
-    const records: {
-      tag: number;
-      level: number;
-      text?: string;
-      cell_header?: string;
-    }[] = [];
+    const records: HwpRecord[] = [];
     for (let offset = 0; offset < bytes.length;) {
       if (offset + 4 > bytes.length)
         throw new ImportError('HWP 레코드가 손상되었습니다.');
@@ -127,20 +349,131 @@ function readHwp(container: CFB.CFB$Container) {
       const data = bytes.subarray(offset, offset + size);
       offset += size;
       if (tag === 67) records.push({ tag, level, text: hwpText(data) });
-      // Retain nesting and list/table records as evidence, but never certify cell geometry.
-      else if (tag === 72 || tag === 77)
+      else if (tag === 72)
         records.push({
           tag,
           level,
           cell_header: data.subarray(0, 48).toString('hex'),
         });
+      else if (tag === 77)
+        records.push({
+          tag,
+          level,
+          table_header: data.subarray(0, 48).toString('hex'),
+        });
     }
     return { section: path, records };
   });
   if (!sections.length) throw new ImportError('HWP 본문 스트림이 없습니다.');
-  return boundedText('hwp', content, [
-    'HWP의 표 셀 좌표를 완전히 복원하지 못했습니다. 원문과 학기별 열을 대조해야 합니다.',
+  const tables = hwpTableContext(extractHwpTableGrids(content));
+  const tableSize = JSON.stringify(tables).length;
+  const preprocessed = preprocessHwpSections(
+    content,
+    Math.max(20_000, MAX_TEXT - tableSize - 1_000),
+  );
+  return boundedText('hwp', { tables, sections: preprocessed.sections }, [
+    'HWP 표의 셀 좌표와 병합 범위를 함께 분석했습니다. 원문과 학기별 열을 대조해야 합니다.',
+    ...preprocessed.warnings,
   ]);
+}
+
+export function isHwpDocument(bytes: Buffer) {
+  if (!bytes.subarray(0, 8).equals(Buffer.from('d0cf11e0a1b11ae1', 'hex')))
+    return false;
+  try {
+    return Boolean(CFB.find(CFB.read(bytes, { type: 'buffer' }), 'FileHeader'));
+  } catch {
+    return false;
+  }
+}
+
+async function runSoffice(
+  inputPath: string,
+  outputDirectory: string,
+  outputPath: string,
+  profilePath: string,
+) {
+  const candidates = [
+    process.env.SOFFICE_PATH,
+    '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+    'soffice',
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  const args = [
+    '--headless',
+    '--nologo',
+    '--nofirststartwizard',
+    `-env:UserInstallation=${pathToFileURL(profilePath).href}`,
+    '--convert-to',
+    'pdf:writer_pdf_Export',
+    '--outdir',
+    outputDirectory,
+    inputPath,
+  ];
+
+  for (const candidate of [...new Set(candidates)]) {
+    if (candidate.startsWith('/') && !existsSync(candidate)) continue;
+    try {
+      await execFile(candidate, args, { timeout: 90_000, maxBuffer: 1_000_000 });
+      if (existsSync(outputPath)) return true;
+    } catch {
+      // A configured executable or PATH entry can be stale; try the next known location.
+    }
+  }
+  return false;
+}
+
+export async function convertHwpToPdf(bytes: Buffer) {
+  if (!isHwpDocument(bytes)) return null;
+
+  const directory = await mkdtemp('/tmp/mea-subject-selection-');
+  const inputPath = join(directory, 'curriculum.hwp');
+  const outputPath = join(directory, 'curriculum.pdf');
+  const profilePath = join(directory, 'libreoffice-profile');
+  try {
+    await writeFile(inputPath, bytes);
+    const converted = await runSoffice(
+      inputPath,
+      directory,
+      outputPath,
+      profilePath,
+    );
+    if (!converted)
+      return {
+        pdf: null,
+        warning:
+          'HWP를 PDF로 변환하지 못했습니다. LibreOffice 설치 상태를 확인한 뒤 텍스트 방식으로 분석합니다.',
+      };
+    if (!existsSync(outputPath))
+      return {
+        pdf: null,
+        warning: 'HWP를 PDF로 변환하지 못해 텍스트 방식으로 분석합니다.',
+      };
+    const pdf = await readFile(outputPath);
+    if (!pdf.length || pdf.length > MAX_FILE_BYTES)
+      return {
+        pdf: null,
+        warning:
+          '변환된 PDF가 비어 있거나 너무 커서 HWP 텍스트 방식으로 분석합니다.',
+      };
+    const pageCount = countPdfPages(pdf);
+    if (pageCount > MAX_CONVERTED_PDF_PAGES)
+      return {
+        pdf: null,
+        warning: `HWP 변환 PDF가 ${pageCount}쪽으로 비정상적으로 길어 원본 HWP 텍스트·표 레코드 방식으로 분석합니다.`,
+      };
+    return {
+      pdf,
+      warning:
+        '원본 HWP를 PDF로 변환해 표의 페이지·열 구조를 기준으로 분석했습니다. 원문 대조가 필요합니다.',
+    };
+  } catch {
+    return {
+      pdf: null,
+      warning: 'HWP를 PDF로 변환하지 못해 텍스트 방식으로 분석합니다.',
+    };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
 export function parseDocument(bytes: Buffer): ParsedDocument {

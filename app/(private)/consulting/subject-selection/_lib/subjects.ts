@@ -1,4 +1,4 @@
-import subjects from '@/app/(private)/consulting/subject-selection/_data/subjects.json';
+import subjects from '../_data/subjects.json';
 
 export const SUBJECT_SELECTION_TERMS = [
   { id: 'grade-2-semester-1', label: '2-1' },

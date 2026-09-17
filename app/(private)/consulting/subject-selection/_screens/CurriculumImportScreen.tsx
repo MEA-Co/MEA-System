@@ -11,18 +11,27 @@ import {
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import {
-  type ConfirmedCurriculum,
-  curriculumFromImport,
-} from '@/app/(private)/consulting/subject-selection/_lib/curriculum';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type {
-  Attachment,
-  ImportResult,
-  School,
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  type Attachment,
+  type ImportResult,
+  requiresTrackVerification,
+  type School,
 } from '@/features/subject-selection/schema';
+
+import {
+  type ConfirmedCurriculum,
+  curriculumFromImport,
+} from '../_lib/curriculum';
 
 const endpoint = '/api/consulting/subject-selection';
 const statusLabel = {
@@ -41,6 +50,7 @@ const terms = [
   [3, 1],
   [3, 2],
 ] as const;
+const trackOptions = ['일반 과정', '과학중점 과정'] as const;
 
 async function readResponse(response: Response) {
   if (response.redirected)
@@ -50,7 +60,41 @@ async function readResponse(response: Response) {
   return data;
 }
 
-export function CurriculumImport({
+function TrackSelect({
+  track,
+  onChange,
+}: {
+  track: (typeof trackOptions)[number];
+  onChange: (track: (typeof trackOptions)[number]) => void;
+}) {
+  return (
+    <div className="space-y-2 text-sm">
+      <span>과정</span>
+      <Select
+        value={track}
+        onValueChange={(value) => onChange(value as typeof track)}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {trackOptions.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {track === '과학중점 과정' ? (
+        <p className="text-xs text-muted-foreground">
+          과학중점과정인 경우 과정명을 골라주세요.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function CurriculumImportScreen({
   onConfirm,
 }: {
   onConfirm: (curriculum: ConfirmedCurriculum) => void;
@@ -62,7 +106,8 @@ export function CurriculumImport({
   const [school, setSchool] = useState<School | null>(null);
   const [sourceYear, setSourceYear] = useState(currentYear);
   const [cohort, setCohort] = useState(currentYear);
-  const [track, setTrack] = useState('');
+  const [track, setTrack] =
+    useState<(typeof trackOptions)[number]>('일반 과정');
   const [files, setFiles] = useState<Attachment[]>([]);
   const [fileId, setFileId] = useState('');
   const [upload, setUpload] = useState<File | null>(null);
@@ -184,6 +229,9 @@ export function CurriculumImport({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  const resultRequiresTrackVerification =
+    result !== null && requiresTrackVerification(result.track);
+
   return (
     <div className="space-y-6">
       <fieldset
@@ -216,18 +264,6 @@ export function CurriculumImport({
             파일 업로드
           </label>
         </div>
-        <label className="block space-y-2 text-sm">
-          <span>과정·학과 (선택)</span>
-          <Input
-            value={track}
-            maxLength={100}
-            placeholder="예: 일반 과정, 과학중점 과정"
-            onChange={(e) => {
-              setTrack(e.target.value);
-              resetResult();
-            }}
-          />
-        </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm">
             <span>공시연도</span>
@@ -286,6 +322,13 @@ export function CurriculumImport({
                 검색
               </Button>
             </form>
+            <TrackSelect
+              track={track}
+              onChange={(value) => {
+                setTrack(value);
+                resetResult();
+              }}
+            />
             {searched && !schools.length && (
               <p className="text-sm text-muted-foreground">
                 검색된 고등학교가 없습니다.
@@ -388,6 +431,13 @@ export function CurriculumImport({
                 }}
               />
             </label>
+            <TrackSelect
+              track={track}
+              onChange={(value) => {
+                setTrack(value);
+                resetResult();
+              }}
+            />
             <label className="block space-y-2 text-sm">
               <span className="flex items-center gap-2">
                 <Upload className="size-4" />
@@ -454,11 +504,28 @@ export function CurriculumImport({
                 >
                   {statusLabel[result.status]}
                 </Badge>
+                {resultRequiresTrackVerification ? (
+                  <Badge
+                    variant="outline"
+                    className={
+                      result.track_matched
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        : 'border-destructive/40 bg-destructive/5 text-destructive'
+                    }
+                  >
+                    {result.track_matched ? '과정 확인됨' : '과정 확인 불가'}
+                  </Badge>
+                ) : null}
               </div>
               <p className="break-all text-xs text-muted-foreground">
                 {result.source.name} · {result.source.format.toUpperCase()}
                 {result.track ? ` · ${result.track}` : ''}
               </p>
+              {resultRequiresTrackVerification && result.track_evidence ? (
+                <p className="break-words text-xs text-muted-foreground">
+                  과정 근거: {result.track_evidence}
+                </p>
+              ) : null}
             </div>
             <Button type="button" variant="outline" onClick={exportResult}>
               <Download className="size-4" />

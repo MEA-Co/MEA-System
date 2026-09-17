@@ -39,21 +39,76 @@ registerHooks({
 
 const { extractionSchema, validateExtraction } =
   await import('../features/subject-selection/schema.ts');
-const { parseDocument } =
-  await import('../features/subject-selection/document.ts');
+const {
+  extractHwpTableGrids,
+  isHwpDocument,
+  parseDocument,
+  preprocessHwpSections,
+} = await import('../features/subject-selection/document.ts');
+const { courseMatchesSchoolRequirement, schoolCourseRequirements } =
+  await import('../features/subject-selection/graduation.ts');
 const { parseAttachments, searchSchools, listAttachments, downloadAttachment } =
   await import('../features/subject-selection/schoolinfo.ts');
 const {
+  courseDomainMatches,
   findPriorityProfile,
+  coreChoiceStatuses,
   findUniversityMatches,
   normalizeCourseName,
   ruleMatchesCourse,
 } = await import('../features/subject-selection/recommendations.ts');
 
+const { universityRuleStatus } =
+  await import('../features/subject-selection/university-status.ts');
+
+test('university status counts normalized subjects once and requires named subjects', () => {
+  const rule = {
+    category: 'recommended',
+    courses: ['물리학', '화학', '생명과학'],
+    choose: 2,
+    requiredCourses: ['화학'],
+    note: '',
+  };
+  const courses = ['물리학', '물리 학', '생명과학'].map((name) => ({
+    name,
+    domain: '과학',
+  }));
+  const status = universityRuleStatus(rule, courses);
+  assert.equal(status.count, 2);
+  assert.equal(status.satisfied, false);
+  assert.deepEqual(status.missingNames, ['화학']);
+  assert.equal(
+    universityRuleStatus(rule, [...courses, { name: '화학', domain: '과학' }])
+      .satisfied,
+    true,
+  );
+});
+
+test('university status filters domain and selection type', () => {
+  const rule = {
+    category: 'recommended',
+    domain: '과학',
+    selectionType: 'career',
+    choose: 2,
+    note: '',
+  };
+  const courses = [
+    { name: '물리학', domain: '과학', selectionType: 'general' },
+    { name: '역학과 에너지', domain: '과학', selectionType: 'career' },
+    { name: '기하', domain: '수학', selectionType: 'career' },
+  ];
+  const status = universityRuleStatus(rule, courses);
+  assert.equal(status.count, 1);
+  assert.equal(status.target, 2);
+  assert.equal(status.satisfied, false);
+});
+
 function fixture() {
   const data = {
     table_found: true,
     table_title: '2026학년도 입학생 교육과정 편제표',
+    track_matched: true,
+    track_evidence: '2026학년도 입학생 [과학중점과정] 표',
     cohort: 2026,
     cohort_evidence: '1쪽 제목: 2026학년도 입학생',
     structure_clear: true,
@@ -175,6 +230,24 @@ test('편제표가 없으면 failed', () => {
   data.table_found = false;
   assert.equal(validateExtraction(data, 2026).status, 'failed');
 });
+test('요청한 과정의 원문 근거가 없으면 확정하지 않는다', () => {
+  const data = fixture();
+  data.track_matched = false;
+  data.track_evidence = null;
+  assert.equal(
+    validateExtraction(data, 2026, [], '과학중점 과정').status,
+    'failed',
+  );
+});
+test('일반과정은 과정 표지 없이도 학년·학기 검증 결과를 사용한다', () => {
+  const data = fixture();
+  data.track_matched = null;
+  data.track_evidence = null;
+  assert.equal(
+    validateExtraction(data, 2026, [], '일반 과정').status,
+    'verified',
+  );
+});
 test('파일 시그니처와 ZIP/OLE 내부 구조로 포맷을 구분한다', () => {
   assert.equal(parseDocument(Buffer.from('%PDF-1.4\n')).format, 'pdf');
   assert.equal(
@@ -224,10 +297,98 @@ test('HWP 레코드 계층은 보존하되 텍스트만으로 표 구조를 확�
     'BodyText/Section0',
     Buffer.concat([word, text]),
   );
-  const result = parseDocument(CFB.write(container, { type: 'buffer' }));
+  const bytes = CFB.write(container, { type: 'buffer' });
+  assert.equal(isHwpDocument(bytes), true);
+  const result = parseDocument(bytes);
   assert.equal(result.format, 'hwp');
   assert.match(result.text, /교육과정 편제표/);
   assert.ok(result.warnings.length);
+});
+
+test('큰 HWP는 편제표 표제 주변 레코드만 전처리해 분석 크기를 제한한다', () => {
+  const filler = '학교 행사 안내와 교육활동 기록 '.repeat(16);
+  const records = Array.from({ length: 3_200 }, (_, index) => ({
+    tag: 67,
+    level: 0,
+    text:
+      index === 1_600
+        ? '2026학년도 입학생 교육과정 편제표 2학년 1학기 과목명 학점'
+        : filler,
+  }));
+  const processed = preprocessHwpSections([
+    { section: 'BodyText/Section0', records },
+  ]);
+
+  assert.ok(processed.warnings.length);
+  assert.ok(JSON.stringify(processed.sections).length <= 240_000);
+  assert.match(JSON.stringify(processed.sections), /교육과정 편제표/);
+});
+test('HWP 표 셀 좌표와 병합 범위를 텍스트와 함께 복원한다', () => {
+  const tableHeader = Buffer.alloc(8);
+  tableHeader.writeUInt16LE(2, 4);
+  tableHeader.writeUInt16LE(3, 6);
+  const cellHeader = (col, row, colSpan = 1, rowSpan = 1) => {
+    const header = Buffer.alloc(16);
+    header.writeUInt16LE(col, 8);
+    header.writeUInt16LE(row, 10);
+    header.writeUInt16LE(colSpan, 12);
+    header.writeUInt16LE(rowSpan, 14);
+    return header.toString('hex');
+  };
+  const tables = extractHwpTableGrids([
+    {
+      section: 'BodyText/Section0',
+      records: [
+        { tag: 77, level: 1, table_header: tableHeader.toString('hex') },
+        { tag: 72, level: 1, cell_header: cellHeader(0, 0, 2) },
+        { tag: 67, level: 2, text: '교육과정 편제표' },
+        { tag: 72, level: 1, cell_header: cellHeader(2, 0) },
+        { tag: 67, level: 2, text: '학점' },
+      ],
+    },
+  ]);
+  assert.deepEqual(tables, [
+    {
+      section: 'BodyText/Section0',
+      rows: 2,
+      columns: 3,
+      cells: [
+        { row: 0, col: 0, rowSpan: 1, colSpan: 2, text: '교육과정 편제표' },
+        { row: 0, col: 2, rowSpan: 1, colSpan: 1, text: '학점' },
+      ],
+    },
+  ]);
+});
+test('학교 편제표의 과학중점 이수 조건은 학기별·통합 조건으로 분리한다', () => {
+  const requirements = schoolCourseRequirements([
+    '(과학) 과학 교과 과목을 2학년 2학기에 2개 과목 이상 선택, 3학년 1학기에 3개 이상 선택해야 함',
+    '(수학, 과학, 정보) 2, 3학년에서 수학, 과학, 정보 교과 과목을 12개 이상 선택해야 함',
+  ]);
+  assert.deepEqual(
+    requirements.map(({ label, grade, semester, minimumCourses }) => ({
+      label,
+      grade,
+      semester,
+      minimumCourses,
+    })),
+    [
+      { label: '과학 · 2-2', grade: 2, semester: 2, minimumCourses: 2 },
+      { label: '과학 · 3-1', grade: 3, semester: 1, minimumCourses: 3 },
+      {
+        label: '수학·과학·정보',
+        grade: null,
+        semester: null,
+        minimumCourses: 12,
+      },
+    ],
+  );
+  assert.equal(
+    courseMatchesSchoolRequirement(
+      { name: '인공지능 기초', domain: '기술·가정/정보' },
+      requirements[2],
+    ),
+    true,
+  );
 });
 test('학사일정이 먼저 있어도 편성운영을 우선 추천하고 모든 첨부를 보존한다', () => {
   const params = {
@@ -260,13 +421,109 @@ test('학과명과 2022 개정 과목 표기를 정규화해 추천 기준을 �
   );
   assert.equal(
     findPriorityProfile('컴퓨터공학과')?.profile.id,
-    'math-computing',
+    'computing-engineering',
   );
   assert.equal(
     findPriorityProfile('화학공학과')?.profile.id,
     'physics-chemistry-combined',
   );
   assert.equal(findPriorityProfile('고고미술사학과')?.profile.id, 'history');
+});
+
+test('기초 Core와 과학 심화 추천을 분리하고 공학별 물리 우선순위를 유지한다', () => {
+  for (const department of [
+    '기계공학과',
+    '전기전자공학과',
+    '화학공학과',
+    '화학생명공학과',
+    '환경공학과',
+    '건축공학과',
+  ]) {
+    const profile = findPriorityProfile(department)?.profile;
+    assert.ok(profile.core.includes('물리학'), department);
+    assert.ok(!profile.core.includes('화학 반응의 세계'), department);
+  }
+  const bio = findPriorityProfile('생명공학과')?.profile;
+  assert.equal(bio.id, 'bio-engineering');
+  assert.deepEqual(bio.core, ['미적분 II', '화학', '생명과학']);
+  assert.ok(bio.subCore.includes('물리학'));
+  assert.ok(bio.subCore.includes('화학 반응의 세계'));
+  assert.ok(
+    !findPriorityProfile('컴퓨터공학과').profile.core.includes('물리학'),
+  );
+  assert.ok(
+    findPriorityProfile('컴퓨터공학과').profile.subCore.includes('물리학'),
+  );
+  assert.equal(findPriorityProfile('건축학과').profile.id, 'architecture');
+  assert.equal(
+    findPriorityProfile('환경공학과').profile.id,
+    'environmental-engineering',
+  );
+  assert.equal(findPriorityProfile('통계학과').profile.id, 'math-computing');
+});
+
+test('학과별 지정 심화 및 선택형 Core의 개수와 포함 조건을 확인한다', () => {
+  const mechanical = findPriorityProfile('기계공학과').profile;
+  const electronics = findPriorityProfile('전자공학과').profile;
+  assert.ok(mechanical.core.includes('역학과 에너지'));
+  assert.ok(!mechanical.core.includes('전자기와 양자'));
+  assert.ok(electronics.core.includes('전자기와 양자'));
+  assert.ok(!electronics.core.includes('역학과 에너지'));
+  const chemistry = findPriorityProfile('화학공학과').profile;
+  const check = (names) =>
+    coreChoiceStatuses(
+      chemistry,
+      names.map((name) => ({ name })),
+    )[0];
+  assert.equal(check(['역학과 에너지', '전자기와 양자']).satisfied, false);
+  assert.equal(check(['물질과 에너지']).satisfied, false);
+  assert.equal(check(['물질과 에너지', '물질과 에너지']).count, 1);
+  assert.equal(check(['물질과 에너지', '역학과 에너지']).satisfied, true);
+  assert.equal(check(['물질과 에너지', '화학 반응의 세계']).satisfied, true);
+  assert.equal(
+    coreChoiceStatuses(findPriorityProfile('신소재공학과').profile, [
+      { name: '역학과 에너지' },
+      { name: '전자기와 양자' },
+    ])[0].satisfied,
+    true,
+  );
+  const energy = findPriorityProfile('원자력공학과').profile;
+  assert.ok(energy.core.includes('역학과 에너지'));
+  assert.ok(!energy.coreChoices[0].courses.includes('역학과 에너지'));
+  assert.equal(
+    coreChoiceStatuses(findPriorityProfile('생명공학과').profile, [
+      { name: '세포와 물질대사' },
+    ])[0].satisfied,
+    true,
+  );
+});
+
+test('새 내부 유형에서도 기존 대학별 권장과목 매칭이 유지된다', () => {
+  for (const [department, previousId] of [
+    ['컴퓨터공학과', 'math-computing'],
+    ['생명공학과', 'chemistry-biology'],
+    ['식품공학과', 'chemistry-biology'],
+    ['건축학과', 'physics-earth'],
+  ]) {
+    const nextId = findPriorityProfile(department).profile.id;
+    const before = findUniversityMatches(department, previousId);
+    assert.ok(before.length, department);
+    assert.deepEqual(
+      findUniversityMatches(department, nextId),
+      before,
+      department,
+    );
+  }
+});
+
+test('추천 과목군은 편제표의 확장 교과 영역 표기도 함께 매칭한다', () => {
+  const profile = findPriorityProfile('경영학과')?.profile;
+  assert.ok(profile);
+  assert.ok(
+    profile.recommendDomains.some((domain) =>
+      courseDomainMatches(domain, '사회(역사/도덕 포함)'),
+    ),
+  );
 });
 
 test('희망 학과와 충분히 가까운 대학 모집단위만 연결한다', () => {
