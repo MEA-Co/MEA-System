@@ -5,6 +5,7 @@ import {
   FilePenLine,
   GraduationCap,
   MessagesSquare,
+  NotebookPen,
   UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -39,26 +40,51 @@ export function DashboardNavigation({
 
   if (role === 'student' || role === 'consultant') {
     return (
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=profile"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'profile'}
-              >
-                <UserRound />
-                <span>내 정보</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=profile"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'profile'}
+                >
+                  <UserRound />
+                  <span>내 정보</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {role === 'consultant' && (
+          <SidebarGroup>
+            <SidebarGroupLabel>운영 관리</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    render={
+                      <Link
+                        href="/dashboard?view=exploration"
+                        onClick={() => setOpenMobile(false)}
+                      />
+                    }
+                    isActive={view === 'exploration'}
+                  >
+                    <NotebookPen />
+                    <span>탐구활동 관리</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+      </>
     );
   }
 
@@ -122,6 +148,22 @@ export function DashboardNavigation({
                 <span>컨설팅 관리</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {role === 'consultant_lead' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=exploration"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'exploration'}
+                >
+                  <NotebookPen />
+                  <span>탐구활동 관리</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             {role === 'consultant_lead' && (
               <SidebarMenuItem>
                 <SidebarMenuButton

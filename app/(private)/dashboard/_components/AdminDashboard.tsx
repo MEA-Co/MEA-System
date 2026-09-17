@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { AdminView, ManagedMember } from '@/lib/admin';
 
+import { ExplorationWorkspace } from './exploration/ExplorationWorkspace';
 import { ConsultantManagement } from './ConsultantManagement';
 import { ConsultingManagement } from './ConsultingManagement';
 import { DashboardNavigation } from './DashboardNavigation';
@@ -46,7 +47,9 @@ export function AdminDashboard({
         />
       }
     >
-      {role === 'consultant_lead' && view === 'questionnaire' ? (
+      {role === 'consultant_lead' && view === 'exploration' ? (
+        <ExplorationWorkspace />
+      ) : role === 'consultant_lead' && view === 'questionnaire' ? (
         <QuestionnaireWorkspace requestedId={questionnaireId} />
       ) : role === 'admin' && view === 'students' ? (
         <StudentManagement students={students} />

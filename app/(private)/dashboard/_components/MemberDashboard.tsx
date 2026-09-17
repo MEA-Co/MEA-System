@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { MEMBER_ROLE_LABELS, type StudentPeriod } from '@/lib/profile';
 
+import { ExplorationWorkspace } from './exploration/ExplorationWorkspace';
 import { ConsultingManagement } from './ConsultingManagement';
 import { DashboardNavigation } from './DashboardNavigation';
 import { DashboardShell } from './DashboardShell';
@@ -15,7 +16,7 @@ type MemberDashboardProps = {
   studentPeriod?: StudentPeriod | null;
   completedConsultingIds?: ReadonlyArray<string>;
   headerActions?: ReactNode;
-  view?: 'profile';
+  view?: 'profile' | 'exploration';
 };
 
 export function MemberDashboard({
@@ -70,6 +71,8 @@ export function MemberDashboard({
             ) : null}
           </dl>
         </section>
+      ) : role === 'consultant' && view === 'exploration' ? (
+        <ExplorationWorkspace />
       ) : (
         <ConsultingManagement
           role={role}

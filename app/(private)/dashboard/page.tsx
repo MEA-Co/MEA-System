@@ -33,6 +33,7 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   if (role === 'admin' || role === 'consultant_lead') {
     const view: AdminView =
       requestedView === 'consultants' ||
+      (requestedView === 'exploration' && role === 'consultant_lead') ||
       (requestedView === 'questionnaire' && role === 'consultant_lead') ||
       (requestedView === 'students' && role === 'admin')
         ? requestedView
@@ -111,6 +112,7 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   return (
     <MemberDashboard
       role="consultant"
+      view={requestedView === 'exploration' ? 'exploration' : undefined}
       name={profile.name}
       headerActions={roleTabs}
     />
