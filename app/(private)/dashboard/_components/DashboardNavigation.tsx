@@ -1,6 +1,11 @@
 'use client';
 
-import { BriefcaseBusiness, GraduationCap, MessagesSquare } from 'lucide-react';
+import {
+  BriefcaseBusiness,
+  GraduationCap,
+  MessagesSquare,
+  UserRound,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -14,21 +19,47 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import type { AdminView } from '@/lib/admin';
+import type { MemberRole } from '@/lib/profile';
 
-type AdminNavigationProps = {
-  role?: 'admin' | 'consultant_lead';
-  consultantCount: number;
-  studentCount: number;
-  view: AdminView;
+type DashboardNavigationProps = {
+  role: MemberRole;
+  consultantCount?: number;
+  studentCount?: number;
+  view?: AdminView | 'profile';
 };
 
-export function AdminNavigation({
+export function DashboardNavigation({
   role = 'admin',
   consultantCount,
   studentCount,
   view,
-}: AdminNavigationProps) {
+}: DashboardNavigationProps) {
   const { setOpenMobile } = useSidebar();
+
+  if (role === 'student' || role === 'consultant') {
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={
+                  <Link
+                    href="/dashboard?view=profile"
+                    onClick={() => setOpenMobile(false)}
+                  />
+                }
+                isActive={view === 'profile'}
+              >
+                <UserRound />
+                <span>내 정보</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
 
   return (
     <>

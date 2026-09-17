@@ -12,8 +12,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import { AdminDashboard } from './_components/AdminDashboard';
 import { AdminRoleTabs } from './_components/AdminRoleTabs';
-import { ConsultantDashboard } from './_components/ConsultantDashboard';
-import { StudentDashboard } from './_components/StudentDashboard';
+import { MemberDashboard } from './_components/MemberDashboard';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,15 +27,14 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   const role = await getViewRole(actualRole);
   const roleTabs =
     actualRole === 'admin' ? <AdminRoleTabs role={role} /> : null;
+  const { view: requestedView } = await searchParams;
 
   if (role === 'admin' || role === 'consultant_lead') {
-    const { view: requestedView } = await searchParams;
     const view: AdminView =
-      requestedView === 'consultants' || requestedView === 'consulting'
+      requestedView === 'consultants' ||
+      (requestedView === 'students' && role === 'admin')
         ? requestedView
-        : role === 'admin'
-          ? 'students'
-          : 'consultants';
+        : 'consulting';
     const supabase = createClient(await cookies());
     const memberResult = await supabase
       .from('profiles')
@@ -65,6 +63,18 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
     );
   }
 
+  if (requestedView === 'profile') {
+    return (
+      <MemberDashboard
+        role={role}
+        name={profile.name}
+        studentPeriod={profile.student_period}
+        view="profile"
+        headerActions={roleTabs}
+      />
+    );
+  }
+
   if (role === 'student') {
     const supabase = createClient(await cookies());
     const completionResult = await supabase
@@ -83,11 +93,12 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
     }
 
     return (
-      <StudentDashboard
+      <MemberDashboard
+        role="student"
         completedConsultingIds={(completionResult.data ?? []).map(
           (completion) => completion.consulting_id,
         )}
-        studentName={profile.name}
+        name={profile.name}
         studentPeriod={profile.student_period}
         headerActions={roleTabs}
       />
@@ -95,8 +106,9 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
   }
 
   return (
-    <ConsultantDashboard
-      consultantName={profile.name}
+    <MemberDashboard
+      role="consultant"
+      name={profile.name}
       headerActions={roleTabs}
     />
   );

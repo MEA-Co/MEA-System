@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 관리자 공통 함수(`getViewRole`, `setAdminView`, `updateConsultantRole`)와 관련 타입은 서버 전용 `lib/admin.ts`에 모은다. 대시보드 `_actions/`는 클라이언트에서 호출할 수 있는 얇은 서버 액션 연결층이다.
 - `consultant_lead`는 컨설턴트 기능과 컨설턴트 관리 목록 조회 권한을 가진다. 리드는 학생·관리자 프로필을 조회하거나 회원 유형을 변경할 수 없다.
-- 리드는 관리자와 공통 `AdminDashboard`·`AdminNavigation`을 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
+- 모든 역할은 `DashboardShell`의 사이드바·사용자 정보·로그아웃·모바일 메뉴와 `DashboardNavigation`을 공유한다. view가 없는 대시보드는 모든 역할에서 컨설팅 목록을 표시한다. 학생·컨설턴트는 `MemberDashboard`를 사용하며 사이드바에는 내 정보만 표시한다. 내 정보는 `?view=profile`에서 이름·회원 유형·학생 학년/학기를 보여주고 컨설팅 목록과 분리한다. 사이드바 MEA 로고는 기본 대시보드로 연결한다. 리드는 관리자와 공통 `AdminDashboard`를 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
 - 가입 화면에서는 학생·컨설턴트만 선택한다. 관리자는 대시보드의 컨설턴트 관리 화면에서 컨설턴트와 컨설턴트 리드 사이를 변경할 수 있다.
 - 역할 변경은 `public.update_consultant_role` RPC가 관리자 여부, 대상의 현재 역할, 새 역할을 검증한다. 일반 사용자는 `profiles.role` 열을 직접 수정할 수 없다.
 - 역할 선택 UI는 변경할 때만 저장·취소 버튼을 표시하고 저장 중에는 중복 입력을 막는다. 서버에서 갱신된 직책을 선택값에 반영한다. 저장 중·성공·실패는 `components/ui/toast.tsx`의 shadcn Base UI Toast 하나를 갱신해 안내하며, 공통 Toaster는 루트 레이아웃에 둔다.
