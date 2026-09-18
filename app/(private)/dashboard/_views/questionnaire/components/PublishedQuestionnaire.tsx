@@ -127,7 +127,7 @@ export function PublishedQuestionnaire({
           </Tabs.Tab>
         ))}
       </Tabs.List>
-      <Tabs.Panel value="detail" keepMounted className="data-[hidden]:hidden">
+      <Tabs.Panel value="detail" keepMounted className="data-hidden:hidden">
         {content}
       </Tabs.Panel>
       <Tabs.Panel value="preview" className="rounded-xl border bg-background">
