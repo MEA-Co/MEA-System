@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const memberId = '11111111-1111-4111-8111-111111111111';
 const source = ts.transpileModule(
   readFileSync(
-    'app/(private)/dashboard/_actions/update-consultant-role.ts',
+    'app/(private)/dashboard/_views/consultants/actions/update-consultant-role.ts',
     'utf8',
   ),
   {

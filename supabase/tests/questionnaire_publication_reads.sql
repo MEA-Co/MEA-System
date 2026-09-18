@@ -1,0 +1,52 @@
+begin;
+create temporary table workflow_users(id uuid, role text);
+insert into workflow_users select gen_random_uuid(),role from unnest(array['student','consultant','consultant_lead','admin','reviewer_lead']) role;
+insert into auth.users(id) select id from workflow_users;
+insert into public.profiles(id,role,name,student_period)
+select id,case when role='reviewer_lead' then 'consultant_lead' else role end,'검증 '||role,case when role='student' then '1학년 1학기' end from workflow_users;
+create temporary table workflow_data(doc jsonb);
+insert into workflow_data values(jsonb_build_object('questionnaireId',gen_random_uuid(),'versionId',gen_random_uuid(),'title','워크플로 검증','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'text','질문','details',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','비공개 의도','text','비공개 설명','visibleToConsultants',false),jsonb_build_object('id',gen_random_uuid(),'title','공개 의도','text','공개 설명','visibleToConsultants',true))))))));
+grant select on workflow_users,workflow_data to authenticated;
+set local role authenticated;
+do $$
+declare doc jsonb; vid uuid; owner_id uuid; reviewer_id uuid; other_id uuid;
+begin
+ select d.doc into doc from workflow_data d; vid:=(doc->>'versionId')::uuid;
+ select id into owner_id from workflow_users where role='consultant_lead';
+ select id into reviewer_id from workflow_users where role='admin';
+ select id into other_id from workflow_users where role='reviewer_lead';
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ perform public.save_questionnaire_draft(doc,0,gen_random_uuid());
+ perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
+ if exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Draft counted'; end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ perform public.publish_questionnaire(vid,1);
+ if exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Own publication counted'; end if;
+ perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
+ if not exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'New publication missing'; end if;
+ begin
+ insert into public.questionnaire_publication_reads(user_id,version_id) values(other_id,vid);
+ raise exception 'Marked another user read'; exception when insufficient_privilege then null; end;
+ perform public.mark_questionnaire_publication_read(vid);
+ perform public.mark_questionnaire_publication_read(vid);
+ if exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Read publication still counted'; end if;
+ if (select count(*) from public.questionnaire_publication_reads where version_id=vid)<>1 then raise exception 'Receipt duplicated'; end if;
+ perform set_config('request.jwt.claim.sub',other_id::text,true);
+ if not exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Receipt leaked across users'; end if;
+ if exists(select 1 from public.questionnaire_publication_reads where user_id=reviewer_id) then raise exception 'Other receipts leaked'; end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ perform public.save_questionnaire_draft(jsonb_set(doc,'{title}','"수정"'),1,gen_random_uuid());
+ perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
+ if exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Edit reset read receipt'; end if;
+ perform set_config('request.jwt.claim.sub',(select id::text from workflow_users where role='consultant'),true);
+ if exists(select 1 from public.unread_questionnaire_publications()) then raise exception 'Consultant publication leaked'; end if;
+ perform public.mark_questionnaire_publication_read(vid);
+ if exists(select 1 from public.questionnaire_publication_reads where version_id=vid) then raise exception 'Consultant marked inaccessible publication'; end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ perform public.distribute_questionnaire(vid,2);
+ perform set_config('request.jwt.claim.sub',other_id::text,true);
+ if exists(select 1 from public.unread_questionnaire_publications() where version_id=vid) then raise exception 'Distributed publication counted'; end if;
+end $$;
+reset role;
+select 'Publication receipt checks passed' as result;
+rollback;

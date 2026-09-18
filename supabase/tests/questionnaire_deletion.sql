@@ -70,7 +70,7 @@ update questionnaire_delete_data set doc=jsonb_build_object('questionnaireId',ge
 set local role authenticated;
 select public.save_questionnaire_draft(doc,0,gen_random_uuid()) from questionnaire_delete_data;
 reset role;
-update public.questionnaire_versions set status='published',published_at=now() where id=(select (doc->>'versionId')::uuid from questionnaire_delete_data);
+update public.questionnaire_versions set status='distributed',published_at=now(),distributed_at=now() where id=(select (doc->>'versionId')::uuid from questionnaire_delete_data);
 insert into public.questionnaire_responses(version_id,respondent_id,assigned_by)
 select (doc->>'versionId')::uuid,(select id from questionnaire_delete_users where role='consultant'),(select id from questionnaire_delete_users where role='admin') from questionnaire_delete_data;
 insert into public.questionnaire_answers(response_id,version_id,question_id,body)

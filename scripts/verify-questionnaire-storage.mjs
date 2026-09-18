@@ -25,8 +25,18 @@ function load(path, imports = {}, globals = {}) {
       require: (name) => {
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
+        if (name === './http-error')
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/http-error.ts',
+          );
+        if (name === './rich-text')
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/rich-text.ts',
+          );
         if (name === './schema')
-          return load('features/questionnaires/schema.ts');
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+          );
         if (name === 'node:crypto') return { randomUUID };
         assert.ok(name in imports, `Unexpected import ${name}`);
         return imports[name];
@@ -36,9 +46,11 @@ function load(path, imports = {}, globals = {}) {
   return exports;
 }
 const { QuestionnaireSaveSession } = load(
-  'features/questionnaires/save-session.ts',
+  'app/(private)/dashboard/_views/questionnaire/lib/save-session.ts',
 );
-const { saveQuestionnaireSchema } = load('features/questionnaires/schema.ts');
+const { saveQuestionnaireSchema } = load(
+  'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+);
 
 test('first autosave synchronizes the saved URL without refresh and retains later edits for the next tick', async () => {
   const slots = [];
@@ -108,7 +120,7 @@ test('first autosave synchronizes the saved URL without refresh and retains late
     },
   };
   const { useQuestionnaireSave: runSaveHook } = load(
-    'app/(private)/dashboard/_hooks/useQuestionnaireSave.ts',
+    'app/(private)/dashboard/_views/questionnaire/hooks/useQuestionnaireSave.ts',
     {
       react,
       'next/navigation': {
@@ -119,14 +131,19 @@ test('first autosave synchronizes the saved URL without refresh and retains late
       '@/components/ui/toast': {
         toast: { add: () => 'toast', update() {}, close() {} },
       },
-      '@/features/questionnaires/save-session': { QuestionnaireSaveSession },
-      '../_actions/save-questionnaire': {
-        saveQuestionnaire: (request) => {
-          requests.push(request);
-          return new Promise((resolve) => {
-            finishSave = resolve;
-          });
-        },
+      '@/app/(private)/dashboard/_views/questionnaire/lib/save-session': {
+        QuestionnaireSaveSession,
+      },
+      '../lib/api-client': {
+        useQuestionnaireApi: () => ({
+          refresh: async () => {},
+          saveQuestionnaire: (request) => {
+            requests.push(request);
+            return new Promise((resolve) => {
+              finishSave = resolve;
+            });
+          },
+        }),
       },
     },
     { window: windowMock, URL, crypto: { randomUUID } },
@@ -314,8 +331,9 @@ test('server save checks actual role/onboarding and maps database conflicts with
     for (const isOnboarded of [false, true]) {
       const calls = [];
       const { saveQuestionnaireDraft } = load(
-        'features/questionnaires/server.ts',
+        'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
         {
+          '@/lib/admin': { getViewRole: async (role) => role },
           'next/headers': { cookies: async () => ({}) },
           '@/lib/auth': {
             getUserAccess: async () => ({
@@ -345,4 +363,257 @@ test('server save checks actual role/onboarding and maps database conflicts with
       assert.equal(result.code, allowed ? 'conflict' : 'forbidden');
     }
   }
+});
+
+test('questionnaire loader selects owner editing, reviewer reading, and safe consultant presentation', async () => {
+  const ownerId = randomUUID();
+  const otherId = randomUUID();
+  const doc = document();
+  for (const scenario of [
+    {
+      actual: 'consultant_lead',
+      visible: 'consultant_lead',
+      user: ownerId,
+      status: 'published',
+      editable: true,
+      details: 1,
+    },
+    {
+      actual: 'admin',
+      visible: 'admin',
+      user: otherId,
+      status: 'published',
+      editable: false,
+      details: 1,
+    },
+    {
+      actual: 'consultant',
+      visible: 'consultant',
+      user: otherId,
+      status: 'distributed',
+      editable: false,
+      details: 0,
+    },
+    {
+      actual: 'admin',
+      visible: 'consultant',
+      user: ownerId,
+      status: 'distributed',
+      editable: false,
+      details: 0,
+    },
+  ]) {
+    const calls = [];
+    const filters = [];
+    const row = {
+      id: doc.versionId,
+      questionnaire_id: doc.questionnaireId,
+      title: doc.title,
+      status: scenario.status,
+      revision: 2,
+      updated_at: '2026-09-18T00:00:00Z',
+      published_at: '2026-09-18T00:00:00Z',
+      distributed_at: null,
+      questionnaires: { created_by: ownerId, archived_at: null },
+      questionnaire_review_requests: [{ count: 2 }],
+    };
+    const { loadQuestionnaireView } = load(
+      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      {
+        'next/headers': { cookies: async () => ({}) },
+        '@/lib/admin': { getViewRole: async () => scenario.visible },
+        '@/lib/auth': {
+          requireUserAccess: async () => ({
+            role: scenario.actual,
+            user: { id: scenario.user },
+          }),
+        },
+        '@/lib/supabase/server': {
+          createClient: () => ({
+            from: (table) => {
+              const builder = {
+                select: () => builder,
+                is: (column) => {
+                  filters.push([table, column]);
+                  return builder;
+                },
+                eq: () => builder,
+                order: async () => ({
+                  data:
+                    table === 'questionnaire_versions'
+                      ? [row]
+                      : table === 'questionnaire_question_details'
+                        ? [{ id: doc.sections[0].questions[0].details[0].id }]
+                        : [],
+                  error: null,
+                }),
+              };
+              return builder;
+            },
+            rpc: async (name) => {
+              calls.push(name);
+              return {
+                data: {
+                  ...structuredClone(doc),
+                  revision: 2,
+                  savedAt: '2026-09-18T00:00:00Z',
+                },
+                error: null,
+              };
+            },
+          }),
+        },
+      },
+    );
+    const result = await loadQuestionnaireView(doc.versionId);
+    assert.equal(!!result.initialDraft, scenario.editable);
+    assert.equal(
+      filters.some(
+        ([table, column]) =>
+          table === 'questionnaire_review_requests' && column === 'resolved_at',
+      ),
+      false,
+    );
+    assert.ok(
+      filters.some(
+        ([table, column]) =>
+          table === 'questionnaire_versions' &&
+          column === 'questionnaire_review_requests.resolved_at',
+      ),
+    );
+    assert.equal(
+      result.editableExplanationIds.length,
+      scenario.visible === 'admin' &&
+        !scenario.editable &&
+        scenario.status === 'published'
+        ? 1
+        : 0,
+    );
+    assert.equal(
+      result.selected.pendingReviewCount,
+      result.selected.isOwner ? 2 : 0,
+    );
+    assert.equal(
+      result.selected.canDelete,
+      ['admin', 'consultant_lead'].includes(scenario.visible) &&
+        (scenario.user === ownerId || scenario.visible === 'admin'),
+    );
+    assert.equal(
+      calls[0],
+      scenario.editable
+        ? 'read_questionnaire_draft'
+        : 'read_published_questionnaire',
+    );
+    const loaded = result.initialDraft ?? result.publishedDocument;
+    assert.equal(
+      loaded.sections[0].questions[0].details.length,
+      scenario.details,
+    );
+    if (scenario.visible === 'consultant') {
+      assert.equal(result.staff, false);
+      assert.equal(result.selected.isOwner, false);
+      await assert.rejects(loadQuestionnaireView('new'));
+    }
+  }
+});
+
+test('review server actions reject consultants and incomplete descriptions before RPC', async () => {
+  for (const role of ['student', 'consultant', 'consultant_lead', 'admin']) {
+    const calls = [];
+    const { manageQuestionnaireReview } = load(
+      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      {
+        'next/headers': { cookies: async () => ({}) },
+        '@/lib/admin': { getViewRole: async (value) => value },
+        '@/lib/auth': {
+          getUserAccess: async () => ({
+            user: { id: randomUUID() },
+            isOnboarded: true,
+            role,
+          }),
+        },
+        '@/lib/supabase/server': {
+          createClient: () => ({
+            rpc: async (...args) => {
+              calls.push(args);
+              return { error: null };
+            },
+          }),
+        },
+      },
+    );
+    const input = {
+      id: randomUUID(),
+      versionId: randomUUID(),
+      questionId: randomUUID(),
+      description: '검토해 주세요',
+    };
+    const result = await manageQuestionnaireReview(input, 'request');
+    const allowed = ['consultant_lead', 'admin'].includes(role);
+    assert.equal(!!result.error, !allowed);
+    assert.equal(calls.length, allowed ? 1 : 0);
+    assert.ok(
+      (
+        await manageQuestionnaireReview(
+          { ...input, description: ' ' },
+          'request',
+        )
+      ).error,
+    );
+    assert.equal(calls.length, allowed ? 1 : 0);
+    if (allowed) {
+      assert.equal(calls[0][1].p_question_id, input.questionId);
+      assert.equal(calls[0][1].p_title, undefined);
+      for (const patch of [
+        { questionId: undefined },
+        { description: ' ' },
+        { description: 'x'.repeat(5001) },
+      ]) {
+        assert.ok(
+          (await manageQuestionnaireReview({ ...input, ...patch }, 'request'))
+            .error,
+        );
+      }
+      assert.equal(calls.length, 1);
+    }
+  }
+});
+
+test('remote snapshots update clean editors but never overwrite unsaved or uncertain saves', async () => {
+  const original = document();
+  const remote = { ...original, title: '다른 창에서 저장' };
+  const clean = new QuestionnaireSaveSession(original, 1);
+  assert.equal(clean.reconcileRemote(remote, 2, original), 'applied');
+  assert.equal(clean.revision, 2);
+  assert.equal(clean.hasChanges(remote), false);
+  const dirty = new QuestionnaireSaveSession(original, 1);
+  assert.equal(
+    dirty.reconcileRemote(remote, 2, { ...original, title: '작성 중' }),
+    'conflict',
+  );
+  assert.equal(dirty.blocked, true);
+  assert.equal(dirty.revision, 1);
+  assert.equal(
+    await dirty.save(
+      original,
+      () => assert.fail('must not overwrite remote'),
+      randomUUID,
+    ),
+    null,
+  );
+  const uncertain = new QuestionnaireSaveSession(original, 1);
+  await assert.rejects(
+    uncertain.save(
+      original,
+      async () => {
+        throw new Error('connection lost');
+      },
+      randomUUID,
+    ),
+  );
+  assert.equal(uncertain.reconcileRemote(remote, 2, original), 'conflict');
+  const own = new QuestionnaireSaveSession(original, 1);
+  own.pending = true;
+  assert.equal(own.reconcileRemote(remote, 2, original), 'unchanged');
+  assert.equal(own.blocked, false);
 });

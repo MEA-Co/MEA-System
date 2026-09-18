@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
+import type { DashboardView } from '@/app/(private)/dashboard/_lib/dashboard-access';
 import { getUserAccess } from '@/lib/auth';
 import {
   MEMBER_ROLE_LABELS,
@@ -13,8 +14,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import 'server-only';
 
-export type AdminView =
-  'students' | 'consultants' | 'consulting' | 'questionnaire' | 'exploration';
+export type AdminView = Exclude<DashboardView, 'profile'>;
 
 export type ManagedMember = {
   id: string;
