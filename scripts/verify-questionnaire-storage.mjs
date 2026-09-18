@@ -447,6 +447,11 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
     const result = await loadQuestionnaireView(doc.versionId);
     assert.equal(!!result.initialDraft, scenario.editable);
     assert.equal(
+      result.selected.canDelete,
+      ['admin', 'consultant_lead'].includes(scenario.visible) &&
+        (scenario.user === ownerId || scenario.visible === 'admin'),
+    );
+    assert.equal(
       calls[0],
       scenario.editable
         ? 'read_questionnaire_draft'

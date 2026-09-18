@@ -133,11 +133,11 @@ export function QuestionnaireList({
                         title={draft.title}
                       />
                     )}
-                    {draft.isOwner && (
+                    {draft.canDelete && (
                       <DeleteQuestionnaireButton
                         versionId={draft.id}
                         revision={draft.revision}
-                        hasPublished={draft.hasPublished}
+                        hasDistributed={draft.hasDistributed}
                         title={draft.title}
                       />
                     )}

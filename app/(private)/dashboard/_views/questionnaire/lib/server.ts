@@ -41,6 +41,8 @@ export async function deleteQuestionnaireDraft(
     return {
       error: '질문지가 수정되었어요. 목록을 새로고침한 뒤 다시 삭제해 주세요.',
     };
+  if (error?.code === '42501')
+    return { error: '질문지 작성자와 관리자만 삭제할 수 있어요.' };
   if (error)
     return {
       error:
@@ -80,9 +82,9 @@ export async function loadQuestionnaireView(requestedId?: string) {
     updated_at: string;
     questionnaires: { archived_at: string | null; created_by: string };
   }>;
-  const publishedIds = new Set(
+  const distributedIds = new Set(
     rows
-      .filter((item) => item.status !== 'draft')
+      .filter((item) => item.status === 'distributed')
       .map((item) => item.questionnaire_id),
   );
   const versions: QuestionnaireListItem[] = rows
@@ -100,8 +102,12 @@ export async function loadQuestionnaireView(requestedId?: string) {
       distributedAt: item.distributed_at,
       updatedAt: item.updated_at,
       revision: item.revision,
-      hasPublished: publishedIds.has(item.questionnaire_id),
+      hasDistributed: distributedIds.has(item.questionnaire_id),
       isOwner: staff && item.questionnaires.created_by === access.user.id,
+      canDelete:
+        staff &&
+        (viewRole === 'admin' ||
+          item.questionnaires.created_by === access.user.id),
     }));
   const result = {
     drafts: versions.filter((item) => item.status === 'draft'),

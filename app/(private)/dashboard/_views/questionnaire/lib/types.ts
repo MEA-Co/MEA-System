@@ -53,8 +53,9 @@ export type QuestionnaireListItem = {
   publishedAt: string | null;
   distributedAt: string | null;
   revision: number;
-  hasPublished: boolean;
+  hasDistributed: boolean;
   isOwner: boolean;
+  canDelete: boolean;
 };
 export type QuestionnaireReview = {
   id: string;

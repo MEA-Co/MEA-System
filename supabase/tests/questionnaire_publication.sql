@@ -56,7 +56,7 @@ set local role authenticated;
 do $$ begin
   if (select public.read_published_questionnaire((doc->>'versionId')::uuid) from questionnaire_publish_data) is null then raise exception 'Admin cannot read published'; end if;
   perform set_config('request.jwt.claim.sub',(select id::text from questionnaire_publish_users where role='consultant_lead'),true);
-  if (select public.delete_questionnaire((doc->>'versionId')::uuid,2) from questionnaire_publish_data) <> 'archived' then raise exception 'Published version deleted'; end if;
+  if (select public.delete_questionnaire((doc->>'versionId')::uuid,2) from questionnaire_publish_data) <> 'deleted' then raise exception 'Published version retained'; end if;
   if (select public.read_published_questionnaire((doc->>'versionId')::uuid) from questionnaire_publish_data) is not null then raise exception 'Archived version still listed'; end if;
 end $$;
 reset role;
