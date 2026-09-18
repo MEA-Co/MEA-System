@@ -54,6 +54,52 @@ const course = (id, name, domain = '사회', credit = 3) => ({
   description: null,
 });
 const a = course('a', '경제');
+test('counseling psychology and history keep distinct department foundations', async () => {
+  const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
+  const counseling = findPriorityProfile('상담심리학과').profile;
+  const general = findPriorityProfile('심리학과').profile;
+  for (const name of ['사회문제 탐구', '현대사회와 윤리']) {
+    assert.ok(counseling.subCore.includes(name));
+    assert.ok(!counseling.recommendCourses.includes(name));
+  }
+  assert.ok(general.subCore.includes('현대사회와 윤리'));
+  assert.ok(!general.recommendCourses.includes('현대사회와 윤리'));
+  assert.ok(!general.subCore.includes('사회문제 탐구'));
+  assert.ok(general.recommendCourses.includes('사회문제 탐구'));
+  assert.ok(counseling.recommendCourses.includes('생명과학'));
+  assert.ok(!counseling.subCore.includes('생명과학'));
+  for (const name of ['사학과', '역사학과', '국사학과']) {
+    const profile = findPriorityProfile(name).profile;
+    assert.ok(profile.core.includes('동아시아 역사 기행'));
+    assert.ok(!profile.subCore.includes('동아시아 역사 기행'));
+  }
+});
+test('journalism and media share social and ethical foundations without changing advertising policy', async () => {
+  const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
+  for (const department of ['미디어학과', '신문방송학과', '언론정보학과']) {
+    const profile = findPriorityProfile(department).profile;
+    assert.deepEqual(profile.core, ['사회와 문화']);
+    for (const name of ['사회문제 탐구', '현대사회와 윤리']) {
+      assert.ok(profile.subCore.includes(name));
+      assert.ok(!profile.recommendCourses.includes(name));
+    }
+    for (const name of ['정치', '법과 사회', '미디어 영어', '실용 통계']) {
+      assert.ok(profile.recommendCourses.includes(name));
+      assert.ok(!profile.subCore.includes(name));
+    }
+  }
+  assert.deepEqual(findPriorityProfile('광고홍보학과').profile.subCore, ['매체 의사소통', '인간과 심리']);
+});
+test('international politics emphasizes geography without changing political science foundations', async () => {
+  const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
+  const diplomacy = findPriorityProfile('정치외교학과').profile;
+  const politics = findPriorityProfile('정치학과').profile;
+  assert.ok(diplomacy.subCore.includes('세계시민과 지리'));
+  assert.ok(!diplomacy.subCore.includes('사회와 문화'));
+  assert.ok(diplomacy.recommendCourses.includes('사회와 문화'));
+  assert.ok(politics.subCore.includes('사회와 문화'));
+  assert.ok(!politics.subCore.includes('세계시민과 지리'));
+});
 test('humanities directional courses remain recommendations rather than strongly advised sub-core', async () => {
   const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
   const { priority } = await import('../app/(private)/consulting/subject-selection/_lib/course-swap.ts');
@@ -62,13 +108,11 @@ test('humanities directional courses remain recommendations rather than strongly
     ['경영학과', ['사회와 문화', '인간과 심리']],
     ['경제학과', ['실용 통계', '금융과 경제생활']],
     ['행정학과', ['경제']],
-    ['법학과', ['현대사회와 윤리']],
+    ['법학과', ['윤리와 사상', '윤리문제 탐구', '인간과 철학']],
     ['사회복지학과', ['현대사회와 윤리']],
     ['심리학과', ['생명과학']],
     ['미디어학과', ['문학과 영상']],
-    ['철학과', ['인문학과 윤리']],
-    ['무역학과', ['세계시민과 지리']],
-    ['국제학과', ['세계시민과 지리']],
+    ['철학과', ['윤리문제 탐구']],
   ]) {
     const profile = findPriorityProfile(department).profile;
     for (const name of names) {
@@ -78,6 +122,19 @@ test('humanities directional courses remain recommendations rather than strongly
     }
   }
   const ad = findPriorityProfile('광고홍보학과').profile;
+  const philosophy = findPriorityProfile('철학과').profile;
+  assert.ok(philosophy.core.includes('현대사회와 윤리'));
+  assert.ok(philosophy.subCore.includes('인문학과 윤리'));
+  assert.ok(!philosophy.recommendCourses.includes('현대사회와 윤리'));
+  assert.ok(!philosophy.recommendCourses.includes('인문학과 윤리'));
+  assert.ok(priority(course('philosophy-support', '인문학과 윤리'), philosophy).score >= 6);
+  for (const department of ['무역학과', '국제통상학과', '국제학과']) {
+    const profile = findPriorityProfile(department).profile;
+    assert.ok(profile.subCore.includes('세계시민과 지리'));
+    assert.ok(!profile.core.includes('세계시민과 지리'));
+    assert.ok(priority(course('geo', '세계시민과 지리'), profile).score >= 6);
+  }
+  assert.ok(!findPriorityProfile('경영학과').profile.subCore.includes('세계시민과 지리'));
   assert.deepEqual(ad.subCore, ['매체 의사소통', '인간과 심리']);
   assert.ok(priority(course('foundation', '매체 의사소통'), ad).score >= 6);
   const mediaEnglish = course('media-english', '미디어 영어', '영어');
