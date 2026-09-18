@@ -236,7 +236,7 @@ export function SubjectSelectionWorkspace() {
           ) : null}
         </div>
       </section>
-      {process.env.NODE_ENV === 'development' && !confirmedCurriculum ? (
+      {!confirmedCurriculum ? (
         <Button
           variant="outline"
           size="sm"
@@ -250,7 +250,7 @@ export function SubjectSelectionWorkspace() {
           흑석고 테스트 편제표 불러오기
         </Button>
       ) : null}
-      {process.env.NODE_ENV === 'development' && confirmedCurriculum ? (
+      {confirmedCurriculum ? (
         <Button
           variant="outline"
           size="sm"
