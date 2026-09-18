@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server';
 
 import { AdminRoleTabs } from '../_components/AdminRoleTabs';
 import { Dashboard } from '../_components/Dashboard';
+import { PublicationNotifications } from '../_views/questionnaire/components/PublicationNotifications';
+import { loadUnreadQuestionnairePublications } from '../_views/questionnaire/lib/publication-notifications';
 
 import 'server-only';
 
@@ -78,16 +80,22 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
     );
   }
 
+  const unreadIds =
+    role === 'admin' || role === 'consultant_lead'
+      ? await loadUnreadQuestionnairePublications()
+      : [];
   return (
-    <Dashboard
-      name={profile.name}
-      role={role}
-      studentPeriod={profile.student_period}
-      members={members}
-      completedConsultingIds={completedConsultingIds}
-      view={view}
-      headerActions={roleTabs}
-      questionnaireId={typeof draft === 'string' ? draft : undefined}
-    />
+    <PublicationNotifications key={`${user.id}:${role}`} unreadIds={unreadIds}>
+      <Dashboard
+        name={profile.name}
+        role={role}
+        studentPeriod={profile.student_period}
+        members={members}
+        completedConsultingIds={completedConsultingIds}
+        view={view}
+        headerActions={roleTabs}
+        questionnaireId={typeof draft === 'string' ? draft : undefined}
+      />
+    </PublicationNotifications>
   );
 }

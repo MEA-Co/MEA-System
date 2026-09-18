@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { loadQuestionnaireView } from '@/app/(private)/dashboard/_views/questionnaire/lib/server';
 import { Button } from '@/components/ui/button';
 
+import { PublicationReadMarker } from './components/PublicationNotifications';
 import { PublishedQuestionnaire } from './components/PublishedQuestionnaire';
 import { QuestionnaireEditor } from './components/QuestionnaireEditor';
 import { QuestionnaireList } from './components/QuestionnaireList';
@@ -27,6 +28,9 @@ export async function QuestionnaireView({
   if (initialDraft || publishedDocument) {
     return (
       <>
+        {staff && selected?.status === 'published' && !selected.isOwner && (
+          <PublicationReadMarker versionId={selected.id} />
+        )}
         <div className="mx-auto mb-6 max-w-4xl">
           <Button
             variant="ghost"

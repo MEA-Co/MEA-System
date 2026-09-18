@@ -26,6 +26,11 @@ import {
 } from '@/components/ui/sidebar';
 import type { MemberRole } from '@/lib/profile';
 
+import {
+  NewPublicationBadge,
+  usePublicationNotifications,
+} from '../_views/questionnaire/components/PublicationNotifications';
+
 const icons = {
   profile: UserRound,
   students: GraduationCap,
@@ -55,6 +60,7 @@ export function DashboardNavigation({
 }: DashboardNavigationProps) {
   const { setOpenMobile } = useSidebar();
   const pages = getDashboardNavigation(role);
+  const { unreadIds } = usePublicationNotifications();
   return (
     <>
       {groups.map((group) => {
@@ -88,6 +94,10 @@ export function DashboardNavigation({
                       >
                         <Icon />
                         <span>{page.label}</span>
+                        {page.view === 'questionnaire' &&
+                          unreadIds.length > 0 && (
+                            <NewPublicationBadge count={unreadIds.length} />
+                          )}
                       </SidebarMenuButton>
                       {count !== undefined ? (
                         <SidebarMenuBadge>{count}</SidebarMenuBadge>

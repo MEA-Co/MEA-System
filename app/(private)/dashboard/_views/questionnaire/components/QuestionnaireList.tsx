@@ -8,7 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import type { QuestionnaireListItem as Item } from '../lib/types';
 
 import { DeleteQuestionnaireButton } from './DeleteQuestionnaireButton';
+import {
+  NewPublicationBadge,
+  usePublicationNotifications,
+} from './PublicationNotifications';
 import { PublishQuestionnaireButton } from './PublishQuestionnaireButton';
+
 const updatedDate = new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -25,6 +30,10 @@ export function QuestionnaireList({
   distributed: Item[];
   staff: boolean;
 }) {
+  const { unreadIds } = usePublicationNotifications();
+  const newCount = published.filter((item) =>
+    unreadIds.includes(item.id),
+  ).length;
   return (
     <Tabs.Root defaultValue={staff ? 'draft' : 'distributed'}>
       <Tabs.List
@@ -38,13 +47,16 @@ export function QuestionnaireList({
           <Tabs.Tab
             key={tab}
             value={tab}
-            className="flex-1 rounded-md px-3 py-2 text-sm data-[active]:bg-background data-[active]:shadow-sm"
+            className="flex flex-1 flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 text-sm data-[active]:bg-background data-[active]:shadow-sm"
           >
             {tab === 'published'
               ? `게시된 질문지 (${published.length})`
               : tab === 'draft'
                 ? `작업 중인 질문지 (${drafts.length})`
                 : `배포된 질문지 (${distributed.length})`}
+            {tab === 'published' && newCount > 0 && (
+              <NewPublicationBadge count={newCount} />
+            )}
           </Tabs.Tab>
         ))}
       </Tabs.List>
@@ -66,7 +78,10 @@ export function QuestionnaireList({
             {items.length ? (
               <ul className="divide-y overflow-hidden rounded-xl border bg-background">
                 {items.map((draft) => (
-                  <li key={draft.id} className="flex items-center">
+                  <li
+                    key={draft.id}
+                    className={`flex items-center ${unreadIds.includes(draft.id) ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
+                  >
                     <Link
                       href={`/dashboard?view=questionnaire&draft=${draft.id}`}
                       prefetch={false}
@@ -79,9 +94,14 @@ export function QuestionnaireList({
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">
-                          {draft.title || '제목 없는 질문지'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium">
+                            {draft.title || '제목 없는 질문지'}
+                          </p>
+                          {unreadIds.includes(draft.id) && (
+                            <NewPublicationBadge />
+                          )}
+                        </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {tab === 'distributed' ? '배포일 ' : '최근 저장 '}
                           <time
