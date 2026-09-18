@@ -58,7 +58,7 @@ test('humanities directional courses remain recommendations rather than strongly
   const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
   const { priority } = await import('../app/(private)/consulting/subject-selection/_lib/course-swap.ts');
   for (const [department, names] of [
-    ['광고홍보학과', ['경제', '실용 통계', '문학과 영상']],
+    ['광고홍보학과', ['경제', '실용 통계', '문학과 영상', '미디어 영어']],
     ['경영학과', ['사회와 문화', '인간과 심리']],
     ['경제학과', ['실용 통계', '금융과 경제생활']],
     ['행정학과', ['경제']],
@@ -80,6 +80,10 @@ test('humanities directional courses remain recommendations rather than strongly
   const ad = findPriorityProfile('광고홍보학과').profile;
   assert.deepEqual(ad.subCore, ['매체 의사소통', '인간과 심리']);
   assert.ok(priority(course('foundation', '매체 의사소통'), ad).score >= 6);
+  const mediaEnglish = course('media-english', '미디어 영어', '영어');
+  assert.ok(priority(mediaEnglish, ad).score >= 4, 'explicit recommendation crosses domain boundaries');
+  const plan = { priorRequiredCourses: [], linkedRules: [], terms: [{ id: 'grade-2-semester-1', label: '2-1', requiredCourses: [], selectionGroups: [{ id: 'g', name: '선택', choose: 1, courses: [course('other', '세계사'), mediaEnglish] }] }] };
+  assert.equal(buildStandardDraft(plan, [], ad)[0].recommendedCourses[0].course.id, mediaEnglish.id);
 });
 test('health drafts prefer one ethics course after sub-core, counting prior and fixed courses', async () => {
   const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');

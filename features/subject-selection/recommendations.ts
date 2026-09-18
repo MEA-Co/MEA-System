@@ -108,6 +108,7 @@ const humanitiesDepartmentPolicies: Record<
       '실용 통계',
       '문학과 영상',
       '독서 토론과 글쓰기',
+      '미디어 영어',
     ],
   },
 };
