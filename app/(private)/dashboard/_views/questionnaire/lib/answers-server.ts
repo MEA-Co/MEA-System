@@ -41,7 +41,7 @@ export async function loadAnswers(versionId: string) {
   const { data, error } = await client
     .from('questionnaire_responses')
     .select(
-      'id,revision,status,updated_at,questionnaire_answers(id,question_id,body)',
+      'id,revision,status,updated_at,free_response,questionnaire_answers(id,question_id,body)',
     )
     .eq('version_id', versionId)
     .eq('respondent_id', userId)
@@ -51,6 +51,7 @@ export async function loadAnswers(versionId: string) {
     revision: data?.revision ?? 0,
     status: data?.status ?? 'assigned',
     savedAt: data?.updated_at ?? null,
+    freeResponse: data?.free_response ?? '',
     answers: Object.fromEntries(
       (data?.questionnaire_answers ?? []).map((a) => [a.question_id, a.body]),
     ),
@@ -62,6 +63,11 @@ export async function saveAnswers(versionId: string, input: unknown) {
       z.uuid(),
       z.string().max(20000).transform(normalizeRichTextValue),
     ),
+    freeResponse: z
+      .string()
+      .max(20000)
+      .transform(normalizeRichTextValue)
+      .optional(),
     revision: z.number().int().nonnegative(),
     saveId: z.uuid(),
     complete: z.boolean(),
@@ -82,6 +88,7 @@ export async function saveAnswers(versionId: string, input: unknown) {
     p_revision: data.revision,
     p_save_id: data.saveId,
     p_complete: data.complete,
+    p_free_response: data.freeResponse ?? null,
   });
   if (result.error) {
     const code = result.error.code;

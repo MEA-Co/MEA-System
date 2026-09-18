@@ -1,5 +1,7 @@
 # 질문지 저장 설계안
 
+자유 응답: 컨설턴트 질문지 마지막에 선택 입력 칸을 제공한다. 일반 질문–답변은 기존 `questionnaire_answers` 행을 유지하며 질문에 속하지 않는 추가 메모는 `questionnaire_responses.free_response`에 저장한다. RichText 형식과 20,000자 저장 제한을 공유한다. 자동/수동 저장, 최종 완료에 함께 포함되며 완료 후 수정 불가다. API `freeResponse` 생략은 보존, 빈 문자열은 삭제를 의미한다. `20260918083342_questionnaire_free_response.sql`은 6인자 RPC를 추가하고 기존 5인자 호출을 호환한다. `supabase/tests/questionnaire_free_response.sql`로 저장·재조회·선택 입력·잠금·타인 접근·구버전 보존을 검증한다.
+
 컨설턴트용 배포본의 답변 저장·완료와 새 배포 알림을 연결했다. 목록은 답변 전(작성 중 포함)/답변 완료로 나뉜다. 변경된 답변을 10초마다 자동 저장하며 수동 저장도 가능하다. 답변 완료는 모든 질문의 답변을 검사하고 최종 저장과 잠금을 한 트랜잭션에서 처리한다. 완료 후 재수정은 DB RPC와 트리거에서 차단한다. 배포본의 새 검토 요청은 UI와 DB에서 막고 기존 요청 조회·확인은 유지한다.
 
 `20260918080745_questionnaire_consultant_answers.sql` 적용. 사용자/버전별 응답은 하나이며 revision과 요청 UUID/내용으로 충돌·중복 재시도를 검사한다. 답변 행의 ID는 처음 저장할 때 생성하고 이후 갱신해 질문–답변 쌍의 식별자를 유지한다. `GET /api/questionnaires/responses`는 본인 상태 목록, `GET/PUT /api/questionnaires/:versionId/answers`는 본인 답변 조회·저장·완료다. PUT 본문은 `{answers: {[questionId]: body}, revision, saveId, complete}`다. 직접 테이블 쓰기는 금지하고 권한 검사한 RPC만 사용한다. 리드/관리자도 자신의 응답만 접근한다.

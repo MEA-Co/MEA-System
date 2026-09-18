@@ -20,6 +20,7 @@ import {
 import { toast } from '@/components/ui/toast';
 
 import {
+  answerContentKey,
   AnswerSessionState,
   type AnswerSnapshot as Snapshot,
 } from '../lib/answer-session';
@@ -35,6 +36,8 @@ import { QuestionnaireLoading } from './QuestionnaireLoading';
 const AnswersContext = createContext<{
   answers: Record<string, string>;
   locked: boolean;
+  freeResponse: string;
+  changeFreeResponse: (value: string) => void;
   change: (id: string, value: string) => void;
 } | null>(null);
 export function useAnswers() {
@@ -89,13 +92,15 @@ function AnswerSession({
 }) {
   const { refresh } = useQuestionnaireApi();
   const [answers, setAnswers] = useState(remote.answers);
+  const [freeResponse, setFreeResponse] = useState(remote.freeResponse ?? '');
   const [status, setStatus] = useState(remote.status);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [savedAt, setSavedAt] = useState(remote.savedAt);
   const [s] = useState(() => new AnswerSessionState(remote));
-  const dirty = JSON.stringify(answers) !== s.saved || !!s.retry;
+  const dirty =
+    answerContentKey(answers, freeResponse) !== s.saved || !!s.retry;
   const locked = status === 'submitted' || unavailable || s.blocked;
   const applyRemote = useEffectEvent(() => {
     if (s.busy || remote.revision <= s.revision) return;
@@ -109,6 +114,7 @@ function AnswerSession({
     }
     s.acceptRemote(remote);
     setAnswers(remote.answers);
+    setFreeResponse(remote.freeResponse ?? '');
     setStatus(remote.status);
     setSavedAt(remote.savedAt);
   });
@@ -128,7 +134,12 @@ function AnswerSession({
       setError('모든 질문에 답변을 입력해 주세요.');
       return;
     }
-    const request = s.begin(answers, complete, () => crypto.randomUUID());
+    const request = s.begin(
+      answers,
+      complete,
+      () => crypto.randomUUID(),
+      freeResponse,
+    );
     if (!request) return;
     setSaving(true);
     const id = toast.add({
@@ -230,6 +241,10 @@ function AnswerSession({
     <AnswersContext.Provider
       value={{
         answers,
+        freeResponse,
+        changeFreeResponse: (value) => {
+          if (!locked && !s.retry?.complete) setFreeResponse(value);
+        },
         locked: locked || !!s.retry?.complete || (saving && open),
         change,
       }}

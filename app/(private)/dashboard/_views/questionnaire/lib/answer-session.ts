@@ -3,14 +3,22 @@ export type AnswerSnapshot = {
   status: string;
   savedAt: string | null;
   answers: Record<string, string>;
+  freeResponse?: string;
 };
 export type AnswerSaveRequest = {
   answers: Record<string, string>;
+  freeResponse?: string;
   revision: number;
   saveId: string;
   complete: boolean;
 };
 /** Request bookkeeping is independent of rendering; uncertain requests stay immutable. */
+export function answerContentKey(
+  answers: Record<string, string>,
+  freeResponse = '',
+) {
+  return JSON.stringify({ answers, freeResponse });
+}
 export class AnswerSessionState {
   revision: number;
   saved: string;
@@ -19,7 +27,7 @@ export class AnswerSessionState {
   retry: AnswerSaveRequest | null = null;
   constructor(remote: AnswerSnapshot) {
     this.revision = remote.revision;
-    this.saved = JSON.stringify(remote.answers);
+    this.saved = answerContentKey(remote.answers, remote.freeResponse);
   }
   block() {
     this.blocked = true;
@@ -32,17 +40,19 @@ export class AnswerSessionState {
   }
   acceptRemote(remote: AnswerSnapshot) {
     this.revision = remote.revision;
-    this.saved = JSON.stringify(remote.answers);
+    this.saved = answerContentKey(remote.answers, remote.freeResponse);
   }
   begin(
     answers: Record<string, string>,
     complete: boolean,
     makeId: () => string,
+    freeResponse = '',
   ) {
     if (this.busy || this.blocked) return null;
     this.busy = true;
     this.retry ??= {
       answers: structuredClone(answers),
+      freeResponse,
       revision: this.revision,
       saveId: makeId(),
       complete,
@@ -51,7 +61,7 @@ export class AnswerSessionState {
   }
   accept(revision: number, request: AnswerSaveRequest) {
     this.revision = revision;
-    this.saved = JSON.stringify(request.answers);
+    this.saved = answerContentKey(request.answers, request.freeResponse);
     this.retry = null;
   }
 }

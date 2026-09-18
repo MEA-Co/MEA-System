@@ -14,6 +14,7 @@ import { PublishedExplanation } from './PublishedExplanation';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionExplanationForm } from './QuestionExplanationForm';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
+import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import { RichTextContent } from './RichTextContent';
@@ -92,6 +93,7 @@ export function PublishedQuestionnaire({
           ))}
         </section>
       ))}
+      {distributed && !staff && <QuestionnaireFreeResponse />}
     </article>
   );
   if (!staff)
