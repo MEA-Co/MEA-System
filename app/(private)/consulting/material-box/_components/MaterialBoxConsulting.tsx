@@ -18,6 +18,7 @@ type MaterialBoxConsultingProps = {
   role: MemberRole;
   debug?: boolean;
   reviewEnabled?: boolean;
+  persistCompletion?: boolean;
 };
 
 async function saveMaterialBoxCompletion({
@@ -51,6 +52,7 @@ export function MaterialBoxConsulting({
   role,
   debug = false,
   reviewEnabled = false,
+  persistCompletion = role === 'student',
 }: MaterialBoxConsultingProps) {
   const [mode, setMode] = useState<'experience' | 'review'>('experience');
 
@@ -95,9 +97,7 @@ export function MaterialBoxConsulting({
       ) : (
         <ConsultingFlow
           debug={debug}
-          onComplete={
-            role === 'student' ? saveMaterialBoxCompletion : undefined
-          }
+          onComplete={persistCompletion ? saveMaterialBoxCompletion : undefined}
           plan={materialBoxPlan}
           renderer={materialBoxRenderer}
           tools={materialBoxTools}

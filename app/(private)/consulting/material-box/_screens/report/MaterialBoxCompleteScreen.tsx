@@ -824,6 +824,7 @@ export const materialBoxCompleteScreen = {
       completion={environment.completion}
       showExampleReports={
         environment.viewerRole === 'consultant' ||
+        environment.viewerRole === 'consultant_lead' ||
         environment.viewerRole === 'admin'
       }
     />

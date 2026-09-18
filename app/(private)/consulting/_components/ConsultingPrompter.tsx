@@ -32,11 +32,13 @@ type ConsultingPrompterProps = {
   animateTyping?: boolean;
   children?: ReactNode;
   onTypingComplete?: () => void;
+  appearance?: 'default' | 'flat';
+  onNext?: () => void;
 };
 
 const emphasisClassNames: Record<ConsultingPrompterMessageEmphasis, string> = {
   strong: 'font-bold',
-  accent: 'font-bold text-blue-600 dark:text-blue-400',
+  accent: 'font-bold text-violet-600 dark:text-violet-400',
   muted: 'text-muted-foreground',
 };
 
@@ -82,6 +84,8 @@ function ConsultingPrompterContent({
   reduceMotion,
   children,
   onTypingComplete,
+  appearance = 'default',
+  onNext,
 }: Omit<ConsultingPrompterProps, 'animateTyping'> & {
   typeImmediately: boolean;
   reduceMotion: boolean;
@@ -157,17 +161,21 @@ function ConsultingPrompterContent({
   }, [characters.length, finishTyping]);
 
   useEffect(() => {
-    if (!isTyping) return;
+    if (!isTyping && !onNext) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.code !== 'Space' ||
-        event.repeat ||
         event.isComposing ||
         event.altKey ||
         event.ctrlKey ||
         event.metaKey
       ) {
+        return;
+      }
+
+      if (event.repeat) {
+        event.preventDefault();
         return;
       }
 
@@ -183,12 +191,13 @@ function ConsultingPrompterContent({
       }
 
       event.preventDefault();
-      skipTyping();
+      if (isTyping) skipTyping();
+      else onNext?.();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isTyping, skipTyping]);
+  }, [isTyping, skipTyping, onNext]);
 
   return (
     <motion.div
@@ -196,13 +205,26 @@ function ConsultingPrompterContent({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
     >
-      <Card className="gap-0 overflow-hidden rounded-xl border bg-card/95 py-0 shadow-xl ring-0 backdrop-blur-md supports-backdrop-filter:bg-card/90">
+      <Card
+        className={cn(
+          'gap-0 overflow-hidden rounded-xl border py-0 ring-0',
+          appearance === 'flat'
+            ? 'border-violet-200 bg-white shadow-none'
+            : 'bg-card/95 shadow-xl backdrop-blur-md supports-backdrop-filter:bg-card/90',
+        )}
+      >
         <CardContent className="p-5 md:p-6">
           <div className="flex min-h-5 items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <span className="h-px w-6 bg-primary/70" aria-hidden="true" />
-              <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">
-                메아 (MEA)
+              <p
+                className={cn(
+                  'text-xs font-semibold',
+                  appearance === 'flat'
+                    ? 'rounded-md bg-violet-50 px-2 py-1 text-violet-700'
+                    : 'text-muted-foreground',
+                )}
+              >
+                MEA
               </p>
             </div>
 
@@ -226,7 +248,7 @@ function ConsultingPrompterContent({
                     aria-keyshortcuts="Space"
                   >
                     <SkipForward className="size-3" aria-hidden="true" />
-                    skip
+                    빨리 보기 · Space
                   </motion.button>
                 )}
               </AnimatePresence>
@@ -279,6 +301,8 @@ export function ConsultingPrompter({
   animateTyping = false,
   children,
   onTypingComplete,
+  appearance,
+  onNext,
 }: ConsultingPrompterProps) {
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = Boolean(shouldReduceMotion);
@@ -292,6 +316,8 @@ export function ConsultingPrompter({
       typeImmediately={typeImmediately}
       reduceMotion={reduceMotion}
       onTypingComplete={onTypingComplete}
+      appearance={appearance}
+      onNext={onNext}
     >
       {children}
     </ConsultingPrompterContent>

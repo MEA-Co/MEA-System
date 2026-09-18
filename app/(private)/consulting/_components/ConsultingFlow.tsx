@@ -36,6 +36,7 @@ type ConsultingFlowProps<
     memory: ConsultingMemory<Context>;
   }) => Promise<void>;
   debug?: boolean;
+  progressLabels?: readonly string[];
 };
 
 export function ConsultingFlow<
@@ -48,6 +49,7 @@ export function ConsultingFlow<
   viewerRole,
   onComplete,
   debug = false,
+  progressLabels,
 }: ConsultingFlowProps<Context, Tools>) {
   const { snapshot, toolRuntime, toolRuntimeSnapshot, memory, logs, send } =
     useConsultingAgent(plan, tools, renderer);
@@ -157,6 +159,8 @@ export function ConsultingFlow<
     <ConsultingToolRuntimeProvider runtime={toolRuntime}>
       <div>
         <ConsultingFrame
+          progressLabels={progressLabels}
+          isComplete={snapshot.isComplete}
           title={screen.title}
           currentStep={screen.progress?.current}
           stepCount={screen.progress?.total}

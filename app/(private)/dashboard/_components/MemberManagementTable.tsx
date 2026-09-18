@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -8,13 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-import type { ManagedMember } from '../_lib/admin';
+import type { ManagedMember } from '@/lib/admin';
 
 type MemberManagementTableProps = {
   emptyMemberLabel: string;
   members: ManagedMember[];
   secondaryColumnLabel: string;
+  secondaryContent?: (member: ManagedMember) => ReactNode;
   secondaryValue: (member: ManagedMember) => string;
 };
 
@@ -29,6 +31,7 @@ export function MemberManagementTable({
   emptyMemberLabel,
   members,
   secondaryColumnLabel,
+  secondaryContent,
   secondaryValue,
 }: MemberManagementTableProps) {
   if (members.length === 0) {
@@ -73,7 +76,11 @@ export function MemberManagementTable({
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant="secondary">{secondaryValue(member)}</Badge>
+              {secondaryContent ? (
+                secondaryContent(member)
+              ) : (
+                <Badge variant="secondary">{secondaryValue(member)}</Badge>
+              )}
             </TableCell>
             <TableCell className="hidden text-right text-muted-foreground md:table-cell">
               {joinedDateFormatter.format(new Date(member.created_at))}

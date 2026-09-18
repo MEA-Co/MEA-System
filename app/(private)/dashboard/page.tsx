@@ -1,45 +1,51 @@
-import { LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   TEMP_STUDENT_CONSULTING_RESULTS_TABLE,
   type TempStudentConsultingResultRow,
 } from '@/features/consulting/completion';
+import type { AdminView, ManagedMember } from '@/lib/admin';
+import { getViewRole } from '@/lib/admin';
 import { requireUserAccess } from '@/lib/auth';
-import type { StudentPeriod } from '@/lib/profile';
+import { MEMBER_ROLES } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
 
-import { signOut } from '../_actions/sign-out';
-
 import { AdminDashboard } from './_components/AdminDashboard';
-import { ConsultingManagement } from './_components/ConsultingManagement';
-import { StudentDashboard } from './_components/StudentDashboard';
-import type { AdminView, ManagedMember } from './_lib/admin';
+import { AdminRoleTabs } from './_components/AdminRoleTabs';
+import { MemberDashboard } from './_components/MemberDashboard';
 
 export const dynamic = 'force-dynamic';
 
 type HomeProps = {
   searchParams: Promise<{
     view?: string | string[];
+    draft?: string;
   }>;
 };
 
 export default async function DashboardPage({ searchParams }: HomeProps) {
-  const { profile, role, user } = await requireUserAccess();
+  const { profile, role: actualRole, user } = await requireUserAccess();
+  const role = await getViewRole(actualRole);
+  const roleTabs =
+    actualRole === 'admin' ? <AdminRoleTabs role={role} /> : null;
+  const { view: requestedView, draft } = await searchParams;
 
-  if (role === 'admin') {
-    const { view: requestedView } = await searchParams;
+  if (role === 'admin' || role === 'consultant_lead') {
     const view: AdminView =
-      requestedView === 'consultants' || requestedView === 'consulting'
+      requestedView === 'consultants' ||
+      (requestedView === 'exploration' && role === 'consultant_lead') ||
+      (requestedView === 'questionnaire' && role === 'consultant_lead') ||
+      (requestedView === 'students' && role === 'admin')
         ? requestedView
-        : 'students';
+        : 'consulting';
     const supabase = createClient(await cookies());
     const memberResult = await supabase
       .from('profiles')
       .select('id, role, name, student_period, created_at')
-      .in('role', ['student', 'consultant', 'admin'])
+      .in(
+        'role',
+        role === 'admin' ? MEMBER_ROLES : ['consultant', 'consultant_lead'],
+      )
       .order('created_at', { ascending: false })
       .overrideTypes<ManagedMember[], { merge: false }>();
 
@@ -52,14 +58,28 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
     return (
       <AdminDashboard
         adminName={profile.name}
+        role={role}
+        headerActions={roleTabs}
         members={memberResult.data ?? []}
         view={view}
+        questionnaireId={typeof draft === 'string' ? draft : undefined}
+      />
+    );
+  }
+
+  if (requestedView === 'profile') {
+    return (
+      <MemberDashboard
+        role={role}
+        name={profile.name}
+        studentPeriod={profile.student_period}
+        view="profile"
+        headerActions={roleTabs}
       />
     );
   }
 
   if (role === 'student') {
-    const studentPeriod = profile.student_period as StudentPeriod;
     const supabase = createClient(await cookies());
     const completionResult = await supabase
       .from(TEMP_STUDENT_CONSULTING_RESULTS_TABLE)
@@ -77,69 +97,24 @@ export default async function DashboardPage({ searchParams }: HomeProps) {
     }
 
     return (
-      <StudentDashboard
+      <MemberDashboard
+        role="student"
         completedConsultingIds={(completionResult.data ?? []).map(
           (completion) => completion.consulting_id,
         )}
-        studentName={profile.name}
-        studentPeriod={studentPeriod}
+        name={profile.name}
+        studentPeriod={profile.student_period}
+        headerActions={roleTabs}
       />
     );
   }
 
-  const roleLabel = '컨설턴트';
-
   return (
-    <main className="min-h-svh bg-white">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 md:px-8 lg:px-10">
-          <div className="text-sm font-semibold tracking-wide text-black">
-            MEA
-          </div>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="rounded-md text-neutral-600 hover:bg-neutral-100 hover:text-black"
-            >
-              <LogOut className="size-4" />
-              로그아웃
-            </Button>
-          </form>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-14 lg:px-10 lg:py-16">
-        <p className="text-sm font-medium text-neutral-500">{roleLabel}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-black md:text-4xl">
-          {profile.name}님, 반가워요.
-        </h1>
-        <p className="mt-3 text-base text-neutral-600">
-          학생들의 목표와 상담 일정을 확인해 보세요.
-        </p>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-12">
-          <Card className="rounded-lg border border-neutral-200 bg-white shadow-none ring-0">
-            <CardContent>
-              <p className="text-xs font-medium text-neutral-500">회원 유형</p>
-              <p className="mt-2 font-semibold text-black">{roleLabel}</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-lg border border-neutral-200 bg-white shadow-none ring-0">
-            <CardContent>
-              <p className="text-xs font-medium text-neutral-500">
-                시스템 상태
-              </p>
-              <p className="mt-2 font-semibold text-black">상담 준비 완료</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-12 border-t pt-10 lg:mt-14 lg:pt-12">
-          <ConsultingManagement />
-        </div>
-      </section>
-    </main>
+    <MemberDashboard
+      role="consultant"
+      view={requestedView === 'exploration' ? 'exploration' : undefined}
+      name={profile.name}
+      headerActions={roleTabs}
+    />
   );
 }
