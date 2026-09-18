@@ -9,12 +9,15 @@ import type {
 } from '@/app/(private)/dashboard/_views/questionnaire/lib/types';
 import { toast } from '@/components/ui/toast';
 
-import { saveQuestionnaire } from '../actions/save-questionnaire';
+import { useQuestionnaireApi } from '../lib/api-client';
 
 export function useQuestionnaireSave(
   document: QuestionnaireDocument,
   initialDraft: QuestionnaireDraft,
+  onRemoteDocument?: (draft: QuestionnaireDraft) => void,
+  remoteUnavailable = false,
 ) {
+  const { saveQuestionnaire, refresh } = useQuestionnaireApi();
   const [session] = useState(
     () => new QuestionnaireSaveSession(document, initialDraft.revision),
   );
@@ -30,8 +33,38 @@ export function useQuestionnaireSave(
   }, []);
   const dirty = session.hasChanges(document);
 
+  const applyRemote = useEffectEvent(() => {
+    if (remoteUnavailable) {
+      session.block();
+      setError(
+        '다른 곳에서 삭제·배포되었거나 편집 권한이 변경되었어요. 작성 내용은 유지되지만 저장할 수 없어요.',
+      );
+      return;
+    }
+    const { questionnaireId, versionId, title, sections } = initialDraft;
+    const result = session.reconcileRemote(
+      { questionnaireId, versionId, title, sections },
+      initialDraft.revision,
+      document,
+    );
+    if (result === 'applied') {
+      onRemoteDocument?.(initialDraft);
+      setSavedAt(initialDraft.savedAt);
+      setError(null);
+    }
+    if (result === 'conflict')
+      setError(
+        '다른 창에서 질문지가 수정되었어요. 작성 중인 내용은 유지했습니다. 내용을 복사한 뒤 다시 열어 주세요.',
+      );
+  });
+  useEffect(() => {
+    // SWR supplies an external server snapshot; reconcile it without replacing unsaved input.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    applyRemote();
+  }, [initialDraft.revision, remoteUnavailable, saving]);
+
   async function save(manual = true) {
-    if (session.pending || session.blocked) return false;
+    if (session.pending || session.blocked || remoteUnavailable) return false;
     if (!session.hasChanges(document) && session.revision > 0) return true;
     setSaving(true);
     const toastId = toast.add({
@@ -68,6 +101,7 @@ export function useQuestionnaireSave(
         });
         return false;
       }
+      void refresh().catch(() => {});
       setSavedAt(result.savedAt);
       setError(null);
       toast.update(toastId, {
@@ -155,5 +189,12 @@ export function useQuestionnaireSave(
     };
   }, [dirty, saving]);
 
-  return { save, saving, dirty, savedAt, error, blocked: session.blocked };
+  return {
+    save,
+    saving,
+    dirty,
+    savedAt,
+    error,
+    blocked: session.blocked || remoteUnavailable,
+  };
 }

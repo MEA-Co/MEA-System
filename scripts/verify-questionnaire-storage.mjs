@@ -25,6 +25,10 @@ function load(path, imports = {}, globals = {}) {
       require: (name) => {
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
+        if (name === './http-error')
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/http-error.ts',
+          );
         if (name === './schema')
           return load(
             'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
@@ -126,13 +130,16 @@ test('first autosave synchronizes the saved URL without refresh and retains late
       '@/app/(private)/dashboard/_views/questionnaire/lib/save-session': {
         QuestionnaireSaveSession,
       },
-      '../actions/save-questionnaire': {
-        saveQuestionnaire: (request) => {
-          requests.push(request);
-          return new Promise((resolve) => {
-            finishSave = resolve;
-          });
-        },
+      '../lib/api-client': {
+        useQuestionnaireApi: () => ({
+          refresh: async () => {},
+          saveQuestionnaire: (request) => {
+            requests.push(request);
+            return new Promise((resolve) => {
+              finishSave = resolve;
+            });
+          },
+        }),
       },
     },
     { window: windowMock, URL, crypto: { randomUUID } },
@@ -393,6 +400,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
     },
   ]) {
     const calls = [];
+    const filters = [];
     const row = {
       id: doc.versionId,
       questionnaire_id: doc.questionnaireId,
@@ -403,6 +411,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       published_at: '2026-09-18T00:00:00Z',
       distributed_at: null,
       questionnaires: { created_by: ownerId, archived_at: null },
+      questionnaire_review_requests: [{ count: 2 }],
     };
     const { loadQuestionnaireView } = load(
       'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
@@ -420,10 +429,18 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
             from: (table) => {
               const builder = {
                 select: () => builder,
-                is: () => builder,
+                is: (column) => {
+                  filters.push([table, column]);
+                  return builder;
+                },
                 eq: () => builder,
                 order: async () => ({
-                  data: table === 'questionnaire_versions' ? [row] : [],
+                  data:
+                    table === 'questionnaire_versions'
+                      ? [row]
+                      : table === 'questionnaire_question_details'
+                        ? [{ id: doc.sections[0].questions[0].details[0].id }]
+                        : [],
                   error: null,
                 }),
               };
@@ -446,6 +463,32 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
     );
     const result = await loadQuestionnaireView(doc.versionId);
     assert.equal(!!result.initialDraft, scenario.editable);
+    assert.equal(
+      filters.some(
+        ([table, column]) =>
+          table === 'questionnaire_review_requests' && column === 'resolved_at',
+      ),
+      false,
+    );
+    assert.ok(
+      filters.some(
+        ([table, column]) =>
+          table === 'questionnaire_versions' &&
+          column === 'questionnaire_review_requests.resolved_at',
+      ),
+    );
+    assert.equal(
+      result.editableExplanationIds.length,
+      scenario.visible === 'admin' &&
+        !scenario.editable &&
+        scenario.status === 'published'
+        ? 1
+        : 0,
+    );
+    assert.equal(
+      result.selected.pendingReviewCount,
+      result.selected.isOwner ? 2 : 0,
+    );
     assert.equal(
       result.selected.canDelete,
       ['admin', 'consultant_lead'].includes(scenario.visible) &&
@@ -498,6 +541,7 @@ test('review server actions reject consultants and incomplete descriptions befor
     const input = {
       id: randomUUID(),
       versionId: randomUUID(),
+      questionId: randomUUID(),
       description: '검토해 주세요',
     };
     const result = await manageQuestionnaireReview(input, 'request');
@@ -513,5 +557,59 @@ test('review server actions reject consultants and incomplete descriptions befor
       ).error,
     );
     assert.equal(calls.length, allowed ? 1 : 0);
+    if (allowed) {
+      assert.equal(calls[0][1].p_question_id, input.questionId);
+      assert.equal(calls[0][1].p_title, undefined);
+      for (const patch of [
+        { questionId: undefined },
+        { description: ' ' },
+        { description: 'x'.repeat(5001) },
+      ]) {
+        assert.ok(
+          (await manageQuestionnaireReview({ ...input, ...patch }, 'request'))
+            .error,
+        );
+      }
+      assert.equal(calls.length, 1);
+    }
   }
+});
+
+test('remote snapshots update clean editors but never overwrite unsaved or uncertain saves', async () => {
+  const original = document();
+  const remote = { ...original, title: '다른 창에서 저장' };
+  const clean = new QuestionnaireSaveSession(original, 1);
+  assert.equal(clean.reconcileRemote(remote, 2, original), 'applied');
+  assert.equal(clean.revision, 2);
+  assert.equal(clean.hasChanges(remote), false);
+  const dirty = new QuestionnaireSaveSession(original, 1);
+  assert.equal(
+    dirty.reconcileRemote(remote, 2, { ...original, title: '작성 중' }),
+    'conflict',
+  );
+  assert.equal(dirty.blocked, true);
+  assert.equal(dirty.revision, 1);
+  assert.equal(
+    await dirty.save(
+      original,
+      () => assert.fail('must not overwrite remote'),
+      randomUUID,
+    ),
+    null,
+  );
+  const uncertain = new QuestionnaireSaveSession(original, 1);
+  await assert.rejects(
+    uncertain.save(
+      original,
+      async () => {
+        throw new Error('connection lost');
+      },
+      randomUUID,
+    ),
+  );
+  assert.equal(uncertain.reconcileRemote(remote, 2, original), 'conflict');
+  const own = new QuestionnaireSaveSession(original, 1);
+  own.pending = true;
+  assert.equal(own.reconcileRemote(remote, 2, original), 'unchanged');
+  assert.equal(own.blocked, false);
 });

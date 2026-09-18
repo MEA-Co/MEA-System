@@ -1,7 +1,6 @@
 'use client';
 
 import { Send } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,10 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 
-import {
-  distributeQuestionnaire,
-  publishQuestionnaire,
-} from '../actions/publish-questionnaire';
+import { useQuestionnaireApi } from '../lib/api-client';
 
 export function PublishQuestionnaireButton({
   versionId,
@@ -32,7 +28,7 @@ export function PublishQuestionnaireButton({
   mode?: 'publish' | 'distribute';
 }) {
   const label = mode === 'publish' ? '게시' : '배포';
-  const router = useRouter();
+  const { command } = useQuestionnaireApi();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
@@ -46,9 +42,11 @@ export function PublishQuestionnaireButton({
       timeout: 0,
     });
     try {
-      const action =
-        mode === 'publish' ? publishQuestionnaire : distributeQuestionnaire;
-      const result = await action({ versionId, revision });
+      const result = await command(
+        `/${versionId}/${mode === 'publish' ? 'publication' : 'distribution'}`,
+        'POST',
+        { revision },
+      );
       if (result.error) {
         toast.update(id, { type: 'error', title: result.error, timeout: 8000 });
         return;
@@ -59,7 +57,6 @@ export function PublishQuestionnaireButton({
         timeout: 3000,
       });
       setOpen(false);
-      router.refresh();
     } catch {
       toast.update(id, {
         type: 'error',

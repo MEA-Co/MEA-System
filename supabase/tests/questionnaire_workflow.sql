@@ -35,10 +35,10 @@ begin
    begin perform public.save_questionnaire_draft(doc,2,gen_random_uuid()); raise exception 'Non-owner edited'; exception when insufficient_privilege then null; end;
    begin perform public.distribute_questionnaire(vid,2); raise exception 'Non-owner distributed'; exception when insufficient_privilege then null; end;
    begin perform public.publish_questionnaire(vid,2); raise exception 'Non-owner published'; exception when insufficient_privilege then null; end;
-   perform public.request_questionnaire_review(case when role_name='admin' then review_id else gen_random_uuid() end,vid,'설명을 검토해 주세요.');
+   perform public.request_questionnaire_review(case when role_name='admin' then review_id else gen_random_uuid() end,vid,(doc#>>'{sections,0,questions,0,id}')::uuid,'설명을 검토해 주세요.');
  end loop;
  perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
- perform public.request_questionnaire_review(review_id,vid,'설명을 검토해 주세요.');
+ perform public.request_questionnaire_review(review_id,vid,(doc#>>'{sections,0,questions,0,id}')::uuid,'설명을 검토해 주세요.');
  if (select count(*) from public.questionnaire_review_requests where version_id=vid)<>1 then raise exception 'Review idempotency/privacy failed'; end if;
  begin perform public.resolve_questionnaire_review(review_id); raise exception 'Non-owner resolved'; exception when insufficient_privilege then null; end;
  for role_name,actor_id in select role,id from workflow_users where role in ('student','consultant') loop
@@ -46,7 +46,7 @@ begin
    if public.read_published_questionnaire(vid) is not null then raise exception 'Published document leaked'; end if;
    if exists(select 1 from public.questionnaires where id=(doc->>'questionnaireId')::uuid) then raise exception 'Published metadata leaked'; end if;
    if exists(select 1 from public.questionnaire_questions where version_id=vid) then raise exception 'Published question leaked'; end if;
-   begin perform public.request_questionnaire_review(gen_random_uuid(),vid,'요청'); raise exception 'Unauthorized review'; exception when insufficient_privilege then null; end;
+   begin perform public.request_questionnaire_review(gen_random_uuid(),vid,(doc#>>'{sections,0,questions,0,id}')::uuid,'요청'); raise exception 'Unauthorized review'; exception when insufficient_privilege then null; end;
  end loop;
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
  if (select count(*) from public.questionnaire_review_requests where version_id=vid and resolved_at is null)<>2 then raise exception 'Owner missing reviews'; end if;
@@ -55,7 +55,7 @@ begin
  if (select count(*) from public.questionnaire_review_requests where version_id=vid and resolved_at is null)<>1 then raise exception 'Review not resolved'; end if;
  -- An uncertain request retry after resolution must not recreate an open request.
  perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
- perform public.request_questionnaire_review(review_id,vid,'설명을 검토해 주세요.');
+ perform public.request_questionnaire_review(review_id,vid,(doc#>>'{sections,0,questions,0,id}')::uuid,'설명을 검토해 주세요.');
  if exists(select 1 from public.questionnaire_review_requests where id=review_id and resolved_at is null) then raise exception 'Resolved review resurrected'; end if;
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
  begin perform public.distribute_questionnaire(vid,1); raise exception 'Stale distribution'; exception when serialization_failure then null; end;
@@ -67,7 +67,7 @@ begin
  if received is null or jsonb_array_length(received#>'{sections,0,questions,0,details}') is distinct from 1 then raise exception 'Consultant visibility failed'; end if;
  if received#>>'{sections,0,questions,0,details,0,text}' is distinct from '공개 설명' then raise exception 'Private detail leaked'; end if;
  if exists(select 1 from public.questionnaire_question_details where question_id=(doc#>>'{sections,0,questions,0,id}')::uuid and not visible_to_consultants) then raise exception 'Direct private detail leaked'; end if;
- begin perform public.request_questionnaire_review(gen_random_uuid(),vid,'요청'); raise exception 'Consultant requested review after distribution'; exception when insufficient_privilege then null; end;
+ begin perform public.request_questionnaire_review(gen_random_uuid(),vid,(doc#>>'{sections,0,questions,0,id}')::uuid,'요청'); raise exception 'Consultant requested review after distribution'; exception when insufficient_privilege then null; end;
  if exists(select 1 from public.questionnaire_review_requests where version_id=vid) then raise exception 'Reviews leaked to consultant'; end if;
  perform set_config('request.jwt.claim.sub',(select id::text from workflow_users where role='student'),true);
  if public.read_published_questionnaire(vid) is not null then raise exception 'Student read distributed'; end if;
@@ -78,7 +78,7 @@ begin
 end $$;
 reset role;
 do $$ begin
- if has_function_privilege('anon','public.distribute_questionnaire(uuid,integer)','execute') or has_function_privilege('anon','public.request_questionnaire_review(uuid,uuid,text)','execute') then raise exception 'Anonymous mutation access'; end if;
+ if has_function_privilege('anon','public.distribute_questionnaire(uuid,integer)','execute') or has_function_privilege('anon','public.request_questionnaire_review(uuid,uuid,uuid,text)','execute') then raise exception 'Anonymous mutation access'; end if;
  if has_table_privilege('authenticated','public.questionnaire_review_requests','insert') then raise exception 'Direct review writes allowed'; end if;
 end $$;
 select 'Questionnaire workflow checks passed' as result;

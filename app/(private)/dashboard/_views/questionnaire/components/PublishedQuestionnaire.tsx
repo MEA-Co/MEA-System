@@ -1,16 +1,33 @@
+'use client';
+
+import { Tabs } from '@base-ui/react/tabs';
+import { Eye, FileText } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 
-import type { QuestionnaireDraft } from '../lib/types';
+import type {
+  QuestionnaireDraft,
+  QuestionnaireReviewContext,
+} from '../lib/types';
+
+import { PublishedExplanation } from './PublishedExplanation';
+import { QuestionExplanationForm } from './QuestionExplanationForm';
+import { QuestionnairePreview } from './QuestionnairePreview';
+import { QuestionnaireReviews } from './QuestionnaireReviews';
 export function PublishedQuestionnaire({
   document,
   distributed = false,
   staff = true,
+  reviewContext,
+  editableExplanationIds = [],
 }: {
   document: QuestionnaireDraft;
   distributed?: boolean;
   staff?: boolean;
+  reviewContext?: QuestionnaireReviewContext;
+  editableExplanationIds?: string[];
 }) {
-  return (
+  const content = (
     <article className="mx-auto max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
         <Badge variant="secondary">
@@ -37,26 +54,72 @@ export function PublishedQuestionnaire({
               </h3>
               <p className="whitespace-pre-wrap break-words">{question.text}</p>
               {question.details.map((detail) => (
-                <div key={detail.id} className="rounded-lg bg-muted/50 p-4">
-                  <h4 className="whitespace-pre-wrap break-words font-medium">
-                    {detail.title || '설명'}{' '}
-                    {staff && (
-                      <Badge variant="outline">
-                        {detail.visibleToConsultants
-                          ? '컨설턴트 공개 항목'
-                          : '컨설턴트 비공개 항목'}
-                      </Badge>
-                    )}
-                  </h4>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm">
-                    {detail.text}
-                  </p>
-                </div>
+                <PublishedExplanation
+                  key={detail.id}
+                  detail={detail}
+                  versionId={document.versionId}
+                  questionId={question.id}
+                  revision={document.revision}
+                  staff={staff}
+                  canManage={
+                    staff &&
+                    !distributed &&
+                    editableExplanationIds.includes(detail.id)
+                  }
+                />
               ))}
+              {staff && !distributed && (
+                <QuestionExplanationForm
+                  versionId={document.versionId}
+                  questionId={question.id}
+                  count={question.details.length}
+                />
+              )}
+              {staff && reviewContext && (
+                <QuestionnaireReviews
+                  {...reviewContext}
+                  questionId={question.id}
+                  initialReviews={reviewContext.initialReviews.filter(
+                    (review) => review.question_id === question.id,
+                  )}
+                />
+              )}
             </div>
           ))}
         </section>
       ))}
     </article>
+  );
+  if (!staff) return content;
+  return (
+    <Tabs.Root defaultValue="detail" className="mx-auto max-w-4xl">
+      <Tabs.List
+        className="mb-4 inline-flex max-w-full gap-1 rounded-xl bg-muted p-1"
+        aria-label="질문지 보기 방식"
+      >
+        {[
+          { value: 'detail', label: '질문지 상세', icon: FileText },
+          { value: 'preview', label: '미리보기', icon: Eye },
+        ].map(({ value, label, icon: Icon }) => (
+          <Tabs.Tab
+            key={value}
+            value={value}
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
+          >
+            <Icon className="size-4" aria-hidden="true" />
+            {label}
+          </Tabs.Tab>
+        ))}
+      </Tabs.List>
+      <Tabs.Panel value="detail" keepMounted className="data-[hidden]:hidden">
+        {content}
+      </Tabs.Panel>
+      <Tabs.Panel value="preview" className="rounded-xl border bg-background">
+        <QuestionnairePreview
+          title={document.title}
+          sections={document.sections}
+        />
+      </Tabs.Panel>
+    </Tabs.Root>
   );
 }

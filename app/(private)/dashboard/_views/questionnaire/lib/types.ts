@@ -56,10 +56,33 @@ export type QuestionnaireListItem = {
   hasDistributed: boolean;
   isOwner: boolean;
   canDelete: boolean;
+  pendingReviewCount: number;
 };
 export type QuestionnaireReview = {
   id: string;
+  question_id: string | null;
+  title: string;
   requester_name: string;
   description: string;
   created_at: string;
+  resolved_at: string | null;
+};
+
+export type QuestionnaireReviewContext = {
+  versionId: string;
+  isOwner: boolean;
+  initialReviews: QuestionnaireReview[];
+  disabled?: boolean;
+};
+
+export type QuestionnaireViewData = {
+  editableExplanationIds: string[];
+  drafts: QuestionnaireListItem[];
+  published: QuestionnaireListItem[];
+  distributed: QuestionnaireListItem[];
+  staff: boolean;
+  selected: QuestionnaireListItem | null;
+  reviews: QuestionnaireReview[];
+  initialDraft: QuestionnaireDraft | null;
+  publishedDocument: QuestionnaireDraft | null;
 };

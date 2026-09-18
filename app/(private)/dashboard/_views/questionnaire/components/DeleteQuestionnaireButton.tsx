@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 
-import { deleteQuestionnaire } from '../actions/delete-questionnaire';
+import { useQuestionnaireApi } from '../lib/api-client';
 
 export function DeleteQuestionnaireButton({
   versionId,
@@ -27,6 +27,7 @@ export function DeleteQuestionnaireButton({
   title: string;
   hasDistributed: boolean;
 }) {
+  const { command } = useQuestionnaireApi();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function DeleteQuestionnaireButton({
     });
     startTransition(async () => {
       try {
-        const result = await deleteQuestionnaire({ versionId, revision });
+        const result = await command(`/${versionId}`, 'DELETE', { revision });
         if (result.error) {
           setError(result.error);
           toast.update(toastId, {

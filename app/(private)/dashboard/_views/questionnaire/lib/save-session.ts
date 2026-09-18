@@ -49,6 +49,26 @@ export class QuestionnaireSaveSession {
     }
   }
 
+  block() {
+    this.blocked = true;
+  }
+
+  reconcileRemote(
+    document: QuestionnaireDocument,
+    revision: number,
+    local: QuestionnaireDocument,
+  ) {
+    if (revision <= this.revision || this.pending || this.blocked)
+      return 'unchanged';
+    if (this.hasChanges(local)) {
+      this.blocked = true;
+      return 'conflict';
+    }
+    this.revision = revision;
+    this.savedDocument = JSON.stringify(document);
+    return 'applied';
+  }
+
   hasChanges(document: QuestionnaireDocument) {
     return (
       this.retry !== null || this.savedDocument !== JSON.stringify(document)

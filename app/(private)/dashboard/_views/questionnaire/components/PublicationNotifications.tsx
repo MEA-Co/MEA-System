@@ -9,8 +9,16 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { SWRConfig } from 'swr';
 
-import { readQuestionnairePublication } from '../actions/read-publication';
+import {
+  type QuestionnaireRealtimeAudience,
+  useQuestionnaireRealtime,
+} from '../hooks/useQuestionnaireRealtime';
+import {
+  useQuestionnaireApi,
+  useQuestionnaireResource,
+} from '../lib/api-client';
 
 const PublicationContext = createContext<{
   unreadIds: string[];
@@ -18,27 +26,63 @@ const PublicationContext = createContext<{
 }>({ unreadIds: [], markRead: async () => {} });
 
 export function PublicationNotifications({
-  unreadIds,
+  enabled,
+  realtimeAudience,
+  userId,
   children,
 }: {
-  unreadIds: string[];
+  enabled: boolean;
+  realtimeAudience: QuestionnaireRealtimeAudience;
+  userId: string;
   children: ReactNode;
 }) {
-  const [confirmed, setConfirmed] = useState<string[]>([]);
-  const markRead = useCallback(async (id: string) => {
-    try {
-      if (await readQuestionnairePublication(id))
-        setConfirmed((ids) => (ids.includes(id) ? ids : [...ids, id]));
-    } catch {
-      // Keep the unread indicator when confirmation could not be saved.
-    }
-  }, []);
+  const [cache] = useState(() => new Map());
+  const config = useMemo(() => ({ provider: () => cache }), [cache]);
+  return (
+    <SWRConfig value={config}>
+      <PublicationState
+        enabled={enabled}
+        realtimeAudience={realtimeAudience}
+        userId={userId}
+      >
+        {children}
+      </PublicationState>
+    </SWRConfig>
+  );
+}
+function PublicationState({
+  enabled,
+  realtimeAudience,
+  userId,
+  children,
+}: {
+  enabled: boolean;
+  realtimeAudience: QuestionnaireRealtimeAudience;
+  userId: string;
+  children: ReactNode;
+}) {
+  useQuestionnaireRealtime(realtimeAudience, userId);
+  const { data, mutate } = useQuestionnaireResource<string[]>(
+    enabled ? '/unread' : null,
+  );
+  const { command } = useQuestionnaireApi();
+  const markRead = useCallback(
+    async (id: string) => {
+      try {
+        const result = await command(`/${id}/read`, 'PUT', {});
+        if (!result.error)
+          await mutate((ids) => (ids ?? []).filter((value) => value !== id), {
+            revalidate: true,
+          });
+      } catch {
+        /* Retain unread on network failure. */
+      }
+    },
+    [command, mutate],
+  );
   const value = useMemo(
-    () => ({
-      unreadIds: unreadIds.filter((id) => !confirmed.includes(id)),
-      markRead,
-    }),
-    [unreadIds, confirmed, markRead],
+    () => ({ unreadIds: data ?? [], markRead }),
+    [data, markRead],
   );
   return (
     <PublicationContext.Provider value={value}>

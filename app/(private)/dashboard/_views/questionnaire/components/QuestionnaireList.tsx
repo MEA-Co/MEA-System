@@ -13,6 +13,7 @@ import {
   usePublicationNotifications,
 } from './PublicationNotifications';
 import { PublishQuestionnaireButton } from './PublishQuestionnaireButton';
+import { ReviewRequestBadge } from './ReviewRequestBadge';
 
 const updatedDate = new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -57,6 +58,18 @@ export function QuestionnaireList({
             {tab === 'published' && newCount > 0 && (
               <NewPublicationBadge count={newCount} />
             )}
+            <ReviewRequestBadge
+              count={(tab === 'published'
+                ? published
+                : tab === 'distributed'
+                  ? distributed
+                  : drafts
+              ).reduce(
+                (total, item) =>
+                  total + (item.isOwner ? item.pendingReviewCount : 0),
+                0,
+              )}
+            />
           </Tabs.Tab>
         ))}
       </Tabs.List>
@@ -80,7 +93,7 @@ export function QuestionnaireList({
                 {items.map((draft) => (
                   <li
                     key={draft.id}
-                    className={`flex items-center ${unreadIds.includes(draft.id) ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
+                    className={`flex items-center ${draft.isOwner && draft.pendingReviewCount > 0 ? 'bg-green-50 dark:bg-green-950/30' : unreadIds.includes(draft.id) ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
                   >
                     <Link
                       href={`/dashboard?view=questionnaire&draft=${draft.id}`}
@@ -94,12 +107,17 @@ export function QuestionnaireList({
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate font-medium">
                             {draft.title || '제목 없는 질문지'}
                           </p>
                           {unreadIds.includes(draft.id) && (
                             <NewPublicationBadge />
+                          )}
+                          {draft.isOwner && (
+                            <ReviewRequestBadge
+                              count={draft.pendingReviewCount}
+                            />
                           )}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">

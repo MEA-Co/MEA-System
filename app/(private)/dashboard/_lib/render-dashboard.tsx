@@ -14,7 +14,6 @@ import { createClient } from '@/lib/supabase/server';
 import { AdminRoleTabs } from '../_components/AdminRoleTabs';
 import { Dashboard } from '../_components/Dashboard';
 import { PublicationNotifications } from '../_views/questionnaire/components/PublicationNotifications';
-import { loadUnreadQuestionnairePublications } from '../_views/questionnaire/lib/publication-notifications';
 
 import 'server-only';
 
@@ -80,12 +79,19 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
     );
   }
 
-  const unreadIds =
-    role === 'admin' || role === 'consultant_lead'
-      ? await loadUnreadQuestionnairePublications()
-      : [];
   return (
-    <PublicationNotifications key={`${user.id}:${role}`} unreadIds={unreadIds}>
+    <PublicationNotifications
+      key={`${user.id}:${role}`}
+      enabled={role === 'admin' || role === 'consultant_lead'}
+      userId={user.id}
+      realtimeAudience={
+        role === 'admin' || role === 'consultant_lead'
+          ? 'staff'
+          : role === 'consultant' && view === 'questionnaire'
+            ? 'distributed'
+            : null
+      }
+    >
       <Dashboard
         name={profile.name}
         role={role}

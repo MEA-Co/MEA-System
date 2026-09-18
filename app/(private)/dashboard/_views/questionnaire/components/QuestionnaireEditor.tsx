@@ -14,6 +14,7 @@ import { useState } from 'react';
 
 import type {
   QuestionnaireDraft,
+  QuestionnaireReviewContext,
   QuestionnaireSection as Section,
 } from '@/app/(private)/dashboard/_views/questionnaire/lib/types';
 import { Button } from '@/components/ui/button';
@@ -23,11 +24,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuestionnaireSave } from '../hooks/useQuestionnaireSave';
 
 import { QuestionDetailsEditor } from './QuestionDetailsEditor';
+import { QuestionnairePreview } from './QuestionnairePreview';
+import { QuestionnaireReviews } from './QuestionnaireReviews';
 
 export function QuestionnaireEditor({
   initialDraft,
+  remoteUnavailable = false,
+  reviewContext,
 }: {
   initialDraft: QuestionnaireDraft;
+  remoteUnavailable?: boolean;
+  reviewContext?: QuestionnaireReviewContext;
 }) {
   const [title, setTitle] = useState(initialDraft.title);
   const [sections, setSections] = useState<Section[]>(initialDraft.sections);
@@ -39,6 +46,11 @@ export function QuestionnaireEditor({
       sections,
     },
     initialDraft,
+    (draft) => {
+      setTitle(draft.title);
+      setSections(draft.sections);
+    },
+    remoteUnavailable,
   );
   const questionCount = sections.reduce(
     (total, section) => total + section.questions.length,
@@ -112,7 +124,7 @@ export function QuestionnaireEditor({
         >
           {[
             { value: 'edit', label: '편집', icon: PencilLine },
-            { value: 'consultant', label: '컨설턴트 미리보기', icon: Eye },
+            { value: 'consultant', label: '미리보기', icon: Eye },
           ].map(({ value, label, icon: Icon }) => (
             <Tabs.Tab
               key={value}
@@ -139,39 +151,14 @@ export function QuestionnaireEditor({
                       : '내용을 입력하면 10초마다 자동 저장됩니다.'}
             </span>
           </div>
-          <Tabs.Panel value="consultant" className="space-y-8 p-5 sm:p-10">
-            <h2 className="whitespace-pre-wrap break-words text-3xl font-semibold">
-              {title || '제목 없는 질문지'}
-            </h2>
-            {sections.map((section, sectionIndex) => (
-              <section key={section.id} className="space-y-6 border-t pt-6">
-                <h3 className="break-words text-xl font-semibold">
-                  {section.title || `섹션 ${sectionIndex + 1}`}
-                </h3>
-                {section.questions.map((question, questionIndex) => (
-                  <div key={question.id} className="space-y-4">
-                    <h4 className="whitespace-pre-wrap break-words font-medium">
-                      {questionIndex + 1}.{' '}
-                      {question.text || '작성하지 않은 질문'}
-                    </h4>
-                    {question.details
-                      .filter((detail) => detail.visibleToConsultants)
-                      .map((detail) => (
-                        <div key={detail.id} className="border-l-2 pl-4">
-                          <p className="break-words text-sm font-semibold">
-                            {detail.title || '제목 없는 항목'}
-                          </p>
-                          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">
-                            {detail.text || '작성하지 않은 내용'}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                ))}
-              </section>
-            ))}
+          <Tabs.Panel value="consultant">
+            <QuestionnairePreview title={title} sections={sections} />
           </Tabs.Panel>
-          <Tabs.Panel value="edit" className="space-y-10 p-5 sm:p-10">
+          <Tabs.Panel
+            value="edit"
+            keepMounted
+            className="space-y-10 p-5 sm:p-10 data-[hidden]:hidden"
+          >
             <div>
               <label
                 htmlFor="questionnaire-title"
@@ -290,6 +277,15 @@ export function QuestionnaireEditor({
                           }))
                         }
                       />
+                      {reviewContext && (
+                        <QuestionnaireReviews
+                          {...reviewContext}
+                          questionId={question.id}
+                          initialReviews={reviewContext.initialReviews.filter(
+                            (review) => review.question_id === question.id,
+                          )}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

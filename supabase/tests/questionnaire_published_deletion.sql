@@ -14,8 +14,8 @@ select public.publish_questionnaire((doc->>'versionId')::uuid,1) from workflow_d
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from workflow_users where role='admin'),true);
 set local role authenticated;
-select public.request_questionnaire_review(gen_random_uuid(),(doc->>'versionId')::uuid,'미확인 검토 요청') from workflow_data;
-select public.request_questionnaire_review(gen_random_uuid(),(doc->>'versionId')::uuid,'확인된 검토 요청') from workflow_data;
+select public.request_questionnaire_review(gen_random_uuid(),(doc->>'versionId')::uuid,(doc#>>'{sections,0,questions,0,id}')::uuid,'미확인 검토 요청') from workflow_data;
+select public.request_questionnaire_review(gen_random_uuid(),(doc->>'versionId')::uuid,(doc#>>'{sections,0,questions,0,id}')::uuid,'확인된 검토 요청') from workflow_data;
 select public.mark_questionnaire_publication_read((doc->>'versionId')::uuid) from workflow_data;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from workflow_users where role='consultant_lead'),true);
