@@ -54,6 +54,33 @@ const course = (id, name, domain = '사회', credit = 3) => ({
   description: null,
 });
 const a = course('a', '경제');
+test('humanities directional courses remain recommendations rather than strongly advised sub-core', async () => {
+  const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
+  const { priority } = await import('../app/(private)/consulting/subject-selection/_lib/course-swap.ts');
+  for (const [department, names] of [
+    ['광고홍보학과', ['경제', '실용 통계', '문학과 영상']],
+    ['경영학과', ['사회와 문화', '인간과 심리']],
+    ['경제학과', ['실용 통계', '금융과 경제생활']],
+    ['행정학과', ['경제']],
+    ['법학과', ['현대사회와 윤리']],
+    ['사회복지학과', ['현대사회와 윤리']],
+    ['심리학과', ['생명과학']],
+    ['미디어학과', ['문학과 영상']],
+    ['철학과', ['인문학과 윤리']],
+    ['무역학과', ['세계시민과 지리']],
+    ['국제학과', ['세계시민과 지리']],
+  ]) {
+    const profile = findPriorityProfile(department).profile;
+    for (const name of names) {
+      assert.ok(!profile.subCore.includes(name), `${department}: ${name}`);
+      assert.ok(profile.recommendCourses.includes(name), `${department}: ${name} remains recommended`);
+      assert.ok(priority(course('direction', name), profile).score < 6);
+    }
+  }
+  const ad = findPriorityProfile('광고홍보학과').profile;
+  assert.deepEqual(ad.subCore, ['매체 의사소통', '인간과 심리']);
+  assert.ok(priority(course('foundation', '매체 의사소통'), ad).score >= 6);
+});
 test('health drafts prefer one ethics course after sub-core, counting prior and fixed courses', async () => {
   const { findPriorityProfile } = await import('../features/subject-selection/recommendations.ts');
   const profile = findPriorityProfile('의예과').profile;
@@ -281,8 +308,9 @@ test('humanities relationships recognize academic connections without shared cou
   const { buildCombinedMajorDraft } = await import('../app/(private)/consulting/subject-selection/_lib/combined-major.ts');
   const get = (name) => findPriorityProfile(name).profile;
   for (const [first, second] of [['경영학과', '영어영문학과'], ['경영학과', '사회학과'], ['사회학과', '영어영문학과']]) {
-    const primary = get(first);
-    const secondary = get(second);
+    // Isolate the thematic route from additional individually recommended courses.
+    const primary = { ...get(first), recommendCourses: [] };
+    const secondary = { ...get(second), recommendCourses: [] };
     assert.ok(humanitiesRelationship(primary, secondary), first + second);
     assert.equal(humanitiesRelationship(primary, secondary), humanitiesRelationship(secondary, primary));
     const names = [...new Set([...primary.core, ...primary.subCore, ...secondary.core, ...secondary.subCore])];

@@ -59,7 +59,8 @@ const earthAdvanced = ['지구시스템과학', '행성우주과학'];
 
 const humanitiesDepartmentPolicies: Record<
   string,
-  Pick<PriorityProfile, 'core' | 'subCore'>
+  Pick<PriorityProfile, 'core' | 'subCore'> &
+    Pick<Partial<PriorityProfile>, 'recommendCourses'>
 > = {
   영어영문학과: {
     core: ['주제 탐구 독서'],
@@ -71,38 +72,42 @@ const humanitiesDepartmentPolicies: Record<
   },
   행정학과: {
     core: ['정치', '사회와 문화'],
-    subCore: ['법과 사회', '경제', '사회문제 탐구'],
+    subCore: ['법과 사회', '사회문제 탐구'],
+    recommendCourses: ['경제', '실용 통계'],
   },
   법학과: {
     core: ['법과 사회', '정치'],
-    subCore: ['현대사회와 윤리', '논리와 사고'],
+    subCore: ['논리와 사고'],
+    recommendCourses: ['현대사회와 윤리', '사회문제 탐구'],
   },
   경영학과: {
     core: ['경제'],
-    subCore: [
-      '경제수학',
-      '확률과 통계',
+    subCore: ['경제수학', '확률과 통계', '미적분 II'],
+    recommendCourses: [
       '사회와 문화',
       '인간과 심리',
-      '미적분 II',
+      '실용 통계',
+      '금융과 경제생활',
     ],
   },
   국제학과: {
     core: ['정치'],
-    subCore: ['경제', '국제 관계의 이해', '세계시민과 지리'],
+    subCore: ['경제', '국제 관계의 이해'],
+    recommendCourses: ['세계시민과 지리', '세계사'],
   },
   사회복지학과: {
     core: ['사회와 문화'],
-    subCore: ['사회문제 탐구', '인간과 심리', '현대사회와 윤리'],
+    subCore: ['사회문제 탐구', '인간과 심리'],
+    recommendCourses: ['현대사회와 윤리', '실용 통계'],
   },
   광고홍보학과: {
     core: ['사회와 문화'],
-    subCore: [
-      '매체 의사소통',
-      '인간과 심리',
+    subCore: ['매체 의사소통', '인간과 심리'],
+    recommendCourses: [
       '경제',
       '실용 통계',
       '문학과 영상',
+      '독서 토론과 글쓰기',
     ],
   },
 };
@@ -466,7 +471,8 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '철학과',
     departments: ['철학과', '윤리교육과'],
     core: ['윤리와 사상'],
-    subCore: ['인간과 철학', '논리와 사고', '인문학과 윤리'],
+    subCore: ['인간과 철학', '논리와 사고'],
+    recommendCourses: ['인문학과 윤리', '현대사회와 윤리', '윤리문제 탐구'],
     recommendDomains: ['사회'],
   },
   {
@@ -482,7 +488,8 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '경제',
     departments: ['경제학과', '경제금융학과'],
     core: ['경제', '경제수학'],
-    subCore: ['확률과 통계', '실용 통계', '금융과 경제생활', '미적분 II'],
+    subCore: ['확률과 통계', '미적분 II'],
+    recommendCourses: ['실용 통계', '금융과 경제생활'],
     recommendDomains: ['사회', '수학'],
   },
   {
@@ -490,7 +497,8 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '경영·무역·국제',
     departments: ['경영학과', '무역학과', '국제학과', '국제통상학과'],
     core: ['경제'],
-    subCore: ['세계시민과 지리', '국제 관계의 이해', '경제수학'],
+    subCore: ['국제 관계의 이해', '경제수학'],
+    recommendCourses: ['세계시민과 지리', '확률과 통계', '금융과 경제생활'],
     recommendDomains: ['사회', '수학'],
   },
   {
@@ -506,7 +514,8 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '심리학',
     departments: ['심리학과', '상담심리학과'],
     core: ['사회와 문화', '확률과 통계'],
-    subCore: ['인간과 심리', '실용 통계', '생명과학'],
+    subCore: ['인간과 심리', '실용 통계'],
+    recommendCourses: ['생명과학', '사회문제 탐구', '현대사회와 윤리'],
     recommendDomains: ['사회', '과학', '수학'],
   },
   {
@@ -514,7 +523,8 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '미디어',
     departments: ['미디어학과', '언론정보학과', '신문방송학과', '광고홍보학과'],
     core: ['사회와 문화'],
-    subCore: ['매체 의사소통', '독서 토론과 글쓰기', '문학과 영상'],
+    subCore: ['매체 의사소통', '독서 토론과 글쓰기'],
+    recommendCourses: ['문학과 영상', '인간과 심리', '실용 통계'],
     recommendDomains: ['사회', '국어', '정보'],
   },
 ];
