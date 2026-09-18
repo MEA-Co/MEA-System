@@ -49,7 +49,13 @@ export function TutorialBubble({
     let branch: HTMLElement = dialog;
     while (branch.parentElement) {
       for (const sibling of branch.parentElement.children) {
-        if (sibling !== branch && sibling instanceof HTMLElement) {
+        // Already-inert siblings belong to their own React state; do not restore
+        // a stale value after that state unlocks them when this guide closes.
+        if (
+          sibling !== branch &&
+          sibling instanceof HTMLElement &&
+          !sibling.inert
+        ) {
           changed.push([sibling, sibling.inert]);
           sibling.inert = true;
         }
