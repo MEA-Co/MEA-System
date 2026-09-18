@@ -134,36 +134,6 @@ export function DashboardNavigation({
         <SidebarGroupLabel>운영 관리</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=consulting"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'consulting'}
-              >
-                <MessagesSquare />
-                <span>컨설팅 관리</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {role === 'consultant_lead' && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=exploration"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'exploration'}
-                >
-                  <NotebookPen />
-                  <span>탐구활동 관리</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
             {role === 'consultant_lead' && (
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -180,6 +150,36 @@ export function DashboardNavigation({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
+            {role === 'consultant_lead' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={
+                    <Link
+                      href="/dashboard?view=exploration"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  isActive={view === 'exploration'}
+                >
+                  <NotebookPen />
+                  <span>탐구활동 관리</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={
+                  <Link
+                    href="/dashboard?view=consulting"
+                    onClick={() => setOpenMobile(false)}
+                  />
+                }
+                isActive={view === 'consulting'}
+              >
+                <MessagesSquare />
+                <span>컨설팅 관리</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
