@@ -68,16 +68,28 @@
 | `_screens/RequiredCoursesScreen` | 필수 확정 단계의 화면. 선택 상태는 전달받아 표시 |
 | `_screens/CourseDraftScreen` | 초안 유형, 교체 이력과 되돌리기를 소유하고 상담 화면에 연결 |
 | `_screens/CourseCounselingScreen` | 질문·비교 화면. 교체는 상위의 검증된 이벤트로 요청 |
+| `_screens/CombinedMajorScreen`, `CombinedDraftCounselingScreen` | 복수학과 검토·변경 동의와 확정 후 초안 상담 |
+| `_screens/FinalCoursePlanScreen` | 학기별 최종 확정안 표시 |
+| `_screens/_components/MajorIntentReview`, `CombinedMajorDetails` | 지원 의향 확인과 접을 수 있는 상세 분석·주의 안내 |
+| `_screens/_components/DirectCourseEditor` | 학기별 직접 교체 UI. 변경 검증은 상위 로직에 위임 |
 | `_screens/_components` | 과목 정보, 튜토리얼, 대학 안내, 초안 표, 비교 설명 등 내부 UI |
 | `_hooks/useCourseSelectionSession` | 전공 적용, 선택·잠금·이전 단계 스냅샷, 조건 계산 및 단계 전환 |
 | `_hooks/useComparisonExplanation` | AI 요청·취소·캐시. JSX 없음 |
 | `_lib` | 초안 계산, 교체 검증, 질문 분기, 편제표 모델, 단계 타입 |
+| `_data` | 로컬 과목 목록과 개발용 편제표 샘플 |
+| `features/subject-selection` | 학과별 추천·대학별 기준·문서 추출 등 공통 정책 및 서버 로직 |
 
 필수 선택 상태는 화면이 아닌 상위 세션에서 실행하는 훅이 소유한다. 필수 확정 화면을 닫아도 세션은 유지되며, 초안은 확정 과목을 전달받는다. 자유 질문은 템플릿을 전환해도 마운트를 유지한다. 훅/계산 모듈은 화면 컴포넌트를 가져오지 않는다.
 
 정책 데이터·공통 도메인 판정·서버 분석은 `features/subject-selection`에 유지한다. 대학별 충족 여부는 안내·최종 확인·교체 비교에서 `university-status.ts`를 공유한다.
 
 ## 복수 학과 준비 깊이
+
+`review`(조정 검토)에서만 `_lib/major-review-screening.ts`로 연결 기반과 코어 개설 여부를 먼저 확인한다. 연결 기반은 공통 코어·심화 2과목 이상 또는 `major-relationships.ts`에 등록된 연구 방법 연계의 과목 조건이다. 구체적인 조합과 판정 순서는 [복수 학과 기준](./major-relationships-policy.md)을 따른다. 현재 선택만이 아니라 1학년 지정·학교지정·전체 선택 후보를 보므로 아직 선택하지 않은 공통 과목도 반영한다. 어느 연결 경로도 확보할 수 없거나 편제 전체로도 코어 조건을 채울 수 없으면 질문 없이 기존 전공 기본안 또는 다른 학과 검토로 안내한다. 별도 이유 입력으로 이 권고를 우회하는 흐름은 두지 않는다. 이 사전 검토는 동시 배치 가능성을 보장하지 않고 실제 선택군·선행·졸업요건 검증은 기존 조정안 탐색이 맡는다.
+
+검토 가치가 있으면 `MajorIntentReview`에서 지원 의향만 확인한다. 실제 지원 관심이 있거나 아직 결정하지 못한 경우 모두 과목 조정안 탐색으로 진행한다. 탐구 확장 목적은 기존 전공 기본안으로 안내한다. 서술형 답변과 AI 지원동기 심사는 사용하지 않는다. 구체적인 교체 과목을 확인하고 학생이 동의해야 적용한다. `compare` API는 과목 비교 설명만 담당한다.
+
+복수학과의 추가 추천 점수는 기존 학과 × 1.5 + 추가 학과 × 1로 고정한다. 기존 코어와 확정 과목 보호 및 조정안 재검증은 별도로 유지한다.
 
 `_lib/major-depth.ts`는 코어 충족과 준비 깊이를 별도로 평가한다. `science-sequence.ts`의 과학 영역 연결을 공유하며, 핵심 또는 Sub core에 화학이 있으면 물질과 에너지·화학 반응의 세계를 해당 영역의 심화로 인정한다. 넓은 추천 영역인 ‘과학’만으로는 모든 과학 심화를 인정하지 않는다. 기초 과목이 없는 심화는 깊이 계산에서 제외하고 코어·선행 재검토로 안내한다.
 

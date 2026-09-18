@@ -1,5 +1,6 @@
 'use client';
 import { Building2, CheckCircle2, LockKeyhole } from 'lucide-react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { scienceSequenceMessage } from '@/features/subject-selection/science-seq
 import { cn } from '@/lib/utils';
 
 import type { CourseSelectionSessionState } from '../_hooks/useCourseSelectionSession';
-import { getCourseTags, sameCourse } from '../_lib/course-selection-utils';
+import { createCourseTagger, sameCourse } from '../_lib/course-selection-utils';
 import type { ConfirmedCurriculum } from '../_lib/curriculum';
 import type {
   CareerGuideStep,
@@ -82,6 +83,26 @@ export function RequiredCoursesScreen({
     departments,
     confirmRequired,
   } = session;
+  const requirementPurpose = useRef<HTMLHeadingElement>(null);
+  const previousRequirementGuide = useRef(requirementGuideStep);
+  useEffect(() => {
+    const wasOpen = previousRequirementGuide.current !== null;
+    previousRequirementGuide.current = requirementGuideStep;
+    if (!wasOpen || requirementGuideStep !== null || stage.kind !== 'requirement') return;
+    // Wait for the tutorial to release its focus trap and inert background.
+    const frame = requestAnimationFrame(() => {
+      requirementPurpose.current?.focus({ preventScroll: true });
+      requirementPurpose.current?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'start',
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [requirementGuideStep, stage.kind]);
+  const tagsById = useMemo(() => {
+    const tag = createCourseTagger(profile, universities, completed);
+    return new Map(occurrences.map(({ course }) => [course.id, tag(course)]));
+  }, [profile, universities, completed, occurrences]);
   function guideBubble(step: CareerGuideStep) {
     return stage.kind === 'career' && guideStep === step ? (
       <CareerGuide
@@ -166,12 +187,18 @@ export function RequiredCoursesScreen({
               onDismiss={() => setStageIntro(null)}
             />
             <section
-              className="rounded-lg border p-4"
+              className="border-y border-l-4 border-emerald-300 bg-emerald-50/60 p-4"
               aria-label="확정된 선택 과목"
             >
               <h2 className="text-sm font-medium">
                 <LockKeyhole className="mr-2 inline size-4" />
-                확정된 선택 과목 {locked.size}개
+                고정된 과목{' '}
+                <Badge
+                  variant="outline"
+                  className="ml-2 border-emerald-300 bg-emerald-100 text-emerald-900"
+                >
+                  선택 확정 {locked.size}개
+                </Badge>
               </h2>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {curriculum.terms.map((term) => {
@@ -182,6 +209,33 @@ export function RequiredCoursesScreen({
                   return (
                     <div key={term.id}>
                       <p className="text-sm font-semibold">{term.label}</p>
+                      <p className="mt-3 text-xs font-semibold text-zinc-600">
+                        학교지정 · 고정
+                      </p>
+                      {term.requiredCourses.map((course) => (
+                        <ImportedCourseInfo key={course.id} course={course}>
+                          <p
+                            tabIndex={0}
+                            className="mt-1 flex cursor-help items-start gap-1.5 rounded bg-zinc-100 px-2 py-1.5 text-sm text-zinc-700 focus-visible:outline-2 focus-visible:outline-emerald-600"
+                          >
+                            <LockKeyhole
+                              className="mt-0.5 size-3.5 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 break-words">
+                              {course.name}
+                            </span>
+                          </p>
+                        </ImportedCourseInfo>
+                      ))}
+                      {!term.requiredCourses.length && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          해당 과목 없음
+                        </p>
+                      )}
+                      <p className="mt-3 text-xs font-semibold text-emerald-800">
+                        이전 스텝 확정 · 고정
+                      </p>
                       {confirmedCourses.length ? (
                         confirmedCourses.map((item) => (
                           <ImportedCourseInfo
@@ -190,9 +244,15 @@ export function RequiredCoursesScreen({
                           >
                             <p
                               tabIndex={0}
-                              className="mt-2 cursor-help rounded text-sm focus-visible:outline-2 focus-visible:outline-emerald-600"
+                              className="mt-2 flex cursor-help items-start gap-1.5 rounded bg-emerald-100 px-2 py-1.5 text-sm text-emerald-950 focus-visible:outline-2 focus-visible:outline-emerald-600"
                             >
-                              ✓ {item.course.name}
+                              <LockKeyhole
+                                className="mt-0.5 size-3.5 shrink-0"
+                                aria-hidden="true"
+                              />
+                              <span className="min-w-0 break-words">
+                                {item.course.name}
+                              </span>
                             </p>
                           </ImportedCourseInfo>
                         ))
@@ -249,16 +309,6 @@ export function RequiredCoursesScreen({
               </details>
             ) : null}
             <section className="rounded-xl border p-5 space-y-4">
-              {scienceGaps.length ? (
-                <p
-                  role="status"
-                  className="border-l-2 border-amber-400 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
-                >
-                  {scienceSequenceMessage(scienceGaps)} 기초 과목을 먼저 듣는
-                  것을 추천해요. 1학년·학교지정 과목도 함께 확인한 결과이며,
-                  실제 개설 학기와 이수 순서는 학교에 확인해 주세요.
-                </p>
-              ) : null}
               {stage.kind === 'review' ? (
                 <UniversityRecommendationReview
                   matches={universities}
@@ -279,9 +329,13 @@ export function RequiredCoursesScreen({
                 )}
                 aria-live="polite"
               >
-                <h2 className="text-lg font-semibold">
+                <h2
+                  ref={requirementPurpose}
+                  tabIndex={-1}
+                  className="scroll-mt-24 text-lg font-semibold outline-none"
+                >
                   {stage.kind === 'core'
-                    ? '먼저 전공의 기초가 되는 코어를 확정하세요'
+                    ? '먼저 전공의 기초가 되는 코어를 알려드릴게요'
                     : stage.kind === 'career'
                       ? '이 진로를 위해 반드시 들을 과목을 골라주세요'
                       : stage.kind === 'requirement'
@@ -290,9 +344,9 @@ export function RequiredCoursesScreen({
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {stage.kind === 'core'
-                    ? '코어는 이 서비스가 전공 학습의 기초로 분류한 과목입니다. 개설 학기가 하나인 과목은 미리 선택했습니다. 여러 학기에 열리는 과목은 들을 학기를 골라 확정하세요. 대학의 지원 자격과는 구분됩니다.'
+                    ? '코어는 메아가 전공 학습의 기초로 분류한 과목입니다. 과학 진로 선택과목 여러개가 후보군인 경우, 가장 필요하다고 생각하는 과목을 선택해주세요.'
                     : stage.kind === 'career'
-                      ? '모든 자리를 채울 필요는 없어요. 고민 중인 과목과 남은 선택 자리는 다음 단계에서 함께 결정합니다.'
+                      ? '모든 과목을 고를 필요는 없어요. 고민 중인 과목과 남은 선택 자리는 다음 단계에서 함께 결정합니다.'
                       : stage.kind === 'requirement'
                         ? '학교 지정 과목과 앞에서 확정한 과목을 반영했습니다. 아래에는 지금 부족한 조건을 채울 수 있는 과목만 표시합니다. 선택을 확정하면 다음 조건으로 넘어갑니다.'
                         : '코어와 진로 과목, 현재 확인하는 영역별·학교별 필수 조건을 반영했습니다. 확정한 과목을 유지한 채 2단계에서 남은 선택군을 채웁니다.'}
@@ -596,13 +650,8 @@ export function RequiredCoursesScreen({
                                         const chosen = selected.has(
                                           item.course.id,
                                         );
-                                        const tags = getCourseTags(
-                                          item.course,
-                                          profile,
-                                          universities,
-                                          [],
-                                          completed,
-                                        );
+                                        const tags =
+                                          tagsById.get(item.course.id) ?? [];
                                         return (
                                           <ImportedCourseInfo
                                             key={item.course.id}
@@ -621,11 +670,23 @@ export function RequiredCoursesScreen({
                                                   'w-full rounded-lg border p-3 text-left transition-colors enabled:hover:border-emerald-500 disabled:opacity-50',
                                                   chosen &&
                                                     'border-emerald-600 bg-emerald-50',
+                                                  chosen &&
+                                                    reason &&
+                                                    'disabled:opacity-100 border-emerald-400 bg-emerald-100 text-emerald-950',
                                                 )}
                                               >
                                                 <span className="flex justify-between gap-2 text-sm font-medium">
                                                   <span>
-                                                    {chosen ? '✓ ' : ''}
+                                                    {chosen && reason ? (
+                                                      <LockKeyhole
+                                                        className="mr-1 inline size-4"
+                                                        aria-label="고정 과목"
+                                                      />
+                                                    ) : chosen ? (
+                                                      '✓ '
+                                                    ) : (
+                                                      ''
+                                                    )}
                                                     {item.course.name}
                                                   </span>
                                                   <span className="shrink-0 text-xs">
@@ -728,6 +789,15 @@ export function RequiredCoursesScreen({
                   {notice}
                 </p>
               ) : null}
+              {scienceGaps.length ? (
+                <p
+                  role="status"
+                  className="border-l-4 border-red-500 bg-red-50 p-3 text-sm font-semibold leading-6 text-red-800 dark:border-red-400 dark:bg-red-950/40 dark:text-red-200"
+                >
+                  {scienceSequenceMessage(scienceGaps)} 기초 과목을 먼저 듣는
+                  것을 추천해요.
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                 <Button
                   variant="outline"
@@ -745,7 +815,7 @@ export function RequiredCoursesScreen({
                     onClick={confirmRequired}
                   >
                     {universities.length
-                      ? '현재 선택으로 확정 · 나머지는 다음 단계에서'
+                      ? '현재 선택으로 확정'
                       : '필수 과목 확정 · 2단계로'}
                   </Button>
                 ) : (
@@ -760,7 +830,7 @@ export function RequiredCoursesScreen({
                     onClick={advance}
                   >
                     {stage.kind === 'core'
-                      ? '코어 확정'
+                      ? '다음 단계로'
                       : stage.kind === 'career'
                         ? '진로 과목 확정 · 필수 이수 확인'
                         : '이 선택 확정 · 다음'}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Sparkles } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,15 +11,17 @@ import {
   scienceSequenceMessage,
 } from '@/features/subject-selection/science-sequence';
 
+import { basicCreditStatus } from '../_lib/basic-credit-limit';
 import type { ConfirmedAdjustment } from '../_lib/confirmed-adjustment';
 import { removedCourseIds } from '../_lib/counseling-question';
-import { buildStandardDraft } from '../_lib/course-selection-draft';
+import { buildStandardDraft, type StandardDraftTerm } from '../_lib/course-selection-draft';
 import { swapProblem } from '../_lib/course-swap';
 import type { ConfirmedCurriculum } from '../_lib/curriculum';
 
 import { StandardDraftPlan } from './_components/StandardDraftPlan';
 import { CombinedMajorScreen } from './CombinedMajorScreen';
 import { CourseCounselingScreen } from './CourseCounselingScreen';
+import { FinalCoursePlanScreen } from './FinalCoursePlanScreen';
 
 export type DraftTypeId = 'standard' | 'story' | 'combined-major';
 
@@ -65,6 +67,7 @@ export function CourseDraftScreen({
   profile,
   confirmedCourseIds,
   onAdjustConfirmed,
+  onFinalizedChange,
 }: {
   schoolName: string;
   department: string;
@@ -72,7 +75,18 @@ export function CourseDraftScreen({
   profile: PriorityProfile | null;
   confirmedCourseIds: string[];
   onAdjustConfirmed: (proposal: ConfirmedAdjustment) => string | null;
+  onFinalizedChange?: (finalized: boolean) => void;
 }) {
+  const [finalPlan, setFinalPlan] = useState<{ terms: StandardDraftTerm[]; secondaryDepartment?: string } | null>(null);
+  function finalize(terms: StandardDraftTerm[], secondaryDepartment?: string) {
+    const status = basicCreditStatus(curriculum, [
+      ...curriculum.priorRequiredCourses,
+      ...terms.flatMap((term) => [...term.requiredCourses, ...term.confirmedCourses.map((item) => item.course), ...term.recommendedCourses.map((item) => item.course)]),
+    ]);
+    if (status.exceeded || terms.some((term) => term.unfilledCount > 0)) return;
+    setFinalPlan({ terms: structuredClone(terms), secondaryDepartment });
+    onFinalizedChange?.(true);
+  }
   const [selectedDraftId, setSelectedDraftId] = useState<DraftTypeId | null>(
     null,
   );
@@ -126,7 +140,9 @@ export function CourseDraftScreen({
   ]);
 
   return (
-    <section className="w-full min-w-0 space-y-8">
+    <>
+      {finalPlan && <FinalCoursePlanScreen schoolName={schoolName} department={department} terms={finalPlan.terms} secondaryDepartment={finalPlan.secondaryDepartment} onEdit={() => { setFinalPlan(null); onFinalizedChange?.(false); }} />}
+    <section hidden={!!finalPlan} className="w-full min-w-0 space-y-8">
       <header className="border-b pb-5">
         <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Building2 className="size-4" aria-hidden="true" />
@@ -229,6 +245,7 @@ export function CourseDraftScreen({
               </>
             ) : selectedDraft.id === 'combined-major' ? (
               <CombinedMajorScreen
+                onFinalize={finalize}
                 curriculum={curriculum}
                 department={department}
                 profile={profile}
@@ -254,6 +271,8 @@ export function CourseDraftScreen({
 
           {selectedDraft.id === 'standard' && (
             <CourseCounselingScreen
+              onFinalize={() => finalize(standardDraft)}
+              unfilledCount={standardDraft.reduce((sum, term) => sum + term.unfilledCount, 0)}
               curriculum={curriculum}
               department={department}
               profile={profile}
@@ -271,11 +290,7 @@ export function CourseDraftScreen({
           )}
         </>
       )}
-
-      <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <Sparkles className="size-3.5" aria-hidden="true" />
-        유형 2는 준비 중이며, 유형 3은 검토용 초안입니다.
-      </p>
     </section>
+    </>
   );
 }

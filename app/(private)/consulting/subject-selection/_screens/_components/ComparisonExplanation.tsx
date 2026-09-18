@@ -35,7 +35,6 @@ export function ComparisonExplanation({
   const sections = current
     ? [['현재 과목과 전공', explanation.currentConnection]]
     : [
-        ['기본 추천', explanation.recommendation],
         ['대안 과목과 전공', explanation.alternativeConnection],
         ['교체 시 고려할 점', explanation.tradeoff],
         ['선택 기준', explanation.decisionGuide],

@@ -10,15 +10,18 @@ import { RequiredCoursesScreen } from '../_screens/RequiredCoursesScreen';
 export function CourseSelectionSession({
   curriculum,
   onRequiredConfirmed,
+  onFinalizedChange,
 }: {
   curriculum: ConfirmedCurriculum;
   onRequiredConfirmed?: () => void;
+  onFinalizedChange?: (finalized: boolean) => void;
 }) {
   const session = useCourseSelectionSession(curriculum, onRequiredConfirmed);
   if (session.confirmed)
     return (
       <TooltipProvider>
         <CourseDraftScreen
+          onFinalizedChange={onFinalizedChange}
           schoolName={curriculum.schoolName}
           department={session.department}
           curriculum={curriculum}

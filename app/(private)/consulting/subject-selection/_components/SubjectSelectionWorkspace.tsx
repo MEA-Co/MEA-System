@@ -38,6 +38,8 @@ export function SubjectSelectionWorkspace() {
   const [currentStep, setCurrentStep] = useState<ConsultingStep>(0);
   const [introStep, setIntroStep] = useState<IntroStep | null>(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [finalized, setFinalized] = useState(false);
+  const completedSteps = finalized ? 3 : currentStep;
   const expanded = introStep !== null || detailsOpen;
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export function SubjectSelectionWorkspace() {
   }
 
   function confirmCurriculum(curriculum: ConfirmedCurriculum) {
+    setFinalized(false);
     setConfirmedCurriculum(curriculum);
     finishIntro();
     setCurrentStep(1);
@@ -86,11 +89,11 @@ export function SubjectSelectionWorkspace() {
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold" aria-live="polite">
-            현재 Step {currentStep} · {consultingSteps[currentStep].title}
+            {finalized ? '과목 선택 완료 · 100%' : `현재 Step ${currentStep} · ${consultingSteps[currentStep].title}`}
           </p>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">
-              전체 3스텝 중 {currentStep}스텝 완료
+              전체 3스텝 중 {completedSteps}스텝 완료
             </span>
             {introStep === null ? (
               <Button
@@ -118,8 +121,8 @@ export function SubjectSelectionWorkspace() {
           aria-label="전체 진행도"
           aria-valuemin={0}
           aria-valuemax={3}
-          aria-valuenow={currentStep}
-          aria-valuetext={`${currentStep}개 스텝 완료. 현재 Step ${currentStep} ${consultingSteps[currentStep].title}`}
+          aria-valuenow={completedSteps}
+          aria-valuetext={finalized ? '전체 3스텝 완료. 100%' : `${currentStep}개 스텝 완료. 현재 Step ${currentStep} ${consultingSteps[currentStep].title}`}
           className={cn(
             'h-2 overflow-hidden rounded-full bg-muted',
             expanded && 'mb-4',
@@ -127,7 +130,7 @@ export function SubjectSelectionWorkspace() {
         >
           <div
             className="h-full rounded-full bg-emerald-600 transition-[width] duration-300"
-            style={{ width: `${(currentStep / 3) * 100}%` }}
+            style={{ width: `${(completedSteps / 3) * 100}%` }}
           />
         </div>
         <div id="consulting-step-details" hidden={!expanded}>
@@ -135,17 +138,17 @@ export function SubjectSelectionWorkspace() {
             {consultingSteps.map((step, index) => (
               <li
                 key={step.title}
-                aria-current={currentStep === index ? 'step' : undefined}
+                aria-current={!finalized && currentStep === index ? 'step' : undefined}
                 className={cn(
                   'min-w-0 rounded-lg border p-3',
-                  index < currentStep && 'border-emerald-200 bg-emerald-50/50',
-                  index === currentStep && 'border-emerald-600 bg-emerald-50',
+                  index < completedSteps && 'border-emerald-200 bg-emerald-50/50',
+                  !finalized && index === currentStep && 'border-emerald-600 bg-emerald-50',
                   introStep === index && tutorialHighlight,
                 )}
               >
                 <p className="flex items-center justify-between gap-2 text-xs font-semibold text-muted-foreground">
                   <span>Step {index}</span>
-                  {index < currentStep ? (
+                  {index < completedSteps ? (
                     <Check
                       className="size-4 text-emerald-700"
                       aria-label="완료"
@@ -272,6 +275,7 @@ export function SubjectSelectionWorkspace() {
         <CourseSelectionSession
           curriculum={confirmedCurriculum}
           onRequiredConfirmed={() => setCurrentStep(2)}
+          onFinalizedChange={setFinalized}
         />
       ) : (
         <CurriculumSetupScreen

@@ -1,3 +1,4 @@
+import { allowsDomainRecommendation } from '@/features/subject-selection/course-priority-policy';
 import {
   courseDomainMatches,
   normalizeCourseName,
@@ -5,6 +6,7 @@ import {
   ruleMatchesCourse,
   type UniversityMatch,
 } from '@/features/subject-selection/recommendations';
+import { universityRuleStatus } from '@/features/subject-selection/university-status';
 
 import type {
   CurriculumCourse,
@@ -50,11 +52,17 @@ export const graduationAreaRequirements: GraduationAreaRequirement[] = [
   },
 ];
 
+const catalogByName = new Map<
+  string,
+  (typeof subjectSelectionCourses)[number]
+>();
+for (const course of subjectSelectionCourses) {
+  const key = normalizeCourseName(course.name);
+  if (!catalogByName.has(key)) catalogByName.set(key, course);
+}
+
 export function catalogCourseFor(course: CurriculumCourse) {
-  return subjectSelectionCourses.find(
-    (candidate) =>
-      normalizeCourseName(candidate.name) === normalizeCourseName(course.name),
-  );
+  return catalogByName.get(normalizeCourseName(course.name));
 }
 
 export function courseDescriptor(course: CurriculumCourse) {
@@ -108,13 +116,47 @@ export function graduationAreaForCourse(
   return null;
 }
 
+function universityTagStatuses(
+  matches: UniversityMatch[],
+  completedCourses: readonly CurriculumCourse[],
+) {
+  const completed = completedCourses.map(courseDescriptor);
+  return new Map(
+    matches.map((match) => [
+      match,
+      new Map(
+        match.rules.map((rule) => [
+          rule,
+          universityRuleStatus(rule, completed),
+        ]),
+      ),
+    ]),
+  );
+}
+
+export function createCourseTagger(
+  profile: PriorityProfile | null,
+  matches: UniversityMatch[],
+  completed: readonly CurriculumCourse[],
+) {
+  const statuses = universityTagStatuses(matches, completed);
+  return (course: CurriculumCourse) =>
+    getCourseTags(course, profile, matches, [], completed, statuses);
+}
+
 export function getCourseTags(
   course: CurriculumCourse,
   profile: PriorityProfile | null,
   universityMatches: UniversityMatch[],
   graduationNeeds: GraduationAreaRequirement[] = [],
   completedCourses?: readonly CurriculumCourse[],
+  preparedStatuses?: ReturnType<typeof universityTagStatuses>,
 ) {
+  const statuses =
+    preparedStatuses ??
+    (completedCourses
+      ? universityTagStatuses(universityMatches, completedCourses)
+      : undefined);
   const tags: CourseTag[] = [];
   const descriptor = courseDescriptor(course);
   const isCore = profile?.core.some((name) => sameCourse(name, course.name));
@@ -130,6 +172,7 @@ export function getCourseTags(
     profile &&
     (profile.recommendCourses?.some((name) => sameCourse(name, course.name)) ||
       (descriptor.domain &&
+        allowsDomainRecommendation(course.name, profile) &&
         profile.recommendDomains.some((domain) =>
           courseDomainMatches(domain, descriptor.domain!),
         )))
@@ -138,21 +181,30 @@ export function getCourseTags(
   }
 
   for (const match of universityMatches) {
+    const matchStatuses = statuses?.get(match);
+    const universitySatisfied = matchStatuses
+      ? [...matchStatuses.values()].every((status) => status.satisfied)
+      : false;
     const matchingRules = match.rules.filter((rule) => {
       if (!ruleMatchesCourse(rule, descriptor)) return false;
       // Keep candidate membership stable; only callers rendering tags supply completion.
-      if (rule.choose === undefined || !completedCourses) return true;
-      const selectedNames = new Set(
-        completedCourses
-          .filter((item) => ruleMatchesCourse(rule, courseDescriptor(item)))
-          .map((item) => normalizeCourseName(item.name)),
-      );
-      const satisfied =
-        selectedNames.size >= rule.choose &&
-        (rule.requiredCourses ?? []).every((name) =>
-          selectedNames.has(normalizeCourseName(name)),
-        );
-      return !satisfied;
+      if (!matchStatuses || (rule.choose === undefined && !rule.domain))
+        return true;
+      const status = matchStatuses.get(rule)!;
+      // Tag visibility only; do not turn autonomous guidance into a university requirement.
+      if (
+        match.university === '연세대' &&
+        rule.domain === '과학' &&
+        rule.selectionType === 'general' &&
+        rule.choose === undefined &&
+        status.target === 0 &&
+        !rule.requiredCourses?.length
+      )
+        return status.count === 0;
+      // An unrestricted domain is guidance, not an invented course-count requirement.
+      if (status.target === 0 && !rule.requiredCourses?.length)
+        return !universitySatisfied;
+      return !status.satisfied;
     });
     if (!matchingRules.length) continue;
     const category = matchingRules.some((rule) => rule.category === 'core')

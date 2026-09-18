@@ -516,6 +516,123 @@ test('새 내부 유형에서도 기존 대학별 권장과목 매칭이 유지�
   }
 });
 
+test('문과 Core와 Sub core는 계열 안에서도 학과별 기초와 방향을 구분한다', () => {
+  const policies = [
+    [
+      '국어국문학과',
+      ['주제 탐구 독서'],
+      ['독서 토론과 글쓰기', '언어생활 탐구'],
+    ],
+    [
+      '영어영문학과',
+      ['주제 탐구 독서'],
+      ['독서 토론과 글쓰기', '언어생활 탐구', '영미 문학 읽기'],
+    ],
+    ['사학과', ['세계사'], ['동아시아 역사 기행', '역사로 탐구하는 현대 세계']],
+    [
+      '철학과',
+      ['윤리와 사상'],
+      ['인간과 철학', '논리와 사고', '인문학과 윤리'],
+    ],
+    [
+      '윤리교육과',
+      ['윤리와 사상', '현대사회와 윤리'],
+      ['윤리문제 탐구', '인간과 철학'],
+    ],
+    [
+      '정치외교학과',
+      ['정치'],
+      ['법과 사회', '국제 관계의 이해', '사회와 문화'],
+    ],
+    [
+      '행정학과',
+      ['정치', '사회와 문화'],
+      ['법과 사회', '경제', '사회문제 탐구'],
+    ],
+    ['법학과', ['법과 사회', '정치'], ['현대사회와 윤리', '논리와 사고']],
+    [
+      '경제학과',
+      ['경제', '경제수학'],
+      ['확률과 통계', '실용 통계', '금융과 경제생활', '미적분 II'],
+    ],
+    [
+      '경영학과',
+      ['경제'],
+      ['경제수학', '확률과 통계', '사회와 문화', '인간과 심리', '미적분 II'],
+    ],
+    [
+      '무역학과',
+      ['경제'],
+      ['세계시민과 지리', '국제 관계의 이해', '경제수학'],
+    ],
+    [
+      '국제통상학과',
+      ['경제'],
+      ['세계시민과 지리', '국제 관계의 이해', '경제수학'],
+    ],
+    ['국제학과', ['정치'], ['경제', '국제 관계의 이해', '세계시민과 지리']],
+    ['사회학과', ['사회와 문화'], ['사회문제 탐구', '실용 통계']],
+    [
+      '사회복지학과',
+      ['사회와 문화'],
+      ['사회문제 탐구', '인간과 심리', '현대사회와 윤리'],
+    ],
+    [
+      '심리학과',
+      ['사회와 문화', '확률과 통계'],
+      ['인간과 심리', '실용 통계', '생명과학'],
+    ],
+    [
+      '상담심리학과',
+      ['사회와 문화', '확률과 통계'],
+      ['인간과 심리', '실용 통계', '생명과학'],
+    ],
+    [
+      '미디어학과',
+      ['사회와 문화'],
+      ['매체 의사소통', '독서 토론과 글쓰기', '문학과 영상'],
+    ],
+    [
+      '광고홍보학과',
+      ['사회와 문화'],
+      ['매체 의사소통', '인간과 심리', '경제', '실용 통계', '문학과 영상'],
+    ],
+  ];
+  for (const [department, core, subCore] of policies) {
+    const profile = findPriorityProfile(department).profile;
+    assert.equal(profile.matchedDepartment, department);
+    assert.deepEqual(profile.core, core, department);
+    assert.deepEqual(profile.subCore, subCore, department);
+    assert.deepEqual(profile.coreChoices, [], department);
+    assert.ok(
+      !profile.subCore.some((name) => profile.core.includes(name)),
+      department,
+    );
+  }
+  for (const department of [
+    '불어불문학과',
+    '독어독문학과',
+    '중어중문학과',
+    '일어일문학과',
+  ]) {
+    assert.ok(
+      !findPriorityProfile(department).profile.subCore.includes(
+        '영미 문학 읽기',
+      ),
+    );
+  }
+  assert.deepEqual(findPriorityProfile('광고홍보학부').profile.core, [
+    '사회와 문화',
+  ]);
+  assert.deepEqual(
+    findPriorityProfile('언론정보학과').profile.subCore,
+    findPriorityProfile('신문방송학과').profile.subCore,
+  );
+  // Department overrides must not mutate the shared family for subsequent lookups.
+  assert.deepEqual(findPriorityProfile('정치학과').profile.core, ['정치']);
+  assert.deepEqual(findPriorityProfile('철학과').profile.core, ['윤리와 사상']);
+});
+
 test('추천 과목군은 편제표의 확장 교과 영역 표기도 함께 매칭한다', () => {
   const profile = findPriorityProfile('경영학과')?.profile;
   assert.ok(profile);

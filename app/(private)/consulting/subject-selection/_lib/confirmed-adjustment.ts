@@ -4,7 +4,7 @@ import {
 } from '@/features/subject-selection/recommendations';
 import { scienceSequenceGaps } from '@/features/subject-selection/science-sequence';
 
-import { buildCombinedMajorDraft, type MajorBalance } from './combined-major';
+import { buildCombinedMajorDraft } from './combined-major';
 import { buildStandardDraft } from './course-selection-draft';
 import { sameCourse } from './course-selection-utils';
 import { allocatedCourses, swapProblem } from './course-swap';
@@ -127,7 +127,6 @@ export function findConfirmedAdjustment(
   ids: string[],
   primary: PriorityProfile,
   secondary: PriorityProfile,
-  balance: MajorBalance,
   recommendedIds: string[],
 ) {
   const baseline = buildStandardDraft(curriculum, ids, primary);
@@ -142,7 +141,6 @@ export function findConfirmedAdjustment(
     ids,
     primary,
     secondary,
-    balance,
     recommendedIds,
   );
   const queue = [{ ids, swaps: [] as ConfirmedSwap[], result: initial }];
@@ -162,6 +160,11 @@ export function findConfirmedAdjustment(
       ...assessment.missing,
       ...assessment.choices.flatMap((rule) => rule.courses),
     ]);
+    missing.push(
+      ...state.result.depth.method.groups
+        .filter((group) => group.count < group.choose)
+        .flatMap((group) => [...group.courses]),
+    );
     const targets = [
       ...missing,
       ...scienceSequenceGaps(missing.map((name) => ({ name }))).map(
@@ -216,7 +219,6 @@ export function findConfirmedAdjustment(
               nextIds,
               primary,
               secondary,
-              balance,
               recommendedIds,
             );
             const completed = allocatedCourses(curriculum, [
@@ -232,7 +234,11 @@ export function findConfirmedAdjustment(
               completed,
             );
             if (result.status !== 'review')
-              result.status = result.depth.supported ? 'both' : 'focused';
+              result.status = result.depth.supported
+                ? 'both'
+                : result.depth.humanities
+                  ? 'review'
+                  : 'focused';
             const swaps = [
               ...state.swaps,
               { from, to, term: term.label, group: group.name, compensations },

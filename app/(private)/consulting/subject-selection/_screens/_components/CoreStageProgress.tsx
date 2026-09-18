@@ -20,9 +20,6 @@ export function CoreStageProgress({
       id="required-stage-intro"
       className="relative grid grid-cols-2 gap-x-2 scroll-mt-4 md:grid-cols-4"
     >
-      {stageIntro ? (
-        <div className="fixed inset-0 z-30 bg-black/20" aria-hidden="true" />
-      ) : null}
       <ol
         aria-label="필수 과목 확정 순서"
         className={cn('col-span-full grid grid-cols-2 gap-2 md:grid-cols-4')}

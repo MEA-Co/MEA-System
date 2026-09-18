@@ -74,8 +74,11 @@ export function CareerGuide({
             확인할 수 있어요.
           </p>
           <p>
-            지금은 모든 자리를 채우는 단계가 아닙니다. 이 학과를 위해 꼭 듣기로
-            한 과목만 고르고, 고민되는 과목은 다음 단계로 남겨주세요.
+            지금은 모든 자리를 채우는 단계가 아닙니다.{' '}
+            <strong className="font-semibold text-red-700 dark:text-red-400">
+              이 학과를 위해 꼭 들을 과목만 고르고, 고민되는 과목은 다음 단계로
+              넘겨주세요.
+            </strong>
           </p>
         </div>
       ) : null}

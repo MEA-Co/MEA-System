@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PriorityProfile } from '@/features/subject-selection/recommendations';
 
+import type { CounselingMajor } from '../../_lib/combined-comparison';
 import {
   type CounselingIntent,
   courseQuestionSummary,
@@ -21,6 +22,7 @@ export function CourseQuestionEntry({
   confirmedIds,
   recommendedIds,
   profile,
+  secondaryMajor,
   intent,
   fromId,
   toId,
@@ -35,6 +37,7 @@ export function CourseQuestionEntry({
   confirmedIds: string[];
   recommendedIds: string[];
   profile: PriorityProfile | null;
+  secondaryMajor?: CounselingMajor;
   intent: CounselingIntent;
   fromId: string;
   toId: string;
@@ -94,6 +97,11 @@ export function CourseQuestionEntry({
             {primary?.course.name} · 메아 기준 안내
           </p>
           <p className="mt-2">{summary.recommendation}</p>
+          {secondaryMajor && primary && (
+            <p className="mt-2">
+              {secondaryMajor.department} 병행 기준: {courseQuestionSummary(primary.course, secondaryMajor.profile).recommendation}
+            </p>
+          )}
           {summary.content && (
             <p className="mt-2 text-muted-foreground">{summary.content}</p>
           )}

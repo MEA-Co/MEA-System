@@ -1,3 +1,5 @@
+import { recommendationFocus } from './recommendation-focus';
+
 export type PriorityProfileId =
   | 'math'
   | 'math-computing'
@@ -24,12 +26,20 @@ export type PriorityProfileId =
   | 'media';
 
 export type PriorityProfile = {
+  matchedDepartment?: string;
   id: PriorityProfileId;
   label: string;
   departments: string[];
   core: string[];
   subCore: string[];
   recommendCourses?: string[];
+  breadthCourses?: string[];
+  draftRecommendationGroups?: {
+    courses: string[];
+    preferCount: number;
+    reason: string;
+  }[];
+  withinTierPreferences?: { courses: string[]; reason: string }[];
   recommendDomains: string[];
   coreChoices?: CoreChoice[];
 };
@@ -47,10 +57,64 @@ const chemistryAdvanced = ['물질과 에너지', '화학 반응의 세계'];
 const biologyAdvanced = ['세포와 물질대사', '생물의 유전'];
 const earthAdvanced = ['지구시스템과학', '행성우주과학'];
 
+const humanitiesDepartmentPolicies: Record<
+  string,
+  Pick<PriorityProfile, 'core' | 'subCore'>
+> = {
+  영어영문학과: {
+    core: ['주제 탐구 독서'],
+    subCore: ['독서 토론과 글쓰기', '언어생활 탐구', '영미 문학 읽기'],
+  },
+  윤리교육과: {
+    core: ['윤리와 사상', '현대사회와 윤리'],
+    subCore: ['윤리문제 탐구', '인간과 철학'],
+  },
+  행정학과: {
+    core: ['정치', '사회와 문화'],
+    subCore: ['법과 사회', '경제', '사회문제 탐구'],
+  },
+  법학과: {
+    core: ['법과 사회', '정치'],
+    subCore: ['현대사회와 윤리', '논리와 사고'],
+  },
+  경영학과: {
+    core: ['경제'],
+    subCore: [
+      '경제수학',
+      '확률과 통계',
+      '사회와 문화',
+      '인간과 심리',
+      '미적분 II',
+    ],
+  },
+  국제학과: {
+    core: ['정치'],
+    subCore: ['경제', '국제 관계의 이해', '세계시민과 지리'],
+  },
+  사회복지학과: {
+    core: ['사회와 문화'],
+    subCore: ['사회문제 탐구', '인간과 심리', '현대사회와 윤리'],
+  },
+  광고홍보학과: {
+    core: ['사회와 문화'],
+    subCore: [
+      '매체 의사소통',
+      '인간과 심리',
+      '경제',
+      '실용 통계',
+      '문학과 영상',
+    ],
+  },
+};
+
 function applyCorePolicy(
   profile: PriorityProfile,
   department: string,
 ): PriorityProfile {
+  const departmentPolicy = Object.entries(humanitiesDepartmentPolicies).find(
+    ([name]) => normalizeDepartment(name) === normalizeDepartment(department),
+  )?.[1];
+  if (departmentPolicy) profile = { ...profile, ...departmentPolicy };
   const core = [...profile.core];
   const choices: CoreChoice[] = [];
   const addChoice = (
@@ -107,6 +171,7 @@ function applyCorePolicy(
     addChoice([...biologyAdvanced, ...chemistryAdvanced], 2);
   return {
     ...profile,
+    ...recommendationFocus(profile, department),
     core: [...new Set(core)],
     subCore: profile.subCore.filter((name) => !core.includes(name)),
     coreChoices: choices,
@@ -363,6 +428,13 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     departments: ['건축학과'],
     core: ['미적분 II', '기하'],
     subCore: ['물리학', '역학과 에너지', '지구과학'],
+    withinTierPreferences: [
+      {
+        courses: ['세계시민과 지리', '한국지리 탐구', '도시의 미래 탐구'],
+        reason:
+          '건축학의 공간·지역·생활환경 탐구와 직접 연결되어 같은 추천 등급에서 우선합니다.',
+      },
+    ],
     recommendDomains: ['과학', '수학', '예술', '사회'],
   },
   {
@@ -378,31 +450,31 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
       '어문학과',
     ],
     core: ['주제 탐구 독서'],
-    subCore: ['독서 토론과 글쓰기', '영미 문학 읽기'],
+    subCore: ['독서 토론과 글쓰기', '언어생활 탐구'],
     recommendDomains: ['국어', '영어', '사회', '제2외국어'],
   },
   {
     id: 'history',
     label: '사학과',
     departments: ['사학과', '역사학과', '국사학과'],
-    core: ['세계사', '동아시아 역사 기행'],
-    subCore: ['역사로 탐구하는 현대 세계'],
+    core: ['세계사'],
+    subCore: ['동아시아 역사 기행', '역사로 탐구하는 현대 세계'],
     recommendDomains: ['사회'],
   },
   {
     id: 'philosophy',
     label: '철학과',
     departments: ['철학과', '윤리교육과'],
-    core: ['현대사회와 윤리', '윤리와 사상'],
-    subCore: ['인문학과 윤리', '윤리문제 탐구', '인간과 철학', '논리와 사고'],
+    core: ['윤리와 사상'],
+    subCore: ['인간과 철학', '논리와 사고', '인문학과 윤리'],
     recommendDomains: ['사회'],
   },
   {
     id: 'politics-law',
     label: '정치·행정·법',
     departments: ['정치외교학과', '행정학과', '법학과', '정치학과'],
-    core: ['정치', '법과 사회'],
-    subCore: ['현대사회와 윤리', '사회와 문화', '윤리와 사상'],
+    core: ['정치'],
+    subCore: ['법과 사회', '국제 관계의 이해', '사회와 문화'],
     recommendDomains: ['사회'],
   },
   {
@@ -410,15 +482,15 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '경제',
     departments: ['경제학과', '경제금융학과'],
     core: ['경제', '경제수학'],
-    subCore: ['금융과 경제생활'],
+    subCore: ['확률과 통계', '실용 통계', '금융과 경제생활', '미적분 II'],
     recommendDomains: ['사회', '수학'],
   },
   {
     id: 'business-global',
     label: '경영·무역·국제',
     departments: ['경영학과', '무역학과', '국제학과', '국제통상학과'],
-    core: ['경제', '경제수학'],
-    subCore: ['세계시민과 지리', '국제 관계의 이해', '금융과 경제생활'],
+    core: ['경제'],
+    subCore: ['세계시민과 지리', '국제 관계의 이해', '경제수학'],
     recommendDomains: ['사회', '수학'],
   },
   {
@@ -426,23 +498,23 @@ export const PRIORITY_PROFILES: PriorityProfile[] = [
     label: '사회학',
     departments: ['사회학과', '사회복지학과'],
     core: ['사회와 문화'],
-    subCore: ['사회문제 탐구'],
+    subCore: ['사회문제 탐구', '실용 통계'],
     recommendDomains: ['사회'],
   },
   {
     id: 'psychology',
     label: '심리학',
     departments: ['심리학과', '상담심리학과'],
-    core: ['사회와 문화'],
-    subCore: ['인간과 심리'],
-    recommendDomains: ['사회', '과학'],
+    core: ['사회와 문화', '확률과 통계'],
+    subCore: ['인간과 심리', '실용 통계', '생명과학'],
+    recommendDomains: ['사회', '과학', '수학'],
   },
   {
     id: 'media',
     label: '미디어',
     departments: ['미디어학과', '언론정보학과', '신문방송학과', '광고홍보학과'],
-    core: ['문학과 영상'],
-    subCore: ['매체 의사소통'],
+    core: ['사회와 문화'],
+    subCore: ['매체 의사소통', '독서 토론과 글쓰기', '문학과 영상'],
     recommendDomains: ['사회', '국어', '정보'],
   },
 ];
@@ -1366,7 +1438,13 @@ export function findPriorityProfile(department: string) {
     (a, b) =>
       departmentSimilarity(department, b) - departmentSimilarity(department, a),
   )[0];
-  return { ...best, profile: applyCorePolicy(best.profile, matchedDepartment) };
+  return {
+    ...best,
+    profile: {
+      ...applyCorePolicy(best.profile, matchedDepartment),
+      matchedDepartment,
+    },
+  };
 }
 
 export function findUniversityMatches(

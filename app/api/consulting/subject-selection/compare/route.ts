@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const parsed = comparisonRequestSchema.safeParse(raw);
     if (!parsed.success)
       return reply(
-        { error: '과목이나 고민 내용의 입력 길이를 확인해 주세요.' },
+        { error: '학과·과목과 고민 내용의 입력을 확인해 주세요.' },
         400,
       );
     if (

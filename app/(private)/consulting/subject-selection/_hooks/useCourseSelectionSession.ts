@@ -59,9 +59,11 @@ export function useCourseSelectionSession(
   const [stageIntro, setStageIntro] = useState<StageIntro>(null);
   const [requirementGuideStep, setRequirementGuideStep] =
     useState<RequirementGuideStep | null>(null);
-  const profile = department
-    ? (findPriorityProfile(department)?.profile ?? null)
-    : null;
+  const profile = useMemo(
+    () =>
+      department ? (findPriorityProfile(department)?.profile ?? null) : null,
+    [department],
+  );
   const universities = useMemo(
     () =>
       department ? findUniversityMatches(department, profile?.id ?? null) : [],
@@ -116,12 +118,15 @@ export function useCourseSelectionSession(
       ]),
     [curriculum],
   );
-  const completed = [
-    ...curriculum.priorRequiredCourses,
-    ...occurrences
-      .filter((item) => item.required || selected.has(item.course.id))
-      .map((item) => item.course),
-  ];
+  const completed = useMemo(
+    () => [
+      ...curriculum.priorRequiredCourses,
+      ...occurrences
+        .filter((item) => item.required || selected.has(item.course.id))
+        .map((item) => item.course),
+    ],
+    [curriculum.priorRequiredCourses, occurrences, selected],
+  );
   const coreNames = profile?.core ?? [];
   const coreChoices = coreChoiceStatuses(profile, completed);
   const missingCoreChoices = coreChoices.some((rule) => !rule.satisfied);
@@ -300,6 +305,16 @@ export function useCourseSelectionSession(
   }
 
   function disabledReason(item: CourseOccurrence) {
+    if (item.required) return '학교지정 · 고정';
+    if (locked.has(item.course.id)) return '이전 단계 확정 · 고정';
+    if (
+      selected.has(item.course.id) &&
+      isCore(item) &&
+      occurrences.filter((other) =>
+        sameCourse(other.course.name, item.course.name),
+      ).length === 1
+    )
+      return '필수 코어 · 자동 확정';
     if (selected.has(item.course.id)) return '';
     if (
       occurrences.some(
@@ -321,7 +336,7 @@ export function useCourseSelectionSession(
   }
 
   function toggle(item: CourseOccurrence) {
-    if (item.required || locked.has(item.course.id)) return;
+    if (disabledReason(item)) return;
     if (selected.has(item.course.id)) {
       const newGaps = scienceSequenceGaps(
         completed.filter((course) => course.id !== item.course.id),
@@ -364,7 +379,7 @@ export function useCourseSelectionSession(
       stage.kind === 'career' &&
       scienceGaps.length &&
       !window.confirm(
-        `${scienceSequenceMessage(scienceGaps)} 기초 과목을 먼저 듣는 것을 추천합니다. 학교의 이수 순서를 확인해 주세요. 기초 과목 없이 현재 선택을 유지하고 넘어갈까요?`,
+        `${scienceSequenceMessage(scienceGaps)} 기초 과목을 먼저 듣는 것을 추천합니다. 기초 과목 없이 현재 선택을 유지하고 넘어갈까요?`,
       )
     )
       return;

@@ -1,3 +1,4 @@
+import { majorMethodRelationship } from '@/features/subject-selection/major-relationships';
 import {
   coreChoiceStatuses,
   type PriorityProfile,
@@ -7,20 +8,27 @@ import {
   scienceSequenceGaps,
 } from '@/features/subject-selection/science-sequence';
 
-import { buildStandardDraft } from './course-selection-draft';
+import {
+  basicCreditKind,
+  basicCreditProblem,
+  basicCreditStatus,
+} from './basic-credit-limit';
+import {
+  buildStandardDraft,
+  withUnselectedGroups,
+} from './course-selection-draft';
 import { sameCourse } from './course-selection-utils';
 import { allocatedCourses, priority } from './course-swap';
 import type { ConfirmedCurriculum, CurriculumCourse } from './curriculum';
 import { evaluateMajorDepth, majorDepthEvidence } from './major-depth';
 
-export type MajorBalance = 'primary' | 'equal';
+export const PRIMARY_MAJOR_WEIGHT = 1.5;
 
 export function buildCombinedMajorDraft(
   curriculum: ConfirmedCurriculum,
   confirmedIds: string[],
   primary: PriorityProfile,
   secondary: PriorityProfile,
-  balance: MajorBalance,
   previousRecommendedIds: string[] = [],
 ) {
   const entries = curriculum.terms.flatMap((term, termIndex) =>
@@ -50,6 +58,18 @@ export function buildCombinedMajorDraft(
         entry.group.courses.filter((course) => selected.has(course.id)).length <
         entry.group.choose
       ) {
+        const before = allocatedCourses(curriculum, [...selected]);
+        if (
+          basicCreditProblem(
+            curriculum,
+            before,
+            [...before, entry.course],
+            true,
+          )
+        ) {
+          selected = snapshot;
+          continue;
+        }
         selected.add(entry.course.id);
         return true;
       }
@@ -71,6 +91,13 @@ export function buildCombinedMajorDraft(
       }
     }
   }
+  const method = majorMethodRelationship(primary, secondary);
+  for (const group of method?.groups ?? []) {
+    for (const name of group.courses) {
+      if (group.courses.filter(has).length >= group.choose) break;
+      add(name);
+    }
+  }
   const additions = [...selected].filter((id) => !confirmedIds.includes(id));
   const score = (course: CurriculumCourse) => {
     const first = Math.max(
@@ -85,9 +112,9 @@ export function buildCombinedMajorDraft(
         ? 6
         : 0,
     );
-    return balance === 'equal' ? first + second : first * 2 + second;
+    return first * PRIMARY_MAJOR_WEIGHT + second;
   };
-  const terms = buildStandardDraft(
+  let terms = buildStandardDraft(
     curriculum,
     [...selected],
     primary,
@@ -105,6 +132,33 @@ export function buildCombinedMajorDraft(
       ...term.recommendedCourses,
     ],
   }));
+  // Recheck secondary-core additions after actual vacancies are known.
+  while (
+    basicCreditStatus(
+      curriculum,
+      allocatedCourses(curriculum, [
+        ...confirmedIds,
+        ...terms.flatMap((term) =>
+          term.recommendedCourses.map((item) => item.course.id),
+        ),
+      ]),
+    ).exceeded
+  ) {
+    const removable = terms
+      .flatMap((term) =>
+        term.recommendedCourses
+          .filter((item) => basicCreditKind(item.course) === 'basic')
+          .map((item) => ({ term, item })),
+      )
+      .sort((a, b) => score(a.item.course) - score(b.item.course))[0];
+    if (!removable) break;
+    removable.term.recommendedCourses =
+      removable.term.recommendedCourses.filter(
+        (item) => item !== removable.item,
+      );
+    removable.term.unfilledCount++;
+  }
+  terms = withUnselectedGroups(curriculum, terms);
   const recommended = terms.flatMap((term) =>
     term.recommendedCourses.map((item) => item.course),
   );
@@ -144,11 +198,16 @@ export function buildCombinedMajorDraft(
   ]);
   const depth = evaluateMajorDepth(primary, secondary, baseline, completed);
   const status =
-    missingCore || gaps.length
+    basicCreditStatus(curriculum, completed).exceeded ||
+    missingCore ||
+    gaps.length ||
+    (depth.method.relationship && !depth.method.satisfied)
       ? 'review'
       : depth.supported
         ? 'both'
-        : 'focused';
+        : depth.humanities
+          ? 'review'
+          : 'focused';
   return {
     terms,
     assessments,

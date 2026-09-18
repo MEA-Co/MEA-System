@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  COMPARISON_VERSION,
   type ComparisonRequest,
   type ComparisonResponse,
   validateComparisonResponse,
@@ -26,7 +27,8 @@ export function useComparisonExplanation() {
 
   async function explain(payload: ComparisonRequest) {
     reset();
-    const key = JSON.stringify(payload);
+    const body = JSON.stringify(payload);
+    const key = `${COMPARISON_VERSION}:${body}`;
     const cached = cache.current.get(key);
     if (cached) {
       setResult(cached);
@@ -41,7 +43,7 @@ export function useComparisonExplanation() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: key,
+          body,
           signal: active.signal,
         },
       );

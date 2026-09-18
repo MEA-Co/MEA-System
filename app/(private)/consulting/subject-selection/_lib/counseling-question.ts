@@ -11,8 +11,8 @@ import type { ConfirmedCurriculum, CurriculumCourse } from './curriculum';
 export type CounselingIntent = 'compare' | 'consider' | 'omit';
 export const counselingTemplates: { id: CounselingIntent; label: string }[] = [
   { id: 'compare', label: '두 과목 중 고민이에요' },
-  { id: 'omit', label: '이 과목을 꼭 들어야 하나요?' },
-  { id: 'consider', label: '이 과목 안 들어도 괜찮나요?' },
+  { id: 'omit', label: '추천 과목 중, 이 과목 안 듣고 싶어요' },
+  { id: 'consider', label: '미선택 과목 중, 이 과목 듣고 싶어요' },
 ];
 
 export function suggestsReducingScience(detail: string) {
@@ -37,6 +37,7 @@ export function counselingCandidates(
   explicitId: string,
   reduceScience: boolean,
   removedCourses: readonly CurriculumCourse[] = [],
+  candidateScore?: (course: CurriculumCourse) => number,
 ) {
   const explicit = eligible.find((course) => course.id === explicitId);
   const automatic = eligible
@@ -48,7 +49,7 @@ export function counselingCandidates(
         ) &&
         (!reduceScience || !isScienceCourse(course)),
     )
-    .sort((a, b) => priority(b, profile).score - priority(a, profile).score);
+    .sort((a, b) => (candidateScore?.(b) ?? priority(b, profile).score) - (candidateScore?.(a) ?? priority(a, profile).score));
   return [...(explicit ? [explicit] : []), ...automatic].slice(0, 2);
 }
 
@@ -115,9 +116,9 @@ export function courseQuestionSummary(
     ? '메아의 필수 코어에 해당하는 과목이에요. 이미 다른 학기에 반영되어 있는지 먼저 확인하고, 빠져 있다면 1단계 선택도 확인해 주세요.'
     : isCoreOption
       ? '필수 코어 선택군의 후보예요. 이 과목 자체가 무조건 필수라는 뜻은 아니며, 1단계에서 확정한 선택군 조건을 유지하면서 판단해야 해요.'
-      : rank.score === 6
-        ? '전공 관련 학습을 보완하는 Sub core라 우선 추천해요. 다만 필수 코어는 아니므로 관심 방향이나 학업 부담을 고려해 다른 과목과 비교할 수 있어요.'
-        : rank.score === 4
+      : rank.label === 'Sub core'
+        ? '전공 관련 학습을 보완하는 Sub core라 강하게 추천해요. 조금 부담되더라도 듣는 것을 추천해요. 다만 필수 코어처럼 선택이 고정되지는 않으며, 실제 학업 부담을 고려한 최종 결정은 학생에게 있어요.'
+        : rank.label === '추천 과목군'
           ? '전공의 추천 과목군에 해당해요. 관련 분야를 넓히는 선택이지만, 이 과목 하나가 반드시 필수인 것은 아니에요.'
           : '현재 전공의 필수 코어나 우선 추천 과목에는 해당하지 않아요. 관심과 탐구 방향에 도움이 된다면 선택할 수 있고, 다른 과목을 고려할 수도 있어요.';
   const catalog = catalogCourseFor(course);

@@ -1,3 +1,5 @@
+import { humanitiesRelationship } from '@/features/subject-selection/humanities-relationships';
+import { methodRelationshipStatus } from '@/features/subject-selection/major-relationships';
 import {
   normalizeCourseName,
   type PriorityProfile,
@@ -18,6 +20,14 @@ export const MAJOR_DEPTH_POLICY = {
 };
 const scienceBasics = ['물리학', '화학', '생명과학', '지구과학'];
 
+// Breadth preferences alone do not establish depth for a second major.
+function depthRecommendations(profile: PriorityProfile) {
+  return (profile.recommendCourses ?? []).filter(
+    (name) =>
+      !profile.breadthCourses?.some((breadth) => sameCourse(name, breadth)),
+  );
+}
+
 export function majorDepthEvidence(
   profile: PriorityProfile,
   course: { name: string },
@@ -35,7 +45,9 @@ export function majorDepthEvidence(
     return `${area.basic} 보완 영역의 심화`;
   if (profile.subCore.some((name) => sameCourse(name, course.name)))
     return '학과 지정 Sub core';
-  if (profile.recommendCourses?.some((name) => sameCourse(name, course.name)))
+  if (
+    depthRecommendations(profile).some((name) => sameCourse(name, course.name))
+  )
     return '학과 개별 지정 추천';
   return null;
 }
@@ -50,7 +62,7 @@ export function majorDepth(
   ];
   const depthNames = [
     ...profile.subCore,
-    ...(profile.recommendCourses ?? []),
+    ...depthRecommendations(profile),
     ...scienceAdvancedForAreas([...core, ...profile.subCore]),
   ].filter((name) => !scienceBasics.some((basic) => sameCourse(basic, name)));
   const unique = [
@@ -161,7 +173,16 @@ export function evaluateMajorDepth(
         .map((course) => [normalizeCourseName(course.name), course]),
     ).values(),
   ];
+  const method = methodRelationshipStatus(primary, secondary, combined);
+  const humanities = humanitiesRelationship(primary, secondary);
+  const connectionSupported =
+    shared.length >= MAJOR_DEPTH_POLICY.sharedFoundation ||
+    method.satisfied ||
+    !!humanities;
   return {
+    humanities,
+    method,
+    connectionSupported,
     first,
     second,
     original,
@@ -173,6 +194,6 @@ export function evaluateMajorDepth(
       second.sufficient &&
       retention !== null &&
       retention >= MAJOR_DEPTH_POLICY.primaryRetention &&
-      shared.length >= MAJOR_DEPTH_POLICY.sharedFoundation,
+      connectionSupported,
   };
 }
