@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 
-import { deleteQuestionnaire } from '../_actions/delete-questionnaire';
+import { deleteQuestionnaire } from '../actions/delete-questionnaire';
 
 export function DeleteQuestionnaireButton({
   versionId,

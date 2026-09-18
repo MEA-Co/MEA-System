@@ -11,6 +11,10 @@ import {
 import Link from 'next/link';
 
 import {
+  type DashboardView,
+  getDashboardNavigation,
+} from '@/app/(private)/dashboard/_lib/dashboard-access';
+import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -20,169 +24,82 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import type { AdminView } from '@/lib/admin';
 import type { MemberRole } from '@/lib/profile';
+
+const icons = {
+  profile: UserRound,
+  students: GraduationCap,
+  consultants: BriefcaseBusiness,
+  questionnaire: FilePenLine,
+  exploration: NotebookPen,
+  consulting: MessagesSquare,
+};
+const groups = [
+  { id: 'personal', label: null },
+  { id: 'members', label: '구성원 관리' },
+  { id: 'operations', label: '운영 관리' },
+] as const;
 
 type DashboardNavigationProps = {
   role: MemberRole;
   consultantCount?: number;
   studentCount?: number;
-  view?: AdminView | 'profile';
+  view?: DashboardView;
 };
 
 export function DashboardNavigation({
-  role = 'admin',
+  role,
   consultantCount,
   studentCount,
   view,
 }: DashboardNavigationProps) {
   const { setOpenMobile } = useSidebar();
-
-  if (role === 'student' || role === 'consultant') {
-    return (
-      <>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=profile"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'profile'}
-                >
-                  <UserRound />
-                  <span>내 정보</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {role === 'consultant' && (
-          <SidebarGroup>
-            <SidebarGroupLabel>운영 관리</SidebarGroupLabel>
+  const pages = getDashboardNavigation(role);
+  return (
+    <>
+      {groups.map((group) => {
+        const items = pages.filter((page) => page.group === group.id);
+        if (!items.length) return null;
+        return (
+          <SidebarGroup key={group.id}>
+            {group.label ? (
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            ) : null}
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    render={
-                      <Link
-                        href="/dashboard?view=exploration"
-                        onClick={() => setOpenMobile(false)}
-                      />
-                    }
-                    isActive={view === 'exploration'}
-                  >
-                    <NotebookPen />
-                    <span>탐구활동 관리</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {items.map((page) => {
+                  const Icon = icons[page.view];
+                  const count =
+                    page.view === 'students'
+                      ? studentCount
+                      : page.view === 'consultants'
+                        ? consultantCount
+                        : undefined;
+                  return (
+                    <SidebarMenuItem key={page.view}>
+                      <SidebarMenuButton
+                        render={
+                          <Link
+                            href={`/dashboard?view=${page.view}`}
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                        isActive={view === page.view}
+                      >
+                        <Icon />
+                        <span>{page.label}</span>
+                      </SidebarMenuButton>
+                      {count !== undefined ? (
+                        <SidebarMenuBadge>{count}</SidebarMenuBadge>
+                      ) : null}
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <SidebarGroup>
-        <SidebarGroupLabel>구성원 관리</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {role === 'admin' && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=students"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'students'}
-                >
-                  <GraduationCap />
-                  <span>학생 관리</span>
-                </SidebarMenuButton>
-                <SidebarMenuBadge>{studentCount}</SidebarMenuBadge>
-              </SidebarMenuItem>
-            )}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=consultants"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'consultants'}
-              >
-                <BriefcaseBusiness />
-                <span>컨설턴트 관리</span>
-              </SidebarMenuButton>
-              <SidebarMenuBadge>{consultantCount}</SidebarMenuBadge>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupLabel>운영 관리</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {role === 'consultant_lead' && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=questionnaire"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'questionnaire'}
-                >
-                  <FilePenLine />
-                  <span>질문지 관리</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {role === 'consultant_lead' && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      href="/dashboard?view=exploration"
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                  isActive={view === 'exploration'}
-                >
-                  <NotebookPen />
-                  <span>탐구활동 관리</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <Link
-                    href="/dashboard?view=consulting"
-                    onClick={() => setOpenMobile(false)}
-                  />
-                }
-                isActive={view === 'consulting'}
-              >
-                <MessagesSquare />
-                <span>컨설팅 관리</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+        );
+      })}
     </>
   );
 }

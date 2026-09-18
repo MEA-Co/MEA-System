@@ -7,13 +7,13 @@ import {
 } from '@/components/ui/card';
 import type { ManagedMember } from '@/lib/admin';
 
-import { MemberManagementTable } from './MemberManagementTable';
+import { StudentManagementTable } from './components/StudentManagementTable';
 
-type StudentManagementProps = {
+type StudentsViewProps = {
   students: ManagedMember[];
 };
 
-export function StudentManagement({ students }: StudentManagementProps) {
+export function StudentsView({ students }: StudentsViewProps) {
   return (
     <>
       <div>
@@ -31,12 +31,7 @@ export function StudentManagement({ students }: StudentManagementProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <MemberManagementTable
-            emptyMemberLabel="학생"
-            members={students}
-            secondaryColumnLabel="현재 시기"
-            secondaryValue={(student) => student.student_period ?? '미입력'}
-          />
+          <StudentManagementTable students={students} />
         </CardContent>
       </Card>
     </>

@@ -47,7 +47,7 @@ export async function deleteQuestionnaireDraft(
   return { mode: data };
 }
 
-export async function loadQuestionnaireWorkspace(requestedId?: string) {
+export async function loadQuestionnaireView(requestedId?: string) {
   await requireUserAccess({ allowedRoles: ['admin', 'consultant_lead'] });
   const client = createClient(await cookies());
   const { data, error } = await client

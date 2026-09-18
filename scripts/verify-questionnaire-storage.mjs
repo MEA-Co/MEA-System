@@ -26,7 +26,9 @@ function load(path, imports = {}, globals = {}) {
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
         if (name === './schema')
-          return load('features/questionnaires/schema.ts');
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+          );
         if (name === 'node:crypto') return { randomUUID };
         assert.ok(name in imports, `Unexpected import ${name}`);
         return imports[name];
@@ -36,9 +38,11 @@ function load(path, imports = {}, globals = {}) {
   return exports;
 }
 const { QuestionnaireSaveSession } = load(
-  'features/questionnaires/save-session.ts',
+  'app/(private)/dashboard/_views/questionnaire/lib/save-session.ts',
 );
-const { saveQuestionnaireSchema } = load('features/questionnaires/schema.ts');
+const { saveQuestionnaireSchema } = load(
+  'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+);
 
 test('first autosave synchronizes the saved URL without refresh and retains later edits for the next tick', async () => {
   const slots = [];
@@ -108,7 +112,7 @@ test('first autosave synchronizes the saved URL without refresh and retains late
     },
   };
   const { useQuestionnaireSave: runSaveHook } = load(
-    'app/(private)/dashboard/_hooks/useQuestionnaireSave.ts',
+    'app/(private)/dashboard/_views/questionnaire/hooks/useQuestionnaireSave.ts',
     {
       react,
       'next/navigation': {
@@ -119,8 +123,10 @@ test('first autosave synchronizes the saved URL without refresh and retains late
       '@/components/ui/toast': {
         toast: { add: () => 'toast', update() {}, close() {} },
       },
-      '@/features/questionnaires/save-session': { QuestionnaireSaveSession },
-      '../_actions/save-questionnaire': {
+      '@/app/(private)/dashboard/_views/questionnaire/lib/save-session': {
+        QuestionnaireSaveSession,
+      },
+      '../actions/save-questionnaire': {
         saveQuestionnaire: (request) => {
           requests.push(request);
           return new Promise((resolve) => {
@@ -314,7 +320,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
     for (const isOnboarded of [false, true]) {
       const calls = [];
       const { saveQuestionnaireDraft } = load(
-        'features/questionnaires/server.ts',
+        'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
         {
           'next/headers': { cookies: async () => ({}) },
           '@/lib/auth': {

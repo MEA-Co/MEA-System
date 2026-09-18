@@ -12,15 +12,15 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import type {
   QuestionnaireDraft,
   QuestionnaireSection as Section,
-} from '@/features/questionnaires/types';
+} from '@/app/(private)/dashboard/_views/questionnaire/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
-import { useQuestionnaireSave } from '../_hooks/useQuestionnaireSave';
+import { useQuestionnaireSave } from '../hooks/useQuestionnaireSave';
 
 import { QuestionDetailsEditor } from './QuestionDetailsEditor';
 

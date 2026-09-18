@@ -2,11 +2,11 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 
+import type { QuestionDetail } from '@/app/(private)/dashboard/_views/questionnaire/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { QuestionDetail } from '@/features/questionnaires/types';
 
 export function QuestionDetailsEditor({
   details,

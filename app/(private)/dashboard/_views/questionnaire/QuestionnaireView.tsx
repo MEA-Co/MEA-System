@@ -1,12 +1,12 @@
 import { ArrowLeft, ArrowRight, FileText, Plus } from 'lucide-react';
 import Link from 'next/link';
 
+import { loadQuestionnaireView } from '@/app/(private)/dashboard/_views/questionnaire/lib/server';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { loadQuestionnaireWorkspace } from '@/features/questionnaires/server';
 
-import { DeleteQuestionnaireButton } from './DeleteQuestionnaireButton';
-import { QuestionnaireEditor } from './QuestionnaireEditor';
+import { DeleteQuestionnaireButton } from './components/DeleteQuestionnaireButton';
+import { QuestionnaireEditor } from './components/QuestionnaireEditor';
 
 const updatedDate = new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -14,13 +14,12 @@ const updatedDate = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
 });
 
-export async function QuestionnaireWorkspace({
+export async function QuestionnaireView({
   requestedId,
 }: {
   requestedId?: string;
 }) {
-  const { initialDraft, drafts } =
-    await loadQuestionnaireWorkspace(requestedId);
+  const { initialDraft, drafts } = await loadQuestionnaireView(requestedId);
   if (initialDraft) {
     return (
       <>

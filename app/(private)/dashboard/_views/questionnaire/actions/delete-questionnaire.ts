@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { deleteQuestionnaireDraft } from '@/features/questionnaires/server';
+import { deleteQuestionnaireDraft } from '@/app/(private)/dashboard/_views/questionnaire/lib/server';
 
 export async function deleteQuestionnaire(input: unknown) {
   const result = await deleteQuestionnaireDraft(input);

@@ -14,7 +14,7 @@ import {
 import { toast } from '@/components/ui/toast';
 import { MEMBER_ROLE_LABELS } from '@/lib/profile';
 
-import { updateConsultantRole } from '../_actions/update-consultant-role';
+import { updateConsultantRole } from '../actions/update-consultant-role';
 
 type ConsultantRole = 'consultant' | 'consultant_lead';
 

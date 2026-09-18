@@ -7,8 +7,8 @@
 - 목록의 삭제 버튼은 확인 후 `delete_questionnaire` RPC를 호출한다. 발행 이력이 없으면 질문지·버전·섹션·질문·설명을 물리 삭제한다. 발행 이력이 하나라도 있으면 현재 초안도 포함하여 `questionnaires.archived_at`으로 보관 처리하고 질문·답변을 보존한다. 관리자/리드 권한과 revision을 검증하며 저장과 같은 잠금으로 직렬화한다. 완전 삭제 후에는 내용 없이 삭제된 버전 UUID·삭제 시각만 private 테이블에 남겨 늦게 도착한 최초 저장 재시도의 문서 재생성을 거절한다. 과거 보관된 자료를 일괄 삭제하는 데이터 정리는 수행하지 않는다. `supabase/tests/questionnaire_deletion.sql`로 권한·충돌·완전 삭제·발행 이력 보존·재생성 차단을 검증한다.
 
 - `20260917080504_add_questionnaire_draft_storage.sql`, `20260917080738_index_questionnaire_composite_references.sql`에 7개 테이블·읽기 정책·원자적 초안 저장/조회 RPC와 인덱스를 기록했다.
-- `features/questionnaires/server.ts`에서 실제 관리자/리드 권한을 확인하고, `schema.ts`에서 UUID·본문 길이·중복 ID·문서 크기를 검증한다. 클라이언트는 대시보드의 얇은 서버 액션을 호출한다.
-- `QuestionnaireWorkspace`의 질문지 관리 목록에서 저장한 초안을 선택하거나 새 질문지 제작을 시작한다. 편집 화면의 질문지 목록으로 버튼으로 돌아갈 수 있다. `draft` URL 매개변수는 버전 ID다. 기본 진입은 제목·최근 저장 시각이 있는 질문지 목록을 표시하며, `draft=new`는 DB 쓰기 없이 빈 문서를 준비한다. 초안은 관리자/리드가 공유한다.
+- `app/(private)/dashboard/_views/questionnaire/lib/server.ts`에서 실제 관리자/리드 권한을 확인하고, `schema.ts`에서 UUID·본문 길이·중복 ID·문서 크기를 검증한다. 클라이언트는 대시보드의 얇은 서버 액션을 호출한다.
+- `QuestionnaireView`의 질문지 관리 목록에서 저장한 초안을 선택하거나 새 질문지 제작을 시작한다. 편집 화면의 질문지 목록으로 버튼으로 돌아갈 수 있다. `draft` URL 매개변수는 버전 ID다. 기본 진입은 제목·최근 저장 시각이 있는 질문지 목록을 표시하며, `draft=new`는 DB 쓰기 없이 빈 문서를 준비한다. 초안은 관리자/리드가 공유한다.
 - 수정 사항이 있을 때 10초 간격으로 자동 저장하고 수동 저장도 제공한다. 저장 중 추가 입력은 다음 저장 대상으로 남는다. 중복 저장을 막고 응답을 받지 못한 요청은 동일 saveId·revision·문서로 재시도한다. 새 문서가 처음 저장되면 `history.replaceState(null, ...)`로 URL만 갱신한다. Next 내부 history state를 전달하거나 `router.refresh()`를 호출하지 않아 편집기와 저장 중 입력을 유지한다. 목록은 돌아갈 때 다시 조회한다.
 - 버전의 `revision`, `last_save_id`, `last_save_hash`로 충돌과 불확실한 네트워크 결과의 재시도를 처리한다. 충돌/권한 오류는 자동 재시도를 멈추며, 화면의 작성 내용은 유지한다. 데이터 삭제·덮어쓰기 없이 새로고침 전 복사를 안내한다.
 - 저장 중/완료/실패는 공통 shadcn Toast를 사용한다. 저장하지 않은 변경이 있는 페이지를 새로고침하거나 링크로 이탈할 때 확인한다. 역할 전환·브라우저 뒤로가기 등 모든 SPA 이탈을 가로채는 기능은 아니므로 이동 전 저장 버튼으로 완료 상태를 확인할 수 있다.

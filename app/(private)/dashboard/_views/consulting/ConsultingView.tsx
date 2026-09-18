@@ -116,7 +116,7 @@ function BrandingConsultingCard({
   );
 }
 
-export function ConsultingManagement({
+export function ConsultingView({
   role,
   completedConsultingIds = [],
 }: {

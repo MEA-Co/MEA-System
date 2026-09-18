@@ -2,14 +2,14 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { toast } from '@/components/ui/toast';
-import { QuestionnaireSaveSession } from '@/features/questionnaires/save-session';
+import { QuestionnaireSaveSession } from '@/app/(private)/dashboard/_views/questionnaire/lib/save-session';
 import type {
   QuestionnaireDocument,
   QuestionnaireDraft,
-} from '@/features/questionnaires/types';
+} from '@/app/(private)/dashboard/_views/questionnaire/lib/types';
+import { toast } from '@/components/ui/toast';
 
-import { saveQuestionnaire } from '../_actions/save-questionnaire';
+import { saveQuestionnaire } from '../actions/save-questionnaire';
 
 export function useQuestionnaireSave(
   document: QuestionnaireDocument,

@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,14 +10,6 @@ import {
 } from '@/components/ui/table';
 import type { ManagedMember } from '@/lib/admin';
 
-type MemberManagementTableProps = {
-  emptyMemberLabel: string;
-  members: ManagedMember[];
-  secondaryColumnLabel: string;
-  secondaryContent?: (member: ManagedMember) => ReactNode;
-  secondaryValue: (member: ManagedMember) => string;
-};
-
 const joinedDateFormatter = new Intl.DateTimeFormat('ko-KR', {
   year: 'numeric',
   month: '2-digit',
@@ -27,19 +17,17 @@ const joinedDateFormatter = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
 });
 
-export function MemberManagementTable({
-  emptyMemberLabel,
-  members,
-  secondaryColumnLabel,
-  secondaryContent,
-  secondaryValue,
-}: MemberManagementTableProps) {
-  if (members.length === 0) {
+export function StudentManagementTable({
+  students,
+}: {
+  students: ManagedMember[];
+}) {
+  if (students.length === 0) {
     return (
       <div className="flex min-h-56 items-center justify-center border-t text-center">
         <div>
           <p className="text-sm font-medium text-foreground">
-            등록된 {emptyMemberLabel}이 없습니다.
+            등록된 학생이 없습니다.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             회원가입을 완료한 회원이 여기에 표시됩니다.
@@ -54,36 +42,34 @@ export function MemberManagementTable({
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>이름</TableHead>
-          <TableHead>{secondaryColumnLabel}</TableHead>
+          <TableHead>현재 시기</TableHead>
           <TableHead className="hidden text-right md:table-cell">
             가입일
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {members.map((member) => (
-          <TableRow key={member.id}>
+        {students.map((student) => (
+          <TableRow key={student.id}>
             <TableCell>
               <div className="flex items-center gap-3">
                 <Avatar size="sm">
                   <AvatarFallback>
-                    {member.name.trim().charAt(0)}
+                    {student.name.trim().charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium text-foreground">
-                  {member.name}
+                  {student.name}
                 </span>
               </div>
             </TableCell>
             <TableCell>
-              {secondaryContent ? (
-                secondaryContent(member)
-              ) : (
-                <Badge variant="secondary">{secondaryValue(member)}</Badge>
-              )}
+              <Badge variant="secondary">
+                {student.student_period ?? '미입력'}
+              </Badge>
             </TableCell>
             <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-              {joinedDateFormatter.format(new Date(member.created_at))}
+              {joinedDateFormatter.format(new Date(student.created_at))}
             </TableCell>
           </TableRow>
         ))}
