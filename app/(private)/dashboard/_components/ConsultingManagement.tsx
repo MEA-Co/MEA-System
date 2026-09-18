@@ -4,11 +4,10 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-
-import { 
-    MATERIAL_BOX_CONSULTING_ID,
-    SUBJECT_SELECTION_CONSULTING_ID,
-  } from '@/features/consulting/completion';
+import {
+  MATERIAL_BOX_CONSULTING_ID,
+  SUBJECT_SELECTION_CONSULTING_ID,
+} from '@/features/consulting/completion';
 import type { MemberRole } from '@/lib/profile';
 
 const consultingItems: ReadonlyArray<{
@@ -34,7 +33,6 @@ const consultingItems: ReadonlyArray<{
     href: '/consulting/subject-selection',
   },
 ] as const;
-];
 
 function BrandingConsultingCard({
   href,
