@@ -82,12 +82,14 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
   return (
     <PublicationNotifications
       key={`${user.id}:${role}`}
-      enabled={role === 'admin' || role === 'consultant_lead'}
+      enabled={
+        role === 'admin' || role === 'consultant_lead' || role === 'consultant'
+      }
       userId={user.id}
       realtimeAudience={
         role === 'admin' || role === 'consultant_lead'
           ? 'staff'
-          : role === 'consultant' && view === 'questionnaire'
+          : role === 'consultant'
             ? 'distributed'
             : null
       }

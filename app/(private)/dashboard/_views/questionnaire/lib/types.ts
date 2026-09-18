@@ -73,6 +73,7 @@ export type QuestionnaireReviewContext = {
   isOwner: boolean;
   initialReviews: QuestionnaireReview[];
   disabled?: boolean;
+  canRequest?: boolean;
 };
 
 export type QuestionnaireViewData = {

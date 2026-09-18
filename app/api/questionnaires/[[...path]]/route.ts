@@ -1,6 +1,11 @@
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
+import {
+  loadAnswers,
+  loadAnswerStatuses,
+  saveAnswers,
+} from '@/app/(private)/dashboard/_views/questionnaire/lib/answers-server';
 import { QuestionnaireHttpError } from '@/app/(private)/dashboard/_views/questionnaire/lib/http-error';
 import { loadUnreadQuestionnairePublications } from '@/app/(private)/dashboard/_views/questionnaire/lib/publication-notifications';
 import {
@@ -43,7 +48,15 @@ async function handle(request: Request, context: Context) {
     const method = request.method;
     if (method === 'GET') {
       if (path.length === 1 && id === 'unread')
-        return json(staff ? await loadUnreadQuestionnairePublications() : []);
+        return json(await loadUnreadQuestionnairePublications(!staff));
+      if (path.length === 1 && id === 'responses')
+        return json(await loadAnswerStatuses());
+      if (
+        path.length === 2 &&
+        resource === 'answers' &&
+        z.uuid().safeParse(id).success
+      )
+        return json(await loadAnswers(id));
       if (path.length > 1)
         return json({ error: '경로를 찾을 수 없어요.' }, 404);
       if (id && id !== 'new' && !z.uuid().safeParse(id).success)
@@ -60,7 +73,13 @@ async function handle(request: Request, context: Context) {
       request.headers.get('sec-fetch-site') === 'cross-site'
     )
       return json({ error: '허용되지 않은 요청이에요.' }, 403);
-    if (!staff) return json({ error: '수정 권한이 없어요.' }, 403);
+    const memberCommand =
+      path.length === 2 &&
+      z.uuid().safeParse(id).success &&
+      method === 'PUT' &&
+      ['answers', 'read'].includes(resource);
+    if (!staff && !memberCommand)
+      return json({ error: '수정 권한이 없어요.' }, 403);
     if (!request.headers.get('content-type')?.startsWith('application/json'))
       return json({ error: 'JSON 요청이 필요해요.' }, 415);
     const raw = await request.text();
@@ -74,6 +93,8 @@ async function handle(request: Request, context: Context) {
     }
     if (!body || typeof body !== 'object' || Array.isArray(body))
       return json({ error: '요청을 확인해 주세요.' }, 400);
+    if (memberCommand && resource === 'answers')
+      return json(await saveAnswers(id, body));
     if (
       (method === 'POST' && path.length === 0) ||
       (method === 'PUT' && path.length === 1)
@@ -154,7 +175,9 @@ async function handle(request: Request, context: Context) {
     } else if (method === 'PUT' && path.length === 2 && resource === 'read') {
       const client = createClient(await cookies());
       const { error } = await client.rpc(
-        'mark_questionnaire_publication_read',
+        staff
+          ? 'mark_questionnaire_publication_read'
+          : 'open_questionnaire_response',
         { p_version_id: id },
       );
       if (error) return json({ error: '확인 상태를 저장하지 못했어요.' }, 503);

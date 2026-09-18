@@ -26,6 +26,7 @@ import { useQuestionnaireSave } from '../hooks/useQuestionnaireSave';
 import { QuestionDetailsEditor } from './QuestionDetailsEditor';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 
 export function QuestionnaireEditor({
   initialDraft,
@@ -230,18 +231,18 @@ export function QuestionnaireEditor({
                           </span>
                           {questionIndex + 1}.
                         </label>
-                        <Textarea
+                        <QuestionRichTextEditor
                           id={`question-${question.id}`}
                           value={question.text}
+                          ariaLabel={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1}`}
                           placeholder="질문을 입력하세요"
-                          rows={2}
-                          className="min-w-0 flex-1 resize-y rounded-lg border-border bg-muted"
-                          onChange={(event) =>
+                          className="min-w-0 flex-1 rounded-lg border-border bg-muted"
+                          onChange={(text) =>
                             updateSection(section.id, (current) => ({
                               ...current,
                               questions: current.questions.map((item) =>
                                 item.id === question.id
-                                  ? { ...item, text: event.target.value }
+                                  ? { ...item, text }
                                   : item,
                               ),
                             }))

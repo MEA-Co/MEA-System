@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 
 import type { QuestionnaireListItem as Item } from '../lib/types';
 
+import { ConsultantQuestionnaireList } from './ConsultantQuestionnaireList';
 import { DeleteQuestionnaireButton } from './DeleteQuestionnaireButton';
 import {
   NewPublicationBadge,
@@ -35,6 +36,7 @@ export function QuestionnaireList({
   const newCount = published.filter((item) =>
     unreadIds.includes(item.id),
   ).length;
+  if (!staff) return <ConsultantQuestionnaireList items={distributed} />;
   return (
     <Tabs.Root defaultValue={staff ? 'draft' : 'distributed'}>
       <Tabs.List

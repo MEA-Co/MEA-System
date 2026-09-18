@@ -89,6 +89,7 @@ function QuestionnaireContent({
           isOwner: selected.isOwner,
           initialReviews: reviews,
           disabled: !!error,
+          canRequest: selected.status === 'published',
         }
       : undefined;
   const pendingReviewCount = reviews.filter(
@@ -106,9 +107,9 @@ function QuestionnaireContent({
             {error.message}
           </p>
         )}
-        {staff && selected?.status === 'published' && !selected.isOwner && (
-          <PublicationReadMarker versionId={selected.id} />
-        )}
+        {((staff && selected?.status === 'published' && !selected.isOwner) ||
+          (!staff && selected?.status === 'distributed')) &&
+          selected && <PublicationReadMarker versionId={selected.id} />}
         <div className="mx-auto mb-6 max-w-4xl">
           <Button
             variant="ghost"

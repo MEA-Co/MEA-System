@@ -11,9 +11,12 @@ import type {
 } from '../lib/types';
 
 import { PublishedExplanation } from './PublishedExplanation';
+import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionExplanationForm } from './QuestionExplanationForm';
+import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
   distributed = false,
@@ -33,18 +36,13 @@ export function PublishedQuestionnaire({
         <Badge variant="secondary">
           {distributed ? '배포된 질문지' : '게시된 질문지'}
         </Badge>
-        <h1 className="mt-3 whitespace-pre-wrap break-words text-2xl font-semibold">
+        <h1 className="mt-3 whitespace-pre-wrap wrap-break-word text-2xl font-semibold">
           {document.title}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {distributed
-            ? '배포된 질문지는 수정할 수 없어요.'
-            : '컨설턴트 리드와 관리자만 볼 수 있어요.'}
-        </p>
       </header>
       {document.sections.map((section, index) => (
         <section key={section.id} className="space-y-5">
-          <h2 className="whitespace-pre-wrap break-words text-xl font-semibold">
+          <h2 className="whitespace-pre-wrap wrap-break-word text-xl font-semibold">
             {section.title || `섹션 ${index + 1}`}
           </h2>
           {section.questions.map((question, questionIndex) => (
@@ -52,7 +50,7 @@ export function PublishedQuestionnaire({
               <h3 className="text-sm font-medium text-muted-foreground">
                 질문 {questionIndex + 1}
               </h3>
-              <p className="whitespace-pre-wrap break-words">{question.text}</p>
+              <RichTextContent value={question.text} />
               {question.details.map((detail) => (
                 <PublishedExplanation
                   key={detail.id}
@@ -78,11 +76,17 @@ export function PublishedQuestionnaire({
               {staff && reviewContext && (
                 <QuestionnaireReviews
                   {...reviewContext}
+                  canRequest={
+                    !distributed && reviewContext.canRequest !== false
+                  }
                   questionId={question.id}
                   initialReviews={reviewContext.initialReviews.filter(
                     (review) => review.question_id === question.id,
                   )}
                 />
+              )}
+              {distributed && !staff && (
+                <QuestionAnswerEditor questionId={question.id} />
               )}
             </div>
           ))}
@@ -90,7 +94,17 @@ export function PublishedQuestionnaire({
       ))}
     </article>
   );
-  if (!staff) return content;
+  if (!staff)
+    return (
+      <QuestionnaireAnswers
+        versionId={document.versionId}
+        questionIds={document.sections.flatMap((section) =>
+          section.questions.map((q) => q.id),
+        )}
+      >
+        {content}
+      </QuestionnaireAnswers>
+    );
   return (
     <Tabs.Root defaultValue="detail" className="mx-auto max-w-4xl">
       <Tabs.List

@@ -19,6 +19,7 @@ import { useQuestionnaireApi } from '../lib/api-client';
 import type { QuestionDetail } from '../lib/types';
 
 import { QuestionExplanationForm } from './QuestionExplanationForm';
+import { RichTextContent } from './RichTextContent';
 
 export function PublishedExplanation({
   detail,
@@ -130,9 +131,7 @@ export function PublishedExplanation({
           onClose={() => setEditing(false)}
         />
       ) : (
-        <p className="mt-3 whitespace-pre-wrap break-words text-sm">
-          {detail.text}
-        </p>
+        <RichTextContent value={detail.text} className="mt-3 text-sm" />
       )}
       {canManage && (
         <>

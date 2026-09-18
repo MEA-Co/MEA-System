@@ -159,11 +159,11 @@ test('staff uses private role and own receipt channels; notification bursts coal
   s.cleanup();
 });
 
-test('consultants subscribe only to distributed changes; students do not connect', () => {
+test('consultants subscribe to distributed and own response changes; students do not connect', () => {
   const consultant = setup('distributed');
   assert.deepEqual(
     consultant.channels.map((c) => c.topic),
-    ['questionnaires:distributed'],
+    ['questionnaires:distributed', 'questionnaires:user:user-id'],
   );
   consultant.cleanup();
   const student = setup(null);

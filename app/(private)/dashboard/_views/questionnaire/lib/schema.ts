@@ -1,15 +1,17 @@
 import { z } from 'zod';
 
+import { normalizeRichTextValue } from './rich-text';
+
 const detailSchema = z.object({
   id: z.uuid(),
   title: z.string().max(500),
-  text: z.string().max(20000),
+  text: z.string().max(20000).transform(normalizeRichTextValue),
   visibleToConsultants: z.boolean(),
 });
 const questionSchema = z.object({
   id: z.uuid(),
   logicalKey: z.uuid(),
-  text: z.string().max(20000),
+  text: z.string().max(20000).transform(normalizeRichTextValue),
   details: z.array(detailSchema).max(30),
 });
 const sectionSchema = z.object({

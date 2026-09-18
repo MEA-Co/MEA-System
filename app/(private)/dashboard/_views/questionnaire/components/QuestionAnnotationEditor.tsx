@@ -3,7 +3,8 @@
 import type { ReactNode } from 'react';
 
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+
+import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 
 /** Shared title/body card for question explanations and review requests. */
 export function QuestionAnnotationEditor({
@@ -61,16 +62,15 @@ export function QuestionAnnotationEditor({
       <label htmlFor={`${id}-text`} className="sr-only">
         {label} 내용
       </label>
-      <Textarea
+      <QuestionRichTextEditor
         id={`${id}-text`}
         value={text}
         placeholder="내용을 작성하세요"
-        rows={3}
         className="mt-3 rounded-lg border-border bg-muted"
         disabled={disabled}
         required={required}
         maxLength={textMaxLength}
-        onChange={(event) => onTextChange(event.target.value)}
+        onChange={onTextChange}
       />
       {children}
     </div>

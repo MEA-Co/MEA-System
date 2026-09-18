@@ -39,7 +39,7 @@ export function useQuestionnaireRealtime(
       if (pending) invalidate();
     };
     const topics = [`questionnaires:${audience}`];
-    if (audience === 'staff') topics.push(`questionnaires:user:${userId}`);
+    topics.push(`questionnaires:user:${userId}`);
 
     const channels = topics.map((topic) =>
       supabase

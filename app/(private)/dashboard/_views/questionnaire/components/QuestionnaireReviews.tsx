@@ -10,6 +10,7 @@ import { useQuestionnaireApi } from '../lib/api-client';
 import type { QuestionnaireReviewContext } from '../lib/types';
 
 import { QuestionAnnotationEditor } from './QuestionAnnotationEditor';
+import { RichTextContent } from './RichTextContent';
 
 export function QuestionnaireReviews({
   versionId,
@@ -17,6 +18,7 @@ export function QuestionnaireReviews({
   isOwner,
   initialReviews,
   disabled = false,
+  canRequest = true,
 }: QuestionnaireReviewContext & { questionId?: string }) {
   const reviews = initialReviews.filter((review) => !review.resolved_at);
   const previousReviews = initialReviews.filter(
@@ -34,6 +36,7 @@ export function QuestionnaireReviews({
   } | null>(null);
   async function submit(reviewId?: string) {
     if (disabled || inFlight.current) return;
+    if (!reviewId && !canRequest) return;
     if (!reviewId && (!questionId || !description.trim())) return;
     inFlight.current = true;
     setPending(true);
@@ -91,7 +94,8 @@ export function QuestionnaireReviews({
       setPending(false);
     }
   }
-  if (!initialReviews.length && (isOwner || !questionId)) return null;
+  if (!initialReviews.length && (isOwner || !questionId || !canRequest))
+    return null;
   return (
     <section
       className={`mt-4 space-y-3 border-l-2 pl-4 ${reviews.length ? 'border-green-200 dark:border-green-900' : 'border-border'}`}
@@ -128,10 +132,12 @@ export function QuestionnaireReviews({
               기존 질문지 전체 검토 요청
             </p>
           )}
-          <p className="whitespace-pre-wrap break-words text-sm">
-            {review.title ? `${review.title}\n\n` : ''}
-            {review.description}
-          </p>
+          <div className="text-sm">
+            {review.title && (
+              <p className="mb-2 whitespace-pre-wrap">{review.title}</p>
+            )}
+            <RichTextContent value={review.description} />
+          </div>
         </div>
       ))}
       {previousReviews.length > 0 && (
@@ -156,16 +162,19 @@ export function QuestionnaireReviews({
                     확인 완료
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                  {review.title ? `${review.title}\n\n` : ''}
-                  {review.description}
-                </p>
+                <div className="text-sm text-muted-foreground">
+                  {review.title && (
+                    <p className="mb-2 whitespace-pre-wrap">{review.title}</p>
+                  )}
+                  <RichTextContent value={review.description} />
+                </div>
               </div>
             ))}
           </div>
         </details>
       )}
       {!isOwner &&
+        canRequest &&
         questionId &&
         (editing ? (
           <form

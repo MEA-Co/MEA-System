@@ -12,6 +12,7 @@ import {
 import { createClient } from '@/lib/supabase/server';
 
 import { QuestionnaireHttpError } from './http-error';
+import { normalizeRichTextValue, richTextPlainText } from './rich-text';
 import { savedDraftSchema, saveQuestionnaireSchema } from './schema';
 import type {
   QuestionnaireDraft,
@@ -384,7 +385,12 @@ export async function manageQuestionnaireReview(
           id: z.uuid(),
           versionId: z.uuid(),
           questionId: z.uuid(),
-          description: z.string().trim().min(1).max(5000),
+          description: z
+            .string()
+            .trim()
+            .max(5000)
+            .transform(normalizeRichTextValue)
+            .refine((value) => richTextPlainText(value).trim().length > 0),
         })
       : z.object({ id: z.uuid() });
   const parsed = schema.safeParse(input);
@@ -429,7 +435,12 @@ export async function addQuestionnaireExplanation(
       versionId: z.uuid(),
       questionId: z.uuid(),
       title: z.string().trim().min(1).max(500),
-      description: z.string().trim().min(1).max(20000),
+      description: z
+        .string()
+        .trim()
+        .max(20000)
+        .transform(normalizeRichTextValue)
+        .refine((value) => richTextPlainText(value).trim().length > 0),
       visibleToConsultants: z.boolean(),
     })
     .safeParse(input);
@@ -474,7 +485,12 @@ export async function manageQuestionnaireExplanation(
       ? base
       : base.extend({
           title: z.string().trim().min(1).max(500),
-          description: z.string().trim().min(1).max(20000),
+          description: z
+            .string()
+            .trim()
+            .max(20000)
+            .transform(normalizeRichTextValue)
+            .refine((value) => richTextPlainText(value).trim().length > 0),
           visibleToConsultants: z.boolean(),
         })
   ).safeParse(input);

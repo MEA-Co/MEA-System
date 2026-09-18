@@ -29,6 +29,10 @@ function load(path, imports = {}, globals = {}) {
           return load(
             'app/(private)/dashboard/_views/questionnaire/lib/http-error.ts',
           );
+        if (name === './rich-text')
+          return load(
+            'app/(private)/dashboard/_views/questionnaire/lib/rich-text.ts',
+          );
         if (name === './schema')
           return load(
             'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',

@@ -25,6 +25,9 @@ function route({
   const calls = [];
   const functions = {};
   for (const name of [
+    'loadAnswers',
+    'loadAnswerStatuses',
+    'saveAnswers',
     'manageQuestionnaireExplanation',
     'addQuestionnaireExplanation',
     'loadQuestionnaireView',
@@ -43,8 +46,11 @@ function route({
     'next/headers': { cookies: async () => ({}) },
     [`${root}http-error`]: { QuestionnaireHttpError: HttpError },
     [`${root}server`]: functions,
+    [`${root}answers-server`]: functions,
     [`${root}publication-notifications`]: {
-      loadUnreadQuestionnairePublications: async () => ['unread'],
+      loadUnreadQuestionnairePublications: async (distributed) => [
+        distributed ? 'distributed-new' : 'unread',
+      ],
     },
     '@/lib/admin': { getViewRole: async () => visibleRole },
     '@/lib/auth': {
@@ -134,7 +140,9 @@ test('REST returns JSON auth failures and never invokes mutations for consultant
   );
   assert.equal(client.calls.length, 0);
   const preview = route({ role: 'admin', visibleRole: 'consultant' });
-  assert.deepEqual(await (await preview.request('GET', ['unread'])).json(), []);
+  assert.deepEqual(await (await preview.request('GET', ['unread'])).json(), [
+    'distributed-new',
+  ]);
   assert.equal((await preview.request('GET', ['new'])).status, 403);
 });
 
@@ -283,4 +291,43 @@ test('explanation updates and deletes bind the path IDs and preserve revision', 
     200,
   );
   assert.equal(client.calls[1][2], 'delete');
+});
+
+test('consultants can save their response and read distribution notifications without gaining staff mutations', async () => {
+  const id = randomUUID();
+  const client = route({ role: 'consultant' });
+  assert.equal((await client.request('GET', [id, 'answers'])).status, 200);
+  assert.equal((await client.request('GET', ['responses'])).status, 200);
+  assert.equal(
+    (
+      await client.request('PUT', [id, 'answers'], {
+        revision: 0,
+        answers: {},
+        saveId: randomUUID(),
+        complete: false,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    client.calls.filter((call) => call[0] === 'saveAnswers').length,
+    1,
+  );
+  assert.equal(
+    (
+      await client.request(
+        'PUT',
+        [id, 'answers'],
+        {},
+        { origin: 'https://evil.test' },
+      )
+    ).status,
+    403,
+  );
+  assert.equal((await client.request('POST', [id, 'reviews'], {})).status, 403);
+  assert.equal(
+    (await client.request('POST', [id, 'distribution'], {})).status,
+    403,
+  );
+  assert.equal((await client.request('PUT', [id, 'read'], {})).status, 200);
 });
