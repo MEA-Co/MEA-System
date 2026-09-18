@@ -1,0 +1,11 @@
+# Supabase
+.branches
+.temp
+
+# One-off production schema inspection export (not a migration)
+remote-schema.sql
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local

@@ -8,6 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## 로컬 Supabase
+
+- 로컬 구성·migration 복구와 운영 이력 차이는 `docs/local-supabase.md`를 먼저 확인한다. 전공 검색 migration 3개는 운영 객체가 있지만 운영 이력이 없고, 복구한 가치관 구조도 운영에 이미 있다. 이력 동등성 검토 없이 `db push`/원격 reset/`migration repair`를 실행하지 않는다. 개발 DB 초기화는 명시적으로 `db reset --local`을 사용한다. 로컬 Supabase 실행만으로 앱의 `.env` 연결이 바뀌지 않으며, 개발 환경 변수·Google OAuth·기준 데이터는 별도로 설정한다.
+
 ## 회원 역할
 
 - 컨설턴트 배포본 맨 아래의 `QuestionnaireFreeResponse`는 선택 입력이다. `questionnaire_responses.free_response`에 일반 질문별 답변과 구분해 저장하며 기존 답변과 같은 10초 자동 저장·수동 저장·revision 충돌·완료 잠금을 적용한다. 입력 서식은 공통 RichText를 사용한다. 저장 요청의 `freeResponse`를 생략하는 이전 클라이언트는 기존 자유 응답을 보존하고, 빈 문자열을 보내면 지운다. 테스트는 `supabase/tests/questionnaire_free_response.sql`과 `scripts/verify-questionnaire-answers.mjs`다.
