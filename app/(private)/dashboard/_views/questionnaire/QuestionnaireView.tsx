@@ -1,26 +1,30 @@
-import { ArrowLeft, ArrowRight, FileText, Plus } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 import { loadQuestionnaireView } from '@/app/(private)/dashboard/_views/questionnaire/lib/server';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import { DeleteQuestionnaireButton } from './components/DeleteQuestionnaireButton';
+import { PublishedQuestionnaire } from './components/PublishedQuestionnaire';
 import { QuestionnaireEditor } from './components/QuestionnaireEditor';
-
-const updatedDate = new Intl.DateTimeFormat('ko-KR', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Seoul',
-});
+import { QuestionnaireList } from './components/QuestionnaireList';
+import { QuestionnaireReviews } from './components/QuestionnaireReviews';
 
 export async function QuestionnaireView({
   requestedId,
 }: {
   requestedId?: string;
 }) {
-  const { initialDraft, drafts } = await loadQuestionnaireView(requestedId);
-  if (initialDraft) {
+  const {
+    initialDraft,
+    drafts,
+    published,
+    distributed,
+    staff,
+    selected,
+    reviews,
+    publishedDocument,
+  } = await loadQuestionnaireView(requestedId);
+  if (initialDraft || publishedDocument) {
     return (
       <>
         <div className="mx-auto mb-6 max-w-4xl">
@@ -36,10 +40,32 @@ export async function QuestionnaireView({
             질문지 목록으로
           </Button>
         </div>
-        <QuestionnaireEditor
-          key={initialDraft.versionId}
-          initialDraft={initialDraft}
-        />
+        {selected && selected.status !== 'draft' && staff && (
+          <QuestionnaireReviews
+            key={`reviews:${selected.id}`}
+            versionId={selected.id}
+            isOwner={selected.isOwner}
+            initialReviews={reviews}
+          />
+        )}
+        {initialDraft && selected?.status === 'published' && (
+          <p className="mx-auto mb-4 max-w-4xl rounded-lg bg-muted p-4 text-sm">
+            게시 중인 질문지예요. 저장한 수정 내용은 다른 리드와 관리자에게도
+            반영됩니다. 배포는 목록에서 진행할 수 있어요.
+          </p>
+        )}
+        {publishedDocument ? (
+          <PublishedQuestionnaire
+            document={publishedDocument}
+            distributed={selected?.status === 'distributed'}
+            staff={staff}
+          />
+        ) : initialDraft ? (
+          <QuestionnaireEditor
+            key={`editor:${initialDraft.versionId}`}
+            initialDraft={initialDraft}
+          />
+        ) : null}
       </>
     );
   }
@@ -57,79 +83,31 @@ export async function QuestionnaireView({
             질문지 관리
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            저장된 질문지를 이어서 작성하거나 새 질문지를 만들어 보세요.
+            {staff
+              ? '질문지를 작성하고 게시·검토·배포할 수 있어요.'
+              : '배포된 질문지를 확인해 보세요.'}
           </p>
         </div>
-        <Button
-          render={
-            <Link
-              href="/dashboard?view=questionnaire&draft=new"
-              prefetch={false}
-            />
-          }
-          nativeButton={false}
-        >
-          <Plus aria-hidden="true" />새 질문지 제작
-        </Button>
-      </div>
-      <p className="mb-3 text-sm font-medium text-muted-foreground">
-        전체 {drafts.length}개
-      </p>
-      {drafts.length ? (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-background">
-          {drafts.map((draft) => (
-            <li key={draft.id} className="flex items-center">
+        {staff && (
+          <Button
+            render={
               <Link
-                href={`/dashboard?view=questionnaire&draft=${draft.id}`}
+                href="/dashboard?view=questionnaire&draft=new"
                 prefetch={false}
-                className="flex min-w-0 flex-1 items-center gap-4 p-5 transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <FileText
-                    className="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">
-                    {draft.title || '제목 없는 질문지'}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    최근 저장{' '}
-                    <time dateTime={draft.updatedAt}>
-                      {updatedDate.format(new Date(draft.updatedAt))}
-                    </time>
-                  </p>
-                </div>
-                <Badge variant="secondary" className="shrink-0">
-                  작성 중
-                </Badge>
-                <ArrowRight
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </Link>
-              <DeleteQuestionnaireButton
-                versionId={draft.id}
-                revision={draft.revision}
-                hasPublished={draft.hasPublished}
-                title={draft.title}
               />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center">
-          <FileText
-            className="mb-4 size-9 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <h2 className="font-medium">아직 저장된 질문지가 없어요.</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            ‘새 질문지 제작’을 눌러 첫 질문지를 작성해 보세요.
-          </p>
-        </div>
-      )}
+            }
+            nativeButton={false}
+          >
+            <Plus aria-hidden="true" />새 질문지 제작
+          </Button>
+        )}
+      </div>
+      <QuestionnaireList
+        drafts={drafts}
+        published={published}
+        distributed={distributed}
+        staff={staff}
+      />
     </section>
   );
 }

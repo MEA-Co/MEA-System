@@ -43,3 +43,22 @@ export type SaveQuestionnaireResult =
       code: 'conflict' | 'forbidden' | 'invalid' | 'unavailable';
       error: string;
     };
+
+export type QuestionnaireStatus = 'draft' | 'published' | 'distributed';
+export type QuestionnaireListItem = {
+  id: string;
+  title: string;
+  status: QuestionnaireStatus;
+  updatedAt: string;
+  publishedAt: string | null;
+  distributedAt: string | null;
+  revision: number;
+  hasPublished: boolean;
+  isOwner: boolean;
+};
+export type QuestionnaireReview = {
+  id: string;
+  requester_name: string;
+  description: string;
+  created_at: string;
+};

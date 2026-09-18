@@ -68,12 +68,15 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from questionnaire_test_users where role='admin'),true);
 set local role authenticated;
 do $$ begin
-  perform public.save_questionnaire_draft((select document from questionnaire_test_data),3,gen_random_uuid());
+  begin
+    perform public.save_questionnaire_draft((select document from questionnaire_test_data),3,gen_random_uuid());
+    raise exception 'Non-owner edited draft';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 
 -- Simulate future publication/assignment without exposing client mutation paths.
-update public.questionnaire_versions set status='published',published_at=now()
+update public.questionnaire_versions set status='distributed',published_at=now(),distributed_at=now()
 where id=(select (document->>'versionId')::uuid from questionnaire_test_data);
 insert into public.questionnaire_responses(version_id,respondent_id,assigned_by)
 select (document->>'versionId')::uuid,(select id from questionnaire_test_users where role='consultant'),(select id from questionnaire_test_users where role='admin') from questionnaire_test_data;
@@ -92,8 +95,8 @@ do $$
 declare qid uuid;
 begin
   select (document#>>'{sections,0,questions,0,id}')::uuid into qid from questionnaire_test_data;
-  if (select count(*) from public.questionnaire_questions where id=qid) <> 1 then raise exception 'Assigned question not visible'; end if;
-  if (select count(*) from public.questionnaire_question_details where question_id=qid) <> 1 then raise exception 'Explanation visibility failed'; end if;
+  if (select count(*) from public.questionnaire_questions where id=qid) <> 1 then raise exception 'Consultant cannot read distributed question'; end if;
+  if (select count(*) from public.questionnaire_question_details where question_id=qid) <> 1 then raise exception 'Consultant public explanation visibility failed'; end if;
   if exists(select 1 from public.questionnaire_question_details where question_id=qid and not visible_to_consultants) then raise exception 'Private explanation leaked'; end if;
   if (select count(*) from public.questionnaire_answers where question_id=qid) <> 1 then raise exception 'Own answer missing'; end if;
 end $$;

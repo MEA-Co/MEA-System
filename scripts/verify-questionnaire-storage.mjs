@@ -322,6 +322,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
       const { saveQuestionnaireDraft } = load(
         'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
         {
+          '@/lib/admin': { getViewRole: async (role) => role },
           'next/headers': { cookies: async () => ({}) },
           '@/lib/auth': {
             getUserAccess: async () => ({
@@ -350,5 +351,162 @@ test('server save checks actual role/onboarding and maps database conflicts with
       assert.equal(calls.length, allowed ? 1 : 0);
       assert.equal(result.code, allowed ? 'conflict' : 'forbidden');
     }
+  }
+});
+
+test('questionnaire loader selects owner editing, reviewer reading, and safe consultant presentation', async () => {
+  const ownerId = randomUUID();
+  const otherId = randomUUID();
+  const doc = document();
+  for (const scenario of [
+    {
+      actual: 'consultant_lead',
+      visible: 'consultant_lead',
+      user: ownerId,
+      status: 'published',
+      editable: true,
+      details: 1,
+    },
+    {
+      actual: 'admin',
+      visible: 'admin',
+      user: otherId,
+      status: 'published',
+      editable: false,
+      details: 1,
+    },
+    {
+      actual: 'consultant',
+      visible: 'consultant',
+      user: otherId,
+      status: 'distributed',
+      editable: false,
+      details: 0,
+    },
+    {
+      actual: 'admin',
+      visible: 'consultant',
+      user: ownerId,
+      status: 'distributed',
+      editable: false,
+      details: 0,
+    },
+  ]) {
+    const calls = [];
+    const row = {
+      id: doc.versionId,
+      questionnaire_id: doc.questionnaireId,
+      title: doc.title,
+      status: scenario.status,
+      revision: 2,
+      updated_at: '2026-09-18T00:00:00Z',
+      published_at: '2026-09-18T00:00:00Z',
+      distributed_at: null,
+      questionnaires: { created_by: ownerId, archived_at: null },
+    };
+    const { loadQuestionnaireView } = load(
+      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      {
+        'next/headers': { cookies: async () => ({}) },
+        '@/lib/admin': { getViewRole: async () => scenario.visible },
+        '@/lib/auth': {
+          requireUserAccess: async () => ({
+            role: scenario.actual,
+            user: { id: scenario.user },
+          }),
+        },
+        '@/lib/supabase/server': {
+          createClient: () => ({
+            from: (table) => {
+              const builder = {
+                select: () => builder,
+                is: () => builder,
+                eq: () => builder,
+                order: async () => ({
+                  data: table === 'questionnaire_versions' ? [row] : [],
+                  error: null,
+                }),
+              };
+              return builder;
+            },
+            rpc: async (name) => {
+              calls.push(name);
+              return {
+                data: {
+                  ...structuredClone(doc),
+                  revision: 2,
+                  savedAt: '2026-09-18T00:00:00Z',
+                },
+                error: null,
+              };
+            },
+          }),
+        },
+      },
+    );
+    const result = await loadQuestionnaireView(doc.versionId);
+    assert.equal(!!result.initialDraft, scenario.editable);
+    assert.equal(
+      calls[0],
+      scenario.editable
+        ? 'read_questionnaire_draft'
+        : 'read_published_questionnaire',
+    );
+    const loaded = result.initialDraft ?? result.publishedDocument;
+    assert.equal(
+      loaded.sections[0].questions[0].details.length,
+      scenario.details,
+    );
+    if (scenario.visible === 'consultant') {
+      assert.equal(result.staff, false);
+      assert.equal(result.selected.isOwner, false);
+      await assert.rejects(loadQuestionnaireView('new'));
+    }
+  }
+});
+
+test('review server actions reject consultants and incomplete descriptions before RPC', async () => {
+  for (const role of ['student', 'consultant', 'consultant_lead', 'admin']) {
+    const calls = [];
+    const { manageQuestionnaireReview } = load(
+      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      {
+        'next/headers': { cookies: async () => ({}) },
+        '@/lib/admin': { getViewRole: async (value) => value },
+        '@/lib/auth': {
+          getUserAccess: async () => ({
+            user: { id: randomUUID() },
+            isOnboarded: true,
+            role,
+          }),
+        },
+        '@/lib/supabase/server': {
+          createClient: () => ({
+            rpc: async (...args) => {
+              calls.push(args);
+              return { error: null };
+            },
+          }),
+        },
+      },
+    );
+    const input = {
+      id: randomUUID(),
+      versionId: randomUUID(),
+      description: '검토해 주세요',
+    };
+    const result = await manageQuestionnaireReview(input, 'request');
+    const allowed = ['consultant_lead', 'admin'].includes(role);
+    assert.equal(!!result.error, !allowed);
+    assert.equal(calls.length, allowed ? 1 : 0);
+    assert.ok(
+      (
+        await manageQuestionnaireReview(
+          { ...input, description: ' ' },
+          'request',
+        )
+      ).error,
+    );
+    assert.equal(calls.length, allowed ? 1 : 0);
   }
 });

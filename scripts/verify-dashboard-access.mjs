@@ -23,7 +23,7 @@ const { getDashboardNavigation, resolveDashboardView } = exports;
 test('each role can open its menus and forbidden direct URLs fall back to consulting', () => {
   const expected = {
     student: ['profile'],
-    consultant: ['profile', 'exploration'],
+    consultant: ['profile', 'questionnaire', 'exploration'],
     consultant_lead: [
       'consultants',
       'questionnaire',

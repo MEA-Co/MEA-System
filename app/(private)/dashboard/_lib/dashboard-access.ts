@@ -22,6 +22,7 @@ export const DASHBOARD_ROLES = {
   },
   consultant: {
     profile: { sidebar: true },
+    questionnaire: { sidebar: true },
     exploration: { sidebar: true },
     consulting: { sidebar: false },
   },
