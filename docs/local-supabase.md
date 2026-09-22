@@ -80,3 +80,11 @@ done
 - 로컬 dump와 운영 dump 비교: 앱 테이블·뷰·함수·제약·권한 정의 일치. 운영의 플랫폼 보조 함수 `public.rls_auto_enable`만 로컬에 없다. 이 함수는 이번 복구에서 옮기지 않았으며 앱 테이블의 RLS는 migration에서 명시적으로 활성화한다. Auth/Storage/Realtime 관리 스키마와 외부 인증 설정 전체의 동일성을 검증한 것은 아니다.
 - SQL 테스트 14개 중 13개 통과. 새 `major_catalog_local.sql`은 실제 RPC의 키워드·예시·계열 사고 조회, 키워드 제외, 다른 계열 연결 차단, 일반 사용자 쓰기 차단, anon 메타데이터 접근 차단을 검증하고 롤백한다.
 - `questionnaire_published_deletion.sql` 실패는 운영 dump에도 존재하는 기존 문제다. `private.guard_submitted_answers`가 DELETE에도 `NEW`(NULL)를 반환해 미완료 답변 삭제를 건너뛰며, 이어지는 응답 삭제가 외래 키에 막힌다. 로컬 구조 재현 작업에서는 운영과 다른 동작을 추가하지 않았다. 별도 수정 migration과 회귀 검증이 필요하다.
+
+## 질문 유형 추가 (2026-09-21)
+
+`20260921083603_questionnaire_question_types.sql`을 롤백 테스트 후 `migration up --local`로 적용했다. 새 질문 유형·선택지, 선택 값과 읽을 수 있는 답변 텍스트 저장을 추가한다. 운영에는 적용하지 않았다. 로컬 적용 대기 파일이 이 파일 하나뿐임을 확인했으며 기존 운영 이력은 변경하지 않았다. 관련 SQL 회귀와 로컬 보안 advisor는 통과했다.
+
+## 기타 선택지 (2026-09-22)
+
+`20260922044351_questionnaire_other_choices.sql`은 기타 선택지 설정 검증과 답변 텍스트 변환을 확장한다. 로컬에만 적용하며 운영 DB는 변경하지 않았다. 관련 SQL은 `supabase/tests/questionnaire_other_choices.sql`이다.

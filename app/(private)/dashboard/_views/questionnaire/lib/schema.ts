@@ -9,6 +9,25 @@ const detailSchema = z.object({
   visibleToConsultants: z.boolean(),
 });
 const questionSchema = z.object({
+  kind: z.enum(['text', 'scale', 'single', 'multiple']).optional(),
+  options: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        label: z.string().max(500),
+        isOther: z.boolean().optional(),
+      }),
+    )
+    .max(20)
+    .refine(
+      (options) => options.filter((o) => o.isOther).length <= 1,
+      'Only one other option is allowed',
+    )
+    .refine(
+      (options) => new Set(options.map((o) => o.id)).size === options.length,
+      'Duplicate option IDs',
+    )
+    .optional(),
   id: z.uuid(),
   logicalKey: z.uuid(),
   text: z.string().max(20000).transform(normalizeRichTextValue),

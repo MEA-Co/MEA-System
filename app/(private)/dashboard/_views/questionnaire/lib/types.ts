@@ -1,3 +1,5 @@
+import type { QuestionKind } from './question-types';
+
 export type QuestionDetail = {
   id: string;
   title: string;
@@ -6,6 +8,8 @@ export type QuestionDetail = {
 };
 
 export type Question = {
+  kind?: QuestionKind;
+  options?: { id: string; label: string; isOther?: boolean }[];
   id: string;
   logicalKey: string;
   text: string;

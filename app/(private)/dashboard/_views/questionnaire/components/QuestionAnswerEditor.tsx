@@ -1,10 +1,14 @@
 'use client';
 
+import type { Question } from '../lib/types';
+
+import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { useAnswers } from './QuestionnaireAnswers';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { RichTextContent } from './RichTextContent';
 
-export function QuestionAnswerEditor({ questionId }: { questionId: string }) {
+export function QuestionAnswerEditor({ question }: { question: Question }) {
+  const questionId = question.id;
   const { answers, locked, change } = useAnswers();
   const answer = answers[questionId] ?? '';
   const id = `answer-${questionId}`;
@@ -16,7 +20,14 @@ export function QuestionAnswerEditor({ questionId }: { questionId: string }) {
       <label id={`${id}-label`} htmlFor={id} className="text-sm font-medium">
         내 답변
       </label>
-      {locked ? (
+      {question.kind && question.kind !== 'text' ? (
+        <QuestionChoiceInput
+          question={question}
+          value={answer}
+          onChange={(value) => change(questionId, value)}
+          disabled={locked}
+        />
+      ) : locked ? (
         <RichTextContent value={answer || '답변 없음'} />
       ) : (
         <QuestionRichTextEditor

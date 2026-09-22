@@ -29,7 +29,9 @@ import {
   useQuestionnaireApi,
   useQuestionnaireResource,
 } from '../lib/api-client';
+import { validTypedAnswer } from '../lib/question-types';
 import { richTextPlainText } from '../lib/rich-text';
+import type { Question } from '../lib/types';
 
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 
@@ -47,11 +49,11 @@ export function useAnswers() {
 }
 export function QuestionnaireAnswers({
   versionId,
-  questionIds,
+  questions,
   children,
 }: {
   versionId: string;
-  questionIds: string[];
+  questions: Question[];
   children: ReactNode;
 }) {
   const { data, error } = useQuestionnaireResource<Snapshot>(
@@ -67,10 +69,11 @@ export function QuestionnaireAnswers({
     <AnswerSession
       key={versionId}
       versionId={versionId}
+      questions={questions}
       remote={{
         ...data,
         answers: Object.fromEntries(
-          questionIds.map((id) => [id, data.answers[id] ?? '']),
+          questions.map(({ id }) => [id, data.answers[id] ?? '']),
         ),
       }}
       unavailable={!!error}
@@ -82,11 +85,13 @@ export function QuestionnaireAnswers({
 function AnswerSession({
   versionId,
   remote,
+  questions,
   unavailable,
   children,
 }: {
   versionId: string;
   remote: Snapshot;
+  questions: Question[];
   unavailable: boolean;
   children: ReactNode;
 }) {
@@ -129,7 +134,11 @@ function AnswerSession({
     if (
       complete &&
       (!Object.keys(answers).length ||
-        Object.values(answers).some((v) => !richTextPlainText(v).trim()))
+        questions.some(
+          (question) =>
+            !validTypedAnswer(question, answers[question.id] ?? '', true) ||
+            !richTextPlainText(answers[question.id] ?? '').trim(),
+        ))
     ) {
       setError('모든 질문에 답변을 입력해 주세요.');
       return;

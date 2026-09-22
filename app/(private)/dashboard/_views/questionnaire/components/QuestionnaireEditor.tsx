@@ -27,6 +27,7 @@ import { QuestionDetailsEditor } from './QuestionDetailsEditor';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
+import { QuestionTypeEditor } from './QuestionTypeEditor';
 
 export function QuestionnaireEditor({
   initialDraft,
@@ -221,49 +222,77 @@ export function QuestionnaireEditor({
                 <div className="space-y-4">
                   {section.questions.map((question, questionIndex) => (
                     <div key={question.id}>
-                      <div className="flex items-start gap-2 sm:gap-3">
-                        <label
-                          htmlFor={`question-${question.id}`}
-                          className="pt-3 text-xs font-semibold text-muted-foreground"
-                        >
-                          <span className="sr-only">
-                            섹션 {sectionIndex + 1} 질문{' '}
-                          </span>
-                          {questionIndex + 1}.
-                        </label>
-                        <QuestionRichTextEditor
-                          id={`question-${question.id}`}
-                          value={question.text}
-                          ariaLabel={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1}`}
-                          placeholder="질문을 입력하세요"
-                          className="min-w-0 flex-1 rounded-lg border-border bg-muted"
-                          onChange={(text) =>
+                      <div className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <QuestionTypeEditor
+                            part="header"
+                            question={question}
+                            disabled={blocked}
+                            onChange={(updated) =>
+                              updateSection(section.id, (current) => ({
+                                ...current,
+                                questions: current.questions.map((item) =>
+                                  item.id === question.id ? updated : item,
+                                ),
+                              }))
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1} 삭제`}
+                            onClick={() =>
+                              updateSection(section.id, (current) => ({
+                                ...current,
+                                questions: current.questions.filter(
+                                  (item) => item.id !== question.id,
+                                ),
+                              }))
+                            }
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </Button>
+                        </div>
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <label
+                            htmlFor={`question-${question.id}`}
+                            className="pt-3 text-xs font-semibold text-muted-foreground"
+                          >
+                            <span className="sr-only">
+                              섹션 {sectionIndex + 1} 질문{' '}
+                            </span>
+                            {questionIndex + 1}.
+                          </label>
+                          <QuestionRichTextEditor
+                            id={`question-${question.id}`}
+                            value={question.text}
+                            ariaLabel={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1}`}
+                            placeholder="질문을 입력하세요"
+                            className="min-w-0 flex-1 rounded-lg border-border bg-muted"
+                            onChange={(text) =>
+                              updateSection(section.id, (current) => ({
+                                ...current,
+                                questions: current.questions.map((item) =>
+                                  item.id === question.id
+                                    ? { ...item, text }
+                                    : item,
+                                ),
+                              }))
+                            }
+                          />
+                        </div>
+                        <QuestionTypeEditor
+                          question={question}
+                          disabled={blocked}
+                          onChange={(updated) =>
                             updateSection(section.id, (current) => ({
                               ...current,
                               questions: current.questions.map((item) =>
-                                item.id === question.id
-                                  ? { ...item, text }
-                                  : item,
+                                item.id === question.id ? updated : item,
                               ),
                             }))
                           }
                         />
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="mt-1"
-                          aria-label={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1} 삭제`}
-                          onClick={() =>
-                            updateSection(section.id, (current) => ({
-                              ...current,
-                              questions: current.questions.filter(
-                                (item) => item.id !== question.id,
-                              ),
-                            }))
-                          }
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </Button>
                       </div>
                       <QuestionDetailsEditor
                         details={question.details}

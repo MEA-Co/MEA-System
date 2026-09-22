@@ -8,7 +8,7 @@ create temporary table questionnaire_test_data(document jsonb, save_id uuid);
 insert into questionnaire_test_data values(jsonb_build_object(
   'questionnaireId',gen_random_uuid(),'versionId',gen_random_uuid(),'title','검증 질문지',
   'sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션',
-    'questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'text','질문',
+    'questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'kind','text','options','[]'::jsonb,'text','질문',
       'details',jsonb_build_array(
         jsonb_build_object('id',gen_random_uuid(),'title','공개 의도','text','공개 설명','visibleToConsultants',true),
         jsonb_build_object('id',gen_random_uuid(),'title','비공개 의도','text','비공개 설명','visibleToConsultants',false)

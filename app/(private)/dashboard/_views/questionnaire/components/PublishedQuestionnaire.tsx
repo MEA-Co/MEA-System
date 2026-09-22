@@ -12,6 +12,7 @@ import type {
 
 import { PublishedExplanation } from './PublishedExplanation';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
+import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionExplanationForm } from './QuestionExplanationForm';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
@@ -52,6 +53,9 @@ export function PublishedQuestionnaire({
                 질문 {questionIndex + 1}
               </h3>
               <RichTextContent value={question.text} />
+              {staff && question.kind && question.kind !== 'text' && (
+                <QuestionChoiceInput question={question} disabled />
+              )}
               {question.details.map((detail) => (
                 <PublishedExplanation
                   key={detail.id}
@@ -87,7 +91,7 @@ export function PublishedQuestionnaire({
                 />
               )}
               {distributed && !staff && (
-                <QuestionAnswerEditor questionId={question.id} />
+                <QuestionAnswerEditor question={question} />
               )}
             </div>
           ))}
@@ -100,9 +104,7 @@ export function PublishedQuestionnaire({
     return (
       <QuestionnaireAnswers
         versionId={document.versionId}
-        questionIds={document.sections.flatMap((section) =>
-          section.questions.map((q) => q.id),
-        )}
+        questions={document.sections.flatMap((section) => section.questions)}
       >
         {content}
       </QuestionnaireAnswers>

@@ -41,7 +41,7 @@ export async function loadAnswers(versionId: string) {
   const { data, error } = await client
     .from('questionnaire_responses')
     .select(
-      'id,revision,status,updated_at,free_response,questionnaire_answers(id,question_id,body)',
+      'id,revision,status,updated_at,free_response,questionnaire_answers(id,question_id,body,selection)',
     )
     .eq('version_id', versionId)
     .eq('respondent_id', userId)
@@ -53,7 +53,14 @@ export async function loadAnswers(versionId: string) {
     savedAt: data?.updated_at ?? null,
     freeResponse: data?.free_response ?? '',
     answers: Object.fromEntries(
-      (data?.questionnaire_answers ?? []).map((a) => [a.question_id, a.body]),
+      (data?.questionnaire_answers ?? []).map((a) => [
+        a.question_id,
+        a.selection == null
+          ? a.body
+          : Array.isArray(a.selection)
+            ? JSON.stringify(a.selection)
+            : String(a.selection),
+      ]),
     ),
   };
 }

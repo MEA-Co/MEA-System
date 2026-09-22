@@ -358,7 +358,7 @@ export async function publishQuestionnaireDraft(
     };
   if (error?.code === '22023')
     return {
-      error: `제목과 질문을 입력해 주세요. 빈 질문은 ${label}할 수 없어요.`,
+      error: `제목·질문·선택지를 확인해 주세요. 선택형은 이름이 다른 선택지 2개 이상이 필요해요.`,
     };
   if (error)
     return {
