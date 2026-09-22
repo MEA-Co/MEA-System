@@ -1,3 +1,12 @@
+export const gradeOptions = ['1', '2', '3'];
+export const semesterOptions = ['1', '2'];
+export const recordTypeOptions = ['창체', '세특'];
+export const creativeActivityOptions = [
+  '자율·자치활동',
+  '동아리활동',
+  '진로활동',
+];
+
 export const groups = [
   {
     title: '기본 정보',
@@ -6,50 +15,46 @@ export const groups = [
       {
         key: 'topic',
         label: '주제',
-        placeholder: '탐구활동의 주제를 입력해 주세요',
+        placeholder:
+          '탐구 소재와 탐구 방법이 잘 드러나는 한 문장으로 작성해 주세요',
         required: true,
       },
-      { key: 'grade', label: '기재 영역 · 학년', placeholder: '예: 2학년' },
-      { key: 'semester', label: '기재 영역 · 학기', placeholder: '예: 1학기' },
+      { key: 'grade', label: '기재 영역 · 학년', placeholder: '학년 선택' },
+      { key: 'semester', label: '기재 영역 · 학기', placeholder: '학기 선택' },
       {
         key: 'recordType',
         label: '기재 영역 · 창체 또는 세특',
-        placeholder: '예: 창체, 세특',
+        placeholder: '기재 유형 선택',
       },
       {
         key: 'recordArea',
         label: '기재 영역 · 활동 영역 또는 교과명',
-        placeholder: '예: 자율자치, 동아리, 진로, 화학Ⅰ',
-      },
-      {
-        key: 'competencies',
-        label: '역량',
-        placeholder: '예: 비판적 사고력, 자료 분석력',
+        placeholder: '활동 영역 선택 또는 과목명 입력',
       },
     ],
   },
   {
     title: '활동 내용',
-    description: '세특 원문과 탐구 과정에서 드러난 생각을 기록해 주세요.',
+    description: '탐구 요약과 탐구 과정에서 드러난 생각을 기록해 주세요.',
     fields: [
       {
         key: 'record',
-        label: '세특 원문',
-        placeholder: '세특 원문을 입력해 주세요',
+        label: '탐구 요약',
+        placeholder: '탐구 요약을 입력해 주세요',
         multiline: true,
       },
       {
         key: 'story',
         label: '스토리',
         placeholder:
-          '챌린지 극복 과정, 활동을 우수하게 만들기 위한 모든 생각과 고민 과정을 입력해 주세요',
+          '탐구 과정에서 어려웠던 부분을 극복한 과정, 활동을 우수하게 만들기 위한 모든 생각과 고민 과정을 입력해 주세요',
         multiline: true,
       },
       {
         key: 'motivation',
         label: '포지셔닝 · 계기',
         placeholder:
-          '이 탐구활동을 시작하게 된 계기와 이전 활동과의 연결을 입력해 주세요',
+          '이 탐구활동을 시작하게 된 계기 또는 이전 활동과의 연계 포인트를 입력해주세요',
         multiline: true,
       },
       {
@@ -57,6 +62,11 @@ export const groups = [
         label: '포지셔닝 · 후속 연계 활동',
         placeholder: '탐구 이후 이어갈 활동을 입력해 주세요',
         multiline: true,
+      },
+      {
+        key: 'competencies',
+        label: '역량',
+        placeholder: '역량을 하나씩 입력해 주세요',
       },
     ],
   },
@@ -67,13 +77,23 @@ export const groups = [
       {
         key: 'inquiryType',
         label: '탐구 유형',
-        placeholder: '예: 이론형, 사례응용형, 가치관형 등 택일',
+        placeholder: '탐구 유형 선택',
+        options: ['이론형', '사례/응용형', '가치판단형'],
       },
       {
         key: 'inquirySubtype',
-        label: '탐구 세부 유형',
-        placeholder:
-          '예: 프로토타입 제작형, 실험형, 사례 비교형, 데이터 활용형, 문제 해결·정책 제언형, 인터뷰형 등',
+        label: '탐구 방법론 (다중 선택)',
+        placeholder: '탐구 방법론 선택',
+        options: [
+          '실험',
+          '독서(문헌)',
+          '제작',
+          '데이터 분석',
+          '설문, 인터뷰',
+          '모델링, 시뮬레이션',
+          '개념분석, 논증',
+          '사례연구,비교',
+        ],
       },
       {
         key: 'references',
@@ -91,7 +111,7 @@ export const groups = [
       },
     ],
   },
-] satisfies {
+] as const satisfies {
   title: string;
   description: string;
   fields: {
@@ -100,12 +120,36 @@ export const groups = [
     placeholder: string;
     required?: boolean;
     multiline?: boolean;
+    options?: string[];
   }[];
 }[];
 
 type FieldKey = (typeof groups)[number]['fields'][number]['key'];
-export type Activity = { clientKey: number; values: Record<FieldKey, string> };
-export const emptyValues = () =>
-  Object.fromEntries(
-    groups.flatMap((group) => group.fields.map((field) => [field.key, ''])),
-  ) as Activity['values'];
+export type ActivityReference = {
+  clientKey: string;
+  title: string;
+  link: string;
+  usage: string;
+};
+export type Activity = {
+  clientKey: number;
+  values: Record<Exclude<FieldKey, 'references'>, string> & {
+    references: ActivityReference[];
+  };
+};
+export const emptyValues = (): Activity['values'] => ({
+  topic: '',
+  grade: '',
+  semester: '',
+  recordType: '',
+  recordArea: '',
+  record: '',
+  story: '',
+  motivation: '',
+  followup: '',
+  competencies: '',
+  inquiryType: '',
+  inquirySubtype: '',
+  references: [],
+  selfAssessment: '',
+});

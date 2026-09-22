@@ -15,11 +15,22 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
+import { ExplorationCompetencyInput } from './components/ExplorationCompetencyInput';
+import { ExplorationRecordFields } from './components/ExplorationRecordFields';
+import { ExplorationReferencesInput } from './components/ExplorationReferencesInput';
+import { ExplorationTypeHelp } from './components/ExplorationTypeHelp';
 import { type Activity, emptyValues, groups } from './lib/fields';
 
 export function ExplorationView() {
@@ -33,9 +44,15 @@ export function ExplorationView() {
     (activity) => activity.clientKey === draft?.clientKey,
   );
   const filtered = activities.filter((activity) =>
-    Object.values(activity.values).some((value) =>
-      value.toLowerCase().includes(query.trim().toLowerCase()),
-    ),
+    Object.values(activity.values)
+      .flatMap((value) =>
+        typeof value === 'string'
+          ? [value]
+          : value.flatMap(({ title, link, usage }) => [title, link, usage]),
+      )
+      .some((value) =>
+        value.toLowerCase().includes(query.trim().toLowerCase()),
+      ),
   );
 
   function returnToList() {
@@ -143,6 +160,94 @@ export function ExplorationView() {
               </p>
               <div className="mt-5 grid gap-5 md:grid-cols-2">
                 {group.fields.map((field) => {
+                  if (field.key === 'inquirySubtype') {
+                    const selected = draft.values.inquirySubtype
+                      .split('\n')
+                      .filter(Boolean);
+                    return (
+                      <fieldset
+                        key={field.key}
+                        className="min-w-0 md:col-span-2"
+                      >
+                        <legend className="mb-3 text-sm font-medium">
+                          {field.label}
+                        </legend>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                          {field.options.map((option) => (
+                            <label
+                              key={option}
+                              className="flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-checked:border-primary/40 has-checked:bg-primary/5"
+                            >
+                              <input
+                                type="checkbox"
+                                name="inquirySubtype"
+                                value={option}
+                                checked={selected.includes(option)}
+                                className="size-4 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                onChange={(event) => {
+                                  const next = event.target.checked
+                                    ? [...selected, option]
+                                    : selected.filter(
+                                        (item) => item !== option,
+                                      );
+                                  setDraft({
+                                    ...draft,
+                                    values: {
+                                      ...draft.values,
+                                      inquirySubtype: field.options
+                                        .filter((item) => next.includes(item))
+                                        .join('\n'),
+                                    },
+                                  });
+                                }}
+                              />
+                              {option}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    );
+                  }
+                  if (field.key === 'references') {
+                    return (
+                      <ExplorationReferencesInput
+                        key={field.key}
+                        references={draft.values.references}
+                        onChange={(references) =>
+                          setDraft({
+                            ...draft,
+                            values: { ...draft.values, references },
+                          })
+                        }
+                      />
+                    );
+                  }
+                  if (field.key === 'competencies') {
+                    return (
+                      <ExplorationCompetencyInput
+                        key={field.key}
+                        value={draft.values.competencies}
+                        onChange={(competencies) =>
+                          setDraft({
+                            ...draft,
+                            values: { ...draft.values, competencies },
+                          })
+                        }
+                      />
+                    );
+                  }
+                  if (field.key === 'semester' || field.key === 'recordArea')
+                    return null;
+                  if (field.key === 'grade' || field.key === 'recordType') {
+                    return (
+                      <ExplorationRecordFields
+                        key={field.key}
+                        section={field.key}
+                        values={draft.values}
+                        onChange={(values) => setDraft({ ...draft, values })}
+                      />
+                    );
+                  }
                   const multiline = 'multiline' in field && field.multiline;
                   const required = 'required' in field && field.required;
                   const props = {
@@ -173,15 +278,46 @@ export function ExplorationView() {
                           : 'space-y-2'
                       }
                     >
-                      <Label htmlFor={props.id}>
-                        {field.label}
-                        {required && (
-                          <span className="text-xs text-muted-foreground">
-                            필수
-                          </span>
-                        )}
-                      </Label>
-                      {multiline ? (
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor={props.id}>
+                          {field.label}
+                          {required && (
+                            <span className="text-xs text-muted-foreground">
+                              필수
+                            </span>
+                          )}
+                        </Label>
+                        {field.key === 'inquiryType' && <ExplorationTypeHelp />}
+                      </div>
+                      {'options' in field && field.options ? (
+                        <Select
+                          name={field.key}
+                          value={draft.values[field.key] || null}
+                          onValueChange={(value) =>
+                            setDraft({
+                              ...draft,
+                              values: {
+                                ...draft.values,
+                                [field.key]: value ?? '',
+                              },
+                            })
+                          }
+                        >
+                          <SelectTrigger
+                            id={props.id}
+                            className="w-full rounded-xl"
+                          >
+                            <SelectValue placeholder={field.placeholder} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : multiline ? (
                         <Textarea
                           {...props}
                           className="min-h-32 resize-y rounded-xl"
@@ -246,10 +382,17 @@ export function ExplorationView() {
                     </button>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {[
-                        activity.values.grade,
-                        activity.values.semester,
-                        activity.values.recordType,
-                        activity.values.recordArea,
+                        [
+                          activity.values.grade &&
+                            `${activity.values.grade}학년`,
+                          activity.values.semester &&
+                            `${activity.values.semester}학기`,
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
+                        [activity.values.recordType, activity.values.recordArea]
+                          .filter(Boolean)
+                          .join(' 영역 '),
                       ]
                         .filter(Boolean)
                         .join(' · ') || '기재 영역 미입력'}
