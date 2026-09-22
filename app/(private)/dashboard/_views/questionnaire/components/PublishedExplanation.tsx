@@ -80,46 +80,44 @@ export function PublishedExplanation({
   }
   return (
     <div className="rounded-lg bg-muted/50 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <h4 className="whitespace-pre-wrap break-words font-medium">
-            {detail.title || '설명'}
-          </h4>
-          {staff && (
-            <Badge variant="outline">
-              {detail.visibleToConsultants
-                ? '컨설턴트 공개 항목'
-                : '컨설턴트 비공개 항목'}
-            </Badge>
-          )}
-        </div>
-        {canManage && (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={editing || pending}
-              onClick={() => setEditing(true)}
-            >
-              <Pencil aria-hidden="true" />
-              수정
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              disabled={editing || pending}
-              onClick={() => {
-                setDeleteRevision(revision);
-                setOpen(true);
-              }}
-            >
-              <Trash2 aria-hidden="true" />
-              삭제
-            </Button>
-          </div>
+      <div className="flex items-start justify-between gap-3">
+        <h4 className="min-w-0 flex-1 whitespace-pre-wrap break-words font-medium">
+          {detail.title || '설명'}
+        </h4>
+        {staff && (
+          <Badge variant="outline" className="shrink-0">
+            {detail.visibleToConsultants
+              ? '컨설턴트 공개 항목'
+              : '컨설턴트 비공개 항목'}
+          </Badge>
         )}
       </div>
+      {canManage && (
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={editing || pending}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil aria-hidden="true" />
+            수정
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={editing || pending}
+            onClick={() => {
+              setDeleteRevision(revision);
+              setOpen(true);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            삭제
+          </Button>
+        </div>
+      )}
       {canManage && editing ? (
         <QuestionExplanationForm
           versionId={versionId}
