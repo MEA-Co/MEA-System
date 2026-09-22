@@ -30,11 +30,6 @@ export function QuestionnairePreview({
                   value={question.text || '작성하지 않은 질문'}
                 />
               </div>
-              {question.kind && question.kind !== 'text' ? (
-                <QuestionChoiceInput question={question} disabled />
-              ) : (
-                <QuestionTextAnswerPreview />
-              )}
               {question.details
                 .filter((detail) => detail.visibleToConsultants)
                 .map((detail) => (
@@ -48,6 +43,11 @@ export function QuestionnairePreview({
                     />
                   </div>
                 ))}
+              {question.kind && question.kind !== 'text' ? (
+                <QuestionChoiceInput question={question} disabled />
+              ) : (
+                <QuestionTextAnswerPreview />
+              )}
             </div>
           ))}
         </section>

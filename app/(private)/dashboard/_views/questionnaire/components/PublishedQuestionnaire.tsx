@@ -18,6 +18,7 @@ import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
@@ -53,9 +54,6 @@ export function PublishedQuestionnaire({
                 질문 {questionIndex + 1}
               </h3>
               <RichTextContent value={question.text} />
-              {staff && question.kind && question.kind !== 'text' && (
-                <QuestionChoiceInput question={question} disabled />
-              )}
               {question.details.map((detail) => (
                 <PublishedExplanation
                   key={detail.id}
@@ -78,6 +76,12 @@ export function PublishedQuestionnaire({
                   count={question.details.length}
                 />
               )}
+              {staff &&
+                (question.kind && question.kind !== 'text' ? (
+                  <QuestionChoiceInput question={question} disabled />
+                ) : (
+                  <QuestionTextAnswerPreview />
+                ))}
               {staff && reviewContext && (
                 <QuestionnaireReviews
                   {...reviewContext}

@@ -98,7 +98,7 @@ export function QuestionnaireReviews({
     return null;
   return (
     <section
-      className={`mt-4 space-y-3 border-l-2 pl-4 ${reviews.length ? 'border-green-200 dark:border-green-900' : 'border-border'}`}
+      className={`mt-4 space-y-3 border-l-2 pl-4 ${reviews.length || (!isOwner && questionId && canRequest) ? 'border-green-300 dark:border-green-700' : 'border-border'}`}
       aria-label={isOwner ? '받은 검토 요청' : '내 검토 요청'}
     >
       {reviews.length > 0 && (

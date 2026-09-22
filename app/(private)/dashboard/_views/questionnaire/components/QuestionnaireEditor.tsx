@@ -281,6 +281,19 @@ export function QuestionnaireEditor({
                             }
                           />
                         </div>
+                        <QuestionDetailsEditor
+                          details={question.details}
+                          onChange={(details) =>
+                            updateSection(section.id, (current) => ({
+                              ...current,
+                              questions: current.questions.map((item) =>
+                                item.id === question.id
+                                  ? { ...item, details }
+                                  : item,
+                              ),
+                            }))
+                          }
+                        />
                         <QuestionTypeEditor
                           question={question}
                           disabled={blocked}
@@ -294,19 +307,6 @@ export function QuestionnaireEditor({
                           }
                         />
                       </div>
-                      <QuestionDetailsEditor
-                        details={question.details}
-                        onChange={(details) =>
-                          updateSection(section.id, (current) => ({
-                            ...current,
-                            questions: current.questions.map((item) =>
-                              item.id === question.id
-                                ? { ...item, details }
-                                : item,
-                            ),
-                          }))
-                        }
-                      />
                       {reviewContext && (
                         <QuestionnaireReviews
                           {...reviewContext}

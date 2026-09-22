@@ -24,7 +24,7 @@ export function QuestionDetailsEditor({
   }
 
   return (
-    <div className="mt-4 space-y-3 border-l-2 border-muted pl-4">
+    <div className="mt-4 space-y-3 border-l-2 border-blue-300 pl-4 dark:border-blue-700">
       {details.map((detail, index) => (
         <QuestionAnnotationEditor
           key={detail.id}

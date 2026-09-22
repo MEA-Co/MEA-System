@@ -100,7 +100,13 @@ export function QuestionExplanationForm({
     }
   }
   return (
-    <div className={detail ? 'mt-4' : 'mt-4 border-l-2 border-muted pl-4'}>
+    <div
+      className={
+        detail
+          ? 'mt-4'
+          : 'mt-4 border-l-2 border-blue-300 pl-4 dark:border-blue-700'
+      }
+    >
       {editing ? (
         <form
           onSubmit={(event) => {

@@ -85,39 +85,16 @@ export function PublishedExplanation({
           {detail.title || '설명'}
         </h4>
         {staff && (
-          <Badge variant="outline" className="shrink-0">
+          <Badge
+            variant="outline"
+            className={`shrink-0 ${detail.visibleToConsultants ? 'border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300' : ''}`}
+          >
             {detail.visibleToConsultants
               ? '컨설턴트 공개 항목'
               : '컨설턴트 비공개 항목'}
           </Badge>
         )}
       </div>
-      {canManage && (
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={editing || pending}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil aria-hidden="true" />
-            수정
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            disabled={editing || pending}
-            onClick={() => {
-              setDeleteRevision(revision);
-              setOpen(true);
-            }}
-          >
-            <Trash2 aria-hidden="true" />
-            삭제
-          </Button>
-        </div>
-      )}
       {canManage && editing ? (
         <QuestionExplanationForm
           versionId={versionId}
@@ -130,6 +107,32 @@ export function PublishedExplanation({
         />
       ) : (
         <RichTextContent value={detail.text} className="mt-3 text-sm" />
+      )}
+      {canManage && !editing && (
+        <div className="mt-4 flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={editing || pending}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil aria-hidden="true" />
+            수정
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={editing || pending}
+            onClick={() => {
+              setDeleteRevision(revision);
+              setOpen(true);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            삭제
+          </Button>
+        </div>
       )}
       {canManage && (
         <>
