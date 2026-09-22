@@ -60,7 +60,7 @@ export const groups = [
       {
         key: 'followup',
         label: '포지셔닝 · 후속 연계 활동',
-        placeholder: '탐구 이후 이어갈 활동을 입력해 주세요',
+        placeholder: '탐구 이후 후속 연계한 활동을 입력해 주세요',
         multiline: true,
       },
       {
