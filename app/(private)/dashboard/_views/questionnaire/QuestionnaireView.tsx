@@ -7,6 +7,8 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
+import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
+
 import { PublicationReadMarker } from './components/PublicationNotifications';
 import { PublishedQuestionnaire } from './components/PublishedQuestionnaire';
 import { QuestionnaireEditor } from './components/QuestionnaireEditor';
@@ -167,7 +169,7 @@ function QuestionnaireContent({
   }
   return (
     <section
-      className="mx-auto max-w-4xl"
+      className="w-full"
       aria-labelledby="questionnaire-management-title"
     >
       {error && (
@@ -177,17 +179,13 @@ function QuestionnaireContent({
       )}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
+          <DashboardPageCategory view="questionnaire" />
           <h1
             id="questionnaire-management-title"
-            className="text-2xl font-semibold tracking-tight"
+            className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"
           >
             질문지 관리
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {staff
-              ? '질문지를 작성하고 게시·검토·배포할 수 있어요.'
-              : '배포된 질문지를 확인해 보세요.'}
-          </p>
         </div>
         {staff && (
           <Button

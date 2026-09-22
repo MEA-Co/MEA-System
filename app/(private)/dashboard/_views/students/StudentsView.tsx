@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/card';
 import type { ManagedMember } from '@/lib/admin';
 
+import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
+
 import { StudentManagementTable } from './components/StudentManagementTable';
 
 type StudentsViewProps = {
@@ -17,7 +19,7 @@ export function StudentsView({ students }: StudentsViewProps) {
   return (
     <>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">구성원 관리</p>
+        <DashboardPageCategory view="students" />
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           학생 관리
         </h1>

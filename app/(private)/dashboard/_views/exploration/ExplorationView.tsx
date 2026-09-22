@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 
+import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
+
 import { type Activity, emptyValues, groups } from './lib/fields';
 
 export function ExplorationView() {
@@ -55,7 +57,7 @@ export function ExplorationView() {
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">운영 관리</p>
+          <DashboardPageCategory view="exploration" />
           <h1
             id="exploration-management-title"
             className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"

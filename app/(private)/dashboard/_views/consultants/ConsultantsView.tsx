@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/card';
 import type { ManagedMember } from '@/lib/admin';
 
+import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
+
 import { ConsultantManagementTable } from './components/ConsultantManagementTable';
 
 type ConsultantsViewProps = {
@@ -21,7 +23,7 @@ export function ConsultantsView({
   return (
     <>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">구성원 관리</p>
+        <DashboardPageCategory view="consultants" />
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           컨설턴트 관리
         </h1>

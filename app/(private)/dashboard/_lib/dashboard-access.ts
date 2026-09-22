@@ -1,11 +1,18 @@
 import type { MemberRole } from '@/lib/profile';
 
+export const DASHBOARD_GROUPS = [
+  { id: 'personal', label: null },
+  { id: 'members', label: '구성원 관리' },
+  { id: 'operations', label: '운영 관리' },
+  { id: 'data', label: '데이터 관리' },
+] as const;
+
 export const DASHBOARD_PAGES = {
   profile: { label: '내 정보', group: 'personal' },
   students: { label: '학생 관리', group: 'members' },
   consultants: { label: '컨설턴트 관리', group: 'members' },
-  questionnaire: { label: '질문지 관리', group: 'operations' },
-  exploration: { label: '탐구활동 관리', group: 'operations' },
+  questionnaire: { label: '질문지 관리', group: 'data' },
+  exploration: { label: '탐구활동 관리', group: 'data' },
   consulting: { label: '컨설팅 관리', group: 'operations' },
 } as const;
 
@@ -24,7 +31,6 @@ export const DASHBOARD_ROLES = {
     profile: { sidebar: true },
     questionnaire: { sidebar: true },
     exploration: { sidebar: true },
-    consulting: { sidebar: false },
   },
   consultant_lead: {
     consultants: { sidebar: true },
@@ -38,10 +44,16 @@ export const DASHBOARD_ROLES = {
     questionnaire: { sidebar: true },
     consulting: { sidebar: true },
   },
-} as const satisfies Record<
-  MemberRole,
-  RolePages & { consulting: { sidebar: boolean } }
->;
+} as const satisfies Record<MemberRole, RolePages>;
+
+export const DASHBOARD_DEFAULT_VIEWS = {
+  student: 'consulting',
+  consultant: 'questionnaire',
+  consultant_lead: 'consultants',
+  admin: 'consultants',
+} as const satisfies {
+  [Role in MemberRole]: keyof (typeof DASHBOARD_ROLES)[Role];
+};
 
 export function canAccessDashboardView(role: MemberRole, view: DashboardView) {
   return Object.hasOwn(DASHBOARD_ROLES[role], view);
@@ -55,9 +67,11 @@ export function resolveDashboardView(
     typeof requested !== 'string' ||
     !Object.hasOwn(DASHBOARD_PAGES, requested)
   )
-    return 'consulting';
+    return DASHBOARD_DEFAULT_VIEWS[role];
   const view = requested as DashboardView;
-  return canAccessDashboardView(role, view) ? view : 'consulting';
+  return canAccessDashboardView(role, view)
+    ? view
+    : DASHBOARD_DEFAULT_VIEWS[role];
 }
 
 export function getDashboardNavigation(role: MemberRole) {

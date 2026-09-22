@@ -10,6 +10,8 @@ import {
 } from '@/features/consulting/completion';
 import type { MemberRole } from '@/lib/profile';
 
+import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
+
 const consultingItems: ReadonlyArray<{
   id: string;
   title: string;
@@ -135,7 +137,7 @@ export function ConsultingView({
     <>
       <div>
         {role !== 'consultant' && (
-          <p className="text-sm font-medium text-muted-foreground">운영 관리</p>
+          <DashboardPageCategory view="consulting" />
         )}
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
           {role === 'consultant' ? '컨설팅 목록' : '컨설팅 관리'}

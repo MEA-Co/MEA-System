@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 
 import {
+  DASHBOARD_GROUPS,
   type DashboardView,
   getDashboardNavigation,
 } from '@/app/(private)/dashboard/_lib/dashboard-access';
@@ -39,11 +40,6 @@ const icons = {
   exploration: NotebookPen,
   consulting: MessagesSquare,
 };
-const groups = [
-  { id: 'personal', label: null },
-  { id: 'members', label: '구성원 관리' },
-  { id: 'operations', label: '운영 관리' },
-] as const;
 
 type DashboardNavigationProps = {
   role: MemberRole;
@@ -63,7 +59,7 @@ export function DashboardNavigation({
   const { unreadIds } = usePublicationNotifications();
   return (
     <>
-      {groups.map((group) => {
+      {DASHBOARD_GROUPS.map((group) => {
         const items = pages.filter((page) => page.group === group.id);
         if (!items.length) return null;
         return (
