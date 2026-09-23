@@ -128,7 +128,7 @@ export function QuestionChoiceInput({
                         onChange={(event) =>
                           onScaleLabelChange(labelKey, event.target.value)
                         }
-                        className={`mt-1 h-8 w-[140px] shrink-0 px-2 text-center text-xs ${questionnaireStyles.input} ${number === 1 ? 'self-start' : number === config.max ? 'self-end' : 'self-center'}`}
+                        className={`mt-1 h-8 w-35 shrink-0 px-2 text-center text-xs ${questionnaireStyles.input} ${number === 1 ? 'self-start' : number === config.max ? 'self-end' : 'self-center'}`}
                       />
                     ) : (
                       <span className="mt-1 min-h-4 text-[11px] leading-relaxed break-keep text-muted-foreground sm:text-xs">
@@ -244,7 +244,9 @@ export function QuestionChoiceInput({
                   }
                 />
                 {choice.isOther && <span aria-hidden="true">+</span>}
-                <span className={chipStyle ? 'min-w-0 break-words' : undefined}>
+                <span
+                  className={chipStyle ? 'min-w-0 wrap-break-word' : undefined}
+                >
                   {choice.isOther
                     ? directInputLabel
                     : choice.label || `선택지 ${index + 1}`}
