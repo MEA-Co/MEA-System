@@ -8,6 +8,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const types = [
   {
@@ -45,13 +51,19 @@ const types = [
 export function ExplorationTypeHelp() {
   return (
     <Dialog>
-      <DialogTrigger
-        type="button"
-        aria-label="탐구 유형 설명 보기"
-        className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-      >
-        <CircleHelp className="size-4" aria-hidden="true" />
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={<DialogTrigger />}
+            type="button"
+            aria-label="탐구 유형 설명 보기"
+            className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <CircleHelp className="size-4" aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent>클릭하여 설명 확인</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader className="pr-8">
           <DialogTitle>탐구 유형 안내</DialogTitle>
