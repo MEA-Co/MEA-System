@@ -35,9 +35,9 @@ export function QuestionTypeEditor({
     <div className="space-y-3">
       {part === 'header' && (
         <div className="flex flex-wrap items-center gap-3">
-          <label id={`kind-${question.id}`} className="text-sm font-medium">
+          <span id={`kind-${question.id}`} className="text-sm font-medium">
             질문 유형
-          </label>
+          </span>
           <Select
             value={kind}
             onValueChange={(value) => {
@@ -74,7 +74,9 @@ export function QuestionTypeEditor({
           </Select>
         </div>
       )}
-      {part === 'settings' && kind === 'text' && <QuestionTextAnswerPreview />}
+      {part === 'settings' && kind === 'text' && (
+        <QuestionTextAnswerPreview variant="editor" />
+      )}
       {part === 'settings' && kind === 'scale' && (
         <QuestionChoiceInput question={question} disabled />
       )}

@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 import type { QuestionnaireSection } from '../lib/types';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
@@ -14,14 +16,17 @@ export function QuestionnairePreview({
 }) {
   return (
     <div className="space-y-8 p-5 sm:p-10">
-      <h2
-        className={`whitespace-pre-wrap wrap-break-word text-3xl font-semibold ${questionnaireStyles.title}`}
-      >
+      <h2 className="whitespace-pre-wrap wrap-break-word text-3xl font-semibold">
         {title || '제목 없는 질문지'}
       </h2>
       {sections.map((section, sectionIndex) => (
         <section key={section.id} className="space-y-5">
-          <h3 className={questionnaireStyles.sectionHeading}>
+          <h3
+            className={cn(
+              questionnaireStyles.sectionHeading,
+              'bg-transparent px-0 dark:bg-transparent',
+            )}
+          >
             <span className={questionnaireStyles.sectionNumber}>
               {sectionIndex + 1}
             </span>
@@ -32,8 +37,10 @@ export function QuestionnairePreview({
           {section.questions.map((question, questionIndex) => (
             <div key={question.id} className={questionnaireStyles.questionCard}>
               <div className="flex items-start gap-2 font-medium">
-                <span className={questionnaireStyles.questionLabel}>
-                  {questionIndex + 1}.
+                <span
+                  className={`w-6 shrink-0 tabular-nums ${questionnaireStyles.questionLabel}`}
+                >
+                  {questionIndex + 1}
                 </span>
                 <RichTextContent
                   className="min-w-0 flex-1"
@@ -59,7 +66,7 @@ export function QuestionnairePreview({
               {question.kind && question.kind !== 'text' ? (
                 <QuestionChoiceInput question={question} disabled />
               ) : (
-                <QuestionTextAnswerPreview />
+                <QuestionTextAnswerPreview variant="questionnaire" />
               )}
             </div>
           ))}

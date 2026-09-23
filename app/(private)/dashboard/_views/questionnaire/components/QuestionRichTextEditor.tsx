@@ -34,6 +34,7 @@ export function QuestionRichTextEditor({
   compact = false,
   className,
   ariaLabel,
+  ariaLabelledBy,
 }: {
   id: string;
   value: string;
@@ -45,6 +46,7 @@ export function QuestionRichTextEditor({
   compact?: boolean;
   className?: string;
   ariaLabel?: string;
+  ariaLabelledBy?: string;
 }) {
   const lengthLimit = useMemo(
     () =>
@@ -111,7 +113,9 @@ export function QuestionRichTextEditor({
         id,
         role: 'textbox',
         'aria-multiline': 'true',
-        'aria-label': ariaLabel ?? placeholder,
+        ...(ariaLabelledBy
+          ? { 'aria-labelledby': ariaLabelledBy }
+          : { 'aria-label': ariaLabel ?? placeholder }),
         'aria-required': String(required),
         class: cn(
           richTextClasses,

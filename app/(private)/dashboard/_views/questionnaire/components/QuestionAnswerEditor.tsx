@@ -18,13 +18,9 @@ export function QuestionAnswerEditor({ question }: { question: Question }) {
       className={questionnaireStyles.answerArea}
       aria-labelledby={`${id}-label`}
     >
-      <label
-        id={`${id}-label`}
-        htmlFor={id}
-        className={questionnaireStyles.questionLabel}
-      >
+      <span id={`${id}-label`} className={questionnaireStyles.questionLabel}>
         내 답변
-      </label>
+      </span>
       {question.kind && question.kind !== 'text' ? (
         <QuestionChoiceInput
           question={question}
@@ -37,10 +33,11 @@ export function QuestionAnswerEditor({ question }: { question: Question }) {
       ) : (
         <QuestionRichTextEditor
           id={id}
-          ariaLabel="내 답변"
+          compact
+          ariaLabelledBy={`${id}-label`}
           value={answer}
           onChange={(value) => change(questionId, value)}
-          placeholder="이 질문에 대한 답변을 작성해 주세요"
+          placeholder="답변을 입력해 주세요"
         />
       )}
     </section>

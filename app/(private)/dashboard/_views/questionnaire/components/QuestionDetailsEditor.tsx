@@ -30,6 +30,7 @@ export function QuestionDetailsEditor({
           key={detail.id}
           id={`detail-${detail.id}`}
           label={`설명 항목 ${index + 1}`}
+          authoring
           title={detail.title}
           text={detail.text}
           onTitleChange={(title) => update(detail.id, { title })}

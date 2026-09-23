@@ -59,10 +59,15 @@ export function PublishedQuestionnaire({
           </h2>
           {section.questions.map((question, questionIndex) => (
             <div key={question.id} className={questionnaireStyles.questionCard}>
-              <h3 className={questionnaireStyles.questionLabel}>
-                질문 {questionIndex + 1}
-              </h3>
-              <RichTextContent value={question.text} />
+              <div className="flex items-start gap-3">
+                <h3
+                  className={`w-6 shrink-0 tabular-nums ${questionnaireStyles.questionLabel}`}
+                >
+                  <span className="sr-only">질문 </span>
+                  {questionIndex + 1}
+                </h3>
+                <RichTextContent className="min-w-0 flex-1" value={question.text} />
+              </div>
               {question.details.map((detail) => (
                 <PublishedExplanation
                   key={detail.id}
@@ -89,7 +94,7 @@ export function PublishedQuestionnaire({
                 (question.kind && question.kind !== 'text' ? (
                   <QuestionChoiceInput question={question} disabled />
                 ) : (
-                  <QuestionTextAnswerPreview />
+                  <QuestionTextAnswerPreview variant="questionnaire" />
                 ))}
               {staff && reviewContext && (
                 <QuestionnaireReviews

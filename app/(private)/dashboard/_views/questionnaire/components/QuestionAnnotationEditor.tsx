@@ -18,6 +18,7 @@ export function QuestionAnnotationEditor({
   actions,
   children,
   titlePlaceholder = '항목 제목 (예: 가이드 답변)',
+  authoring = false,
   disabled = false,
   required = false,
   titleMaxLength,
@@ -32,26 +33,36 @@ export function QuestionAnnotationEditor({
   actions?: ReactNode;
   children?: ReactNode;
   titlePlaceholder?: string;
+  authoring?: boolean;
   disabled?: boolean;
   required?: boolean;
   titleMaxLength?: number;
   textMaxLength?: number;
 }) {
+  const surfaceClassName = authoring
+    ? 'rounded-lg border border-neutral-200 border-l-[3px] border-l-neutral-300 bg-white p-4 dark:border-neutral-700 dark:border-l-neutral-600 dark:bg-neutral-900'
+    : onTitleChange
+      ? questionnaireStyles.explanation
+      : 'rounded-xl border bg-muted/20 p-4';
+
   return (
-    <div
-      className={
-        onTitleChange
-          ? questionnaireStyles.explanation
-          : 'rounded-xl border bg-muted/20 p-4'
-      }
-    >
+    <div className={surfaceClassName}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <label
-          htmlFor={`${id}-${onTitleChange ? 'title' : 'text'}`}
-          className="text-xs font-medium text-muted-foreground"
-        >
-          {label}
-        </label>
+        {onTitleChange ? (
+          <label
+            htmlFor={`${id}-title`}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            {label}
+          </label>
+        ) : (
+          <span
+            id={`${id}-text-label`}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            {label}
+          </span>
+        )}
         <div className="flex items-center gap-1">{actions}</div>
       </div>
       {onTitleChange && (
@@ -66,11 +77,14 @@ export function QuestionAnnotationEditor({
           onChange={(event) => onTitleChange(event.target.value)}
         />
       )}
-      <label htmlFor={`${id}-text`} className="sr-only">
-        {label} 내용
-      </label>
+      {onTitleChange && (
+        <span id={`${id}-text-label`} className="sr-only">
+          {label} 내용
+        </span>
+      )}
       <QuestionRichTextEditor
         id={`${id}-text`}
+        ariaLabelledBy={`${id}-text-label`}
         value={text}
         placeholder="내용을 작성하세요"
         className="mt-3 rounded-lg"

@@ -258,19 +258,19 @@ export function QuestionnaireEditor({
                           </Button>
                         </div>
                         <div className="flex items-start gap-2 sm:gap-3">
-                          <label
-                            htmlFor={`question-${question.id}`}
-                            className="pt-3 text-sm font-semibold text-neutral-600 dark:text-neutral-300"
+                          <span
+                            id={`question-${question.id}-label`}
+                            className="w-6 shrink-0 pt-3 text-sm font-semibold tabular-nums text-neutral-600 dark:text-neutral-300"
                           >
                             <span className="sr-only">
                               섹션 {sectionIndex + 1} 질문{' '}
                             </span>
-                            {questionIndex + 1}.
-                          </label>
+                            {questionIndex + 1}
+                          </span>
                           <QuestionRichTextEditor
                             id={`question-${question.id}`}
                             value={question.text}
-                            ariaLabel={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1}`}
+                            ariaLabelledBy={`question-${question.id}-label`}
                             placeholder="질문을 입력하세요"
                             compact
                             className="min-w-0 flex-1 rounded-lg"
