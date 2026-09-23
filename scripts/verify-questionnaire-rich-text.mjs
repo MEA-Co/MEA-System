@@ -6,8 +6,8 @@ import vm from 'node:vm';
 import * as tiptapCore from '@tiptap/core';
 import { getSchema } from '@tiptap/core';
 import Highlight from '@tiptap/extension-highlight';
-import { wrapInList } from '@tiptap/pm/schema-list';
-import { EditorState } from '@tiptap/pm/state';
+import { splitListItem, wrapInList } from '@tiptap/pm/schema-list';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import ts from 'typescript';
 
@@ -33,6 +33,7 @@ const {
   parseRichText,
   richTextPlainText,
   normalizeRichTextValue,
+  showRichTextPlaceholder,
   RICH_TEXT_PREFIX,
 } = exports;
 const listExports = {};
@@ -57,6 +58,26 @@ const schema = getSchema([
   QuestionnaireList,
   Highlight,
 ]);
+
+test('placeholder disappears in empty bullet, plus, and numbered lists', () => {
+  const blank = schema.nodeFromJSON(toEditorDocument(''));
+  assert.equal(showRichTextPlaceholder(true, blank), true);
+
+  for (const [list, attributes] of [
+    [schema.nodes.bulletList, { marker: 'bullet' }],
+    [schema.nodes.bulletList, { marker: 'plus' }],
+    [schema.nodes.orderedList, { start: 1 }],
+  ]) {
+    let state = EditorState.create({ schema, doc: blank });
+    assert.equal(
+      wrapInList(list, attributes)(state, (transaction) => {
+        state = state.apply(transaction);
+      }),
+      true,
+    );
+    assert.equal(showRichTextPlaceholder(true, state.doc), false);
+  }
+});
 
 test('dash and plus rules match separately and preserve distinct markers through saving', () => {
   const rules = QuestionnaireList.config.addInputRules.call({
@@ -175,5 +196,65 @@ test('untrusted attributes are discarded and unsupported structures remain liter
   ]) {
     assert.equal(parseRichText(value), null);
     assert.equal(richTextPlainText(toEditorDocument(value)), value);
+  }
+});
+
+test('numbered lists continue on Enter and preserve start numbers after saving', () => {
+  for (const start of [1, 3]) {
+    let state = EditorState.create({
+      schema,
+      doc: schema.nodeFromJSON(toEditorDocument('첫 항목')),
+    });
+    wrapInList(schema.nodes.orderedList, { start })(state, (tr) => {
+      state = state.apply(tr);
+    });
+    state = state.apply(
+      state.tr.setSelection(
+        TextSelection.create(state.doc, 3 + '첫 항목'.length),
+      ),
+    );
+    assert.equal(
+      splitListItem(schema.nodes.listItem)(state, (tr) => {
+        state = state.apply(tr);
+      }),
+      true,
+    );
+    state = state.apply(state.tr.insertText('다음 항목'));
+    assert.equal(state.doc.firstChild.childCount, 2);
+    const saved = serializeRichText(state.doc.toJSON());
+    assert.equal(parseRichText(saved).content[0].attrs.start, start);
+    assert.equal(
+      schema.nodeFromJSON(toEditorDocument(saved)).eq(state.doc),
+      true,
+    );
+    assert.equal(richTextPlainText(saved), '첫 항목\n다음 항목');
+    assert.equal(serializeRichText(toEditorDocument(saved)), saved);
+  }
+});
+
+test('ordered list start attributes are bounded and arbitrary attributes removed', () => {
+  for (const start of [-1, 1.5, '3', 1000000000]) {
+    const saved = serializeRichText({
+      type: 'doc',
+      content: [
+        {
+          type: 'orderedList',
+          attrs: { start, onclick: 'bad' },
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: '항목' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    assert.equal(parseRichText(saved).content[0].attrs.start, 1);
+    assert.equal(saved.includes('onclick'), false);
   }
 });

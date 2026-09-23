@@ -13,13 +13,18 @@ export function QuestionnairePreview({
 }) {
   return (
     <div className="space-y-8 p-5 sm:p-10">
-      <h2 className="whitespace-pre-wrap break-words text-3xl font-semibold">
+      <h2 className="whitespace-pre-wrap wrap-break-word text-3xl font-semibold">
         {title || '제목 없는 질문지'}
       </h2>
       {sections.map((section, sectionIndex) => (
         <section key={section.id} className="space-y-6 border-t pt-6">
-          <h3 className="break-words text-xl font-semibold">
-            {section.title || `섹션 ${sectionIndex + 1}`}
+          <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
+              {sectionIndex + 1}
+            </span>
+            <span className="min-w-0 whitespace-pre-wrap wrap-break-word">
+              {section.title || '제목 없는 섹션'}
+            </span>
           </h3>
           {section.questions.map((question, questionIndex) => (
             <div key={question.id} className="space-y-4">
@@ -34,7 +39,7 @@ export function QuestionnairePreview({
                 .filter((detail) => detail.visibleToConsultants)
                 .map((detail) => (
                   <div key={detail.id} className="border-l-2 pl-4">
-                    <p className="break-words text-sm font-semibold">
+                    <p className="wrap-break-word text-sm font-semibold">
                       {detail.title || '제목 없는 항목'}
                     </p>
                     <RichTextContent

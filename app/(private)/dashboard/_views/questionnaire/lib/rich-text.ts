@@ -1,12 +1,28 @@
 /** Versioned, text-column-compatible content. Legacy strings remain literal text. */
 export const RICH_TEXT_PREFIX = '::mea-rich-text:v1::';
 export type RichTextNode = {
-  type: 'doc' | 'paragraph' | 'bulletList' | 'listItem' | 'text' | 'hardBreak';
+  type:
+    | 'doc'
+    | 'paragraph'
+    | 'bulletList'
+    | 'orderedList'
+    | 'listItem'
+    | 'text'
+    | 'hardBreak';
   text?: string;
-  attrs?: { marker: 'plus' };
+  attrs?: { marker?: 'plus'; start?: number };
   marks?: { type: 'highlight' }[];
   content?: RichTextNode[];
 };
+
+export function showRichTextPlaceholder(
+  isEmpty: boolean,
+  doc: { childCount: number; firstChild: { type: { name: string } } | null },
+): boolean {
+  return (
+    isEmpty && doc.childCount === 1 && doc.firstChild?.type.name === 'paragraph'
+  );
+}
 
 export function normalizeRichText(input: unknown): RichTextNode | null {
   let remaining = 10000;
@@ -34,7 +50,9 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
     }
     if (n.type === 'hardBreak') return { type: 'hardBreak' };
     if (
-      !['doc', 'paragraph', 'bulletList', 'listItem'].includes(String(n.type))
+      !['doc', 'paragraph', 'bulletList', 'orderedList', 'listItem'].includes(
+        String(n.type),
+      )
     )
       return null;
     if (n.content !== undefined && !Array.isArray(n.content)) return null;
@@ -46,9 +64,9 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
     const allowed =
       n.type === 'paragraph'
         ? ['text', 'hardBreak']
-        : n.type === 'bulletList'
+        : n.type === 'bulletList' || n.type === 'orderedList'
           ? ['listItem']
-          : ['paragraph', 'bulletList'];
+          : ['paragraph', 'bulletList', 'orderedList'];
     if (content.some((child) => !allowed.includes(child.type))) return null;
     if (n.type !== 'paragraph' && !content.length) return null;
     if (n.type === 'listItem' && content[0]?.type !== 'paragraph') return null;
@@ -59,6 +77,24 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
       typeof n.attrs === 'object' &&
       (n.attrs as Record<string, unknown>).marker === 'plus'
         ? { attrs: { marker: 'plus' as const } }
+        : {}),
+      ...(n.type === 'orderedList'
+        ? {
+            attrs: {
+              start: (() => {
+                const start =
+                  n.attrs && typeof n.attrs === 'object'
+                    ? (n.attrs as Record<string, unknown>).start
+                    : undefined;
+                return typeof start === 'number' &&
+                  Number.isInteger(start) &&
+                  start >= 1 &&
+                  start <= 999999999
+                  ? start
+                  : 1;
+              })(),
+            },
+          }
         : {}),
       ...(content.length ? { content } : {}),
     };
@@ -104,6 +140,7 @@ export function serializeRichText(input: unknown): string {
   function formatted(n: RichTextNode): boolean {
     return (
       n.type === 'bulletList' ||
+      n.type === 'orderedList' ||
       !!n.marks?.length ||
       (n.content ?? []).some(formatted)
     );

@@ -17,6 +17,7 @@ import { QuestionnaireList } from '../lib/list-extension';
 import {
   richTextPlainText,
   serializeRichText,
+  showRichTextPlaceholder,
   toEditorDocument,
 } from '../lib/rich-text';
 
@@ -93,7 +94,6 @@ export function QuestionRichTextEditor({
         heading: false,
         blockquote: false,
         horizontalRule: false,
-        orderedList: false,
         bulletList: false,
         link: false,
         trailingNode: false,
@@ -120,7 +120,9 @@ export function QuestionRichTextEditor({
   const state = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
-      empty: current?.isEmpty ?? !value,
+      empty: current
+        ? showRichTextPlaceholder(current.isEmpty, current.state.doc)
+        : !value,
       highlighted: current?.isActive('highlight') ?? false,
     }),
   });
