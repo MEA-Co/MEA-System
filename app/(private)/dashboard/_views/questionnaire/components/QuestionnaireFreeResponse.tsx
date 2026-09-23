@@ -1,5 +1,6 @@
 'use client';
 
+import { questionnaireStyles } from './questionnaire-styles';
 import { useAnswers } from './QuestionnaireAnswers';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { RichTextContent } from './RichTextContent';
@@ -8,10 +9,13 @@ export function QuestionnaireFreeResponse() {
   const { freeResponse, changeFreeResponse, locked } = useAnswers();
   return (
     <section
-      className="space-y-3 border-t pt-8"
+      className={questionnaireStyles.answerArea}
       aria-labelledby="free-response-label"
     >
-      <h2 id="free-response-label" className="text-lg font-semibold">
+      <h2
+        id="free-response-label"
+        className="text-lg font-semibold text-blue-800 dark:text-blue-300"
+      >
         자유 응답{' '}
         <span className="text-sm font-normal text-muted-foreground">
           (선택)

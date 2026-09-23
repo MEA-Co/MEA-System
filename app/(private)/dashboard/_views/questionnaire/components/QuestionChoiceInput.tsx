@@ -9,6 +9,8 @@ import {
 } from '../lib/question-types';
 import type { Question } from '../lib/types';
 
+import { questionnaireStyles } from './questionnaire-styles';
+
 export function QuestionChoiceInput({
   question,
   value = '',
@@ -77,7 +79,7 @@ export function QuestionChoiceInput({
       {choices.map((choice, index) => (
         <div key={choice.id} className="space-y-2">
           <label
-            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${disabled ? 'bg-muted/20' : 'cursor-pointer bg-muted/40 hover:bg-muted'} ${selected.includes(choice.id) ? 'border-blue-400 bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
+            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-blue-400/40 ${disabled ? '' : 'cursor-pointer'} ${selected.includes(choice.id) ? 'border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40' : `border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-900/40 ${disabled ? '' : 'hover:border-blue-300 hover:bg-blue-50/60 dark:hover:border-blue-700 dark:hover:bg-blue-950/30'}`}`}
           >
             <input
               type={multiple ? 'checkbox' : 'radio'}
@@ -111,7 +113,7 @@ export function QuestionChoiceInput({
             <Input
               aria-label="기타 답변"
               placeholder="기타 내용을 직접 입력해 주세요"
-              className="bg-muted"
+              className={questionnaireStyles.input}
               maxLength={5000}
               value={
                 answers.flatMap((answer) =>

@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuestionnaireSave } from '../hooks/useQuestionnaireSave';
 
 import { QuestionDetailsEditor } from './QuestionDetailsEditor';
+import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
@@ -121,7 +122,7 @@ export function QuestionnaireEditor({
       ) : null}
       <Tabs.Root defaultValue="edit">
         <Tabs.List
-          className="mb-4 inline-flex max-w-full gap-1 rounded-xl bg-muted p-1"
+          className="mb-4 inline-flex max-w-full gap-1 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800"
           aria-label="질문지 보기 방식"
         >
           {[
@@ -131,15 +132,15 @@ export function QuestionnaireEditor({
             <Tabs.Tab
               key={value}
               value={value}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
+              className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
             >
               <Icon className="size-4" aria-hidden="true" />
               {label}
             </Tabs.Tab>
           ))}
         </Tabs.List>
-        <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
-          <div className="flex items-center gap-2 border-b bg-muted/40 px-5 py-3 text-xs text-muted-foreground">
+        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-background dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="flex items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-5 py-3 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-300">
             <FileText className="size-4" aria-hidden="true" />
             <span role="status">
               {saving
@@ -153,13 +154,16 @@ export function QuestionnaireEditor({
                       : '내용을 입력하면 10초마다 자동 저장됩니다.'}
             </span>
           </div>
-          <Tabs.Panel value="consultant">
+          <Tabs.Panel
+            value="consultant"
+            className="bg-background dark:bg-neutral-900"
+          >
             <QuestionnairePreview title={title} sections={sections} />
           </Tabs.Panel>
           <Tabs.Panel
             value="edit"
             keepMounted
-            className="space-y-10 p-5 sm:p-10 data-[hidden]:hidden"
+            className="space-y-10 bg-background p-5 sm:p-10 dark:bg-neutral-900 data-[hidden]:hidden"
           >
             <div>
               <label
@@ -174,7 +178,7 @@ export function QuestionnaireEditor({
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="제목을 입력하세요"
                 rows={1}
-                className="mt-2 min-h-14 resize-none rounded-lg border-border bg-muted px-4 text-2xl font-semibold shadow-none md:text-3xl"
+                className={`mt-2 min-h-14 resize-none rounded-lg px-4 text-2xl font-semibold md:text-3xl ${questionnaireStyles.input}`}
               />
             </div>
 
@@ -188,7 +192,7 @@ export function QuestionnaireEditor({
                   <div className="min-w-0 flex-1">
                     <label
                       htmlFor={`section-${section.id}`}
-                      className="text-xs font-medium text-muted-foreground"
+                      className="block text-xs font-medium text-muted-foreground"
                     >
                       섹션 {sectionIndex + 1}
                     </label>
@@ -202,7 +206,7 @@ export function QuestionnaireEditor({
                         }))
                       }
                       placeholder="소제목을 입력하세요"
-                      className="mt-2 h-12 rounded-lg border-border bg-muted px-4 text-lg font-semibold shadow-none md:text-lg"
+                      className={`mt-2 h-12 rounded-lg px-4 text-lg font-semibold sm:max-w-[66%] md:text-lg ${questionnaireStyles.input}`}
                     />
                   </div>
                   <Button
@@ -222,7 +226,7 @@ export function QuestionnaireEditor({
                 <div className="space-y-4">
                   {section.questions.map((question, questionIndex) => (
                     <div key={question.id}>
-                      <div className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
+                      <div className={questionnaireStyles.questionCard}>
                         <div className="flex items-center justify-between gap-3">
                           <QuestionTypeEditor
                             part="header"
@@ -256,7 +260,7 @@ export function QuestionnaireEditor({
                         <div className="flex items-start gap-2 sm:gap-3">
                           <label
                             htmlFor={`question-${question.id}`}
-                            className="pt-3 text-xs font-semibold text-muted-foreground"
+                            className="pt-3 text-sm font-semibold text-neutral-600 dark:text-neutral-300"
                           >
                             <span className="sr-only">
                               섹션 {sectionIndex + 1} 질문{' '}
@@ -268,7 +272,8 @@ export function QuestionnaireEditor({
                             value={question.text}
                             ariaLabel={`섹션 ${sectionIndex + 1} 질문 ${questionIndex + 1}`}
                             placeholder="질문을 입력하세요"
-                            className="min-w-0 flex-1 rounded-lg border-border bg-muted"
+                            compact
+                            className="min-w-0 flex-1 rounded-lg"
                             onChange={(text) =>
                               updateSection(section.id, (current) => ({
                                 ...current,
@@ -322,7 +327,7 @@ export function QuestionnaireEditor({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-4"
+                  className="mt-4 w-full rounded-xl border border-dashed border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                   onClick={() => {
                     const question = {
                       id: crypto.randomUUID(),
@@ -344,7 +349,7 @@ export function QuestionnaireEditor({
 
             <Button
               variant="outline"
-              className="w-full border-dashed"
+              className="w-full border-dashed border-neutral-300 bg-background text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
               onClick={addSection}
             >
               <Plus aria-hidden="true" />

@@ -15,6 +15,7 @@ import { QUESTION_TYPES, type QuestionKind } from '../lib/question-types';
 import type { Question } from '../lib/types';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
+import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 
 export function QuestionTypeEditor({
@@ -73,9 +74,7 @@ export function QuestionTypeEditor({
           </Select>
         </div>
       )}
-      {part === 'settings' && kind === 'text' && (
-        <QuestionTextAnswerPreview />
-      )}
+      {part === 'settings' && kind === 'text' && <QuestionTextAnswerPreview />}
       {part === 'settings' && kind === 'scale' && (
         <QuestionChoiceInput question={question} disabled />
       )}
@@ -94,7 +93,7 @@ export function QuestionTypeEditor({
               <Input
                 aria-label={`선택지 ${index + 1}`}
                 placeholder={`선택지 ${index + 1}`}
-                className="bg-muted"
+                className={questionnaireStyles.input}
                 value={option.label}
                 maxLength={500}
                 disabled={disabled || option.isOther}

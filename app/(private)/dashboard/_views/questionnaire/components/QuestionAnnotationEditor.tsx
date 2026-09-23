@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { Input } from '@/components/ui/input';
 
+import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 
 /** Shared title/body card for question explanations and review requests. */
@@ -37,7 +38,13 @@ export function QuestionAnnotationEditor({
   textMaxLength?: number;
 }) {
   return (
-    <div className="rounded-xl border bg-muted/20 p-4">
+    <div
+      className={
+        onTitleChange
+          ? questionnaireStyles.explanation
+          : 'rounded-xl border bg-muted/20 p-4'
+      }
+    >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <label
           htmlFor={`${id}-${onTitleChange ? 'title' : 'text'}`}
@@ -52,7 +59,7 @@ export function QuestionAnnotationEditor({
           id={`${id}-title`}
           value={title ?? ''}
           placeholder={titlePlaceholder}
-          className="rounded-lg border-border bg-muted"
+          className={`rounded-lg ${questionnaireStyles.input}`}
           disabled={disabled}
           required={required}
           maxLength={titleMaxLength}
@@ -66,7 +73,7 @@ export function QuestionAnnotationEditor({
         id={`${id}-text`}
         value={text}
         placeholder="내용을 작성하세요"
-        className="mt-3 rounded-lg border-border bg-muted"
+        className="mt-3 rounded-lg"
         disabled={disabled}
         required={required}
         maxLength={textMaxLength}

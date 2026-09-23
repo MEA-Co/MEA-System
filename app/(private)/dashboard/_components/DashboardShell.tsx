@@ -22,6 +22,7 @@ type DashboardShellProps = {
   role: MemberRole;
   navigation: ReactNode;
   floatingControls?: ReactNode;
+  documentBackground?: boolean;
   children: ReactNode;
 };
 
@@ -30,6 +31,7 @@ export function DashboardShell({
   role,
   navigation,
   floatingControls,
+  documentBackground = false,
   children,
 }: DashboardShellProps) {
   return (
@@ -87,7 +89,7 @@ export function DashboardShell({
         </header>
 
         <div
-          className={`flex-1 p-4 md:p-6 lg:p-8 ${floatingControls ? 'pt-20 md:pt-20 lg:pt-20' : ''}`}
+          className={`flex-1 p-4 md:p-6 lg:p-8 ${documentBackground ? 'bg-neutral-100 dark:bg-neutral-950' : ''} ${floatingControls ? 'pt-20 md:pt-20 lg:pt-20' : ''}`}
         >
           <div className="mx-auto max-w-6xl">{children}</div>
         </div>

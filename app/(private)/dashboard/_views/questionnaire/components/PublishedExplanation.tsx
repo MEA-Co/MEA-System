@@ -19,6 +19,7 @@ import { useQuestionnaireApi } from '../lib/api-client';
 import type { QuestionDetail } from '../lib/types';
 
 import { QuestionExplanationForm } from './QuestionExplanationForm';
+import { questionnaireStyles } from './questionnaire-styles';
 import { RichTextContent } from './RichTextContent';
 
 export function PublishedExplanation({
@@ -79,7 +80,7 @@ export function PublishedExplanation({
     }
   }
   return (
-    <div className="rounded-lg bg-muted/50 p-4">
+    <div className={questionnaireStyles.explanation}>
       <div className="flex items-start justify-between gap-3">
         <h4 className="min-w-0 flex-1 whitespace-pre-wrap break-words font-medium">
           {detail.title || '설명'}
@@ -106,7 +107,10 @@ export function PublishedExplanation({
           onClose={() => setEditing(false)}
         />
       ) : (
-        <RichTextContent value={detail.text} className="mt-3 text-sm" />
+        <RichTextContent
+          value={detail.text}
+          className="mt-3 text-sm text-neutral-700 dark:text-neutral-300"
+        />
       )}
       {canManage && !editing && (
         <div className="mt-4 flex items-center justify-end gap-1">

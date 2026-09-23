@@ -3,6 +3,7 @@
 import type { Question } from '../lib/types';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
+import { questionnaireStyles } from './questionnaire-styles';
 import { useAnswers } from './QuestionnaireAnswers';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { RichTextContent } from './RichTextContent';
@@ -14,10 +15,14 @@ export function QuestionAnswerEditor({ question }: { question: Question }) {
   const id = `answer-${questionId}`;
   return (
     <section
-      className="space-y-3 border-t pt-4"
+      className={questionnaireStyles.answerArea}
       aria-labelledby={`${id}-label`}
     >
-      <label id={`${id}-label`} htmlFor={id} className="text-sm font-medium">
+      <label
+        id={`${id}-label`}
+        htmlFor={id}
+        className={questionnaireStyles.questionLabel}
+      >
         내 답변
       </label>
       {question.kind && question.kind !== 'text' ? (

@@ -31,6 +31,7 @@ export function QuestionRichTextEditor({
   disabled = false,
   required = false,
   maxLength = 20000,
+  compact = false,
   className,
   ariaLabel,
 }: {
@@ -41,6 +42,7 @@ export function QuestionRichTextEditor({
   disabled?: boolean;
   required?: boolean;
   maxLength?: number;
+  compact?: boolean;
   className?: string;
   ariaLabel?: string;
 }) {
@@ -111,7 +113,11 @@ export function QuestionRichTextEditor({
         'aria-multiline': 'true',
         'aria-label': ariaLabel ?? placeholder,
         'aria-required': String(required),
-        class: cn(richTextClasses, 'min-h-24 px-3 py-2 text-sm outline-none'),
+        class: cn(
+          richTextClasses,
+          'px-3 py-2 text-sm outline-none',
+          compact ? 'min-h-9' : 'min-h-24',
+        ),
       },
     },
     onUpdate: ({ editor: current }) =>
@@ -140,7 +146,7 @@ export function QuestionRichTextEditor({
   return (
     <div
       className={cn(
-        'relative min-w-0 rounded-lg border border-border bg-muted shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
+        'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
         disabled && 'opacity-50',
         className,
       )}

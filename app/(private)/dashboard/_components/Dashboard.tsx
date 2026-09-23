@@ -45,6 +45,9 @@ export function Dashboard({
       name={name}
       role={role}
       floatingControls={headerActions}
+      documentBackground={
+        activeView === 'questionnaire' && Boolean(questionnaireId)
+      }
       navigation={
         <DashboardNavigation
           role={role}
