@@ -8,40 +8,48 @@ const detailSchema = z.object({
   text: z.string().max(20000).transform(normalizeRichTextValue),
   visibleToConsultants: z.boolean(),
 });
-const questionSchema = z.object({
-  kind: z.enum(['text', 'scale', 'single', 'multiple']).optional(),
-  scaleConfig: z
-    .object({
-      max: z.number().int().min(2).max(9),
-      low: z.string().max(500),
-      middle: z.string().max(500),
-      high: z.string().max(500),
-      allowText: z.boolean(),
-    })
-    .optional(),
-  options: z
-    .array(
-      z.object({
-        id: z.uuid(),
-        label: z.string().max(500),
-        isOther: z.boolean().optional(),
-      }),
-    )
-    .max(20)
-    .refine(
-      (options) => options.filter((o) => o.isOther).length <= 1,
-      'Only one other option is allowed',
-    )
-    .refine(
-      (options) => new Set(options.map((o) => o.id)).size === options.length,
-      'Duplicate option IDs',
-    )
-    .optional(),
-  id: z.uuid(),
-  logicalKey: z.uuid(),
-  text: z.string().max(20000).transform(normalizeRichTextValue),
-  details: z.array(detailSchema).max(30),
-});
+const questionSchema = z
+  .object({
+    kind: z.enum(['text', 'scale', 'single', 'multiple']).optional(),
+    choiceStyle: z.enum(['list', 'chip']).optional(),
+    choiceAllowText: z.boolean().optional(),
+    scaleConfig: z
+      .object({
+        max: z.number().int().min(2).max(9),
+        low: z.string().max(500),
+        middle: z.string().max(500),
+        high: z.string().max(500),
+        allowText: z.boolean(),
+      })
+      .optional(),
+    options: z
+      .array(
+        z.object({
+          id: z.uuid(),
+          label: z.string().max(500),
+          isOther: z.boolean().optional(),
+        }),
+      )
+      .max(20)
+      .refine(
+        (options) => new Set(options.map((o) => o.id)).size === options.length,
+        'Duplicate option IDs',
+      )
+      .optional(),
+    id: z.uuid(),
+    logicalKey: z.uuid(),
+    text: z.string().max(20000).transform(normalizeRichTextValue),
+    details: z.array(detailSchema).max(30),
+  })
+  .refine(
+    (question) =>
+      question.kind === 'multiple' ||
+      (question.options ?? []).filter((option) => option.isOther).length <= 1,
+    {
+      path: ['options'],
+      message: 'Only one direct-input option is allowed for single choice',
+    },
+  );
 const sectionSchema = z.object({
   id: z.uuid(),
   title: z.string().max(500),

@@ -29,6 +29,10 @@ function load(name) {
 const {
   validTypedAnswer,
   selectedOptions,
+  choiceAnswerValue,
+  encodeChoiceAnswerValue,
+  nextDirectInputLabel,
+  orderedChoiceOptions,
   scaleLabel,
   scaleAnswer,
   encodeScaleAnswer,
@@ -140,6 +144,23 @@ test('question schema preserves option identity, permits draft labels and suppor
       .id,
     options[0].id,
   );
+  q.choiceStyle = 'chip';
+  assert.equal(
+    questionnaireDocumentSchema.parse(doc).sections[0].questions[0].choiceStyle,
+    'chip',
+  );
+  q.choiceStyle = 'tiles';
+  assert.equal(questionnaireDocumentSchema.safeParse(doc).success, false);
+  q.choiceStyle = 'list';
+  q.choiceAllowText = true;
+  assert.equal(
+    questionnaireDocumentSchema.parse(doc).sections[0].questions[0]
+      .choiceAllowText,
+    true,
+  );
+  q.choiceAllowText = 'yes';
+  assert.equal(questionnaireDocumentSchema.safeParse(doc).success, false);
+  q.choiceAllowText = false;
   q.options = [{ ...options[0], label: '' }, options[1]];
   assert.equal(questionnaireDocumentSchema.safeParse(doc).success, true);
   q.options = [options[0], options[0]];
@@ -208,4 +229,131 @@ test('other choices preserve free text and require it only on completion', () =>
       false,
     );
   }
+});
+
+test('choice questions preserve selections and direct input alongside optional written answers', () => {
+  const other = { id: randomUUID(), label: '기타', isOther: true };
+  for (const kind of ['single', 'multiple']) {
+    const multiple = kind === 'multiple';
+    const question = {
+      kind,
+      options: [...options, other],
+      choiceAllowText: true,
+    };
+    const choices = multiple
+      ? [options[0].id, { id: other.id, text: '추가 경험' }]
+      : [{ id: other.id, text: '추가 경험' }];
+    const value = encodeChoiceAnswerValue(choices, multiple, true, '선택 이유');
+    assert.equal(validTypedAnswer(question, value, true), true);
+    assert.equal(choiceAnswerValue(value, multiple).text, '선택 이유');
+    assert.equal(
+      choiceAnswerValue(value, multiple).choices.length,
+      choices.length,
+    );
+    assert.equal(selectedOptions(value).includes(other.id), true);
+    assert.equal(
+      validTypedAnswer(
+        question,
+        encodeChoiceAnswerValue(choices, multiple, true, ''),
+        true,
+      ),
+      true,
+    );
+    assert.equal(
+      validTypedAnswer({ ...question, choiceAllowText: false }, value, true),
+      false,
+    );
+    assert.equal(
+      validTypedAnswer(
+        question,
+        encodeChoiceAnswerValue(choices, multiple, true, 'x'.repeat(5001)),
+        false,
+      ),
+      false,
+    );
+    assert.equal(
+      validTypedAnswer(
+        question,
+        JSON.stringify({ choices: [], text: '선택 없이 글만' }),
+        true,
+      ),
+      false,
+    );
+    assert.equal(
+      validTypedAnswer(
+        question,
+        encodeChoiceAnswerValue(choices, multiple, false, ''),
+        true,
+      ),
+      true,
+    );
+  }
+});
+
+test('direct input stays last when a regular choice is added later', () => {
+  const other = { id: randomUUID(), label: '직접 입력', isOther: true };
+  const initial = [options[0], other, options[1]];
+  const ordered = orderedChoiceOptions(initial);
+  assert.equal(
+    ordered.map((option) => option.id).join(','),
+    [options[0].id, options[1].id, other.id].join(','),
+  );
+  assert.equal(initial[1].id, other.id);
+  const added = { id: randomUUID(), label: '' };
+  assert.equal(
+    orderedChoiceOptions([...ordered, added])
+      .map((option) => option.id)
+      .join(','),
+    [options[0].id, options[1].id, added.id, other.id].join(','),
+  );
+});
+
+test('multiple choice accepts independent direct inputs while single choice allows one', () => {
+  const first = { id: randomUUID(), label: '직접 입력', isOther: true };
+  const second = {
+    id: randomUUID(),
+    label: nextDirectInputLabel([options[0], first]),
+    isOther: true,
+  };
+  assert.equal(second.label, '직접 입력 2');
+  assert.equal(nextDirectInputLabel([first, second]), '직접 입력 3');
+  assert.equal(
+    nextDirectInputLabel([first, second, { label: '직접 입력 4' }]),
+    '직접 입력 3',
+  );
+  const question = {
+    id: randomUUID(),
+    logicalKey: randomUUID(),
+    text: '질문',
+    kind: 'multiple',
+    options: [options[0], first, second],
+    details: [],
+  };
+  const document = {
+    questionnaireId: randomUUID(),
+    versionId: randomUUID(),
+    title: '제목',
+    sections: [{ id: randomUUID(), title: '섹션', questions: [question] }],
+  };
+  assert.equal(questionnaireDocumentSchema.safeParse(document).success, true);
+  const value = JSON.stringify([
+    { id: first.id, text: '첫 답변' },
+    { id: second.id, text: '둘째 답변' },
+  ]);
+  assert.equal(validTypedAnswer(question, value, true), true);
+  assert.equal(
+    validTypedAnswer(
+      question,
+      JSON.stringify([
+        { id: first.id, text: '첫 답변' },
+        { id: second.id, text: '' },
+      ]),
+      true,
+    ),
+    false,
+  );
+  question.kind = 'single';
+  assert.equal(questionnaireDocumentSchema.safeParse(document).success, false);
+  question.options = [options[0], first];
+  assert.equal(questionnaireDocumentSchema.safeParse(document).success, true);
 });

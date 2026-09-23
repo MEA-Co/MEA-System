@@ -7,6 +7,23 @@ export const QUESTION_TYPES = [
   { value: 'multiple', label: '다수선택형' },
 ] as const;
 export type QuestionKind = (typeof QUESTION_TYPES)[number]['value'];
+export function orderedChoiceOptions<T extends { isOther?: boolean }>(
+  options: readonly T[],
+): T[] {
+  return [
+    ...options.filter((option) => !option.isOther),
+    ...options.filter((option) => option.isOther),
+  ];
+}
+export function nextDirectInputLabel(
+  options: readonly { label: string }[],
+): string {
+  const labels = new Set(options.map((option) => option.label.trim()));
+  if (!labels.has('직접 입력')) return '직접 입력';
+  let number = 2;
+  while (labels.has(`직접 입력 ${number}`)) number += 1;
+  return `직접 입력 ${number}`;
+}
 export const DEFAULT_SCALE_CONFIG: ScaleConfig = {
   max: 5,
   low: '전혀 그렇지 않다',
@@ -92,11 +109,57 @@ export function encodeChoiceAnswers(
       ? answers[0]
       : JSON.stringify(answers[0]);
 }
+export function choiceAnswerValue(
+  value: string,
+  multiple: boolean,
+): { choices: ChoiceAnswer[]; text: string; wrapped: boolean } {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      !Array.isArray(parsed) &&
+      'choices' in parsed &&
+      'text' in parsed &&
+      Object.keys(parsed).length === 2 &&
+      Array.isArray(parsed.choices) &&
+      typeof parsed.text === 'string' &&
+      parsed.choices.every(
+        (item: unknown) =>
+          typeof item === 'string' ||
+          (item !== null &&
+            typeof item === 'object' &&
+            !Array.isArray(item) &&
+            'id' in item &&
+            'text' in item &&
+            Object.keys(item).length === 2 &&
+            typeof item.id === 'string' &&
+            typeof item.text === 'string'),
+      )
+    )
+      return { choices: parsed.choices, text: parsed.text, wrapped: true };
+  } catch {}
+  return { choices: choiceAnswers(value, multiple), text: '', wrapped: false };
+}
+export function encodeChoiceAnswerValue(
+  choices: ChoiceAnswer[],
+  multiple: boolean,
+  allowText: boolean,
+  text: string,
+): string {
+  if (!choices.length) return '';
+  return allowText
+    ? JSON.stringify({ choices, text })
+    : encodeChoiceAnswers(choices, multiple);
+}
 export function selectedOptions(value: string): string[] {
-  return choiceAnswers(value, true).map(choiceAnswerId);
+  return choiceAnswerValue(value, true).choices.map(choiceAnswerId);
 }
 export function validTypedAnswer(
-  question: Pick<Question, 'kind' | 'options' | 'scaleConfig'>,
+  question: Pick<
+    Question,
+    'kind' | 'options' | 'scaleConfig' | 'choiceAllowText'
+  >,
   value: string,
   complete = false,
 ): boolean {
@@ -116,10 +179,14 @@ export function validTypedAnswer(
     );
   }
   const options = question.options ?? [];
-  const answers = choiceAnswers(value, kind === 'multiple');
+  const parsed = choiceAnswerValue(value, kind === 'multiple');
+  const answers = parsed.choices;
   const ids = answers.map(choiceAnswerId);
   return (
     answers.length > 0 &&
+    (kind === 'multiple' || answers.length === 1) &&
+    (!parsed.wrapped || !!question.choiceAllowText) &&
+    parsed.text.length <= 5000 &&
     new Set(ids).size === ids.length &&
     answers.every((answer) => {
       const option = options.find((o) => o.id === choiceAnswerId(answer));

@@ -9,17 +9,19 @@ insert into workflow_data values(jsonb_build_object('questionnaireId',gen_random
 grant select on workflow_users,workflow_data to authenticated;
 set local role authenticated;
 do $$
-declare doc jsonb; vid uuid; owner_id uuid; person uuid; qtext uuid:=gen_random_uuid(); qscale uuid:=gen_random_uuid(); qsingle uuid:=gen_random_uuid(); qmulti uuid:=gen_random_uuid(); one uuid:=gen_random_uuid(); two uuid:=gen_random_uuid(); choices jsonb; answers jsonb; original jsonb; loaded jsonb; saved_id uuid; pair_id uuid;
+declare doc jsonb; vid uuid; owner_id uuid; person uuid; qtext uuid:=gen_random_uuid(); qscale uuid:=gen_random_uuid(); qsingle uuid:=gen_random_uuid(); qmulti uuid:=gen_random_uuid(); one uuid:=gen_random_uuid(); two uuid:=gen_random_uuid(); three uuid:=gen_random_uuid(); choices jsonb; multi_choices jsonb; answers jsonb; original jsonb; loaded jsonb; saved_id uuid; pair_id uuid;
 begin
  select d.doc into doc from workflow_data d;vid:=(doc->>'versionId')::uuid;
  select id into owner_id from workflow_users where role='consultant_lead';select id into person from workflow_users where role='consultant';
  choices:=jsonb_build_array(jsonb_build_object('id',one,'label','팀 프로젝트'),jsonb_build_object('id',two,'label','기타','isOther',true));
+ multi_choices:=choices||jsonb_build_array(jsonb_build_object('id',three,'label','직접 입력 2','isOther',true));
  doc:=jsonb_set(doc,'{sections,0,questions}',jsonb_build_array(
  jsonb_build_object('id',qtext,'logicalKey',gen_random_uuid(),'text','서술 질문','details','[]'::jsonb),
  jsonb_build_object('id',qscale,'logicalKey',gen_random_uuid(),'text','척도 질문','kind','scale','options','[]'::jsonb,'details','[]'::jsonb),
- jsonb_build_object('id',qsingle,'logicalKey',gen_random_uuid(),'text','하나 선택','kind','single','options',choices,'details','[]'::jsonb),
- jsonb_build_object('id',qmulti,'logicalKey',gen_random_uuid(),'text','여러 개 선택','kind','multiple','options',choices,'details','[]'::jsonb)));
+ jsonb_build_object('id',qsingle,'logicalKey',gen_random_uuid(),'text','하나 선택','kind','single','choiceStyle','chip','choiceAllowText',true,'options',choices,'details','[]'::jsonb),
+ jsonb_build_object('id',qmulti,'logicalKey',gen_random_uuid(),'text','여러 개 선택','kind','multiple','choiceStyle','list','choiceAllowText',true,'options',multi_choices,'details','[]'::jsonb)));
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ begin perform public.save_questionnaire_draft(jsonb_set(doc,'{sections,0,questions,2,options}',multi_choices),0,gen_random_uuid());raise exception 'Accepted multiple direct inputs for single choice';exception when check_violation or invalid_parameter_value then null;end;
  original:=doc;
  doc:=jsonb_set(doc,'{sections,0,questions,2,options,0,label}','""'::jsonb);
  perform public.save_questionnaire_draft(doc,0,gen_random_uuid());
@@ -28,24 +30,34 @@ begin
  loaded:=public.read_questionnaire_draft(vid);
  if loaded#>>'{sections,0,questions,0,kind}'<>'text' then raise exception 'Legacy text default changed';end if;
  if loaded#>>'{sections,0,questions,2,kind}'<>'single' or loaded#>'{sections,0,questions,2,options}'<>choices then raise exception 'Configuration lost';end if;
+ if loaded#>'{sections,0,questions,3,options}'<>multi_choices then raise exception 'Multiple direct-input configuration lost';end if;
+ if loaded#>>'{sections,0,questions,2,choiceStyle}'<>'chip' or loaded#>>'{sections,0,questions,3,choiceStyle}'<>'list' then raise exception 'Choice style was not restored';end if;
+ if loaded#>>'{sections,0,questions,2,choiceAllowText}'<>'true' or loaded#>>'{sections,0,questions,3,choiceAllowText}'<>'true' then raise exception 'Optional written answer setting was not restored';end if;
  perform public.publish_questionnaire(vid,2);perform public.distribute_questionnaire(vid,2);
  begin perform public.save_questionnaire_draft(doc,2,gen_random_uuid());raise exception 'Distributed types edited';exception when object_not_in_prerequisite_state then null;end;
  perform set_config('request.jwt.claim.sub',person::text,true);
  loaded:=public.read_published_questionnaire(vid);
  if loaded#>>'{sections,0,questions,3,kind}'<>'multiple' then raise exception 'Consultant cannot read type';end if;
- answers:=jsonb_build_object(qtext::text,'자유로운 서술 답변',qscale::text,'3',qsingle::text,jsonb_build_object('id',two,'text','직접 입력')::text,qmulti::text,jsonb_build_array(jsonb_build_object('id',two,'text','추가 경험'),one)::text);
+ if loaded#>>'{sections,0,questions,2,choiceStyle}'<>'chip' then raise exception 'Consultant cannot read chip style';end if;
+ if loaded#>>'{sections,0,questions,2,choiceAllowText}'<>'true' then raise exception 'Consultant cannot read optional written answer setting';end if;
+ answers:=jsonb_build_object(qtext::text,'자유로운 서술 답변',qscale::text,'3',qsingle::text,jsonb_build_object('id',two,'text','직접 입력')::text,qmulti::text,jsonb_build_array(jsonb_build_object('id',two,'text','추가 경험'),jsonb_build_object('id',three,'text','또 다른 경험'),one)::text);
  begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qscale::text],'"6"'),0,gen_random_uuid(),false,'');raise exception 'Accepted invalid scale';exception when invalid_parameter_value then null;end;
  begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qsingle::text],to_jsonb(gen_random_uuid()::text)),0,gen_random_uuid(),false,'');raise exception 'Accepted unknown option';exception when invalid_parameter_value then null;end;
  begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qmulti::text],to_jsonb(jsonb_build_array(one,one)::text)),0,gen_random_uuid(),false,'');raise exception 'Accepted duplicate selection';exception when invalid_parameter_value then null;end;
  begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qsingle::text],to_jsonb(jsonb_build_object('id',two,'text','')::text)),0,gen_random_uuid(),true,'');raise exception 'Accepted empty other on completion';exception when invalid_parameter_value then null;end;
+ begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qmulti::text],to_jsonb(jsonb_build_array(jsonb_build_object('id',two,'text','추가 경험'),jsonb_build_object('id',three,'text',''),one)::text)),0,gen_random_uuid(),true,'');raise exception 'Accepted an empty second direct input on completion';exception when invalid_parameter_value then null;end;
+ begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qsingle::text],to_jsonb(jsonb_build_object('choices',jsonb_build_array(one),'text',repeat('x',5001))::text)),0,gen_random_uuid(),false,'');raise exception 'Accepted oversized optional written answer';exception when invalid_parameter_value then null;end;
+ begin perform public.save_questionnaire_response(vid,jsonb_set(answers,array[qmulti::text],to_jsonb(jsonb_build_object('choices','[]'::jsonb,'text','선택 없는 서술')::text)),0,gen_random_uuid(),true,'');raise exception 'Accepted text without a selection';exception when invalid_parameter_value then null;end;
  saved_id:=gen_random_uuid();perform public.save_questionnaire_response(vid,answers,0,saved_id,false,'추가 설명');perform public.save_questionnaire_response(vid,answers,0,saved_id,false,'추가 설명');
  if not exists(select 1 from public.questionnaire_answers where question_id=qscale and body='3점 · 보통이다' and selection='3'::jsonb) then raise exception 'Scale not readable';end if;
- if not exists(select 1 from public.questionnaire_answers where question_id=qsingle and body='기타: 직접 입력' and selection=to_jsonb(jsonb_build_object('id',two,'text','직접 입력')::text)) then raise exception 'Single not readable';end if;
- if not exists(select 1 from public.questionnaire_answers where question_id=qmulti and body='팀 프로젝트, 기타: 추가 경험' and selection=jsonb_build_array(jsonb_build_object('id',two,'text','추가 경험'),one)) then raise exception 'Multiple not readable';end if;
+ if not exists(select 1 from public.questionnaire_answers where question_id=qsingle and body='직접 입력: 직접 입력' and selection=to_jsonb(jsonb_build_object('id',two,'text','직접 입력')::text)) then raise exception 'Single not readable';end if;
+ if not exists(select 1 from public.questionnaire_answers where question_id=qmulti and body='팀 프로젝트, 직접 입력 1: 추가 경험, 직접 입력 2: 또 다른 경험' and selection=jsonb_build_array(jsonb_build_object('id',two,'text','추가 경험'),jsonb_build_object('id',three,'text','또 다른 경험'),one)) then raise exception 'Multiple direct inputs not readable';end if;
  select id into pair_id from public.questionnaire_answers where question_id=qmulti;
- answers:=jsonb_set(answers,array[qmulti::text],to_jsonb(jsonb_build_array(one)::text));
+ answers:=jsonb_set(answers,array[qsingle::text],to_jsonb(jsonb_build_object('choices',jsonb_build_array(jsonb_build_object('id',two,'text','직접 입력')),'text','선택 이유')::text));
+ answers:=jsonb_set(answers,array[qmulti::text],to_jsonb(jsonb_build_object('choices',jsonb_build_array(one),'text','')::text));
  perform public.save_questionnaire_response(vid,answers,1,gen_random_uuid(),true,'추가 설명');
- if not exists(select 1 from public.questionnaire_answers where id=pair_id and body='팀 프로젝트') then raise exception 'Pair ID changed';end if;
+ if not exists(select 1 from public.questionnaire_answers where question_id=qsingle and body=E'직접 입력: 직접 입력\n추가 답변: 선택 이유' and selection=jsonb_build_object('choices',jsonb_build_array(jsonb_build_object('id',two,'text','직접 입력')),'text','선택 이유')) then raise exception 'Single optional answer was not saved';end if;
+ if not exists(select 1 from public.questionnaire_answers where id=pair_id and body='팀 프로젝트' and selection=jsonb_build_object('choices',jsonb_build_array(one),'text','')) then raise exception 'Multiple optional answer or pair ID changed';end if;
  begin perform public.save_questionnaire_response(vid,answers,2,gen_random_uuid(),false,'');raise exception 'Edited submitted';exception when object_not_in_prerequisite_state then null;end;
 end $$;
 reset role;

@@ -17,6 +17,8 @@ export type QuestionDetail = {
 
 export type Question = {
   kind?: QuestionKind;
+  choiceStyle?: 'list' | 'chip';
+  choiceAllowText?: boolean;
   options?: { id: string; label: string; isOther?: boolean }[];
   scaleConfig?: ScaleConfig;
   id: string;

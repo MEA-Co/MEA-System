@@ -14,13 +14,18 @@ import {
 import { Switch } from '@/components/ui/switch';
 
 import {
+  nextDirectInputLabel,
+  orderedChoiceOptions,
   QUESTION_TYPES,
   type QuestionKind,
   scaleConfig,
 } from '../lib/question-types';
 import type { Question } from '../lib/types';
 
-import { QuestionChoiceInput } from './QuestionChoiceInput';
+import {
+  QuestionChoiceInput,
+  QuestionOptionalTextInput,
+} from './QuestionChoiceInput';
 import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 
@@ -36,7 +41,9 @@ export function QuestionTypeEditor({
   part?: 'header' | 'settings';
 }) {
   const kind = question.kind ?? 'text';
-  const options = question.options ?? [];
+  const options = orderedChoiceOptions(question.options ?? []);
+  const regularOptions = options.filter((option) => !option.isOther);
+  const directInputOptions = options.filter((option) => option.isOther);
   return (
     <div className="space-y-3">
       {part === 'header' && (
@@ -59,7 +66,9 @@ export function QuestionTypeEditor({
                 options:
                   next === 'single' || next === 'multiple'
                     ? options.length
-                      ? options
+                      ? next === 'single'
+                        ? [...regularOptions, ...directInputOptions.slice(0, 1)]
+                        : options
                       : [
                           { id: crypto.randomUUID(), label: '' },
                           { id: crypto.randomUUID(), label: '' },
@@ -100,7 +109,23 @@ export function QuestionTypeEditor({
             {kind === 'single' ? '하나만' : '여러 개를'} 선택할 수 있어요.
             선택지는 2~20개까지 작성할 수 있어요.
           </p>
-          {options.map((option, index) => (
+          <div className="flex items-center gap-3 py-1">
+            <Switch
+              id={`choice-style-${question.id}`}
+              checked={question.choiceStyle === 'chip'}
+              disabled={disabled}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...question,
+                  choiceStyle: checked ? 'chip' : 'list',
+                })
+              }
+            />
+            <label htmlFor={`choice-style-${question.id}`} className="text-sm">
+              칩 스타일
+            </label>
+          </div>
+          {regularOptions.map((option, index) => (
             <div key={option.id} className="flex items-center gap-2">
               <span
                 aria-hidden="true"
@@ -112,7 +137,7 @@ export function QuestionTypeEditor({
                 className={questionnaireStyles.input}
                 value={option.label}
                 maxLength={500}
-                disabled={disabled || option.isOther}
+                disabled={disabled}
                 onChange={(event) =>
                   onChange({
                     ...question,
@@ -128,7 +153,7 @@ export function QuestionTypeEditor({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`선택지 ${index + 1} 삭제`}
-                disabled={disabled || (!option.isOther && options.length <= 2)}
+                disabled={disabled || options.length <= 2}
                 onClick={() =>
                   onChange({
                     ...question,
@@ -147,36 +172,91 @@ export function QuestionTypeEditor({
             onClick={() =>
               onChange({
                 ...question,
-                options: [...options, { id: crypto.randomUUID(), label: '' }],
+                options: orderedChoiceOptions([
+                  ...options,
+                  { id: crypto.randomUUID(), label: '' },
+                ]),
               })
             }
           >
             <Plus />
             선택지 추가
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={
-              disabled || options.length >= 20 || options.some((o) => o.isOther)
-            }
-            onClick={() =>
-              onChange({
-                ...question,
-                options: [
-                  ...options,
-                  { id: crypto.randomUUID(), label: '기타', isOther: true },
-                ],
-              })
-            }
-          >
-            <Plus />
-            기타 추가
-          </Button>
-          {options.some((o) => o.isOther) && (
+          {directInputOptions.map((option, index) => (
+            <div key={option.id} className="flex items-center gap-2">
+              <span
+                className={`inline-flex min-h-9 items-center gap-1.5 border border-dashed border-neutral-300 bg-white px-3 text-sm text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300 ${question.choiceStyle === 'chip' ? 'rounded-full' : 'flex-1 rounded-lg'}`}
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                직접 입력
+                {directInputOptions.length > 1 ? ` ${index + 1}` : ''}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`직접 입력 항목 ${index + 1} 삭제`}
+                disabled={disabled}
+                onClick={() =>
+                  onChange({
+                    ...question,
+                    options: options.filter((o) => o.id !== option.id),
+                  })
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+          {(kind === 'multiple' || directInputOptions.length === 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={disabled || options.length >= 20}
+              onClick={() =>
+                onChange({
+                  ...question,
+                  options: [
+                    ...options,
+                    {
+                      id: crypto.randomUUID(),
+                      label: nextDirectInputLabel(options),
+                      isOther: true,
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus />
+              직접 입력 항목 추가
+            </Button>
+          )}
+          {directInputOptions.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              기타를 선택한 응답자는 내용을 직접 입력할 수 있어요.
+              응답자는 ‘직접 입력’을 선택한 뒤 내용을 입력할 수 있어요.
             </p>
+          )}
+          <div className="flex items-center gap-3 pt-2">
+            <Switch
+              id={`choice-text-${question.id}`}
+              checked={!!question.choiceAllowText}
+              disabled={disabled}
+              onCheckedChange={(choiceAllowText) =>
+                onChange({ ...question, choiceAllowText })
+              }
+            />
+            <label htmlFor={`choice-text-${question.id}`} className="text-sm">
+              서술형 답변 허용
+            </label>
+          </div>
+          {question.choiceAllowText && (
+            <QuestionOptionalTextInput
+              value=""
+              disabled
+              authorPreview
+              selectionMade={false}
+              selectionPrompt=""
+              onChange={() => {}}
+            />
           )}
         </div>
       )}

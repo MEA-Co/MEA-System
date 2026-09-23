@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 
 import {
   choiceAnswerId,
-  choiceAnswers,
-  encodeChoiceAnswers,
+  choiceAnswerValue,
+  encodeChoiceAnswerValue,
   encodeScaleAnswer,
+  orderedChoiceOptions,
   scaleAnswer,
   scaleConfig,
   scaleLabel,
@@ -141,11 +142,12 @@ export function QuestionChoiceInput({
           </div>
         </div>
         {config.allowText && (
-          <ScaleTextInput
+          <QuestionOptionalTextInput
             value={answer.text}
             disabled={disabled}
             authorPreview={disabled && previewVariant === 'editor'}
-            scoreSelected={answer.score !== null}
+            selectionMade={answer.score !== null}
+            selectionPrompt="먼저 점수를 선택해 주세요"
             onChange={(text) =>
               onChange?.(encodeScaleAnswer({ score: answer.score, text }, true))
             }
@@ -155,9 +157,41 @@ export function QuestionChoiceInput({
     );
   }
   const multiple = question.kind === 'multiple';
-  const choices = question.options ?? [];
-  const answers = choiceAnswers(value, multiple);
+  const choices = orderedChoiceOptions(question.options ?? []);
+  const directInputCount = choices.filter((choice) => choice.isOther).length;
+  const parsed = choiceAnswerValue(value, multiple);
+  const answers = parsed.choices;
   const selected = answers.map(choiceAnswerId);
+  const chipStyle = question.choiceStyle === 'chip';
+  function selectChoice(choice: (typeof choices)[number], checked: boolean) {
+    if (!onChange) return;
+    const answer = choice.isOther ? { id: choice.id, text: '' } : choice.id;
+    if (!multiple) {
+      onChange(
+        encodeChoiceAnswerValue(
+          [answer],
+          false,
+          !!question.choiceAllowText,
+          parsed.text,
+        ),
+      );
+      return;
+    }
+    const next = checked
+      ? [...answers, answer]
+      : answers.filter((item) => choiceAnswerId(item) !== choice.id);
+    const ordered = choices.flatMap((option) =>
+      next.filter((item) => choiceAnswerId(item) === option.id),
+    );
+    onChange(
+      encodeChoiceAnswerValue(
+        ordered,
+        true,
+        !!question.choiceAllowText,
+        parsed.text,
+      ),
+    );
+  }
   return (
     <fieldset disabled={disabled} className="space-y-2">
       <legend className="mb-2 text-xs text-muted-foreground">
@@ -165,83 +199,119 @@ export function QuestionChoiceInput({
           ? '해당하는 항목을 모두 선택해 주세요.'
           : '하나를 선택해 주세요.'}
       </legend>
-      {choices.map((choice, index) => (
-        <div key={choice.id} className="space-y-2">
-          <label
-            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-blue-400/40 ${disabled ? '' : 'cursor-pointer'} ${selected.includes(choice.id) ? 'border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40' : `border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-900/40 ${disabled ? '' : 'hover:border-blue-300 hover:bg-blue-50/60 dark:hover:border-blue-700 dark:hover:bg-blue-950/30'}`}`}
-          >
-            <input
-              type={multiple ? 'checkbox' : 'radio'}
-              name={`choice-${question.id}`}
-              value={choice.id}
-              checked={selected.includes(choice.id)}
-              className="mt-0.5 size-4 shrink-0 accent-blue-600"
-              onChange={(event) => {
-                if (!onChange) return;
-                const answer = choice.isOther
-                  ? { id: choice.id, text: '' }
-                  : choice.id;
-                if (!multiple) {
-                  onChange(encodeChoiceAnswers([answer], false));
-                  return;
+      <div
+        className={chipStyle ? 'flex flex-wrap items-start gap-2' : 'space-y-2'}
+      >
+        {choices.map((choice, index) => {
+          const active = selected.includes(choice.id);
+          const showOther = choice.isOther && active;
+          const directInputLabel =
+            directInputCount > 1
+              ? `직접 입력 ${choices.slice(0, index + 1).filter((item) => item.isOther).length}`
+              : '직접 입력';
+          return (
+            <div
+              key={choice.id}
+              className={
+                chipStyle
+                  ? showOther
+                    ? 'flex w-full flex-wrap items-center gap-2'
+                    : 'min-w-0'
+                  : 'space-y-2'
+              }
+            >
+              <label
+                className={
+                  choice.isOther
+                    ? `${chipStyle ? 'inline-flex max-w-full rounded-full px-4 py-2' : 'flex rounded-lg px-4 py-3'} items-center gap-2 border border-dashed text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-blue-400/40 ${disabled ? '' : 'cursor-pointer'} ${active ? 'border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-200' : `border-neutral-300 bg-white text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300 ${disabled ? '' : 'hover:border-blue-400 hover:bg-blue-50/60 dark:hover:border-blue-600 dark:hover:bg-blue-950/30'}`}`
+                    : chipStyle
+                      ? `inline-flex max-w-full items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-blue-400/40 ${disabled ? '' : 'cursor-pointer'} ${active ? 'border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-200' : `border-neutral-300 bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 ${disabled ? '' : 'hover:border-blue-400 hover:bg-blue-50/60 dark:hover:border-blue-600 dark:hover:bg-blue-950/30'}`}`
+                      : `flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-blue-400/40 ${disabled ? '' : 'cursor-pointer'} ${active ? 'border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40' : `border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-900/40 ${disabled ? '' : 'hover:border-blue-300 hover:bg-blue-50/60 dark:hover:border-blue-700 dark:hover:bg-blue-950/30'}`}`
                 }
-                const next = event.target.checked
-                  ? [...answers, answer]
-                  : answers.filter(
-                      (item) => choiceAnswerId(item) !== choice.id,
-                    );
-                const ordered = choices.flatMap((option) =>
-                  next.filter((item) => choiceAnswerId(item) === option.id),
-                );
-                onChange(encodeChoiceAnswers(ordered, true));
-              }}
-            />
-            <span>{choice.label || `선택지 ${index + 1}`}</span>
-          </label>
-          {choice.isOther && (disabled || selected.includes(choice.id)) && (
-            <Input
-              aria-label="기타 답변"
-              placeholder="기타 내용을 직접 입력해 주세요"
-              className={questionnaireStyles.input}
-              maxLength={5000}
-              value={
-                answers.flatMap((answer) =>
-                  typeof answer !== 'string' && answer.id === choice.id
-                    ? [answer.text]
-                    : [],
-                )[0] ?? ''
-              }
-              onChange={(event) =>
-                onChange?.(
-                  encodeChoiceAnswers(
-                    answers.map((answer) =>
-                      choiceAnswerId(answer) === choice.id
-                        ? { id: choice.id, text: event.target.value }
-                        : answer,
-                    ),
-                    multiple,
-                  ),
-                )
-              }
-            />
-          )}
-        </div>
-      ))}
+              >
+                <input
+                  type={multiple ? 'checkbox' : 'radio'}
+                  name={`choice-${question.id}`}
+                  value={choice.id}
+                  checked={active}
+                  className={
+                    chipStyle || choice.isOther
+                      ? 'peer sr-only'
+                      : 'mt-0.5 size-4 shrink-0 accent-blue-600'
+                  }
+                  onChange={(event) =>
+                    selectChoice(choice, event.target.checked)
+                  }
+                />
+                {choice.isOther && <span aria-hidden="true">+</span>}
+                <span className={chipStyle ? 'min-w-0 break-words' : undefined}>
+                  {choice.isOther
+                    ? directInputLabel
+                    : choice.label || `선택지 ${index + 1}`}
+                </span>
+              </label>
+              {showOther && (
+                <Input
+                  aria-label={`${directInputLabel} 답변`}
+                  placeholder="내용을 입력해 주세요"
+                  className={`${questionnaireStyles.input} ${chipStyle ? 'min-w-48 max-w-lg flex-1' : ''}`}
+                  maxLength={5000}
+                  value={
+                    answers.flatMap((answer) =>
+                      typeof answer !== 'string' && answer.id === choice.id
+                        ? [answer.text]
+                        : [],
+                    )[0] ?? ''
+                  }
+                  onChange={(event) =>
+                    onChange?.(
+                      encodeChoiceAnswerValue(
+                        answers.map((answer) =>
+                          choiceAnswerId(answer) === choice.id
+                            ? { id: choice.id, text: event.target.value }
+                            : answer,
+                        ),
+                        multiple,
+                        !!question.choiceAllowText,
+                        parsed.text,
+                      ),
+                    )
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {question.choiceAllowText && (
+        <QuestionOptionalTextInput
+          value={parsed.text}
+          disabled={disabled}
+          authorPreview={disabled && previewVariant === 'editor'}
+          selectionMade={answers.length > 0}
+          selectionPrompt="먼저 선택지를 선택해 주세요"
+          onChange={(text) =>
+            onChange?.(encodeChoiceAnswerValue(answers, multiple, true, text))
+          }
+        />
+      )}
     </fieldset>
   );
 }
 
-function ScaleTextInput({
+export function QuestionOptionalTextInput({
   value,
   disabled,
   authorPreview,
-  scoreSelected,
+  selectionMade,
+  selectionPrompt,
   onChange,
 }: {
   value: string;
   disabled: boolean;
   authorPreview: boolean;
-  scoreSelected: boolean;
+  selectionMade: boolean;
+  selectionPrompt: string;
   onChange: (value: string) => void;
 }) {
   const id = useId();
@@ -263,13 +333,13 @@ function ScaleTextInput({
         maxLength={5000}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        disabled={disabled || !scoreSelected}
+        disabled={disabled || !selectionMade}
         placeholder={
           authorPreview
             ? '응답자가 답변을 입력하는 공간입니다.'
-            : scoreSelected || disabled
+            : selectionMade || disabled
               ? '답변을 입력해 주세요'
-              : '먼저 점수를 선택해 주세요'
+              : selectionPrompt
         }
         className={`block min-h-10 w-full resize-none overflow-hidden rounded-lg px-3 py-2.5 text-sm outline-none placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-neutral-500 dark:placeholder:text-neutral-400 ${authorPreview ? 'border border-dashed border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-900' : 'border-0 bg-neutral-100 dark:bg-neutral-800'}`}
       />
