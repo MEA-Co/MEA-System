@@ -57,7 +57,7 @@ export async function loadAnswers(versionId: string) {
         a.question_id,
         a.selection == null
           ? a.body
-          : Array.isArray(a.selection)
+          : typeof a.selection === 'object'
             ? JSON.stringify(a.selection)
             : String(a.selection),
       ]),

@@ -1,5 +1,13 @@
 import type { QuestionKind } from './question-types';
 
+export type ScaleConfig = {
+  max: number;
+  low: string;
+  middle: string;
+  high: string;
+  allowText: boolean;
+};
+
 export type QuestionDetail = {
   id: string;
   title: string;
@@ -10,6 +18,7 @@ export type QuestionDetail = {
 export type Question = {
   kind?: QuestionKind;
   options?: { id: string; label: string; isOther?: boolean }[];
+  scaleConfig?: ScaleConfig;
   id: string;
   logicalKey: string;
   text: string;

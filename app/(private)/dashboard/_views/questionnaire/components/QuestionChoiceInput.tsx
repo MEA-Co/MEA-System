@@ -1,11 +1,16 @@
 'use client';
+import { useId, useLayoutEffect, useRef } from 'react';
+
 import { Input } from '@/components/ui/input';
 
 import {
   choiceAnswerId,
   choiceAnswers,
   encodeChoiceAnswers,
-  SCALE_LABELS,
+  encodeScaleAnswer,
+  scaleAnswer,
+  scaleConfig,
+  scaleLabel,
 } from '../lib/question-types';
 import type { Question } from '../lib/types';
 
@@ -16,52 +21,136 @@ export function QuestionChoiceInput({
   value = '',
   onChange,
   disabled = false,
+  previewVariant = 'questionnaire',
+  onScaleLabelChange,
+  scaleLabelEditingDisabled = false,
 }: {
   question: Question;
   value?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  previewVariant?: 'editor' | 'questionnaire';
+  onScaleLabelChange?: (key: 'low' | 'middle' | 'high', value: string) => void;
+  scaleLabelEditingDisabled?: boolean;
 }) {
   if (question.kind === 'scale') {
+    const config = scaleConfig(question);
+    const answer = scaleAnswer(value);
     return (
-      <fieldset disabled={disabled} className="min-w-0 py-2">
-        <legend className="mb-2 text-xs text-muted-foreground">
-          {disabled ? '5점 척도' : '해당하는 점수를 선택해 주세요.'}
+      <fieldset
+        disabled={disabled && !onScaleLabelChange}
+        className="min-w-0 space-y-4 py-2"
+      >
+        <legend
+          className={
+            onScaleLabelChange
+              ? 'sr-only'
+              : 'mb-2 text-xs text-muted-foreground'
+          }
+        >
+          {onScaleLabelChange
+            ? '척도 라벨 편집'
+            : disabled
+              ? `${config.max}점 척도`
+              : '해당하는 점수를 선택해 주세요.'}
         </legend>
-        <div className="relative grid grid-cols-5">
+        <div className="overflow-x-auto">
           <div
-            aria-hidden="true"
-            className="absolute inset-x-[10%] top-5 h-0.5 -translate-y-1/2 bg-border"
-          />
-          {SCALE_LABELS.map((label, index) => {
-            const score = String(index + 1);
-            return (
-              <label
-                key={score}
-                className={`relative flex min-w-0 flex-col items-center px-1 text-center ${disabled ? '' : 'cursor-pointer'}`}
-              >
-                <input
-                  type="radio"
-                  name={`choice-${question.id}`}
-                  value={score}
-                  checked={value === score}
-                  onChange={() => onChange?.(score)}
-                  className="peer sr-only"
-                  aria-label={`${score}점 · ${label}`}
-                />
-                <span className="flex h-10 items-center justify-center peer-focus-visible:rounded-md peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
-                  <span
-                    className={`relative size-5 rounded-full border-2 transition-colors ${value === score ? 'border-blue-600 bg-blue-600 ring-4 ring-blue-100 dark:ring-blue-950' : 'border-muted-foreground/40 bg-background'}`}
-                  />
-                </span>
-                <span className="mt-1 text-sm font-medium">{score}점</span>
-                <span className="mt-1 text-[11px] leading-relaxed break-keep text-muted-foreground sm:text-xs">
-                  {label}
-                </span>
-              </label>
-            );
-          })}
+            className="relative grid"
+            style={{
+              minWidth: `${Math.max(onScaleLabelChange ? 420 : 360, config.max * 64)}px`,
+              gridTemplateColumns: `repeat(${config.max}, minmax(0, 1fr))`,
+            }}
+          >
+            <div
+              aria-hidden="true"
+              className="absolute top-5 h-0.5 -translate-y-1/2 bg-border"
+              style={{
+                left: `${50 / config.max}%`,
+                right: `${50 / config.max}%`,
+              }}
+            />
+            {Array.from({ length: config.max }, (_, index) => index + 1).map(
+              (number) => {
+                const score = String(number);
+                const label = scaleLabel(config, number);
+                const labelKey =
+                  number === 1
+                    ? 'low'
+                    : number === config.max
+                      ? 'high'
+                      : config.max % 2 === 1 && number === (config.max + 1) / 2
+                        ? 'middle'
+                        : null;
+                return (
+                  <div
+                    key={score}
+                    className="relative flex min-w-0 flex-col items-center px-1 text-center"
+                  >
+                    <label
+                      className={`flex flex-col items-center ${disabled ? '' : 'cursor-pointer'}`}
+                    >
+                      <input
+                        type="radio"
+                        name={`choice-${question.id}`}
+                        value={score}
+                        checked={answer.score === number}
+                        disabled={disabled}
+                        onChange={() =>
+                          onChange?.(
+                            encodeScaleAnswer(
+                              { score: number, text: answer.text },
+                              config.allowText,
+                            ),
+                          )
+                        }
+                        className="peer sr-only"
+                        aria-label={
+                          label ? `${score}점 · ${label}` : `${score}점`
+                        }
+                      />
+                      <span className="flex h-10 items-center justify-center peer-focus-visible:rounded-md peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
+                        <span
+                          className={`relative size-5 rounded-full border-2 transition-colors ${answer.score === number ? 'border-blue-600 bg-blue-600 ring-4 ring-blue-100 dark:ring-blue-950' : 'border-muted-foreground/40 bg-background'}`}
+                        />
+                      </span>
+                      <span className="mt-1 text-sm font-medium">
+                        {score}점
+                      </span>
+                    </label>
+                    {labelKey && onScaleLabelChange ? (
+                      <Input
+                        aria-label={`${score}점 라벨`}
+                        value={label}
+                        maxLength={500}
+                        disabled={scaleLabelEditingDisabled}
+                        onChange={(event) =>
+                          onScaleLabelChange(labelKey, event.target.value)
+                        }
+                        className={`mt-1 h-8 w-[140px] shrink-0 px-2 text-center text-xs ${questionnaireStyles.input} ${number === 1 ? 'self-start' : number === config.max ? 'self-end' : 'self-center'}`}
+                      />
+                    ) : (
+                      <span className="mt-1 min-h-4 text-[11px] leading-relaxed break-keep text-muted-foreground sm:text-xs">
+                        {label}
+                      </span>
+                    )}
+                  </div>
+                );
+              },
+            )}
+          </div>
         </div>
+        {config.allowText && (
+          <ScaleTextInput
+            value={answer.text}
+            disabled={disabled}
+            authorPreview={disabled && previewVariant === 'editor'}
+            scoreSelected={answer.score !== null}
+            onChange={(text) =>
+              onChange?.(encodeScaleAnswer({ score: answer.score, text }, true))
+            }
+          />
+        )}
       </fieldset>
     );
   }
@@ -139,5 +228,51 @@ export function QuestionChoiceInput({
         </div>
       ))}
     </fieldset>
+  );
+}
+
+function ScaleTextInput({
+  value,
+  disabled,
+  authorPreview,
+  scoreSelected,
+  onChange,
+}: {
+  value: string;
+  disabled: boolean;
+  authorPreview: boolean;
+  scoreSelected: boolean;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    ref.current.style.height = 'auto';
+    ref.current.style.height = `${ref.current.scrollHeight}px`;
+  }, [value]);
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="sr-only">
+        추가 서술 답변
+      </label>
+      <textarea
+        ref={ref}
+        id={id}
+        rows={1}
+        maxLength={5000}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled || !scoreSelected}
+        placeholder={
+          authorPreview
+            ? '응답자가 답변을 입력하는 공간입니다.'
+            : scoreSelected || disabled
+              ? '답변을 입력해 주세요'
+              : '먼저 점수를 선택해 주세요'
+        }
+        className={`block min-h-10 w-full resize-none overflow-hidden rounded-lg px-3 py-2.5 text-sm outline-none placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-neutral-500 dark:placeholder:text-neutral-400 ${authorPreview ? 'border border-dashed border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-900' : 'border-0 bg-neutral-100 dark:bg-neutral-800'}`}
+      />
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
-import { QUESTION_TYPES, type QuestionKind } from '../lib/question-types';
+import {
+  QUESTION_TYPES,
+  type QuestionKind,
+  scaleConfig,
+} from '../lib/question-types';
 import type { Question } from '../lib/types';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
@@ -46,6 +52,10 @@ export function QuestionTypeEditor({
               onChange({
                 ...question,
                 kind: next,
+                scaleConfig:
+                  next === 'scale'
+                    ? scaleConfig(question)
+                    : question.scaleConfig,
                 options:
                   next === 'single' || next === 'multiple'
                     ? options.length
@@ -78,7 +88,11 @@ export function QuestionTypeEditor({
         <QuestionTextAnswerPreview variant="editor" />
       )}
       {part === 'settings' && kind === 'scale' && (
-        <QuestionChoiceInput question={question} disabled />
+        <ScaleSettings
+          question={question}
+          onChange={onChange}
+          disabled={disabled}
+        />
       )}
       {part === 'settings' && (kind === 'single' || kind === 'multiple') && (
         <div className="space-y-2">
@@ -166,6 +180,106 @@ export function QuestionTypeEditor({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function ScaleSettings({
+  question,
+  onChange,
+  disabled,
+}: {
+  question: Question;
+  onChange: (value: Question) => void;
+  disabled: boolean;
+}) {
+  const config = scaleConfig(question);
+  const [maxDraft, setMaxDraft] = useState({
+    base: config.max,
+    value: String(config.max),
+  });
+  const [rejectedAt, setRejectedAt] = useState<number | null>(null);
+  const maxInput =
+    maxDraft.base === config.max ? maxDraft.value : String(config.max);
+  const reverted = rejectedAt === config.max;
+  const validMax = /^[2-9]$/.test(maxInput);
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <div className="flex items-center gap-1 text-sm font-medium">
+          <Input
+            id={`scale-max-${question.id}`}
+            type="number"
+            inputMode="numeric"
+            min={2}
+            max={9}
+            step={1}
+            value={maxInput}
+            disabled={disabled}
+            aria-label="척도 점수"
+            aria-invalid={!validMax}
+            aria-describedby={
+              !validMax || reverted
+                ? `scale-max-error-${question.id}`
+                : undefined
+            }
+            className={`h-9 w-16 text-center tabular-nums ${questionnaireStyles.input}`}
+            onChange={(event) => {
+              const next = event.target.value;
+              setMaxDraft({ base: config.max, value: next });
+              setRejectedAt(null);
+              if (/^[2-9]$/.test(next)) {
+                onChange({
+                  ...question,
+                  scaleConfig: { ...config, max: Number(next) },
+                });
+              }
+            }}
+            onBlur={() => {
+              if (!validMax) {
+                setMaxDraft({ base: config.max, value: String(config.max) });
+                setRejectedAt(config.max);
+              }
+            }}
+          />
+          <label htmlFor={`scale-max-${question.id}`}>점 척도</label>
+          <span className="font-normal text-muted-foreground">(2~9)</span>
+        </div>
+        {(!validMax || reverted) && (
+          <p
+            id={`scale-max-error-${question.id}`}
+            role="alert"
+            className="text-xs text-destructive"
+          >
+            {validMax
+              ? '범위를 벗어난 입력은 반영되지 않아 이전 점수를 유지했어요.'
+              : '2~9 사이의 정수를 입력해 주세요.'}
+          </p>
+        )}
+      </div>
+      <QuestionChoiceInput
+        question={question}
+        disabled
+        previewVariant="editor"
+        onScaleLabelChange={(key, label) =>
+          onChange({ ...question, scaleConfig: { ...config, [key]: label } })
+        }
+        scaleLabelEditingDisabled={disabled}
+      />
+      <div className="flex items-center gap-3">
+        <Switch
+          id={`scale-text-${question.id}`}
+          checked={config.allowText}
+          disabled={disabled}
+          onCheckedChange={(allowText) =>
+            onChange({ ...question, scaleConfig: { ...config, allowText } })
+          }
+        />
+        <label htmlFor={`scale-text-${question.id}`} className="text-sm">
+          서술형 답변 허용
+        </label>
+      </div>
     </div>
   );
 }

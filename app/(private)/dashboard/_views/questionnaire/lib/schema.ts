@@ -10,6 +10,15 @@ const detailSchema = z.object({
 });
 const questionSchema = z.object({
   kind: z.enum(['text', 'scale', 'single', 'multiple']).optional(),
+  scaleConfig: z
+    .object({
+      max: z.number().int().min(2).max(9),
+      low: z.string().max(500),
+      middle: z.string().max(500),
+      high: z.string().max(500),
+      allowText: z.boolean(),
+    })
+    .optional(),
   options: z
     .array(
       z.object({

@@ -26,7 +26,13 @@ function load(name) {
   );
   return exports;
 }
-const { validTypedAnswer, selectedOptions } = load('question-types');
+const {
+  validTypedAnswer,
+  selectedOptions,
+  scaleLabel,
+  scaleAnswer,
+  encodeScaleAnswer,
+} = load('question-types');
 const { questionnaireDocumentSchema } = load('schema');
 const options = [
   { id: randomUUID(), label: '팀 프로젝트' },
@@ -70,6 +76,49 @@ test('scale and selection validation reject invalid, duplicate and missing answe
   );
   assert.equal(selectedOptions('invalid').length, 0);
 });
+test('configurable scales label the endpoints and odd midpoint, with optional written answers', () => {
+  const even = {
+    max: 2,
+    low: '낮음',
+    middle: '보통',
+    high: '높음',
+    allowText: false,
+  };
+  const odd = { ...even, max: 9, allowText: true };
+  assert.equal(scaleLabel(even, 1), '낮음');
+  assert.equal(scaleLabel(even, 2), '높음');
+  assert.equal(scaleLabel(odd, 5), '보통');
+  assert.equal(scaleLabel(odd, 4), '');
+  assert.equal(
+    validTypedAnswer({ kind: 'scale', scaleConfig: even }, '2', true),
+    true,
+  );
+  assert.equal(
+    validTypedAnswer({ kind: 'scale', scaleConfig: even }, '3', true),
+    false,
+  );
+  const answer = encodeScaleAnswer({ score: 9, text: '자세한 이유' }, true);
+  assert.equal(scaleAnswer(answer).text, '자세한 이유');
+  assert.equal(
+    validTypedAnswer({ kind: 'scale', scaleConfig: odd }, answer, true),
+    true,
+  );
+  assert.equal(
+    validTypedAnswer({ kind: 'scale', scaleConfig: odd }, '9', true),
+    true,
+  );
+  assert.equal(
+    validTypedAnswer({ kind: 'scale', scaleConfig: even }, answer, true),
+    false,
+  );
+  assert.equal(
+    validTypedAnswer(
+      { kind: 'scale', scaleConfig: odd },
+      encodeScaleAnswer({ score: 9, text: 'x'.repeat(5001) }, true),
+    ),
+    false,
+  );
+});
 test('question schema preserves option identity, permits draft labels and supports legacy text', () => {
   const q = {
     id: randomUUID(),
@@ -97,6 +146,18 @@ test('question schema preserves option identity, permits draft labels and suppor
   assert.equal(questionnaireDocumentSchema.safeParse(doc).success, false);
   q.options = options;
   q.kind = 'unexpected';
+  assert.equal(questionnaireDocumentSchema.safeParse(doc).success, false);
+  q.kind = 'scale';
+  q.options = [];
+  q.scaleConfig = {
+    max: 9,
+    low: '낮음',
+    middle: '보통',
+    high: '높음',
+    allowText: true,
+  };
+  assert.equal(questionnaireDocumentSchema.safeParse(doc).success, true);
+  q.scaleConfig.max = 10;
   assert.equal(questionnaireDocumentSchema.safeParse(doc).success, false);
 });
 

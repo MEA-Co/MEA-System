@@ -88,3 +88,7 @@ done
 ## 기타 선택지 (2026-09-22)
 
 `20260922044351_questionnaire_other_choices.sql`은 기타 선택지 설정 검증과 답변 텍스트 변환을 확장한다. 로컬에만 적용하며 운영 DB는 변경하지 않았다. 관련 SQL은 `supabase/tests/questionnaire_other_choices.sql`이다.
+
+## 척도 설정 (2026-09-23)
+
+`20260923042351_questionnaire_scale_settings.sql`은 척도 2~9점, 양끝·홀수 가운데 라벨, 선택적 서술 답변을 저장한다. 로컬에만 적용했으며 운영 DB는 변경하지 않았다. `supabase/tests/questionnaire_scale_settings.sql`과 기존 질문 유형·답변 SQL 회귀 테스트, 로컬 DB lint·보안 advisor가 통과했다.
