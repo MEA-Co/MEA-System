@@ -14,14 +14,11 @@ import { PublishedExplanation } from './PublishedExplanation';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionExplanationForm } from './QuestionExplanationForm';
-import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
-import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
-
 export function PublishedQuestionnaire({
   document,
   distributed = false,
@@ -36,10 +33,8 @@ export function PublishedQuestionnaire({
   editableExplanationIds?: string[];
 }) {
   const content = (
-    <article
-      className={`mx-auto max-w-4xl space-y-8 rounded-xl border p-5 sm:p-10 ${questionnaireStyles.document}`}
-    >
-      <header className={questionnaireStyles.title}>
+    <article className="mx-auto max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
+      <header>
         <Badge variant="secondary">
           {distributed ? '배포된 질문지' : '게시된 질문지'}
         </Badge>
@@ -49,25 +44,18 @@ export function PublishedQuestionnaire({
       </header>
       {document.sections.map((section, index) => (
         <section key={section.id} className="space-y-5">
-          <h2 className={questionnaireStyles.sectionHeading}>
-            <span className={questionnaireStyles.sectionNumber}>
-              {index + 1}
-            </span>
-            <span className="min-w-0 whitespace-pre-wrap wrap-break-word">
-              {section.title || `섹션 ${index + 1}`}
-            </span>
+          <h2 className="whitespace-pre-wrap wrap-break-word text-xl font-semibold">
+            {section.title || `섹션 ${index + 1}`}
           </h2>
           {section.questions.map((question, questionIndex) => (
-            <div key={question.id} className={questionnaireStyles.questionCard}>
-              <div className="flex items-start gap-3">
-                <h3
-                  className={`w-6 shrink-0 tabular-nums ${questionnaireStyles.questionLabel}`}
-                >
-                  <span className="sr-only">질문 </span>
-                  {questionIndex + 1}
-                </h3>
-                <RichTextContent className="min-w-0 flex-1" value={question.text} />
-              </div>
+            <div key={question.id} className="space-y-4 rounded-lg border p-5">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                질문 {questionIndex + 1}
+              </h3>
+              <RichTextContent value={question.text} />
+              {staff && question.kind && question.kind !== 'text' && (
+                <QuestionChoiceInput question={question} disabled />
+              )}
               {question.details.map((detail) => (
                 <PublishedExplanation
                   key={detail.id}
@@ -90,12 +78,6 @@ export function PublishedQuestionnaire({
                   count={question.details.length}
                 />
               )}
-              {staff &&
-                (question.kind && question.kind !== 'text' ? (
-                  <QuestionChoiceInput question={question} disabled />
-                ) : (
-                  <QuestionTextAnswerPreview variant="questionnaire" />
-                ))}
               {staff && reviewContext && (
                 <QuestionnaireReviews
                   {...reviewContext}
@@ -150,10 +132,7 @@ export function PublishedQuestionnaire({
       <Tabs.Panel value="detail" keepMounted className="data-hidden:hidden">
         {content}
       </Tabs.Panel>
-      <Tabs.Panel
-        value="preview"
-        className={`rounded-xl border ${questionnaireStyles.document}`}
-      >
+      <Tabs.Panel value="preview" className="rounded-xl border bg-background">
         <QuestionnairePreview
           title={document.title}
           sections={document.sections}

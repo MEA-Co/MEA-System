@@ -11,6 +11,7 @@ export const DASHBOARD_PAGES = {
   profile: { label: '내 정보', group: 'personal' },
   students: { label: '학생 관리', group: 'members' },
   consultants: { label: '컨설턴트 관리', group: 'members' },
+  questions: { label: '질문 관리', group: 'data' },
   questionnaire: { label: '질문지 관리', group: 'data' },
   exploration: { label: '탐구활동 관리', group: 'data' },
   consulting: { label: '컨설팅 관리', group: 'operations' },
@@ -34,6 +35,7 @@ export const DASHBOARD_ROLES = {
   },
   consultant_lead: {
     consultants: { sidebar: true },
+    questions: { sidebar: true },
     questionnaire: { sidebar: true },
     exploration: { sidebar: true },
     consulting: { sidebar: true },
@@ -41,6 +43,7 @@ export const DASHBOARD_ROLES = {
   admin: {
     students: { sidebar: true },
     consultants: { sidebar: true },
+    questions: { sidebar: true },
     questionnaire: { sidebar: true },
     consulting: { sidebar: true },
   },

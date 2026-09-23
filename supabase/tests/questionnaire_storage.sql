@@ -24,6 +24,12 @@ begin
   if (result->>'revision')::int <> 1 then raise exception 'First save revision failed'; end if;
   if public.save_questionnaire_draft(doc,0,sid) <> result then raise exception 'Idempotent retry changed revision/time'; end if;
   loaded := public.read_questionnaire_draft((doc->>'versionId')::uuid);
+  -- Legacy payloads remain accepted; reads now include editor defaults.
+  if loaded#>'{sections,0,questions,0,scaleConfig}' is distinct from '{"max":5,"low":"전혀 그렇지 않다","middle":"보통이다","high":"매우 그렇다","allowText":false}'::jsonb
+    or loaded#>>'{sections,0,questions,0,choiceStyle}' is distinct from 'list'
+    or loaded#>'{sections,0,questions,0,choiceAllowText}' is distinct from 'false'::jsonb
+    then raise exception 'Legacy question defaults were not preserved'; end if;
+  loaded := jsonb_set(loaded,'{sections,0,questions,0}',(loaded#>'{sections,0,questions,0}') - 'scaleConfig' - 'choiceStyle' - 'choiceAllowText');
   if loaded - 'revision' - 'savedAt' <> doc then raise exception 'Round trip changed IDs or content'; end if;
   begin
     perform public.save_questionnaire_draft(doc,0,gen_random_uuid());
@@ -38,7 +44,9 @@ begin
   doc := jsonb_set(doc,'{sections,0,questions,0,details}',jsonb_build_array(doc#>'{sections,0,questions,0,details,1}'));
   result := public.save_questionnaire_draft(doc,1,gen_random_uuid());
   if (result->>'revision')::int <> 2 then raise exception 'Second save failed'; end if;
-  if public.read_questionnaire_draft((doc->>'versionId')::uuid) - 'revision' - 'savedAt' <> doc then raise exception 'Update/prune failed'; end if;
+  loaded := public.read_questionnaire_draft((doc->>'versionId')::uuid);
+  loaded := jsonb_set(loaded,'{sections,0,questions,0}',(loaded#>'{sections,0,questions,0}') - 'scaleConfig' - 'choiceStyle' - 'choiceAllowText');
+  if loaded - 'revision' - 'savedAt' <> doc then raise exception 'Update/prune failed'; end if;
   -- Re-add original details, then test malformed/duplicate IDs roll back everything.
   select document into doc from questionnaire_test_data;
   perform public.save_questionnaire_draft(doc,2,gen_random_uuid());

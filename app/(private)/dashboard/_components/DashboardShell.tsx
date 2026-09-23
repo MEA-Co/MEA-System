@@ -83,7 +83,7 @@ export function DashboardShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-w-0">
+      <SidebarInset className="min-w-0 has-[[data-question-editor]]:bg-neutral-100 dark:has-[[data-question-editor]]:bg-neutral-950">
         <header className="flex h-14 shrink-0 items-center px-4 md:px-6 md:hidden">
           <SidebarTrigger className="-ml-1 md:hidden" aria-label="메뉴 열기" />
         </header>

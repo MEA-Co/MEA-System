@@ -14,6 +14,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 질문 조건 UI는 공통 Select로 질문 → 특정 열/모든 열 → 조건 순서다. `선택했을 때`는 직접 입력 없는 선택형 열에서만 메뉴에 표시하고 선택지를 같은 줄에 고른다. 특정 열의 answered는 그 열, fieldId 없는 모든 열 answered는 같은 행의 모든 열이 입력됐는지 판정한다. 참조도 일치 행만 따른다. 로컬 migration `20260923085519_question_answered_column_references.sql`.
+
+- 질문 관리의 `특정 항목을 선택했을 때`는 직접 입력 없는 단일/다수선택형 열과 선택지 하나를 고른다. 단일은 equals, 다수는 includes로 저장하며 후보 열이 하나면 자동 선택한다. 미리보기는 참조를 끄면 일치 행 하나 이상으로 질문을 열고, 참조를 켜면 일치하는 행만 원본 ID 기준으로 반복한다. 로컬 migration `20260923084501_question_choice_reference_conditions.sql`, 검증 `supabase/tests/question_choice_conditions.sql`, `scripts/verify-question-choice-conditions.mjs`.
+
+- 질문 관리 조건 카드의 `응답했을 때`는 질문 단위 조건(fieldId 생략)으로 저장한다. `앞선 질문의 응답 참조`를 켜면 해당 질문의 작성된 행 수에 맞추며 sourceFieldId=null을 사용한다. 기존 열 단위 참조는 호환 유지한다. 별도 행 구성·선후관계 카드는 제거했다. 미리보기는 앞선 질문 입력과 행 ID별 후속 응답 보존을 제공하고 실제 배포/응답 영속화와는 분리된다. 검증은 `supabase/tests/question_response_references.sql`, `scripts/verify-question-reference-rows.mjs`, 로컬 migration은 `20260923083334_question_response_references.sql`이다.
+
+- 독립 질문 관리(`_views/questions/`, `/api/questions`)는 `public.questions`와 별도 `question_details`를 사용한다. 설명은 질문 카드 아래에서 제목·서식 본문·컨설턴트 공개 여부를 편집하며 질문–답변 원문에는 포함하지 않는다. 설명 편집 요소는 questions 폴더 소유이며 questionnaire를 참조하지 않는다. `save_question`이 질문과 설명을 원자적으로 저장하고 부모 revision·saveId로 충돌/재시도를 보호한다. `details` 생략은 보존, 빈 배열은 삭제다. 미리보기에는 공개 설명만 표시한다. 설명은 리드·관리자 읽기와 작성자·관리자 RPC 쓰기를 허용하고 직접 쓰기를 차단한다. 로컬 적용 migration은 `20260923073954_question_details.sql`, 회귀는 `supabase/tests/question_details.sql`이다.
+
 - 질문 카드의 순서는 유형 선택·삭제 버튼 → 질문 입력 → 답변 UI/선택지 설정이다. 척도는 가로선 위의 점을 선택하며 편집 중에는 비활성 미리보기를 표시한다. 선택형 options의 `isOther`는 단일선택형에서 하나, 다수선택형에서 여러 개(전체 선택지 최대 20개)를 허용한다. 제작·미리보기·응답 화면에서 항상 일반 선택지 다음에 표시하며 둘 이상이면 `직접 입력 1`, `직접 입력 2`처럼 구분한다. 제작 화면에서는 `선택지 추가` 버튼을 일반 선택지 아래, `직접 입력` 항목 또는 추가 버튼 위에 둔다. 해당 답변은 각 선택지 ID별 `{id,text}`(다수 선택은 일반 ID와 객체의 배열)로 전달한다. 직접 입력 내용은 항목당 최대 5,000자이며 임시 저장은 공백을 허용하지만 완료 시 선택된 항목마다 필수다. 선택형의 `choice_allow_text`가 켜지면 `{choices:[선택값],text:"추가 서술"}`로 답변을 전달하며 추가 서술은 선택 입력이다. 기존 선택형 답변 형식도 읽고 `body`에는 `직접 입력: 내용`(여러 개면 번호 부여)과 별도의 `추가 답변: 내용`을 기록한다. 검증: `supabase/tests/questionnaire_other_choices.sql`, `scripts/verify-questionnaire-question-types.mjs`.
 
 - 질문은 서술형(`text`, 기본), 척도형(`scale`), 단일선택형(`single`), 다수선택형(`multiple`)을 지원한다. `QuestionTypeEditor`에서 유형과 선택지 2~20개를 설정한다. 선택지는 질문 행의 `options` JSONB에 `{id,label}`로 저장하며 `kind`와 함께 배포 후 고정된다. 선택형의 `choice_style`은 `list`(기본) 또는 `chip`이며 두 방식 모두 `isOther` 직접 입력 항목을 지원한다. 초안에는 빈 선택지 이름을 허용하지만 게시·배포 시 두 개 이상의 서로 다른 이름을 요구한다. `QuestionChoiceInput`은 미리보기·배포 상세·컨설턴트 입력을 공유한다. 척도는 `scale_config`에 최고 점수 2~9(기본 5), 양끝·홀수 가운데 라벨, 선택적 서술 답변 여부를 저장한다. 기존 척도는 5점 기본값을 사용한다. 척도 답변 `selection`은 숫자 또는 `{score,text}`이며 `body`는 점수·라벨·추가 답변을 보존한다. 검증: `supabase/tests/questionnaire_scale_settings.sql`, `scripts/verify-questionnaire-question-types.mjs`. 기존 서술형과 자유 응답은 그대로 유지한다.

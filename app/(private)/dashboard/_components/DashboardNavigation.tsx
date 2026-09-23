@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Blocks,
   BriefcaseBusiness,
   FilePenLine,
   GraduationCap,
@@ -36,6 +37,7 @@ const icons = {
   profile: UserRound,
   students: GraduationCap,
   consultants: BriefcaseBusiness,
+  questions: Blocks,
   questionnaire: FilePenLine,
   exploration: NotebookPen,
   consulting: MessagesSquare,

@@ -8,6 +8,7 @@ import { ConsultingView } from '../_views/consulting/ConsultingView';
 import { ExplorationView } from '../_views/exploration/ExplorationView';
 import { ProfileView } from '../_views/profile/ProfileView';
 import { QuestionnaireView } from '../_views/questionnaire/QuestionnaireView';
+import { QuestionsView } from '../_views/questions/QuestionsView';
 import { StudentsView } from '../_views/students/StudentsView';
 
 import { type DashboardView, resolveDashboardView } from './dashboard-access';
@@ -42,6 +43,7 @@ const DASHBOARD_VIEWS = {
       completedConsultingIds={completedConsultingIds}
     />
   ),
+  questions: () => <QuestionsView />,
   questionnaire: ({ questionnaireId }) => (
     <QuestionnaireView requestedId={questionnaireId} />
   ),
