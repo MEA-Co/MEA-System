@@ -9,6 +9,8 @@ const require = createRequire(import.meta.url);
 function setup({
   role = 'consultant_lead',
   batches = [],
+  viewRole = role,
+  count = 0,
   rpcError = null,
 } = {}) {
   const calls = [];
@@ -19,6 +21,7 @@ function setup({
     '@/app/(private)/dashboard/_views/questions/lib/question-blocks': {
       questionBlockSchema: z.any(),
     },
+    '@/lib/admin': { getViewRole: async () => viewRole },
     '@/lib/auth': {
       getUserAccess: async () => ({
         user: { id: 'actor' },
@@ -49,6 +52,21 @@ function setup({
               return builder;
             },
             is: () => builder,
+            maybeSingle: () => builder,
+            eq: (column, value) => {
+              calls.push({ filter: column, value });
+              return builder;
+            },
+            ilike: (column, value) => {
+              calls.push({ search: column, value });
+              return builder;
+            },
+            in: (column, value) => {
+              calls.push({ in: column, value });
+              return builder;
+            },
+            then: (resolve) =>
+              resolve({ data: batches.shift() ?? [], count, error: null }),
             order: (column, options) => {
               calls.push({ column, options });
               return builder;
@@ -91,9 +109,9 @@ function setup({
   );
   return {
     calls,
-    get: (query = '') =>
+    get: (query = '', path = []) =>
       exports.GET(new Request(`https://example.test/api/questions${query}`), {
-        params: Promise.resolve({}),
+        params: Promise.resolve({ path }),
       }),
   };
 }
@@ -162,4 +180,59 @@ test('relationship mode excludes explanations and storage metadata', async () =>
   assert.ok(!columns.includes('*'));
   assert.ok(!columns.includes('details'));
   assert.ok(!columns.includes('save_id'));
+});
+
+test('admin lead preview filters before pagination and returns the display role', async () => {
+  const client = setup({
+    role: 'admin',
+    viewRole: 'consultant_lead',
+    count: 11,
+    batches: [[], [{ id: 'mine', condition: null }]],
+  });
+  const result = await (await client.get('?page=99&search=%25_')).json();
+  assert.equal(result.total, 11);
+  assert.equal(result.page, 2);
+  assert.equal(result.pageSize, 10);
+  assert.equal(result.role, 'consultant_lead');
+  assert.equal(
+    client.calls.some((c) => c.name === 'list_questions_page'),
+    false,
+  );
+  assert.equal(
+    client.calls.filter((c) => c.filter === 'created_by' && c.value === 'actor')
+      .length,
+    2,
+  );
+  assert.deepEqual(
+    client.calls.filter((c) => 'start' in c),
+    [
+      { start: 980, end: 989 },
+      { start: 10, end: 19 },
+    ],
+  );
+});
+test('admin lead preview full and relationship lists use the same owner filter', async () => {
+  for (const query of ['', '?mode=relationships']) {
+    const client = setup({ role: 'admin', viewRole: 'consultant_lead' });
+    await client.get(query);
+    assert.ok(
+      client.calls.some(
+        (c) => c.filter === 'created_by' && c.value === 'actor',
+      ),
+    );
+  }
+});
+test('admin normal view retains the full paginated RPC', async () => {
+  const client = setup({ role: 'admin' });
+  const result = await (await client.get('?page=1')).json();
+  assert.equal(result.role, 'admin');
+  assert.ok(client.calls.some((c) => c.name === 'list_questions_page'));
+});
+
+test('admin lead preview detail query includes author constraint', async () => {
+  const client = setup({ role: 'admin', viewRole: 'consultant_lead' });
+  await client.get('', [randomUUID()]);
+  assert.ok(
+    client.calls.some((c) => c.filter === 'created_by' && c.value === 'actor'),
+  );
 });

@@ -193,7 +193,9 @@ function readLocalDraft(
   }
 }
 
-export function QuestionLibraryView() {
+export function QuestionLibraryView({
+  displayRole,
+}: { displayRole?: string } = {}) {
   const requestedId = useSearchParams().get('question');
   const activeId = useRef<string | null>(null);
   const sessions = useRef(
@@ -846,7 +848,7 @@ export function QuestionLibraryView() {
           ) : listMode === 'table' ? (
             <div className="space-y-4">
               <QuestionManagementTable
-                showCreator={role === 'admin'}
+                showCreator={(displayRole ?? role) === 'admin'}
                 questions={pageQuestions}
                 allQuestions={[...blocks, ...references]}
                 canManage={(q) => role === 'admin' || q.created_by === userId}

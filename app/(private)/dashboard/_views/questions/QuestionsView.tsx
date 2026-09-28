@@ -85,7 +85,7 @@ export function QuestionsView({
       {questionnaire ? (
         <QuestionnaireView requestedId={requestedId} />
       ) : (
-        <QuestionLibraryView />
+        <QuestionLibraryView displayRole={role} />
       )}
     </div>
   );

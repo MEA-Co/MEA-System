@@ -16,6 +16,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 관리자 리드 미리보기의 /api/questions GET은 getViewRole로 표시 역할을 읽고 본인 created_by로 목록·검색/개수·상세·관계 후보를 제한한다. 실제 RLS/쓰기 권한은 변경하지 않는다. 관리자 기본 화면은 전체 조회한다. 이 서버 필터 변경에는 migration이 없다.
+
 - 독립 질문은 작성자인 리드와 관리자만 조회한다. questions와 question_details RLS가 목록·검색·상세·관계 후보 조회에 적용된다. 관리자의 질문 테이블은 list_questions_page가 반환한 creator_name을 제작자 열에 표시한다. private 저장 RPC를 통한 타 작성자 질문 참조·배치도 트리거로 차단한다. migration 20260928061511_question_creator_visibility.sql, 검증 supabase/tests/question_creator_visibility.sql.
 
 - 질문 생성·수정은 QuestionLibraryView의 Drawer로 열며 목록의 검색·페이지·스크롤을 유지한다. question URL 매개변수와 미저장 닫기 확인을 지원한다. useQuestionEditorData는 개별 상세와 설명을 제외한 /api/questions?mode=relationships를 별도로 SWR 캐싱한다. PC는 넓은 오른쪽 패널, 모바일은 전체 높이다. DB migration 없음. 검증 scripts/verify-question-drawer.mjs, scripts/verify-question-pagination-api.mjs.

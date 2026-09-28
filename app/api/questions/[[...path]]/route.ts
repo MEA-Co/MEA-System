@@ -5,6 +5,7 @@ import {
   type QuestionBlockRow,
   questionBlockSchema,
 } from '@/app/(private)/dashboard/_views/questions/lib/question-blocks';
+import { getViewRole } from '@/lib/admin';
 import { getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -61,22 +62,27 @@ async function handle(request: Request, context: Context) {
   ) {
     return json({ error: '질문 관리 권한이 없어요.' }, 403);
   }
+  const userId = access.user.id;
   const path = (await context.params).path ?? [];
   const id = path[0];
   const client = createClient(await cookies());
 
   if (request.method === 'GET') {
+    const viewRole = await getViewRole(access.role!);
+    const ownOnly = viewRole !== 'admin';
     if (path.length > 1 || (id && !z.uuid().safeParse(id).success)) {
       return json({ error: '경로를 찾을 수 없어요.' }, 404);
     }
     if (id) {
-      const result = await client
+      let query = client
         .from('questions')
         .select(
           '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)',
         )
         .eq('id', id)
-        .is('archived_at', null)
+        .is('archived_at', null);
+      if (ownOnly) query = query.eq('created_by', userId);
+      const result = await query
         .maybeSingle()
         .overrideTypes<QuestionBlockRow, { merge: false }>();
       if (result.error)
@@ -97,6 +103,73 @@ async function handle(request: Request, context: Context) {
         });
       if (!parsed.success)
         return json({ error: '검색어와 페이지를 확인해 주세요.' }, 400);
+      if (access.role === 'admin' && ownOnly) {
+        // Filter before counting and paging so preview pages stay full and totals
+        // never include other authors. RLS and actual account privileges stay intact.
+        const columns =
+          'id,created_by,title,prompt,fields,row_mode,max_rows,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at';
+        const pattern =
+          '%' + parsed.data.search.trim().replace(/[\\%_]/g, '\\$&') + '%';
+        const pageSize = 10;
+        const readPage = (page: number) =>
+          client
+            .from('questions')
+            .select(columns, { count: 'exact' })
+            .eq('created_by', userId)
+            .is('archived_at', null)
+            .ilike('search_text', pattern)
+            .order('updated_at', { ascending: false })
+            .order('id', { ascending: false })
+            .range((page - 1) * pageSize, page * pageSize - 1);
+        let result = await readPage(parsed.data.page);
+        if (result.error)
+          return json({ error: '질문 목록을 불러오지 못했어요.' }, 503);
+        const total = result.count ?? 0;
+        const page = Math.min(
+          parsed.data.page,
+          Math.max(1, Math.ceil(total / pageSize)),
+        );
+        if (page !== parsed.data.page) result = await readPage(page);
+        if (result.error)
+          return json({ error: '질문 목록을 불러오지 못했어요.' }, 503);
+        const blocks = (result.data ?? []) as QuestionBlockRow[];
+        const ids = [
+          ...new Set(
+            blocks
+              .flatMap((block) => [
+                block.source_block_id,
+                block.after_block_id,
+                ...(block.condition?.clauses.map((clause) => clause.blockId) ??
+                  []),
+              ])
+              .filter(
+                (id): id is string =>
+                  !!id && !blocks.some((block) => block.id === id),
+              ),
+          ),
+        ];
+        let references: QuestionBlockRow[] = [];
+        if (ids.length) {
+          const linked = await client
+            .from('questions')
+            .select(columns)
+            .eq('created_by', userId)
+            .is('archived_at', null)
+            .in('id', ids);
+          if (linked.error)
+            return json({ error: '참조 질문을 불러오지 못했어요.' }, 503);
+          references = (linked.data ?? []) as QuestionBlockRow[];
+        }
+        return json({
+          blocks,
+          references,
+          total,
+          page,
+          pageSize,
+          userId: access.user.id,
+          role: viewRole,
+        });
+      }
       const result = await client.rpc('list_questions_page', {
         p_page: parsed.data.page,
         p_search: parsed.data.search.trim(),
@@ -106,7 +179,7 @@ async function handle(request: Request, context: Context) {
       return json({
         ...result.data,
         userId: access.user.id,
-        role: access.role,
+        role: viewRole,
       });
     }
     // Graphs, question relationships and the composer explicitly request the full
@@ -118,10 +191,12 @@ async function handle(request: Request, context: Context) {
     const blocks: QuestionBlockRow[] = [];
     const batchSize = 500;
     for (let start = 0; ; start += batchSize) {
-      const result = await client
+      let query = client
         .from('questions')
         .select(columns)
-        .is('archived_at', null)
+        .is('archived_at', null);
+      if (ownOnly) query = query.eq('created_by', userId);
+      const result = await query
         .order('updated_at', { ascending: false })
         .order('id', { ascending: false })
         .range(start, start + batchSize - 1)
@@ -131,7 +206,7 @@ async function handle(request: Request, context: Context) {
       blocks.push(...(result.data ?? []));
       if (!result.data || result.data.length < batchSize) break;
     }
-    return json({ blocks, userId: access.user.id, role: access.role });
+    return json({ blocks, userId: access.user.id, role: viewRole });
   }
 
   const origin = request.headers.get('origin');
