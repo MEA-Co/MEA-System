@@ -30,13 +30,14 @@ export const DASHBOARD_ROLES = {
   },
   consultant: {
     profile: { sidebar: true },
-    questionnaire: { sidebar: true },
+    questions: { sidebar: true },
+    questionnaire: { sidebar: false },
     exploration: { sidebar: true },
   },
   consultant_lead: {
     consultants: { sidebar: true },
     questions: { sidebar: true },
-    questionnaire: { sidebar: true },
+    questionnaire: { sidebar: false },
     exploration: { sidebar: true },
     consulting: { sidebar: true },
   },
@@ -44,14 +45,14 @@ export const DASHBOARD_ROLES = {
     students: { sidebar: true },
     consultants: { sidebar: true },
     questions: { sidebar: true },
-    questionnaire: { sidebar: true },
+    questionnaire: { sidebar: false },
     consulting: { sidebar: true },
   },
 } as const satisfies Record<MemberRole, RolePages>;
 
 export const DASHBOARD_DEFAULT_VIEWS = {
   student: 'consulting',
-  consultant: 'questionnaire',
+  consultant: 'questions',
   consultant_lead: 'consultants',
   admin: 'consultants',
 } as const satisfies {
@@ -71,7 +72,9 @@ export function resolveDashboardView(
     !Object.hasOwn(DASHBOARD_PAGES, requested)
   )
     return DASHBOARD_DEFAULT_VIEWS[role];
-  const view = requested as DashboardView;
+  const view = (
+    requested === 'questionnaire' ? 'questions' : requested
+  ) as DashboardView;
   return canAccessDashboardView(role, view)
     ? view
     : DASHBOARD_DEFAULT_VIEWS[role];

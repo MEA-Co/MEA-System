@@ -15,7 +15,7 @@ const exports = {};
 vm.runInNewContext(
   ts.transpileModule(
     readFileSync(
-      'app/(private)/dashboard/_views/questionnaire/lib/rich-text.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/rich-text.ts',
       'utf8',
     ),
     {
@@ -40,7 +40,7 @@ const listExports = {};
 vm.runInNewContext(
   ts.transpileModule(
     readFileSync(
-      'app/(private)/dashboard/_views/questionnaire/lib/list-extension.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/list-extension.ts',
       'utf8',
     ),
     {

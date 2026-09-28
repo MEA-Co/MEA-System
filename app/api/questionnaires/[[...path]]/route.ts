@@ -5,18 +5,19 @@ import {
   loadAnswers,
   loadAnswerStatuses,
   saveAnswers,
-} from '@/app/(private)/dashboard/_views/questionnaire/lib/answers-server';
-import { QuestionnaireHttpError } from '@/app/(private)/dashboard/_views/questionnaire/lib/http-error';
-import { loadUnreadQuestionnairePublications } from '@/app/(private)/dashboard/_views/questionnaire/lib/publication-notifications';
+} from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/answers-server';
+import { QuestionnaireHttpError } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/http-error';
+import { loadUnreadQuestionnairePublications } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/publication-notifications';
 import {
   addQuestionnaireExplanation,
+  changeQuestionnaireStatus,
   deleteQuestionnaireDraft,
   loadQuestionnaireView,
   manageQuestionnaireExplanation,
   manageQuestionnaireReview,
   publishQuestionnaireDraft,
   saveQuestionnaireDraft,
-} from '@/app/(private)/dashboard/_views/questionnaire/lib/server';
+} from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/server';
 import { getViewRole } from '@/lib/admin';
 import { type AuthorizedUserAccess, getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -123,6 +124,8 @@ async function handle(request: Request, context: Context) {
     let result: { error?: string; status?: number; mode?: string };
     if (method === 'DELETE' && path.length === 1)
       result = await deleteQuestionnaireDraft({ ...body, versionId: id });
+    else if (method === 'PATCH' && path.length === 2 && resource === 'status')
+      result = await changeQuestionnaireStatus({ ...body, versionId: id });
     else if (
       method === 'POST' &&
       path.length === 2 &&

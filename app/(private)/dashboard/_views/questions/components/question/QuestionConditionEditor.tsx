@@ -12,13 +12,13 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
-import { supportsChoiceCondition } from '../lib/choice-condition';
+import { supportsChoiceCondition } from '../../lib/choice-condition';
 import {
   type QuestionBlockClause,
   type QuestionBlockDocument,
   type QuestionBlockRow,
   questionName,
-} from '../lib/question-blocks';
+} from '../../lib/question-blocks';
 
 function ConditionSelect({
   label,

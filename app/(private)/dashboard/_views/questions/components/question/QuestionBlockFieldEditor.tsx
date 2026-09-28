@@ -2,15 +2,15 @@
 
 import { Trash2 } from 'lucide-react';
 
-import { questionStyles } from '@/app/(private)/dashboard/_views/questions/components/question-styles';
-import { QuestionTypeEditor } from '@/app/(private)/dashboard/_views/questions/components/QuestionTypeEditor';
+import { questionStyles } from '@/app/(private)/dashboard/_views/questions/components/question/question-styles';
+import { QuestionTypeEditor } from '@/app/(private)/dashboard/_views/questions/components/question/QuestionTypeEditor';
 import type { Question } from '@/app/(private)/dashboard/_views/questions/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { questionFromField } from '../lib/field-question';
-import type { QuestionBlockField } from '../lib/question-blocks';
+import { questionFromField } from '../../lib/field-question';
+import type { QuestionBlockField } from '../../lib/question-blocks';
 
 function asField(
   field: QuestionBlockField,

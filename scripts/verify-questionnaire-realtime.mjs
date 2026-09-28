@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
-const base = 'app/(private)/dashboard/_views/questionnaire/';
+const base = 'app/(private)/dashboard/_views/questions/';
 function compile(file, imports, globals = {}) {
   const exports = {};
   vm.runInNewContext(
@@ -81,7 +81,7 @@ function setup(audience = 'staff') {
     },
   };
   const subject = compile(
-    'hooks/useQuestionnaireRealtime.ts',
+    'hooks/questionnaire/useQuestionnaireRealtime.ts',
     {
       react: {
         useEffect: (fn) => {
@@ -89,7 +89,7 @@ function setup(audience = 'staff') {
         },
       },
       '@/lib/supabase/client': { createClient: () => client },
-      '../lib/api-client': {
+      '../../lib/questionnaire/api-client': {
         useQuestionnaireApi: () => ({
           refresh: async () => {
             refreshes++;
@@ -220,7 +220,7 @@ test('unmount, sign-out and account switch stop pending and late callbacks', () 
 
 test('SWR retains focus/reconnect recovery and uses 60-second fallback, never polling new forms', () => {
   const configurations = [];
-  const subject = compile('lib/api-client.ts', {
+  const subject = compile('lib/questionnaire/api-client.ts', {
     react: { useCallback: (fn) => fn },
     swr: {
       default: (key, _fetcher, config) => configurations.push({ key, config }),

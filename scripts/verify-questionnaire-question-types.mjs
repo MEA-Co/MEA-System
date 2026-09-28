@@ -7,7 +7,7 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 const require = createRequire(import.meta.url);
-const root = 'app/(private)/dashboard/_views/questionnaire/lib/';
+const root = 'app/(private)/dashboard/_views/questions/lib/questionnaire/';
 function load(name) {
   const exports = {};
   vm.runInNewContext(

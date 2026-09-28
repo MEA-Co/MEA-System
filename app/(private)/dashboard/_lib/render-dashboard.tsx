@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import { AdminRoleTabs } from '../_components/AdminRoleTabs';
 import { Dashboard } from '../_components/Dashboard';
-import { PublicationNotifications } from '../_views/questionnaire/components/PublicationNotifications';
+import { PublicationNotifications } from '../_views/questions/components/questionnaire/PublicationNotifications';
 
 import 'server-only';
 

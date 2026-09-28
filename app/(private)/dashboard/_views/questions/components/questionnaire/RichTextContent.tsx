@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { type RichTextNode, toEditorDocument } from '../lib/rich-text';
+import {
+  type RichTextNode,
+  toEditorDocument,
+} from '../../lib/questionnaire/rich-text';
 
 import styles from './RichTextContent.module.css';
 

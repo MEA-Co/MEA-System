@@ -14,6 +14,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 질문지 목록은 `questions/components/questionnaire/QuestionnaireList.tsx`의 검색·상태 필터 테이블이며 `QuestionnaireStatusSelect`에서 수정 중/게시/배포/보관을 변경한다. 보관은 삭제와 분리하고 복원할 수 있다. 배포→수정 중은 원본 배포본과 답변을 유지하고 별도 질문지 초안을 생성한다. `PATCH /api/questionnaires/:id/status`와 `change_questionnaire_status`는 권한·revision·이전 상태·보관 시각·요청 ID를 검증한다. 배치 질문지의 배포 차단은 유지한다. 로컬 migration `20260928050243_questionnaire_status_management.sql`, SQL 검증 `supabase/tests/questionnaire_status.sql`.
+
+- 질문·질문지 관리는 `questions/QuestionsView.tsx`로 통합한다. 사이드바는 질문 관리 하나이며 리드·관리자는 질문/질문지 탭, 컨설턴트는 배포 질문지 화면을 사용한다. `view=questionnaire`는 이전 링크 호환용이고 새 링크는 `view=questions&tab=questionnaires`를 사용한다. 현재 컴포넌트는 `questions/components/question/`와 `questions/components/questionnaire/`, 질문지 저장·조회 코드는 `questions/lib/questionnaire/`와 `questions/hooks/questionnaire/`에 둔다. 기존 `_views/questionnaire/`는 미사용 보존본이므로 수정·신규 참조하지 않는다. 자세한 이동 범위는 `docs/question-management-integration.md`를 참고한다.
+
 - 기존 서술형 질문지의 원본을 보존하고 독립 질문·배치형 새 초안을 생성하는 운영자 도구는 `private.import_legacy_text_questionnaire(uuid,integer)`다. `private.legacy_questionnaire_imports`에 대응 ID를 보존하며 앱 역할 실행은 차단한다. migration 설치만으로 실제 데이터를 이전하지 않는다. 응답 없는 활성 게시본만 지원하고 재실행 시 기존 결과를 반환한다. 절차 `docs/legacy-questionnaire-import.md`, 검사·예행연습·실행·비교는 `supabase/snippets/legacy-questionnaire-import-*.sql`, 로컬 회귀 `supabase/tests/import_legacy_text_questionnaire.sql`, migration `20260928042153_import_legacy_text_questionnaire.sql`.
 
 - 질문지 제작은 `QuestionnaireComposer`에서 질문 관리의 저장된 질문을 검색·배치한다. `questionnaire_questions.source_question_id`로 원본 ID를 참조하고 배치 ID는 독립적으로 유지한다. 제작·게시 중에는 원본의 최신 질문·열·조건·설명을 읽으며 섹션/질문 이동, 참조 선행 순서 검증, 공유 응답 미리보기를 제공한다. 새 배치를 포함한 배포는 질문 버전 고정·열/행 응답 저장 구현 전까지 DB에서 차단한다. 기존 배포본은 유지한다. 기존 편집 파일은 삭제하지 않았고 삭제 후보 3개 및 데이터 계약은 `docs/questionnaire-question-placement.md`에 기록했다. 로컬 migration `20260928034945_questionnaire_question_placements.sql`, 검증 `scripts/verify-questionnaire-placements.mjs`, `supabase/tests/questionnaire_question_placements.sql`. 운영에는 미적용이다.

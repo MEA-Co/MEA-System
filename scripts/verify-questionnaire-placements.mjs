@@ -37,13 +37,13 @@ function load(filename) {
   return exports;
 }
 const { createPlacement, questionsToPlace, placementError } = load(
-  `${root}/questionnaire/lib/question-placement.ts`,
+  `${root}/questions/lib/questionnaire/question-placement.ts`,
 );
 const { placementPreviewState } = load(
-  `${root}/questionnaire/lib/placement-preview.ts`,
+  `${root}/questions/lib/questionnaire/placement-preview.ts`,
 );
 const { questionnaireDocumentSchema } = load(
-  `${root}/questionnaire/lib/schema.ts`,
+  `${root}/questions/lib/questionnaire/schema.ts`,
 );
 const plain = (value) => JSON.parse(JSON.stringify(value));
 const field = (kind = 'text') => ({ id: randomUUID(), label: '답변', kind });

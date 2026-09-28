@@ -13,13 +13,13 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
-import { QuestionList } from '../lib/list-extension';
+import { QuestionList } from '../../lib/list-extension';
 import {
   richTextPlainText,
   serializeRichText,
   showRichTextPlaceholder,
   toEditorDocument,
-} from '../lib/rich-text';
+} from '../../lib/rich-text';
 
 import { richTextClasses } from './RichTextContent';
 

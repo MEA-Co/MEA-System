@@ -122,3 +122,9 @@ done
 `20260928042153_import_legacy_text_questionnaire.sql`은 운영자 전용 이전 함수와 private 대응 기록 테이블을 설치한다. migration 자체는 실제 운영 질문을 복사하지 않는다. `docs/legacy-questionnaire-import.md`와 `supabase/snippets/legacy-questionnaire-import-{check,dry-run,apply,verify}.sql`을 순서대로 사용한다.
 
 로컬에는 함수·이력 테이블만 적용했다. 가상 질문 16개·설명 32개·섹션 3개(빈 섹션 포함)를 사용한 `supabase/tests/import_legacy_text_questionnaire.sql`, 실제 전달할 검사/실행/비교 SQL의 롤백 테스트, 보안 advisor를 통과했다. 전체 migration 재생과 로컬 public/private 스키마 차이 없음 확인 후 이 migration 하나의 로컬 이력을 등록했다. 운영 데이터는 읽거나 변경하지 않았으며 운영 실행은 사용자가 수행한다.
+
+## 질문지 상태 관리 (2026-09-28)
+
+`20260928050243_questionnaire_status_management.sql`은 상태 변경 RPC와 private 재시도 기록을 추가한다. 수정 중·게시·배포·보관/복원 및 배포본을 보존하는 수정용 초안 복사를 제공한다. 기존 배치 질문지의 배포 차단은 유지한다. 실제 역할·작성자·revision·이전 상태·보관 시각을 검증하며 데이터 직접 쓰기 권한은 추가하지 않는다.
+
+로컬 SQL 적용 후 `supabase/tests/questionnaire_status.sql`로 상태 전환, 권한 거절, 충돌, 완료 답변 보존, 중복 복사 방지, 독립 보관, 배치 배포 실패의 원자적 롤백, 원본 보관 후 복원 차단을 검증했다. 보안 advisor 통과 후 `db pull questionnaire_status_management --local --schema public,private --yes`로 migration과 로컬 이력을 생성했다. CLI 출력의 remoteHistoryUpdated는 이 명령에서 선택한 **로컬 DB** 이력을 뜻하며 운영 DB에 적용한 것이 아니다.

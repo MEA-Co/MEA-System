@@ -5,14 +5,14 @@ import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
-import { matchingChoiceRows } from '../lib/choice-condition';
-import { questionFromField } from '../lib/field-question';
+import { matchingChoiceRows } from '../../lib/choice-condition';
+import { questionFromField } from '../../lib/field-question';
 import type {
   QuestionBlockDocument,
   QuestionBlockField,
   QuestionBlockRow,
-} from '../lib/question-blocks';
-import { documentFromRow } from '../lib/question-blocks';
+} from '../../lib/question-blocks';
+import { documentFromRow } from '../../lib/question-blocks';
 import {
   choiceAnswerId,
   choiceAnswerValue,
@@ -21,9 +21,12 @@ import {
   scaleConfig,
   scaleLabel,
   validTypedAnswer,
-} from '../lib/question-types';
-import { answeredSourceRows, referenceAnswerRows } from '../lib/reference-rows';
-import { richTextPlainText } from '../lib/rich-text';
+} from '../../lib/question-types';
+import {
+  answeredSourceRows,
+  referenceAnswerRows,
+} from '../../lib/reference-rows';
+import { richTextPlainText } from '../../lib/rich-text';
 
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';

@@ -23,18 +23,13 @@ const { getDashboardNavigation, resolveDashboardView } = exports;
 test('each role can open its menus and forbidden direct URLs fall back to the role home', () => {
   const expected = {
     student: ['profile'],
-    consultant: ['profile', 'questionnaire', 'exploration'],
-    consultant_lead: [
-      'consultants',
-      'questionnaire',
-      'exploration',
-      'consulting',
-    ],
-    admin: ['students', 'consultants', 'questionnaire', 'consulting'],
+    consultant: ['profile', 'questions', 'exploration'],
+    consultant_lead: ['consultants', 'questions', 'exploration', 'consulting'],
+    admin: ['students', 'consultants', 'questions', 'consulting'],
   };
   const homes = {
     student: 'consulting',
-    consultant: 'questionnaire',
+    consultant: 'questions',
     consultant_lead: 'consultants',
     admin: 'consultants',
   };
@@ -47,7 +42,7 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
       'profile',
       'students',
       'consultants',
-      'questionnaire',
+      'questions',
       'exploration',
       'consulting',
     ]) {
@@ -58,7 +53,7 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
     }
     for (const invalid of [
       undefined,
-      ['questionnaire'],
+      ['questions'],
       'unknown',
       '__proto__',
       'constructor',
@@ -71,12 +66,21 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
 test('questionnaires and explorations belong to data management', () => {
   for (const role of ['consultant', 'consultant_lead', 'admin']) {
     for (const page of getDashboardNavigation(role)) {
-      if (['questionnaire', 'exploration'].includes(page.view))
+      if (['questions', 'exploration'].includes(page.view))
         assert.equal(page.group, 'data');
     }
   }
-  assert.equal(
-    resolveDashboardView('consultant', 'consulting'),
-    'questionnaire',
-  );
+  assert.equal(resolveDashboardView('consultant', 'consulting'), 'questions');
+});
+
+test('legacy questionnaire URLs resolve to the unified view', () => {
+  for (const role of ['admin', 'consultant_lead', 'consultant']) {
+    assert.equal(resolveDashboardView(role, 'questionnaire'), 'questions');
+    assert.equal(
+      getDashboardNavigation(role).filter((page) => page.view === 'questions')
+        .length,
+      1,
+    );
+  }
+  assert.equal(resolveDashboardView('student', 'questionnaire'), 'consulting');
 });

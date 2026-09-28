@@ -14,8 +14,8 @@ import {
   scaleAnswer,
   scaleConfig,
   scaleLabel,
-} from '../lib/question-types';
-import type { Question } from '../lib/types';
+} from '../../lib/question-types';
+import type { Question } from '../../lib/types';
 
 import { questionStyles } from './question-styles';
 

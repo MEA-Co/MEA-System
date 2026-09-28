@@ -8,7 +8,7 @@ const exports = {};
 vm.runInNewContext(
   ts.transpileModule(
     readFileSync(
-      'app/(private)/dashboard/_views/questionnaire/lib/answer-session.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/answer-session.ts',
       'utf8',
     ),
     {

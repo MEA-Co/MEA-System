@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import { RichTextContent } from '../../questions/components/RichTextContent';
+import { RichTextContent } from '../../questions/components/question/RichTextContent';
 import {
   type QuestionBlockRow,
   questionName,

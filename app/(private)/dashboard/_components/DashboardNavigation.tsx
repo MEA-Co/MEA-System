@@ -31,7 +31,7 @@ import type { MemberRole } from '@/lib/profile';
 import {
   NewPublicationBadge,
   usePublicationNotifications,
-} from '../_views/questionnaire/components/PublicationNotifications';
+} from '../_views/questions/components/questionnaire/PublicationNotifications';
 
 const icons = {
   profile: UserRound,
@@ -92,7 +92,7 @@ export function DashboardNavigation({
                       >
                         <Icon />
                         <span>{page.label}</span>
-                        {page.view === 'questionnaire' &&
+                        {page.view === 'questions' &&
                           unreadIds.length > 0 && (
                             <NewPublicationBadge count={unreadIds.length} />
                           )}

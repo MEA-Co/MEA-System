@@ -11,9 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { type QuestionBlockRow, questionName } from '../lib/question-blocks';
-import { describeClause } from '../lib/question-list';
-import { richTextPlainText } from '../lib/rich-text';
+import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
+import { describeClause } from '../../lib/question-list';
+import { richTextPlainText } from '../../lib/rich-text';
 
 function ConditionBadge({ children }: { children: string }) {
   return (

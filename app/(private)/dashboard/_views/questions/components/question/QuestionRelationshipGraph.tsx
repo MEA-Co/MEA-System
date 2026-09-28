@@ -6,9 +6,9 @@ import { Fragment, useId, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import { type QuestionBlockRow, questionName } from '../lib/question-blocks';
-import { describeClause, questionGraphLayout } from '../lib/question-list';
-import { richTextPlainText } from '../lib/rich-text';
+import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
+import { describeClause, questionGraphLayout } from '../../lib/question-list';
+import { richTextPlainText } from '../../lib/rich-text';
 
 export function QuestionRelationshipGraph({
   questions,

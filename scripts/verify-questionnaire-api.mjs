@@ -8,7 +8,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
-const root = '@/app/(private)/dashboard/_views/questionnaire/lib/';
+const root = '@/app/(private)/dashboard/_views/questions/lib/questionnaire/';
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -34,6 +34,7 @@ function route({
     'saveQuestionnaireDraft',
     'deleteQuestionnaireDraft',
     'publishQuestionnaireDraft',
+    'changeQuestionnaireStatus',
     'manageQuestionnaireReview',
   ]) {
     functions[name] = async (...args) => {
@@ -330,4 +331,45 @@ test('consultants can save their response and read distribution notifications wi
     403,
   );
   assert.equal((await client.request('PUT', [id, 'read'], {})).status, 200);
+});
+
+test('status changes use the URL identity and deny consultant/cross-origin mutations', async () => {
+  const id = randomUUID();
+  const client = route();
+  assert.equal(
+    (
+      await client.request('PATCH', [id, 'status'], {
+        versionId: randomUUID(),
+        status: 'archived',
+      })
+    ).status,
+    200,
+  );
+  assert.equal(client.calls[0][0], 'changeQuestionnaireStatus');
+  assert.equal(client.calls[0][1].versionId, id);
+  assert.equal(
+    (await route({ role: 'consultant' }).request('PATCH', [id, 'status'], {}))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await client.request(
+        'PATCH',
+        [id, 'status'],
+        {},
+        { origin: 'https://evil.test' },
+      )
+    ).status,
+    403,
+  );
+  const conflict = route({
+    service: {
+      changeQuestionnaireStatus: () => ({ status: 409, error: 'conflict' }),
+    },
+  });
+  assert.equal(
+    (await conflict.request('PATCH', [id, 'status'], {})).status,
+    409,
+  );
 });

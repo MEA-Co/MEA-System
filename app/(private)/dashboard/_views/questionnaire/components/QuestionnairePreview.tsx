@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { QuestionBlockPreview } from '../../questions/components/QuestionBlockPreview';
+import { QuestionBlockPreview } from '../../questions/components/question/QuestionBlockPreview';
 import {
   documentFromRow,
   type QuestionBlockRow,

@@ -27,15 +27,15 @@ function load(path, imports = {}, globals = {}) {
         if (name === 'server-only') return {};
         if (name === './http-error')
           return load(
-            'app/(private)/dashboard/_views/questionnaire/lib/http-error.ts',
+            'app/(private)/dashboard/_views/questions/lib/questionnaire/http-error.ts',
           );
         if (name === './rich-text')
           return load(
-            'app/(private)/dashboard/_views/questionnaire/lib/rich-text.ts',
+            'app/(private)/dashboard/_views/questions/lib/questionnaire/rich-text.ts',
           );
         if (name === './schema')
           return load(
-            'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+            'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
           );
         if (name === 'node:crypto') return { randomUUID };
         assert.ok(name in imports, `Unexpected import ${name}`);
@@ -46,10 +46,10 @@ function load(path, imports = {}, globals = {}) {
   return exports;
 }
 const { QuestionnaireSaveSession } = load(
-  'app/(private)/dashboard/_views/questionnaire/lib/save-session.ts',
+  'app/(private)/dashboard/_views/questions/lib/questionnaire/save-session.ts',
 );
 const { saveQuestionnaireSchema } = load(
-  'app/(private)/dashboard/_views/questionnaire/lib/schema.ts',
+  'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
 );
 
 test('first autosave synchronizes the saved URL without refresh and retains later edits for the next tick', async () => {
@@ -62,7 +62,7 @@ test('first autosave synchronizes the saved URL without refresh and retains late
   const historyWrites = [];
   const windowMock = {
     location: {
-      href: 'https://example.test/dashboard?view=questionnaire&draft=new',
+      href: 'https://example.test/dashboard?view=questions&tab=questionnaires&draft=new',
     },
     history: {
       state: { __NA: true },
@@ -120,7 +120,7 @@ test('first autosave synchronizes the saved URL without refresh and retains late
     },
   };
   const { useQuestionnaireSave: runSaveHook } = load(
-    'app/(private)/dashboard/_views/questionnaire/hooks/useQuestionnaireSave.ts',
+    'app/(private)/dashboard/_views/questions/hooks/questionnaire/useQuestionnaireSave.ts',
     {
       react,
       'next/navigation': {
@@ -131,10 +131,11 @@ test('first autosave synchronizes the saved URL without refresh and retains late
       '@/components/ui/toast': {
         toast: { add: () => 'toast', update() {}, close() {} },
       },
-      '@/app/(private)/dashboard/_views/questionnaire/lib/save-session': {
-        QuestionnaireSaveSession,
-      },
-      '../lib/api-client': {
+      '@/app/(private)/dashboard/_views/questions/lib/questionnaire/save-session':
+        {
+          QuestionnaireSaveSession,
+        },
+      '../../lib/questionnaire/api-client': {
         useQuestionnaireApi: () => ({
           refresh: async () => {},
           saveQuestionnaire: (request) => {
@@ -331,7 +332,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
     for (const isOnboarded of [false, true]) {
       const calls = [];
       const { saveQuestionnaireDraft } = load(
-        'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+        'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
         {
           '@/lib/admin': { getViewRole: async (role) => role },
           'next/headers': { cookies: async () => ({}) },
@@ -418,7 +419,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       questionnaire_review_requests: [{ count: 2 }],
     };
     const { loadQuestionnaireView } = load(
-      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
       {
         'next/headers': { cookies: async () => ({}) },
         '@/lib/admin': { getViewRole: async () => scenario.visible },
@@ -509,6 +510,19 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       loaded.sections[0].questions[0].details.length,
       scenario.details,
     );
+    row.questionnaires.archived_at = '2026-09-28T00:00:00Z';
+    const archiveList = await loadQuestionnaireView();
+    assert.equal(
+      archiveList.distributed.length +
+        archiveList.published.length +
+        archiveList.drafts.length,
+      0,
+    );
+    assert.equal(
+      archiveList.archived.length,
+      scenario.visible === 'consultant' ? 0 : 1,
+    );
+    await assert.rejects(loadQuestionnaireView(doc.versionId));
     if (scenario.visible === 'consultant') {
       assert.equal(result.staff, false);
       assert.equal(result.selected.isOwner, false);
@@ -521,7 +535,7 @@ test('review server actions reject consultants and incomplete descriptions befor
   for (const role of ['student', 'consultant', 'consultant_lead', 'admin']) {
     const calls = [];
     const { manageQuestionnaireReview } = load(
-      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
       {
         'next/headers': { cookies: async () => ({}) },
         '@/lib/admin': { getViewRole: async (value) => value },
@@ -622,7 +636,7 @@ test('placements cannot silently save through a database without the placement m
   for (const available of [false, true]) {
     let rpcCalls = 0;
     const { saveQuestionnaireDraft } = load(
-      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
       {
         '@/lib/admin': { getViewRole: async (role) => role },
         'next/headers': { cookies: async () => ({}) },

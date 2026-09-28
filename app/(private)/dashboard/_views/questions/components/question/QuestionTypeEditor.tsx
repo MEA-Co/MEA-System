@@ -19,8 +19,8 @@ import {
   QUESTION_TYPES,
   type QuestionKind,
   scaleConfig,
-} from '../lib/question-types';
-import type { Question } from '../lib/types';
+} from '../../lib/question-types';
+import type { Question } from '../../lib/types';
 
 import { questionStyles } from './question-styles';
 import { QuestionChoiceInput } from './QuestionChoiceInput';

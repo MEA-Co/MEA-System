@@ -7,7 +7,6 @@ import { ConsultantsView } from '../_views/consultants/ConsultantsView';
 import { ConsultingView } from '../_views/consulting/ConsultingView';
 import { ExplorationView } from '../_views/exploration/ExplorationView';
 import { ProfileView } from '../_views/profile/ProfileView';
-import { QuestionnaireView } from '../_views/questionnaire/QuestionnaireView';
 import { QuestionsView } from '../_views/questions/QuestionsView';
 import { StudentsView } from '../_views/students/StudentsView';
 
@@ -43,9 +42,11 @@ const DASHBOARD_VIEWS = {
       completedConsultingIds={completedConsultingIds}
     />
   ),
-  questions: () => <QuestionsView />,
-  questionnaire: ({ questionnaireId }) => (
-    <QuestionnaireView requestedId={questionnaireId} />
+  questions: ({ role, questionnaireId }) => (
+    <QuestionsView role={role} requestedId={questionnaireId} />
+  ),
+  questionnaire: ({ role, questionnaireId }) => (
+    <QuestionsView role={role} requestedId={questionnaireId} />
   ),
   exploration: () => <ExplorationView />,
 } satisfies Record<DashboardView, (context: ViewContext) => ReactNode>;
