@@ -79,13 +79,11 @@ export function QuestionsDashboard() {
             failed: !!error,
             href: `${base}&tab=questionnaires`,
             icon: FilePenLine,
-            items: mine
-              .slice(0, 4)
-              .map((item) => ({
-                id: item.id,
-                title: item.title || '제목 없는 질문지',
-                updatedAt: item.updatedAt,
-              })),
+            items: mine.slice(0, 4).map((item) => ({
+              id: item.id,
+              title: item.title || '제목 없는 질문지',
+              updatedAt: item.updatedAt,
+            })),
             empty: '아직 만든 질문지가 없어요.',
           },
         ].map(
@@ -165,10 +163,10 @@ export function QuestionsDashboard() {
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Globe className="size-5" />
-              다른 사람이 게시한 질문지
+              게시된 질문지
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              공유된 질문지를 살펴보고 내용을 확인하세요.
+              공유된 질문지를 살펴보고 내용을 검토하세요.
             </p>
           </div>
           <Input
