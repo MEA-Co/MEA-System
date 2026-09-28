@@ -264,7 +264,7 @@ export function ExplorationView() {
                           {'columns' in group && fieldIndex > 0 && (
                             <ArrowRight
                               aria-hidden="true"
-                              className="absolute -top-9 left-1/2 size-5 -translate-x-1/2 rotate-90 text-muted-foreground md:top-40 md:-left-[30px] md:translate-x-0 md:rotate-0"
+                              className="absolute -top-9 left-1/2 size-5 -translate-x-1/2 rotate-90 text-muted-foreground md:top-40 md:-left-7.5 md:translate-x-0 md:rotate-0"
                             />
                           )}
                           <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
