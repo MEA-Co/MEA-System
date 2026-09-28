@@ -84,20 +84,52 @@ async function handle(request: Request, context: Context) {
       if (!result.data) return json({ error: '질문을 찾을 수 없어요.' }, 404);
       return json({ block: result.data, userId: access.user.id });
     }
-    const result = await client
-      .from('questions')
-      .select(
-        '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)',
-      )
-      .is('archived_at', null)
-      .order('updated_at', { ascending: false })
-      .overrideTypes<QuestionBlockRow[], { merge: false }>();
-    if (result.error) return json({ error: '질문을 불러오지 못했어요.' }, 503);
-    return json({
-      blocks: result.data ?? [],
-      userId: access.user.id,
-      role: access.role,
-    });
+    const params = new URL(request.url).searchParams;
+    if (params.has('page') || params.has('search')) {
+      const parsed = z
+        .object({
+          page: z.coerce.number().int().min(1).max(100000),
+          search: z.string().max(200),
+        })
+        .safeParse({
+          page: params.get('page') ?? '1',
+          search: params.get('search') ?? '',
+        });
+      if (!parsed.success)
+        return json({ error: '검색어와 페이지를 확인해 주세요.' }, 400);
+      const result = await client.rpc('list_questions_page', {
+        p_page: parsed.data.page,
+        p_search: parsed.data.search.trim(),
+      });
+      if (result.error)
+        return json({ error: '질문 목록을 불러오지 못했어요.' }, 503);
+      return json({
+        ...result.data,
+        userId: access.user.id,
+        role: access.role,
+      });
+    }
+    // Graphs, question relationships and the composer explicitly request the full
+    // library. Batch reads to avoid the Data API's per-response row limit.
+    const blocks: QuestionBlockRow[] = [];
+    const batchSize = 500;
+    for (let start = 0; ; start += batchSize) {
+      const result = await client
+        .from('questions')
+        .select(
+          '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)',
+        )
+        .is('archived_at', null)
+        .order('updated_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(start, start + batchSize - 1)
+        .overrideTypes<QuestionBlockRow[], { merge: false }>();
+      if (result.error)
+        return json({ error: '질문을 불러오지 못했어요.' }, 503);
+      blocks.push(...(result.data ?? []));
+      if (!result.data || result.data.length < batchSize) break;
+    }
+    return json({ blocks, userId: access.user.id, role: access.role });
   }
 
   const origin = request.headers.get('origin');

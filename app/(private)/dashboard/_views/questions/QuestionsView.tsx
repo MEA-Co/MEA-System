@@ -42,7 +42,7 @@ export function QuestionsView({
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {staff
-              ? '질문을 만들고, 필요한 질문을 골라 질문지로 구성하세요.'
+              ? '질문을 만들고, 질문지를 구성하세요.'
               : '배포된 질문지를 확인하고 답변을 작성하세요.'}
           </p>
         </header>

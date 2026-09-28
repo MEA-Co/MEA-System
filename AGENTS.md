@@ -10,9 +10,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 운영 DB migration이 필요한 변경을 완료하면 최종 안내에 실행 명령어와 순서를 반드시 함께 제공한다. 프로젝트 경로 이동 → 연결된 운영 대상·이력 확인 → dry-run 및 예상 migration 파일 확인 → 실제 적용 → 적용 대기 없음 재확인 → 앱 배포 → 기능 확인 순서로 안내한다. 예상과 다른 migration이 나오면 적용 전에 이력을 검토하도록 명시하고, 로컬 검증과 운영 적용 여부를 구분한다.
+
 - 로컬 구성·migration 복구와 운영 이력 차이는 `docs/local-supabase.md`를 먼저 확인한다. 전공 검색 migration 3개는 운영 객체가 있지만 운영 이력이 없고, 복구한 가치관 구조도 운영에 이미 있다. 이력 동등성 검토 없이 `db push`/원격 reset/`migration repair`를 실행하지 않는다. 개발 DB 초기화는 명시적으로 `db reset --local`을 사용한다. 로컬 Supabase 실행만으로 앱의 `.env` 연결이 바뀌지 않으며, 개발 환경 변수·Google OAuth·기준 데이터는 별도로 설정한다.
 
 ## 회원 역할
+
+- 질문 테이블은 `/api/questions?page=&search=`와 `list_questions_page` RPC로 20개씩 서버 검색·페이지 조회한다. 이름·서식 제거한 본문을 부분 일치로 검색하고 입력은 300ms 디바운스한다. 조건 설명은 해당 페이지의 직접 참조 질문을 함께 받아 표시한다. 그래프·질문 편집·질문지 배치만 전체 조회를 사용하며 서버에서 500개씩 나누어 읽는다. 로컬 migration `20260928052431_question_server_pagination.sql`, 검증 `supabase/tests/question_server_pagination.sql`, `scripts/verify-question-pagination-api.mjs`, 설명 `docs/question-search-pagination.md`.
 
 - 질문지 목록은 `questions/components/questionnaire/QuestionnaireList.tsx`의 검색·상태 필터 테이블이며 `QuestionnaireStatusSelect`에서 수정 중/게시/배포/보관을 변경한다. 보관은 삭제와 분리하고 복원할 수 있다. 배포→수정 중은 원본 배포본과 답변을 유지하고 별도 질문지 초안을 생성한다. `PATCH /api/questionnaires/:id/status`와 `change_questionnaire_status`는 권한·revision·이전 상태·보관 시각·요청 ID를 검증한다. 배치 질문지의 배포 차단은 유지한다. 로컬 migration `20260928050243_questionnaire_status_management.sql`, SQL 검증 `supabase/tests/questionnaire_status.sql`.
 

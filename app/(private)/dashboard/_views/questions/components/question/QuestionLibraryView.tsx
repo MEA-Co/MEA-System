@@ -219,57 +219,68 @@ export function QuestionLibraryView() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [conflicted, setConflicted] = useState(false);
   const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [total, setTotal] = useState(0);
+  const [references, setReferences] = useState<QuestionBlockRow[]>([]);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const requestSerial = useRef(0);
+  const [page, setPage] = useState(1);
   const [listMode, setListMode] = useState<'table' | 'graph'>('table');
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [pendingArchive, setPendingArchive] = useState<QuestionBlockRow | null>(
     null,
   );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const loadBlocks = useCallback(async () => {
-    setLoadError(false);
-    try {
-      const response = await fetch('/api/questions', {
-        cache: 'no-store',
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(readError(data));
-      setBlocks(data.blocks);
-      setUserId(data.userId);
-      setRole(data.role);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fullLibrary = Boolean(requestedId) || listMode === 'graph';
+  const requestUrl = fullLibrary
+    ? '/api/questions'
+    : `/api/questions?page=${page}&search=${encodeURIComponent(search)}`;
+  const loading =
+    fetching ||
+    loadedUrl !== requestUrl ||
+    (!fullLibrary && query.trim() !== search);
 
   useEffect(() => {
-    let active = true;
-    void fetch('/api/questions', { cache: 'no-store' })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(readError(data));
-        return data;
-      })
-      .then((data) => {
-        if (!active) return;
-        setBlocks(data.blocks);
-        setUserId(data.userId);
-        setRole(data.role);
-      })
-      .catch(() => {
-        if (active) setLoadError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    const timer = window.setTimeout(() => setSearch(query.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  const loadBlocks = useCallback(async () => {
+    const serial = ++requestSerial.current;
+    setFetching(true);
+    setLoadError(false);
+    try {
+      const response = await fetch(requestUrl, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(readError(data));
+      if (serial !== requestSerial.current) return;
+      setBlocks(data.blocks);
+      setReferences(data.references ?? []);
+      setTotal(data.total ?? data.blocks.length);
+      setUserId(data.userId);
+      setRole(data.role);
+      if (!fullLibrary && data.page !== page) setPage(data.page);
+    } catch {
+      if (serial === requestSerial.current) setLoadError(true);
+    } finally {
+      if (serial === requestSerial.current) {
+        setLoadedUrl(requestUrl);
+        setFetching(false);
+      }
+    }
+  }, [requestUrl, fullLibrary, page]);
+
+  useEffect(() => {
+    // This fetch synchronizes the editor or current server page with its URL.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadBlocks();
     return () => {
-      active = false;
+      requestSerial.current += 1;
     };
-  }, []);
+  }, [loadBlocks]);
 
   const filtered = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
@@ -279,6 +290,11 @@ export function QuestionLibraryView() {
         richTextPlainText(block.prompt).toLocaleLowerCase().includes(search),
     );
   }, [blocks, query]);
+  const pageSize = 20;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageQuestions = blocks;
   const existing = blocks.find((block) => block.id === draft?.id);
   const candidates = blocks.filter((block) => block.id !== draft?.id);
   const dirty = draft
@@ -864,9 +880,13 @@ export function QuestionLibraryView() {
               />
               <Input
                 aria-label="질문 검색"
+                maxLength={200}
                 className="pl-9"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="이름이나 질문 내용으로 검색"
               />
             </div>
@@ -911,19 +931,53 @@ export function QuestionLibraryView() {
                 다시 시도
               </Button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : (
+              listMode === 'table' ? blocks.length === 0 : filtered.length === 0
+            ) ? (
             <div className="flex flex-col items-center gap-4 rounded-2xl border bg-background p-10 text-center text-sm text-muted-foreground">
               <Blocks className="size-10 text-neutral-400" aria-hidden="true" />
               {query ? '검색 결과가 없어요.' : '아직 만든 질문이 없어요.'}
             </div>
           ) : listMode === 'table' ? (
-            <QuestionManagementTable
-              questions={filtered}
-              allQuestions={blocks}
-              canManage={(q) => role === 'admin' || q.created_by === userId}
-              onOpen={openEditor}
-              onArchive={setPendingArchive}
-            />
+            <div className="space-y-4">
+              <QuestionManagementTable
+                questions={pageQuestions}
+                allQuestions={[...blocks, ...references]}
+                canManage={(q) => role === 'admin' || q.created_by === userId}
+                onOpen={openEditor}
+                onArchive={setPendingArchive}
+              />
+              <nav
+                aria-label="질문 목록 페이지"
+                className="flex flex-wrap items-center justify-between gap-3"
+              >
+                <p className="text-sm text-muted-foreground" aria-live="polite">
+                  전체 {total}개 중 {pageStart + 1}–
+                  {Math.min(pageStart + pageSize, total)}개
+                </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setPage(currentPage - 1)}
+                  >
+                    이전
+                  </Button>
+                  <span className="text-sm tabular-nums">
+                    {currentPage} / {pageCount}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === pageCount}
+                    onClick={() => setPage(currentPage + 1)}
+                  >
+                    다음
+                  </Button>
+                </div>
+              </nav>
+            </div>
           ) : (
             <QuestionRelationshipGraph
               questions={blocks}

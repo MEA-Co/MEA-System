@@ -128,3 +128,7 @@ done
 `20260928050243_questionnaire_status_management.sql`은 상태 변경 RPC와 private 재시도 기록을 추가한다. 수정 중·게시·배포·보관/복원 및 배포본을 보존하는 수정용 초안 복사를 제공한다. 기존 배치 질문지의 배포 차단은 유지한다. 실제 역할·작성자·revision·이전 상태·보관 시각을 검증하며 데이터 직접 쓰기 권한은 추가하지 않는다.
 
 로컬 SQL 적용 후 `supabase/tests/questionnaire_status.sql`로 상태 전환, 권한 거절, 충돌, 완료 답변 보존, 중복 복사 방지, 독립 보관, 배치 배포 실패의 원자적 롤백, 원본 보관 후 복원 차단을 검증했다. 보안 advisor 통과 후 `db pull questionnaire_status_management --local --schema public,private --yes`로 migration과 로컬 이력을 생성했다. CLI 출력의 remoteHistoryUpdated는 이 명령에서 선택한 **로컬 DB** 이력을 뜻하며 운영 DB에 적용한 것이 아니다.
+
+## 질문 서버 검색·페이지네이션 (2026-09-28)
+
+`20260928052431_question_server_pagination.sql`은 질문 표시 텍스트를 추출하는 함수·저장 생성 열, pg_trgm 검색 인덱스, 20개 단위 security invoker 조회 RPC를 추가한다. 기존 원문과 권한은 유지한다. 로컬 DB에 먼저 적용해 45개 가상 질문으로 SQL 검증과 보안 advisor를 통과했다. 기본 pg-delta 생성기가 pg_trgm 의존성에서 실패해 `db pull --local --schema public,private --diff-engine migra`로 생성하고, 빠진 확장/권한과 함수→생성 열 순서를 보완했다. 로컬 이력만 등록했으며 운영 DB에는 적용하지 않았다. 사용 방법은 `question-search-pagination.md`를 참고한다.
