@@ -5,6 +5,7 @@ import { Eye, FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 
+import { useQuestionLibrary } from '../hooks/useQuestionLibrary';
 import type {
   QuestionnaireDraft,
   QuestionnaireReviewContext,
@@ -18,6 +19,7 @@ import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { QuestionPlacementCard } from './QuestionPlacementCard';
 import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
@@ -32,6 +34,10 @@ export function PublishedQuestionnaire({
   reviewContext?: QuestionnaireReviewContext;
   editableExplanationIds?: string[];
 }) {
+  const hasPlacements = document.sections.some((s) =>
+    s.questions.some((q) => q.sourceQuestionId),
+  );
+  const library = useQuestionLibrary(staff && hasPlacements);
   const content = (
     <article className="mx-auto max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
@@ -52,7 +58,24 @@ export function PublishedQuestionnaire({
               <h3 className="text-sm font-medium text-muted-foreground">
                 질문 {questionIndex + 1}
               </h3>
-              <RichTextContent value={question.text} />
+              {question.sourceQuestionId ? (
+                (() => {
+                  const source = library.data?.find(
+                    (q) => q.id === question.sourceQuestionId,
+                  );
+                  return source ? (
+                    <QuestionPlacementCard question={source} />
+                  ) : (
+                    <p role="status">
+                      {library.error
+                        ? '질문을 불러오지 못했어요.'
+                        : '질문을 불러오고 있어요.'}
+                    </p>
+                  );
+                })()
+              ) : (
+                <RichTextContent value={question.text} />
+              )}
               {staff && question.kind && question.kind !== 'text' && (
                 <QuestionChoiceInput question={question} disabled />
               )}
@@ -136,6 +159,7 @@ export function PublishedQuestionnaire({
         <QuestionnairePreview
           title={document.title}
           sections={document.sections}
+          library={library.data}
         />
       </Tabs.Panel>
     </Tabs.Root>

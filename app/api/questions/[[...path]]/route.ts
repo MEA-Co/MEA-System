@@ -27,6 +27,8 @@ function errorStatus(code?: string) {
 }
 
 function errorMessage(message: string, status: number) {
+  if (message.includes('used by a questionnaire'))
+    return '질문지에 배치된 질문이에요. 해당 질문지에서 제거한 뒤 보관해 주세요.';
   if (message.includes('dependency cycle'))
     return '질문의 선후관계가 순환해요.';
   if (message.includes('used by another block'))

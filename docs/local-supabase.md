@@ -108,3 +108,10 @@ done
 `20260923051135_questionnaire_choice_written_answer.sql`은 단일·다수선택형의 선택적 추가 서술 설정과 답변 저장을 추가한다. 기존 선택형 답변 형식을 허용하며 `직접 입력`과 별도 추가 서술을 함께 보존한다. 로컬에만 적용했고 관련 SQL 회귀·DB lint·보안 advisor가 통과했으며 운영 DB는 변경하지 않았다. 관련 회귀는 `supabase/tests/questionnaire_other_choices.sql`이다.
 
 `20260923052741_questionnaire_multiple_direct_input.sql`은 다수선택형에 여러 `isOther` 항목을 허용하고, 단일선택형은 하나로 제한한다. 선택된 직접 입력 답변이 여러 개면 본문에 번호를 매기고 일반 선택지 뒤에 둔다. 로컬에만 적용했고 관련 SQL 회귀·DB lint·보안 advisor를 통과했으며 운영 DB는 변경하지 않았다. 관련 회귀는 `supabase/tests/questionnaire_other_choices.sql`이다.
+
+
+## 저장된 질문 배치 (2026-09-28)
+
+`20260928034945_questionnaire_question_placements.sql`을 로컬에 적용했다. 배치의 원본 질문 FK·중복 방지·참조 선행 순서 검사·원본 보관 보호를 추가했다. 새 방식의 배포는 버전 고정과 열/행 응답 저장 연결 전까지 차단한다. 기존 질문지·답변 경로는 유지한다. 상세 구조와 삭제 후보는 `questionnaire-question-placement.md`에 있다.
+
+직접 SQL 적용으로 검증한 뒤 `db diff --local --schema public,private`의 차이가 없음을 확인했고, 해당 migration 하나만 `migration repair --local --status applied 20260928034945`로 로컬 이력에 등록했다. 이는 새 로컬 변경의 동등성 확인 후 수행했으며 기존 이력과 운영 DB는 변경하지 않았다. 로컬 보안 advisor 통과, 관련 SQL 20개 중 19개 통과, 실패 1개는 위에 기록된 기존 `questionnaire_published_deletion.sql` 오류다.

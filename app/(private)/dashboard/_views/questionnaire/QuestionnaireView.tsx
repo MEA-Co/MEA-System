@@ -11,7 +11,7 @@ import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
 import { PublicationReadMarker } from './components/PublicationNotifications';
 import { PublishedQuestionnaire } from './components/PublishedQuestionnaire';
-import { QuestionnaireEditor } from './components/QuestionnaireEditor';
+import { QuestionnaireComposer } from './components/QuestionnaireComposer';
 import { QuestionnaireList } from './components/QuestionnaireList';
 import { QuestionnaireLoading } from './components/QuestionnaireLoading';
 import { QuestionnaireReviews } from './components/QuestionnaireReviews';
@@ -149,7 +149,7 @@ function QuestionnaireContent({
           </p>
         )}
         {editorDraft ? (
-          <QuestionnaireEditor
+          <QuestionnaireComposer
             key={`editor:${editorDraft.versionId}`}
             initialDraft={editorDraft}
             remoteUnavailable={editUnavailable}

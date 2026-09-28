@@ -16,6 +16,7 @@ export type QuestionDetail = {
 };
 
 export type Question = {
+  sourceQuestionId?: string;
   kind?: QuestionKind;
   choiceStyle?: 'list' | 'chip';
   choiceAllowText?: boolean;

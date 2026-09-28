@@ -10,6 +10,10 @@ const detailSchema = z.object({
 });
 const questionSchema = z
   .object({
+    sourceQuestionId: z
+      .uuid()
+      .nullish()
+      .transform((id) => id ?? undefined),
     kind: z.enum(['text', 'scale', 'single', 'multiple']).optional(),
     choiceStyle: z.enum(['list', 'chip']).optional(),
     choiceAllowText: z.boolean().optional(),

@@ -59,11 +59,15 @@ export function QuestionBlockPreview({
   questions = [],
   ancestors = [],
   onAnsweredRowsChange,
+  runtime,
+  questionNumber = 1,
 }: {
   document: QuestionBlockDocument;
   questions?: QuestionBlockRow[];
   ancestors?: string[];
   onAnsweredRowsChange?: (rows: PreviewRow[]) => void;
+  runtime?: { waiting: boolean; matchedRows: PreviewRow[] };
+  questionNumber?: number;
 }) {
   const nextRow = useRef(2);
   const previewId = useId();
@@ -84,7 +88,7 @@ export function QuestionBlockPreview({
       question.id !== document.id &&
       !ancestors.includes(question.id),
   );
-  const matchedRows = useMemo(() => {
+  const localMatchedRows = useMemo(() => {
     if (!conditionClause) return sourceRows;
     if (!source) return [];
     if (conditionClause.op === 'answered') {
@@ -106,7 +110,8 @@ export function QuestionBlockPreview({
     }
     return matchingChoiceRows(sourceRows, conditionClause, source.fields);
   }, [sourceRows, conditionClause, source]);
-  const waiting = !!sourceId && matchedRows.length === 0;
+  const matchedRows = runtime?.matchedRows ?? localMatchedRows;
+  const waiting = runtime?.waiting ?? (!!sourceId && matchedRows.length === 0);
   const visibleRows = useMemo(
     () =>
       waiting
@@ -179,11 +184,13 @@ export function QuestionBlockPreview({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        사용자가 보는 답변 화면을 체험할 수 있어요. 여기서 입력한 답변은
-        저장되지 않아요.
-      </p>
-      {source && (
+      {!runtime && (
+        <p className="text-sm text-muted-foreground">
+          사용자가 보는 답변 화면을 체험할 수 있어요. 여기서 입력한 답변은
+          저장되지 않아요.
+        </p>
+      )}
+      {source && !runtime && (
         <div className="space-y-3 rounded-xl border border-dashed p-4">
           <p className="text-sm font-medium">앞선 질문에 응답해 보세요</p>
           <QuestionBlockPreview
@@ -197,7 +204,9 @@ export function QuestionBlockPreview({
       )}
       <div className="space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
         <div className="flex items-start gap-3 font-medium">
-          <span className="w-6 shrink-0 text-sm font-semibold">1</span>
+          <span className="w-6 shrink-0 text-sm font-semibold">
+            {questionNumber}
+          </span>
           <RichTextContent
             value={document.prompt || '질문을 입력하세요'}
             className="min-w-0 flex-1"
@@ -216,7 +225,7 @@ export function QuestionBlockPreview({
               <RichTextContent value={detail.text} />
             </div>
           ))}
-        {sourceId && !source && (
+        {sourceId && !source && !runtime && (
           <p className="text-sm text-muted-foreground">
             앞선 질문을 불러올 수 없어요. 조건 설정을 확인해 주세요.
           </p>

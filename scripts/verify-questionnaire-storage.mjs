@@ -617,3 +617,57 @@ test('remote snapshots update clean editors but never overwrite unsaved or uncer
   assert.equal(own.reconcileRemote(remote, 2, original), 'unchanged');
   assert.equal(own.blocked, false);
 });
+
+test('placements cannot silently save through a database without the placement migration', async () => {
+  for (const available of [false, true]) {
+    let rpcCalls = 0;
+    const { saveQuestionnaireDraft } = load(
+      'app/(private)/dashboard/_views/questionnaire/lib/server.ts',
+      {
+        '@/lib/admin': { getViewRole: async (role) => role },
+        'next/headers': { cookies: async () => ({}) },
+        '@/lib/auth': {
+          getUserAccess: async () => ({
+            user: { id: randomUUID() },
+            role: 'consultant_lead',
+            isOnboarded: true,
+          }),
+        },
+        '@/lib/supabase/server': {
+          createClient: () => ({
+            from(table) {
+              assert.equal(table, 'questionnaire_questions');
+              return {
+                select(column) {
+                  assert.equal(column, 'source_question_id');
+                  return {
+                    limit: async (limit) => {
+                      assert.equal(limit, 0);
+                      return { error: available ? null : { code: '42703' } };
+                    },
+                  };
+                },
+              };
+            },
+            rpc: async () => {
+              rpcCalls++;
+              return {
+                data: { revision: 1, savedAt: new Date().toISOString() },
+                error: null,
+              };
+            },
+          }),
+        },
+      },
+    );
+    const doc = document();
+    doc.sections[0].questions[0].sourceQuestionId = randomUUID();
+    const result = await saveQuestionnaireDraft({
+      document: doc,
+      expectedRevision: 0,
+      saveId: randomUUID(),
+    });
+    assert.equal(result.ok, available);
+    assert.equal(rpcCalls, available ? 1 : 0);
+  }
+});

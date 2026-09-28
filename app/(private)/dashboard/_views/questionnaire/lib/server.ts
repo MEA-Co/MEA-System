@@ -166,14 +166,7 @@ export async function loadQuestionnaireView(
         {
           id: randomUUID(),
           title: '',
-          questions: [
-            {
-              id: randomUUID(),
-              logicalKey: randomUUID(),
-              text: '',
-              details: [],
-            },
-          ],
+          questions: [],
         },
       ],
     };
@@ -266,12 +259,36 @@ export async function saveQuestionnaireDraft(
         '질문지 입력을 확인해 주세요. 제목은 500자, 본문은 20,000자까지 저장할 수 있어요.',
     };
   const client = createClient(await cookies());
+  if (
+    parsed.data.document.sections.some((section) =>
+      section.questions.some((question) => question.sourceQuestionId),
+    )
+  ) {
+    const support = await client
+      .from('questionnaire_questions')
+      .select('source_question_id')
+      .limit(0);
+    if (support.error)
+      return {
+        ok: false,
+        code: 'invalid',
+        error:
+          '현재 연결된 데이터베이스에 질문 배치 기능이 준비되지 않았어요. 데이터베이스 업데이트 후 다시 저장해 주세요.',
+      };
+  }
   const { data, error } = await client.rpc('save_questionnaire_draft', {
     p_document: parsed.data.document,
     p_expected_revision: parsed.data.expectedRevision,
     p_save_id: parsed.data.saveId,
   });
   if (error) {
+    if (error.message?.includes('Question placement'))
+      return {
+        ok: false,
+        code: 'invalid',
+        error:
+          '배치한 질문과 참조 순서를 확인해 주세요. 질문 관리에서 원본이 변경되었을 수 있어요.',
+      };
     if (error.code === '40001' || error.code === '55000')
       return {
         ok: false,
@@ -349,6 +366,17 @@ export async function publishQuestionnaireDraft(
     return {
       status: 403,
       error: '질문지를 처음 만든 사람만 게시하거나 배포할 수 있어요.',
+    };
+  if (error?.message?.includes('Question placement responses'))
+    return {
+      status: 409,
+      error:
+        '저장된 질문을 배치한 질문지는 현재 제작·게시·미리보기까지 지원해요. 배포는 질문 버전 고정과 응답 저장 연결 후 사용할 수 있어요.',
+    };
+  if (error?.message?.includes('Question placement dependency'))
+    return {
+      status: 400,
+      error: '참조하는 질문을 앞에 배치한 뒤 다시 저장해 주세요.',
     };
   if (error?.code === '55000')
     return {

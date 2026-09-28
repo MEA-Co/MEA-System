@@ -16,6 +16,7 @@ export function useQuestionnaireSave(
   initialDraft: QuestionnaireDraft,
   onRemoteDocument?: (draft: QuestionnaireDraft) => void,
   remoteUnavailable = false,
+  validationError: string | null = null,
 ) {
   const { saveQuestionnaire, refresh } = useQuestionnaireApi();
   const [session] = useState(
@@ -65,6 +66,10 @@ export function useQuestionnaireSave(
 
   async function save(manual = true) {
     if (session.pending || session.blocked || remoteUnavailable) return false;
+    if (validationError) {
+      if (manual) setError(validationError);
+      return false;
+    }
     if (!session.hasChanges(document) && session.revision > 0) return true;
     setSaving(true);
     const toastId = toast.add({
