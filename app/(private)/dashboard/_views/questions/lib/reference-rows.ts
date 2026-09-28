@@ -23,3 +23,18 @@ export function answeredSourceRows(
       )
     : [];
 }
+
+/** Add empty preview rows up to the configured minimum without replacing existing answers. */
+export function minimumAnswerRows(
+  rows: PreviewAnswerRow[],
+  minimum: number,
+  maximum: number,
+): PreviewAnswerRow[] {
+  const visible = rows.slice(0, maximum);
+  let id = -1;
+  while (visible.length < Math.min(minimum, maximum)) {
+    while (visible.some((row) => row.id === id)) id--;
+    visible.push({ id: id--, answers: {} });
+  }
+  return visible;
+}

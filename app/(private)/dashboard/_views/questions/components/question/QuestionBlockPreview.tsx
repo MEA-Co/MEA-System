@@ -24,6 +24,7 @@ import {
 } from '../../lib/question-types';
 import {
   answeredSourceRows,
+  minimumAnswerRows,
   referenceAnswerRows,
 } from '../../lib/reference-rows';
 import { richTextPlainText } from '../../lib/rich-text';
@@ -81,6 +82,10 @@ export function QuestionBlockPreview({
   const repeated = document.rowMode !== 'single';
   const maxRows =
     document.rowMode === 'repeatable' ? (document.maxRows ?? 1) : 1;
+  const minRows =
+    document.rowMode === 'repeatable'
+      ? Math.min(document.minRows ?? 1, maxRows)
+      : 1;
   const conditionClause = document.condition?.clauses[0];
   const sourceId = reference
     ? document.sourceBlockId
@@ -115,15 +120,11 @@ export function QuestionBlockPreview({
   }, [sourceRows, conditionClause, source]);
   const matchedRows = runtime?.matchedRows ?? localMatchedRows;
   const waiting = runtime?.waiting ?? (!!sourceId && matchedRows.length === 0);
-  const visibleRows = useMemo(
-    () =>
-      waiting
-        ? []
-        : reference
-          ? referenceAnswerRows(matchedRows, rows)
-          : rows.slice(0, maxRows),
-    [waiting, reference, matchedRows, rows, maxRows],
-  );
+  const visibleRows = useMemo(() => {
+    if (waiting) return [];
+    if (reference) return referenceAnswerRows(matchedRows, rows);
+    return minimumAnswerRows(rows, minRows, maxRows);
+  }, [waiting, reference, matchedRows, rows, maxRows, minRows]);
   const answeredRows = useMemo(
     () =>
       visibleRows.filter((row) =>
@@ -141,6 +142,16 @@ export function QuestionBlockPreview({
   }, [answeredRows, onAnsweredRowsChange]);
 
   function updateAnswer(rowId: number, fieldId: string, value: string) {
+    if (!reference) {
+      setRows(
+        visibleRows.map((row) =>
+          row.id === rowId
+            ? { ...row, answers: { ...row.answers, [fieldId]: value } }
+            : row,
+        ),
+      );
+      return;
+    }
     setRows((current) =>
       current.some((row) => row.id === rowId)
         ? current.map((row) =>
@@ -286,7 +297,7 @@ export function QuestionBlockPreview({
                             size="sm"
                             aria-expanded={expanded}
                             aria-controls={expanded ? panelId : undefined}
-                            aria-label={`항목 ${index + 1} 답변 ${expanded ? '접기' : '입력'}`}
+                            aria-label={`항목 ${document.rowLabels?.[index]?.trim() || index + 1} 답변 ${expanded ? '접기' : '입력'}`}
                             onClick={(event) => {
                               event.stopPropagation();
                               toggle();
@@ -296,7 +307,7 @@ export function QuestionBlockPreview({
                               aria-hidden="true"
                               className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
                             />
-                            {index + 1}
+                            {document.rowLabels?.[index]?.trim() || index + 1}
                           </Button>
                         </th>
                         {document.fields.map((field) => {
@@ -319,12 +330,18 @@ export function QuestionBlockPreview({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            disabled={reference || visibleRows.length === 1}
-                            aria-label={`미리보기 항목 ${index + 1} 삭제`}
+                            disabled={
+                              reference || visibleRows.length <= minRows
+                            }
+                            aria-label={`미리보기 항목 ${document.rowLabels?.[index]?.trim() || index + 1} 삭제`}
                             onClick={(event) => {
                               event.stopPropagation();
-                              setRows((current) =>
-                                current.filter((item) => item.id !== row.id),
+                              if (reference || visibleRows.length <= minRows)
+                                return;
+                              setRows(
+                                visibleRows.filter(
+                                  (item) => item.id !== row.id,
+                                ),
                               );
                               if (expanded) setActiveRowId(null);
                             }}
@@ -342,7 +359,7 @@ export function QuestionBlockPreview({
                             <div
                               id={panelId}
                               role="region"
-                              aria-label={`항목 ${index + 1} 답변 입력`}
+                              aria-label={`항목 ${document.rowLabels?.[index]?.trim() || index + 1} 답변 입력`}
                             >
                               {reference && source && (
                                 <div className="mb-4 space-y-1 rounded-lg bg-muted p-3 text-sm">
@@ -379,8 +396,8 @@ export function QuestionBlockPreview({
                         onClick={() => {
                           if (visibleRows.length >= maxRows) return;
                           const id = nextRow.current++;
-                          setRows((current) => [
-                            ...current.slice(0, maxRows - 1),
+                          setRows(() => [
+                            ...visibleRows.slice(0, maxRows - 1),
                             { id, answers: {} },
                           ]);
                           setActiveRowId(id);
@@ -398,7 +415,16 @@ export function QuestionBlockPreview({
             </table>
           </div>
         ) : (
-          visibleRows.map((row) => <div key={row.id}>{renderInputs(row)}</div>)
+          visibleRows.map((row) => (
+            <div key={row.id}>
+              {document.rowLabels?.[0]?.trim() && (
+                <p className="mb-3 font-medium">
+                  {document.rowLabels[0].trim()}
+                </p>
+              )}
+              {renderInputs(row)}
+            </div>
+          ))
         )}
       </div>
     </div>

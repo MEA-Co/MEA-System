@@ -108,7 +108,7 @@ async function handle(request: Request, context: Context) {
         // Filter before counting and paging so preview pages stay full and totals
         // never include other authors. RLS and actual account privileges stay intact.
         const columns =
-          'id,created_by,title,prompt,fields,row_mode,max_rows,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at';
+          'id,created_by,title,prompt,fields,row_mode,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at';
         const pattern =
           '%' + parsed.data.search.trim().replace(/[\\%_]/g, '\\$&') + '%';
         const pageSize = 10;
@@ -193,7 +193,7 @@ async function handle(request: Request, context: Context) {
     // library. Batch reads to avoid the Data API's per-response row limit.
     const relationshipsOnly = params.get('mode') === 'relationships';
     const columns = relationshipsOnly
-      ? 'id,created_by,title,prompt,fields,row_mode,max_rows,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at'
+      ? 'id,created_by,title,prompt,fields,row_mode,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at'
       : '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)';
     const blocks: QuestionBlockRow[] = [];
     const batchSize = 500;

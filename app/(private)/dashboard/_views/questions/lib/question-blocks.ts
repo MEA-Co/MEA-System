@@ -114,6 +114,8 @@ export const questionBlockSchema = z
       .optional(),
     fields: z.array(fieldSchema).min(1).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
+    minRows: z.number().int().min(1).max(20).optional(),
+    rowLabels: z.array(z.string().trim().max(100)).max(20).optional(),
     maxRows: z.number().int().min(1).max(20).nullable(),
     sourceBlockId: z.uuid().nullable(),
     sourceFieldId: z.uuid().nullable(),
@@ -128,6 +130,15 @@ export const questionBlockSchema = z
   .superRefine((block, context) => {
     if (!richTextPlainText(block.prompt).trim()) {
       context.addIssue({ code: 'custom', message: '질문을 입력해 주세요.' });
+    }
+    if (
+      block.rowMode === 'repeatable' &&
+      (block.minRows ?? 1) > (block.maxRows ?? 1)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: '최소 행 수는 최대 행 수보다 클 수 없어요.',
+      });
     }
     const ids = block.fields.map((field) => field.id);
     if (new Set(ids).size !== ids.length) {
@@ -215,6 +226,8 @@ export type QuestionBlockRow = {
   fields: QuestionBlockField[];
   row_mode: QuestionBlockDocument['rowMode'];
   max_rows: number | null;
+  min_rows?: number;
+  row_labels?: string[];
   source_block_id: string | null;
   source_field_id: string | null;
   after_block_id: string | null;
@@ -252,6 +265,8 @@ export function documentFromRow(row: QuestionBlockRow): QuestionBlockDocument {
     fields: row.fields,
     rowMode: row.row_mode,
     maxRows: row.max_rows,
+    minRows: row.min_rows ?? 1,
+    rowLabels: row.row_labels ?? [],
     sourceBlockId: row.source_block_id,
     sourceFieldId: row.source_field_id,
     afterBlockId: row.after_block_id,
@@ -268,6 +283,8 @@ export function emptyQuestionBlock(): QuestionBlockDocument {
     fields: [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
     rowMode: 'single',
     maxRows: null,
+    minRows: 1,
+    rowLabels: [],
     sourceBlockId: null,
     sourceFieldId: null,
     afterBlockId: null,

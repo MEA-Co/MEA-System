@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   answeredSourceRows,
+  minimumAnswerRows,
   referenceAnswerRows,
 } from '../app/(private)/dashboard/_views/questions/lib/reference-rows.ts';
 
@@ -42,4 +43,19 @@ test('all columns must be answered in the same row; a specific column only check
   );
   assert.deepEqual(answeredSourceRows(rows, ['missing'], hasAnswer), []);
   assert.deepEqual(answeredSourceRows(rows, [], hasAnswer), []);
+});
+
+test('minimum preview rows preserve answers, keep unique stable IDs and respect maximum', () => {
+  const saved = [
+    { id: 1, answers: { a: 'keep' } },
+    { id: -1, answers: { a: 'also keep' } },
+  ];
+  const rows = minimumAnswerRows(saved, 4, 5);
+  assert.equal(rows.length, 4);
+  assert.equal(new Set(rows.map((row) => row.id)).size, 4);
+  assert.equal(rows[0], saved[0]);
+  assert.equal(rows[1], saved[1]);
+  assert.deepEqual(minimumAnswerRows(rows, 4, 5), rows);
+  assert.equal(minimumAnswerRows(rows, 4, 2).length, 2);
+  assert.equal(saved.length, 2);
 });

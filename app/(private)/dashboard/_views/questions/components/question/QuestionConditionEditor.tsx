@@ -110,7 +110,7 @@ export function QuestionConditionEditor({
       condition: next ? { mode: 'all', clauses: [next] } : null,
       afterBlockId: null,
       ...(referencing
-        ? { rowMode: next ? 'reference' : 'single', maxRows: null }
+        ? { rowMode: next ? 'reference' : 'single', maxRows: null, minRows: 1 }
         : {}),
       sourceBlockId: referencing && next ? next.blockId : null,
       sourceFieldId: null,
@@ -230,6 +230,7 @@ export function QuestionConditionEditor({
                     onChange({
                       rowMode: checked ? 'reference' : 'single',
                       maxRows: null,
+                      minRows: 1,
                       sourceBlockId: checked ? questionId : null,
                       sourceFieldId: null,
                       afterBlockId: null,

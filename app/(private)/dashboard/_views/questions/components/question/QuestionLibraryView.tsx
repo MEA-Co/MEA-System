@@ -41,6 +41,14 @@ import {
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { toast } from '@/components/ui/toast';
 
 import { useQuestionEditorData } from '../../hooks/useQuestionEditorData';
@@ -1027,6 +1035,24 @@ export function QuestionLibraryView({
                       </p>
                     ) : (
                       <>
+                        <Label htmlFor="min-rows">최소</Label>
+                        <Input
+                          id="min-rows"
+                          type="number"
+                          min={1}
+                          max={draft.maxRows ?? 1}
+                          className="w-20"
+                          value={draft.minRows ?? 1}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            if (
+                              Number.isInteger(value) &&
+                              value >= 1 &&
+                              value <= (draft.maxRows ?? 1)
+                            )
+                              updateDraft({ minRows: value });
+                          }}
+                        />
                         <Label htmlFor="max-rows">최대</Label>
                         <MaxItemsInput
                           value={
@@ -1040,6 +1066,7 @@ export function QuestionLibraryView({
                             updateDraft({
                               rowMode: count > 1 ? 'repeatable' : 'single',
                               maxRows: count > 1 ? count : null,
+                              minRows: Math.min(draft.minRows ?? 1, count),
                             });
                           }}
                         />
@@ -1047,6 +1074,49 @@ export function QuestionLibraryView({
                       </>
                     )}
                   </div>
+                  {draft.rowMode !== 'reference' && (
+                    <div className="mt-3 overflow-hidden rounded-xl border">
+                      <Table aria-label="행 이름 설정">
+                        <TableHeader>
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableHead className="w-24 text-center">
+                              행 번호
+                            </TableHead>
+                            <TableHead>행 이름</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from(
+                            { length: draft.maxRows ?? 1 },
+                            (_, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="text-center text-muted-foreground">
+                                  {index + 1}
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    id={`row-label-${index}`}
+                                    aria-label={`${index + 1}행 이름`}
+                                    maxLength={100}
+                                    placeholder={String(index + 1)}
+                                    value={draft.rowLabels?.[index] ?? ''}
+                                    onChange={(event) => {
+                                      const labels = Array.from(
+                                        { length: draft.maxRows ?? 1 },
+                                        (_, i) => draft.rowLabels?.[i] ?? '',
+                                      );
+                                      labels[index] = event.target.value;
+                                      updateDraft({ rowLabels: labels });
+                                    }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
                   <div>
