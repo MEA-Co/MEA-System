@@ -725,7 +725,7 @@ export function QuestionLibraryView() {
           질문
         </h2>
         <Button disabled={loading || loadError} onClick={() => openEditor()}>
-          <Plus aria-hidden="true" /> 질문 만들기
+          <Plus aria-hidden="true" /> 새 질문 만들기
         </Button>
       </div>
       <div aria-busy={fetching}>

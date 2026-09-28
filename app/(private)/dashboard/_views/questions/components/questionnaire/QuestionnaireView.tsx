@@ -195,7 +195,7 @@ function QuestionnaireContent({
             }
             nativeButton={false}
           >
-            <Plus aria-hidden="true" />새 질문지 제작
+            <Plus aria-hidden="true" />새 질문지 만들기
           </Button>
         )}
       </div>
