@@ -52,7 +52,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from detail_users where role='other_lead'),true);
 set local role authenticated;
 do $$ begin
- if (select count(*) from public.question_details where question_id=(select (doc->>'id')::uuid from detail_docs))<>1 then raise exception 'Staff cannot read details'; end if;
+ if (select count(*) from public.question_details where question_id=(select (doc->>'id')::uuid from detail_docs))<>0 then raise exception 'Other author can read details'; end if;
  begin
   perform public.save_question((select doc from detail_docs),3,gen_random_uuid());
   raise exception 'Other lead wrote details';

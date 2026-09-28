@@ -6,9 +6,11 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 // Exercise state/history/requests without running a browser.
-function mount({ delayedBack = false } = {}) {
+function mount({ delayedBack = false, failSave = false } = {}) {
+  let autoSave;
   let pendingBack = null;
   const detailRequests = [];
+  const toasts = [];
   const row = {
     id: randomUUID(),
     created_by: 'owner',
@@ -137,7 +139,10 @@ function mount({ delayedBack = false } = {}) {
     },
     setTimeout: () => 1,
     clearTimeout() {},
-    setInterval: () => 1,
+    setInterval: (callback) => {
+      autoSave = callback;
+      return 1;
+    },
     clearInterval() {},
     addEventListener() {},
     removeEventListener() {},
@@ -175,8 +180,9 @@ function mount({ delayedBack = false } = {}) {
       HTMLElement: class {},
       HTMLAnchorElement: class {},
       Element: class {},
-      fetch: async (url) => {
+      fetch: async (url, options) => {
         calls.push(url);
+        if (failSave && options?.method) throw new Error('offline');
         return {
           ok: true,
           json: async () => ({
@@ -224,7 +230,14 @@ function mount({ delayedBack = false } = {}) {
             questionName: (q) => q.title || q.prompt,
           };
         if (name.endsWith('rich-text')) return { richTextPlainText: (s) => s };
-        if (name.endsWith('/toast')) return { toast: { add() {} } };
+        if (name.endsWith('/toast'))
+          return {
+            toast: {
+              add(value) {
+                toasts.push(value);
+              },
+            },
+          };
         return new Proxy({}, { get: (_t, key) => key });
       },
     },
@@ -266,7 +279,9 @@ function mount({ delayedBack = false } = {}) {
     window,
     local,
     detailRequests,
+    toasts,
     completeBack: () => pendingBack?.(),
+    tick: () => autoSave?.(),
   };
 }
 
@@ -301,13 +316,17 @@ test('new question close asks before discarding and cancel retains the draft', a
       'Button',
       (props) =>
         Array.isArray(props.children) &&
-        props.children.includes(' 질문 만들기'),
+        props.children.includes(' 새 질문 만들기'),
     )
     .props.onClick();
   await app.flush();
   const id = new URL(app.window.location.href).searchParams.get('question');
   assert.ok(id);
   assert.ok(app.find('Input', (props) => props.id === 'block-title'));
+  app
+    .find('Input', (p) => p.id === 'block-title')
+    .props.onChange({ target: { value: '작성 중' } });
+  await app.flush();
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
   const dialog = app.find('Dialog', (props) => props.open);
@@ -339,9 +358,13 @@ test('Back with unsaved content restores the editor until discard is confirmed',
       'Button',
       (props) =>
         Array.isArray(props.children) &&
-        props.children.includes(' 질문 만들기'),
+        props.children.includes(' 새 질문 만들기'),
     )
     .props.onClick();
+  await app.flush();
+  app
+    .find('Input', (p) => p.id === 'block-title')
+    .props.onChange({ target: { value: '작성 중' } });
   await app.flush();
   app.window.history.back();
   await app.flush();
@@ -364,9 +387,14 @@ test('discard does not request an unsaved question while history Back is pending
   app
     .find(
       'Button',
-      (p) => Array.isArray(p.children) && p.children.includes(' 질문 만들기'),
+      (p) =>
+        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
     )
     .props.onClick();
+  await app.flush();
+  app
+    .find('Input', (p) => p.id === 'block-title')
+    .props.onChange({ target: { value: '작성 중' } });
   await app.flush();
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
@@ -377,4 +405,85 @@ test('discard does not request an unsaved question while history Back is pending
   await app.flush();
   assert.equal(app.find('Drawer').props.open, false);
   assert.deepEqual(app.detailRequests, []);
+});
+
+test('untouched new question disables save and closes without confirmation or detail fetch', async () => {
+  const app = mount({ delayedBack: true });
+  await app.flush();
+  app
+    .find(
+      'Button',
+      (p) =>
+        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.equal(
+    app.find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    ).props.disabled,
+    true,
+  );
+  app.find('Drawer').props.onOpenChange(false);
+  await app.flush();
+  assert.equal(
+    app.find('Dialog', (p) => p.open),
+    null,
+  );
+  assert.equal(app.local.size, 0);
+  assert.deepEqual(app.detailRequests, []);
+  app.completeBack();
+  await app.flush();
+  assert.equal(app.find('Drawer').props.open, false);
+});
+test('edited new question enables save but empty prompt prevents requests and explains why', async () => {
+  const app = mount();
+  await app.flush();
+  app
+    .find(
+      'Button',
+      (p) =>
+        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
+    )
+    .props.onClick();
+  await app.flush();
+  app
+    .find('Input', (p) => p.id === 'block-title')
+    .props.onChange({ target: { value: '작성 중' } });
+  await app.flush();
+  const button = app.find(
+    'Button',
+    (p) => Array.isArray(p.children) && p.children.includes('저장'),
+  );
+  assert.equal(button.props.disabled, false);
+  const before = app.calls.length;
+  await button.props.onClick();
+  await app.flush();
+  assert.equal(app.calls.length, before);
+  assert.match(app.toasts.at(-1).title, /질문 본문이 비어/);
+  app.find('Drawer').props.onOpenChange(false);
+  await app.flush();
+  const dialog = app.find('Dialog', (p) => p.open);
+  assert.match(
+    app.find('DialogDescription', () => true, dialog).props.children,
+    /저장할 수 없어요/,
+  );
+});
+
+test('automatic save failure shows a toast, preserves input, and does not repeat the same error toast', async () => {
+  const app = mount({ failSave: true });
+  await app.flush();
+  app.find('QuestionManagementTable').props.onOpen(app.row);
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('변경한 본문');
+  await app.flush();
+  app.tick();
+  await app.flush();
+  assert.match(app.toasts.at(-1).title, /저장 결과를 확인하지 못했어요/);
+  const count = app.toasts.length;
+  assert.equal(app.find('QuestionRichTextEditor').props.value, '변경한 본문');
+  app.tick();
+  await app.flush();
+  assert.equal(app.toasts.length, count);
 });

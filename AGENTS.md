@@ -16,6 +16,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 독립 질문은 작성자인 리드와 관리자만 조회한다. questions와 question_details RLS가 목록·검색·상세·관계 후보 조회에 적용된다. 관리자의 질문 테이블은 list_questions_page가 반환한 creator_name을 제작자 열에 표시한다. private 저장 RPC를 통한 타 작성자 질문 참조·배치도 트리거로 차단한다. migration 20260928061511_question_creator_visibility.sql, 검증 supabase/tests/question_creator_visibility.sql.
+
 - 질문 생성·수정은 QuestionLibraryView의 Drawer로 열며 목록의 검색·페이지·스크롤을 유지한다. question URL 매개변수와 미저장 닫기 확인을 지원한다. useQuestionEditorData는 개별 상세와 설명을 제외한 /api/questions?mode=relationships를 별도로 SWR 캐싱한다. PC는 넓은 오른쪽 패널, 모바일은 전체 높이다. DB migration 없음. 검증 scripts/verify-question-drawer.mjs, scripts/verify-question-pagination-api.mjs.
 
 - 질문 테이블은 `/api/questions?page=&search=`와 `list_questions_page` RPC로 10개씩 서버 검색·페이지 조회한다. 이름·서식 제거한 본문을 부분 일치로 검색하고 입력은 300ms 디바운스한다. 조건 설명은 해당 페이지의 직접 참조 질문을 함께 받아 표시한다. 그래프·질문지 배치만 기존 전체 조회를 사용하며 서버에서 500개씩 나누어 읽는다. 로컬 migration `20260928052431_question_server_pagination.sql`, 검증 `supabase/tests/question_server_pagination.sql`, `scripts/verify-question-pagination-api.mjs`, 설명 `docs/question-search-pagination.md`.

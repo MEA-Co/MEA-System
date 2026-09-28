@@ -146,6 +146,7 @@ function clearLocalDraft(userId: string | null, id: string) {
 type LocalQuestionBlockDraft = {
   document: QuestionBlockDocument;
   savedDocument: QuestionBlockDocument | null;
+  initialDocument?: QuestionBlockDocument | null;
   revision: number;
   savedAt: string | null;
 };
@@ -183,6 +184,7 @@ function readLocalDraft(
         })),
       },
       savedDocument: local.savedDocument ?? null,
+      initialDocument: local.initialDocument ?? null,
       revision: local.revision,
       savedAt: local.savedAt ?? null,
     };
@@ -219,6 +221,8 @@ export function QuestionLibraryView() {
   const [role, setRole] = useState<string | null>(null);
   const [draft, setDraft] = useState<QuestionBlockDocument | null>(null);
   const [savedDocument, setSavedDocument] =
+    useState<QuestionBlockDocument | null>(null);
+  const [initialDocument, setInitialDocument] =
     useState<QuestionBlockDocument | null>(null);
   const [revision, setRevision] = useState(0);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -315,9 +319,11 @@ export function QuestionLibraryView() {
   const listHeading = useRef<HTMLHeadingElement | null>(null);
   const openedFromList = useRef(false);
   const pendingRoute = useRef<string | null>(null);
-  const dirty = draft
-    ? !savedDocument || stableDocument(draft) !== stableDocument(savedDocument)
-    : false;
+  const baseline = savedDocument ?? initialDocument;
+  const dirty =
+    !!draft &&
+    (!baseline || stableDocument(draft) !== stableDocument(baseline));
+  const emptyPrompt = !!draft && !richTextPlainText(draft.prompt).trim();
   const valid = draft ? questionBlockSchema.safeParse(draft).success : false;
 
   function storeSession(
@@ -350,6 +356,7 @@ export function QuestionLibraryView() {
       storeSession({
         document: draft,
         savedDocument,
+        initialDocument,
         revision,
         savedAt,
         conflicted,
@@ -358,7 +365,16 @@ export function QuestionLibraryView() {
   });
   useEffect(() => {
     rememberDraft();
-  }, [userId, draft, savedDocument, revision, savedAt, conflicted, saveError]);
+  }, [
+    userId,
+    draft,
+    savedDocument,
+    initialDocument,
+    revision,
+    savedAt,
+    conflicted,
+    saveError,
+  ]);
 
   function navigateQuestion(id: string | null, replace = false) {
     const url = new URL(window.location.href);
@@ -420,6 +436,7 @@ export function QuestionLibraryView() {
       storeSession({
         document,
         savedDocument: null,
+        initialDocument: document,
         revision: 0,
         savedAt: null,
       });
@@ -459,6 +476,7 @@ export function QuestionLibraryView() {
       remoteDocument &&
       local &&
       stableDocument(remoteDocument) === stableDocument(local.document);
+    setInitialDocument(local?.initialDocument ?? null);
     setDraft(useLocal ? local.document : remoteDocument);
     setSavedDocument(
       sameSaved || !useLocal ? remoteDocument : local.savedDocument,
@@ -512,7 +530,23 @@ export function QuestionLibraryView() {
     if (dirty) {
       pendingRoute.current = null;
       setConfirmDiscard(true);
+    } else if (draft && revision === 0) {
+      discardDraft();
     } else returnToList();
+  }
+
+  function discardDraft() {
+    setClosingId(requestedId);
+    if (draft) {
+      clearLocalDraft(userId, draft.id);
+      sessions.current.delete(draft.id);
+      pendingSaves.current.delete(draft.id);
+    }
+    activeId.current = null;
+    setDraft(null);
+    setConfirmDiscard(false);
+    if (pendingRoute.current) navigateQuestion(pendingRoute.current, true);
+    else returnToList();
   }
 
   function openEditor(block?: QuestionBlockRow) {
@@ -521,11 +555,13 @@ export function QuestionLibraryView() {
         ? window.document.activeElement
         : null;
     openedFromList.current = true;
+    pendingRoute.current = null;
     if (!block) {
       const document = emptyQuestionBlock();
       storeSession({
         document,
         savedDocument: null,
+        initialDocument: document,
         revision: 0,
         savedAt: null,
       });
@@ -541,6 +577,15 @@ export function QuestionLibraryView() {
       (!dirty && !pendingSaves.current.has(draft.id))
     )
       return;
+    if (!richTextPlainText(draft.prompt).trim()) {
+      if (manual)
+        toast.add({
+          title:
+            '질문 본문이 비어 있어 저장할 수 없어요. 질문을 입력해 주세요.',
+          type: 'error',
+        });
+      return;
+    }
     let attempt = pendingSaves.current.get(draft.id);
     if (!attempt) {
       const parsed = questionBlockSchema.safeParse(draft);
@@ -600,7 +645,8 @@ export function QuestionLibraryView() {
         const message = readError(data);
         if (response.status < 500) pendingSaves.current.delete(attemptId);
         recordError(message, response.status === 409);
-        if (manual) toast.add({ title: message, type: 'error' });
+        if (manual || saveError !== message)
+          toast.add({ title: message, type: 'error' });
         return;
       }
       const saved = data.block as QuestionBlockRow;
@@ -634,7 +680,8 @@ export function QuestionLibraryView() {
     } catch {
       const message = '저장 결과를 확인하지 못했어요. 연결을 확인해 주세요.';
       recordError(message);
-      if (manual) toast.add({ title: message, type: 'error' });
+      if (manual || saveError !== message)
+        toast.add({ title: message, type: 'error' });
     } finally {
       savingRef.current = false;
       setBusy(false);
@@ -756,7 +803,7 @@ export function QuestionLibraryView() {
               {(
                 [
                   { value: 'table', label: '테이블', icon: Table2 },
-                  { value: 'graph', label: '그래프', icon: Network },
+                  { value: 'graph', label: '그래프(Beta)', icon: Network },
                 ] as const
               ).map(({ value, label, icon: Icon }) => (
                 <button
@@ -799,6 +846,7 @@ export function QuestionLibraryView() {
           ) : listMode === 'table' ? (
             <div className="space-y-4">
               <QuestionManagementTable
+                showCreator={role === 'admin'}
                 questions={pageQuestions}
                 allQuestions={[...blocks, ...references]}
                 canManage={(q) => role === 'admin' || q.created_by === userId}
@@ -870,7 +918,7 @@ export function QuestionLibraryView() {
                   draft.id !== requestedId ||
                   busy ||
                   conflicted ||
-                  (!dirty && !!savedAt)
+                  !dirty
                 }
                 onClick={() => void save()}
               >
@@ -1139,7 +1187,9 @@ export function QuestionLibraryView() {
           <DialogHeader>
             <DialogTitle>작성 중인 내용을 버릴까요?</DialogTitle>
             <DialogDescription>
-              저장하지 않은 질문의 변경 내용은 사라집니다.
+              {emptyPrompt
+                ? '질문 본문이 비어 있어 저장할 수 없어요. 계속 작성해 질문을 입력하거나 변경 내용을 버려 주세요.'
+                : '저장하지 않은 질문의 변경 내용은 사라집니다.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1153,20 +1203,7 @@ export function QuestionLibraryView() {
             <Button
               variant="destructive"
               disabled={busy}
-              onClick={() => {
-                setClosingId(requestedId);
-                if (draft) {
-                  clearLocalDraft(userId, draft.id);
-                  sessions.current.delete(draft.id);
-                  pendingSaves.current.delete(draft.id);
-                }
-                activeId.current = null;
-                setDraft(null);
-                setConfirmDiscard(false);
-                if (pendingRoute.current)
-                  navigateQuestion(pendingRoute.current, true);
-                else returnToList();
-              }}
+              onClick={discardDraft}
             >
               변경 내용 버리기
             </Button>

@@ -199,6 +199,7 @@ export type QuestionBlockClause = NonNullable<
 export type QuestionBlockRow = {
   id: string;
   created_by: string;
+  creator_name?: string | null;
   title: string;
   prompt: string;
   details?: {

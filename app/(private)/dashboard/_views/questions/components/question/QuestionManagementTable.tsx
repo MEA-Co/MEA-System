@@ -83,11 +83,13 @@ export function QuestionManagementTable({
   questions,
   allQuestions,
   canManage,
+  showCreator = false,
   onOpen,
   onArchive,
 }: {
   questions: QuestionBlockRow[];
   allQuestions: QuestionBlockRow[];
+  showCreator?: boolean;
   canManage: (q: QuestionBlockRow) => boolean;
   onOpen: (q: QuestionBlockRow) => void;
   onArchive: (q: QuestionBlockRow) => void;
@@ -97,8 +99,15 @@ export function QuestionManagementTable({
       <Table className="min-w-[940px] table-fixed">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="w-[45%] pl-5">질문</TableHead>
-            <TableHead className="w-[43%]">조건</TableHead>
+            <TableHead
+              className={showCreator ? 'w-[35%] pl-5' : 'w-[45%] pl-5'}
+            >
+              질문
+            </TableHead>
+            <TableHead className={showCreator ? 'w-[38%]' : 'w-[43%]'}>
+              조건
+            </TableHead>
+            {showCreator && <TableHead className="w-[15%]">제작자</TableHead>}
             <TableHead className="w-[12%] text-right pr-5">관리</TableHead>
           </TableRow>
         </TableHeader>
@@ -141,6 +150,11 @@ export function QuestionManagementTable({
               <TableCell className="whitespace-normal py-4 align-top">
                 <QuestionConditions question={q} questions={allQuestions} />
               </TableCell>
+              {showCreator && (
+                <TableCell className="whitespace-normal break-words py-4 align-top">
+                  {q.creator_name?.trim() || '이름 없음'}
+                </TableCell>
+              )}
               <TableCell className="py-4 pr-5 text-right align-top">
                 {canManage(q) ? (
                   <Button
