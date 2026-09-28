@@ -15,8 +15,26 @@ function setup({
 } = {}) {
   const calls = [];
   const z = require('zod').z;
+  const usageExports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      readFileSync(
+        'app/(private)/dashboard/_views/questions/lib/question-usage.ts',
+        'utf8',
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      },
+    ).outputText,
+    { exports: usageExports },
+  );
   const imports = {
     zod: { z },
+    '@/app/(private)/dashboard/_views/questions/lib/question-usage':
+      usageExports,
     'next/headers': { cookies: async () => ({}) },
     '@/app/(private)/dashboard/_views/questions/lib/question-blocks': {
       questionBlockSchema: z.any(),
@@ -208,6 +226,8 @@ test('admin lead preview filters before pagination and returns the display role'
     [
       { start: 980, end: 989 },
       { start: 10, end: 19 },
+      { start: 0, end: 499 },
+      { start: 0, end: 499 },
     ],
   );
 });

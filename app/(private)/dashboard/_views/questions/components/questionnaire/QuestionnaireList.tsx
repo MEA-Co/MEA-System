@@ -58,6 +58,7 @@ export function QuestionnaireList({
   const items = useMemo(
     () =>
       [...drafts, ...published, ...distributed, ...archived]
+        .filter((item) => item.isOwner)
         .filter((item) =>
           (item.title || '제목 없는 질문지')
             .toLocaleLowerCase()
@@ -121,7 +122,9 @@ export function QuestionnaireList({
               <TableHead>상태</TableHead>
               <TableHead>최근 수정</TableHead>
               <TableHead>배포일</TableHead>
-              <TableHead className="text-right pr-5">관리</TableHead>
+              <TableHead className="text-right pr-5">
+                <span className="inline-block w-8 text-center">관리</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

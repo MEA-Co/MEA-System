@@ -5,6 +5,7 @@ import {
   type QuestionBlockRow,
   questionBlockSchema,
 } from '@/app/(private)/dashboard/_views/questions/lib/question-blocks';
+import { withQuestionnaireUsage } from '@/app/(private)/dashboard/_views/questions/lib/question-usage';
 import { getViewRole } from '@/lib/admin';
 import { getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -29,11 +30,11 @@ function errorStatus(code?: string) {
 
 function errorMessage(message: string, status: number) {
   if (message.includes('used by a questionnaire'))
-    return '질문지에 배치된 질문이에요. 해당 질문지에서 제거한 뒤 보관해 주세요.';
+    return '질문지에 배치된 질문이에요. 해당 질문지에서 제거한 뒤 삭제해 주세요.';
   if (message.includes('dependency cycle'))
     return '질문의 선후관계가 순환해요.';
   if (message.includes('used by another block'))
-    return '다른 질문이 참조하고 있어 보관할 수 없어요.';
+    return '다른 질문이 참조하고 있어 삭제할 수 없어요.';
   if (message.includes('Referenced answer fields'))
     return '다른 질문에서 참조하는 열이나 행 구성은 바꿀 수 없어요.';
   if (status === 409)
@@ -161,7 +162,7 @@ async function handle(request: Request, context: Context) {
           references = (linked.data ?? []) as QuestionBlockRow[];
         }
         return json({
-          blocks,
+          blocks: await withQuestionnaireUsage(client, blocks, userId, ownOnly),
           references,
           total,
           page,
@@ -178,6 +179,12 @@ async function handle(request: Request, context: Context) {
         return json({ error: '질문 목록을 불러오지 못했어요.' }, 503);
       return json({
         ...result.data,
+        blocks: await withQuestionnaireUsage(
+          client,
+          result.data.blocks ?? [],
+          userId,
+          ownOnly,
+        ),
         userId: access.user.id,
         role: viewRole,
       });

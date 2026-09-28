@@ -200,6 +200,9 @@ export type QuestionBlockRow = {
   id: string;
   created_by: string;
   creator_name?: string | null;
+  referenced_by_question?: boolean;
+  referencing_questions?: { id: string; title: string }[] | null;
+  questionnaire_usage?: import('./question-usage').QuestionnaireUsage[] | null;
   title: string;
   prompt: string;
   details?: {

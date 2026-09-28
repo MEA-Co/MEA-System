@@ -76,7 +76,7 @@ export function DeleteQuestionnaireButton({
       <Button
         variant="ghost"
         size="icon-sm"
-        className="mr-4 shrink-0 text-muted-foreground hover:text-destructive"
+        className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/10"
         aria-label={`${label} 삭제`}
         onClick={() => {
           setError(null);

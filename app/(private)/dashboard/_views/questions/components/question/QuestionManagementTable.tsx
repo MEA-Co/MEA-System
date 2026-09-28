@@ -1,6 +1,5 @@
-import { Trash2 } from 'lucide-react';
+import { Files, Link2, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -10,85 +9,165 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
-import { describeClause } from '../../lib/question-list';
 import { richTextPlainText } from '../../lib/rich-text';
 
-function ConditionBadge({ children }: { children: string }) {
-  return (
-    <Badge variant="secondary" className="max-w-44 align-middle">
-      <span className="truncate" title={children}>
-        {children}
+const usageStatusLabels = {
+  draft: '수정 중',
+  published: '게시',
+  distributed: '배포',
+  archived: '보관',
+};
+
+function QuestionUsageList({ question }: { question: QuestionBlockRow }) {
+  const usages = question.questionnaire_usage;
+  if (usages == null)
+    return (
+      <span className="text-xs text-muted-foreground">
+        사용 질문지 확인 불가
       </span>
-    </Badge>
+    );
+  if (!usages.length)
+    return (
+      <span className="text-xs text-muted-foreground">사용 질문지 없음</span>
+    );
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 focus-visible:outline-2 focus-visible:outline-ring dark:bg-blue-950 dark:text-blue-200"
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`사용 중인 질문지 ${usages.length}개`}
+        >
+          <Files className="size-3" aria-hidden="true" />
+          질문지 {usages.length}개에서 사용
+        </TooltipTrigger>
+        <TooltipContent className="block max-h-72 max-w-sm overflow-y-auto p-3">
+          <p className="mb-2 font-semibold">사용 중인 질문지</p>
+          <ul className="space-y-1.5">
+            {usages.map((usage) => (
+              <li key={usage.id} className="break-words">
+                {usage.title}{' '}
+                <span className="opacity-70">
+                  · {usageStatusLabels[usage.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
-export function QuestionConditions({
+function QuestionReferenceList({ question }: { question: QuestionBlockRow }) {
+  const references = question.referencing_questions;
+  if (references == null)
+    return (
+      <span className="text-xs text-muted-foreground">참조 질문 확인 불가</span>
+    );
+  if (!references.length)
+    return (
+      <span className="text-xs text-muted-foreground">
+        {question.referenced_by_question
+          ? '조회할 수 없는 질문에서 참조 중'
+          : '참조 질문 없음'}
+      </span>
+    );
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 focus-visible:outline-2 focus-visible:outline-ring dark:bg-violet-950 dark:text-violet-200"
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`참조 중인 질문 ${references.length}개`}
+        >
+          <Link2 className="size-3" aria-hidden="true" />
+          질문 {references.length}개에서 참조
+        </TooltipTrigger>
+        <TooltipContent className="block max-h-72 max-w-sm overflow-y-auto p-3">
+          <p className="mb-2 font-semibold">이 질문을 참조하는 질문</p>
+          <ul className="space-y-1.5">
+            {references.map((reference) => (
+              <li key={reference.id} className="break-words">
+                {reference.title}
+              </li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function DeleteQuestionButton({
   question,
-  questions,
+  onArchive,
 }: {
   question: QuestionBlockRow;
-  questions: QuestionBlockRow[];
+  onArchive: (question: QuestionBlockRow) => void;
 }) {
-  const name = (id: string) => {
-    const q = questions.find((q) => q.id === id);
-    return q ? questionName(q) : '찾을 수 없는 질문';
-  };
-  const clauses = question.condition?.clauses ?? [];
+  const reasons = [
+    question.questionnaire_usage?.length
+      ? '사용 중인 질문지가 있어 삭제할 수 없어요.'
+      : null,
+    question.referenced_by_question
+      ? '다른 질문이 참조하고 있어 삭제할 수 없어요.'
+      : null,
+    question.questionnaire_usage == null ||
+    question.referenced_by_question == null
+      ? '사용 여부를 확인할 수 없어요. 목록을 새로고침해 주세요.'
+      : null,
+  ].filter(Boolean);
+  const reason = reasons.join(' ');
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      disabled={!!reason}
+      aria-label={`${questionName(question)} 삭제`}
+      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/10"
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!reason) onArchive(question);
+      }}
+    >
+      <Trash2 className="size-4" aria-hidden="true" />
+    </Button>
+  );
+  if (!reason) return button;
   return (
-    <div className="space-y-2 text-xs leading-6 text-muted-foreground">
-      {clauses.map((clause, index) => {
-        const text = describeClause(clause, questions);
-        return (
-          <div key={index}>
-            {index > 0 && (
-              <span className="mr-1">
-                {question.condition?.mode === 'any' ? '또는' : '그리고'}
-              </span>
-            )}
-            <ConditionBadge>{name(clause.blockId)}</ConditionBadge>의{' '}
-            <ConditionBadge>{text.fieldLabel}</ConditionBadge>
-            {text.particle}{' '}
-            {text.valueLabel !== null && (
-              <>
-                <ConditionBadge>{text.valueLabel}</ConditionBadge>{' '}
-              </>
-            )}
-            {text.suffix}
-          </div>
-        );
-      })}
-      {question.source_block_id && (
-        <div>
-          <ConditionBadge>{name(question.source_block_id)}</ConditionBadge>의
-          응답 항목 참조
-        </div>
-      )}
-      {question.after_block_id && (
-        <div>
-          <ConditionBadge>{name(question.after_block_id)}</ConditionBadge>{' '}
-          다음에 진행
-        </div>
-      )}
-      {!clauses.length &&
-        !question.source_block_id &&
-        !question.after_block_id && <span>조건 없음</span>}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={<span tabIndex={0} />}
+          className="inline-flex"
+          aria-label={`${questionName(question)} 삭제 불가: ${reason}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {button}
+        </TooltipTrigger>
+        <TooltipContent>{reason}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
 export function QuestionManagementTable({
   questions,
-  allQuestions,
   canManage,
   showCreator = false,
   onOpen,
   onArchive,
 }: {
   questions: QuestionBlockRow[];
-  allQuestions: QuestionBlockRow[];
   showCreator?: boolean;
   canManage: (q: QuestionBlockRow) => boolean;
   onOpen: (q: QuestionBlockRow) => void;
@@ -100,15 +179,16 @@ export function QuestionManagementTable({
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             <TableHead
-              className={showCreator ? 'w-[35%] pl-5' : 'w-[45%] pl-5'}
+              className={showCreator ? 'w-[30%] pl-5' : 'w-[43%] pl-5'}
             >
               질문
             </TableHead>
-            <TableHead className={showCreator ? 'w-[38%]' : 'w-[43%]'}>
-              조건
+            <TableHead className="w-[22%]">참조 중인 질문</TableHead>
+            <TableHead className="w-[23%]">사용 중인 질문지</TableHead>
+            {showCreator && <TableHead className="w-[13%]">제작자</TableHead>}
+            <TableHead className="w-[12%] text-right pr-5">
+              <span className="inline-block w-8 text-center">관리</span>
             </TableHead>
-            {showCreator && <TableHead className="w-[15%]">제작자</TableHead>}
-            <TableHead className="w-[12%] text-right pr-5">관리</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -148,7 +228,10 @@ export function QuestionManagementTable({
                 </p>
               </TableCell>
               <TableCell className="whitespace-normal py-4 align-top">
-                <QuestionConditions question={q} questions={allQuestions} />
+                <QuestionReferenceList question={q} />
+              </TableCell>
+              <TableCell className="whitespace-normal py-4 align-top">
+                <QuestionUsageList question={q} />
               </TableCell>
               {showCreator && (
                 <TableCell className="whitespace-normal break-words py-4 align-top">
@@ -157,17 +240,7 @@ export function QuestionManagementTable({
               )}
               <TableCell className="py-4 pr-5 text-right align-top">
                 {canManage(q) ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`${questionName(q)} 보관`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onArchive(q);
-                    }}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </Button>
+                  <DeleteQuestionButton question={q} onArchive={onArchive} />
                 ) : (
                   <span className="text-xs text-muted-foreground">
                     읽기 전용

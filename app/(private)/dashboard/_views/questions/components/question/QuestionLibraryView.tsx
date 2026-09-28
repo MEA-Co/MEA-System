@@ -250,7 +250,6 @@ export function QuestionLibraryView({
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [total, setTotal] = useState(0);
-  const [references, setReferences] = useState<QuestionBlockRow[]>([]);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const requestSerial = useRef(0);
   const [page, setPage] = useState(1);
@@ -286,7 +285,6 @@ export function QuestionLibraryView({
       if (!response.ok) throw new Error(readError(data));
       if (serial !== requestSerial.current) return;
       setBlocks(data.blocks);
-      setReferences(data.references ?? []);
       setTotal(data.total ?? data.blocks.length);
       setUserId(data.userId);
       setRole(data.role);
@@ -798,11 +796,11 @@ export function QuestionLibraryView({
       if (!response.ok) throw new Error(readError(data));
       setPendingArchive(null);
       await loadBlocks();
-      toast.add({ title: '질문을 보관했어요.', type: 'success' });
+      toast.add({ title: '질문을 삭제했어요.', type: 'success' });
     } catch (error) {
       toast.add({
         title:
-          error instanceof Error ? error.message : '질문을 보관하지 못했어요.',
+          error instanceof Error ? error.message : '질문을 삭제하지 못했어요.',
         type: 'error',
       });
     } finally {
@@ -1200,7 +1198,6 @@ export function QuestionLibraryView({
                   <QuestionManagementTable
                     showCreator={(displayRole ?? role) === 'admin'}
                     questions={pageQuestions}
-                    allQuestions={[...blocks, ...references]}
                     canManage={(q) =>
                       role === 'admin' || q.created_by === userId
                     }
@@ -1313,10 +1310,10 @@ export function QuestionLibraryView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>질문을 보관할까요?</DialogTitle>
+            <DialogTitle>질문을 삭제할까요?</DialogTitle>
             <DialogDescription>
-              보관하면 목록에서 사라집니다. 다른 질문이 참조 중이라면 보관할 수
-              없습니다.
+              ‘{pendingArchive ? questionName(pendingArchive) : '이 질문'}’을
+              삭제합니다. 삭제 후 되돌릴 수 없습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1328,7 +1325,7 @@ export function QuestionLibraryView({
               disabled={busy}
               onClick={() => void archive()}
             >
-              보관
+              삭제
             </Button>
           </DialogFooter>
         </DialogContent>
