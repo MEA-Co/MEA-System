@@ -1,20 +1,27 @@
-import { CloudUpload, Paperclip, Trash2, Upload } from 'lucide-react';
+import { CloudUpload, Download, Paperclip, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 
+import { downloadReport } from '../lib/api-client';
 import { type Activity } from '../lib/fields';
+import {
+  MAX_REPORT_SIZE,
+  MAX_REPORTS,
+  reportExtension,
+} from '../lib/storage-model';
 
 type Reports = NonNullable<Activity['reports']>;
-const extensions = /\.(pdf|hwp|hwpx|doc|docx|ppt|pptx)$/i;
 
 import { ExplorationFieldIcon } from './ExplorationFieldIcon';
 
 export function ExplorationReportInput({
+  activityId,
   reports,
   onChange,
 }: {
+  activityId: string;
   reports: Reports;
   onChange: (reports: Reports) => void;
 }) {
@@ -24,7 +31,12 @@ export function ExplorationReportInput({
   function addFiles(files: File[]) {
     const accepted: Reports = [];
     for (const file of files) {
-      if (!extensions.test(file.name) || file.size > 20 * 1024 * 1024) {
+      if (
+        !reportExtension.test(file.name) ||
+        file.size > MAX_REPORT_SIZE ||
+        file.size === 0 ||
+        file.name.length > 255
+      ) {
         toast.add({
           title: `${file.name}: PDF, HWP, DOC, PPT 계열의 20MB 이하 파일을 선택해 주세요.`,
           type: 'error',
@@ -34,13 +46,27 @@ export function ExplorationReportInput({
       if (
         [...reports, ...accepted].some(
           (item) =>
-            item.file.name === file.name &&
-            item.file.size === file.size &&
-            item.file.lastModified === file.lastModified,
+            item.name === file.name &&
+            item.size === file.size &&
+            item.lastModified === file.lastModified,
         )
       )
         continue;
-      accepted.push({ clientKey: crypto.randomUUID(), file });
+      if (reports.length + accepted.length >= MAX_REPORTS) {
+        toast.add({
+          title: `파일은 최대 ${MAX_REPORTS}개까지 첨부할 수 있습니다.`,
+          type: 'error',
+        });
+        break;
+      }
+      accepted.push({
+        clientKey: crypto.randomUUID(),
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      });
     }
     onChange([...reports, ...accepted]);
   }
@@ -75,7 +101,8 @@ export function ExplorationReportInput({
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
-          addFiles(Array.from(event.dataTransfer.files));
+          if (!event.currentTarget.closest('fieldset')?.disabled)
+            addFiles(Array.from(event.dataTransfer.files));
         }}
       >
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -108,20 +135,48 @@ export function ExplorationReportInput({
       </div>
       {reports.length > 0 && (
         <ul className="divide-y rounded-xl border">
-          {reports.map(({ clientKey, file }) => (
+          {reports.map(({ clientKey, name, size, file, path }) => (
             <li key={clientKey} className="flex items-center gap-3 p-3 text-sm">
               <Paperclip aria-hidden="true" className="size-4 shrink-0" />
               <span className="min-w-0 flex-1 break-all">
-                {file.name}{' '}
+                {name}{' '}
                 <span className="text-muted-foreground">
-                  ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                  ({(size / 1024 / 1024).toFixed(1)} MB)
                 </span>
               </span>
+              {!path && !file && (
+                <span className="text-xs text-destructive">
+                  다시 첨부해 주세요
+                </span>
+              )}
+              {path && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${name} 다운로드`}
+                  onClick={async () => {
+                    try {
+                      await downloadReport(activityId, clientKey);
+                    } catch (error) {
+                      toast.add({
+                        title:
+                          error instanceof Error
+                            ? error.message
+                            : '다운로드에 실패했습니다.',
+                        type: 'error',
+                      });
+                    }
+                  }}
+                >
+                  <Download aria-hidden="true" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                aria-label={`${file.name} 첨부 삭제`}
+                aria-label={`${name} 첨부 삭제`}
                 onClick={() =>
                   onChange(
                     reports.filter((report) => report.clientKey !== clientKey),

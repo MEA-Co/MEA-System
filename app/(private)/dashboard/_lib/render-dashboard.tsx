@@ -95,6 +95,7 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
       }
     >
       <Dashboard
+        userId={user.id}
         name={profile.name}
         role={role}
         studentPeriod={profile.student_period}

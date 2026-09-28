@@ -13,6 +13,7 @@ import { DashboardNavigation } from './DashboardNavigation';
 import { DashboardShell } from './DashboardShell';
 
 type DashboardProps = {
+  userId: string;
   name: string;
   role: MemberRole;
   members: ManagedMember[];
@@ -24,6 +25,7 @@ type DashboardProps = {
 };
 
 export function Dashboard({
+  userId,
   name,
   role,
   members,
@@ -55,6 +57,7 @@ export function Dashboard({
       }
     >
       {renderDashboardView(role, activeView, {
+        userId,
         name,
         studentPeriod,
         students,

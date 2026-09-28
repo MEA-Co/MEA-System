@@ -15,6 +15,7 @@ import { type DashboardView, resolveDashboardView } from './dashboard-access';
 import 'server-only';
 
 type ViewContext = {
+  userId: string;
   name: string;
   role: MemberRole;
   studentPeriod?: StudentPeriod | null;
@@ -48,7 +49,7 @@ const DASHBOARD_VIEWS = {
   questionnaire: ({ role, questionnaireId }) => (
     <QuestionsView role={role} requestedId={questionnaireId} />
   ),
-  exploration: () => <ExplorationView />,
+  exploration: ({ userId }) => <ExplorationView key={userId} userId={userId} />,
 } satisfies Record<DashboardView, (context: ViewContext) => ReactNode>;
 
 export function renderDashboardView(

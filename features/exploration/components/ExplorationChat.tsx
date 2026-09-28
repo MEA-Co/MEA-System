@@ -35,7 +35,7 @@ function replaceAt<T>(current: ReadonlyArray<T>, index: number, value: T) {
 }
 
 async function requestExploration(body: unknown): Promise<ExplorationResponse> {
-  const response = await fetch('/api/exploration', {
+  const response = await fetch('/api/exploration-coach', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

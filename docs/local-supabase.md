@@ -132,3 +132,15 @@ done
 ## 질문 서버 검색·페이지네이션 (2026-09-28)
 
 `20260928052431_question_server_pagination.sql`은 질문 표시 텍스트를 추출하는 함수·저장 생성 열, pg_trgm 검색 인덱스, 20개 단위 security invoker 조회 RPC를 추가한다. 기존 원문과 권한은 유지한다. 로컬 DB에 먼저 적용해 45개 가상 질문으로 SQL 검증과 보안 advisor를 통과했다. 기본 pg-delta 생성기가 pg_trgm 의존성에서 실패해 `db pull --local --schema public,private --diff-engine migra`로 생성하고, 빠진 확장/권한과 함수→생성 열 순서를 보완했다. 로컬 이력만 등록했으며 운영 DB에는 적용하지 않았다. 사용 방법은 `question-search-pagination.md`를 참고한다.
+
+
+## 탐구활동 확정 저장 (2026-09-28)
+
+`20260928100109_exploration_activity_storage.sql`을 로컬에 적용했다. 본인 확정본·권한·revision 충돌/재시도 RPC, 비공개 보고서 버킷과 Storage 정책을 추가한다. 임시저장은 서버에 전송하지 않고 브라우저에 보관한다. 운영에는 적용하지 않았다.
+
+로컬 SQL 회귀와 실제 파일 업로드·다운로드·권한·용량 제한 검사, 보안 advisor를 통과했다. 전체 migration shadow 재생 후 public/private/storage 스키마 차이 없음을 확인했다. 기존 `20260928055251`의 로컬 이력 누락으로 db pull이 중단되어 CLI migration new로 이번 파일을 만들었고, 동등성 확인 후 이번 migration만 로컬 이력에 등록했다. 기존 누락 이력은 수정하지 않았다. 상세 운영 명령·파일 설정은 [탐구활동 저장 안내](exploration-activity-storage.md)를 참고한다.
+
+
+## 탐구활동 API·DB 이름 정리 (2026-09-28)
+
+기존 AI 코치의 `/api/exploration`은 `/api/exploration-coach`로 이동했다. 새 탐구활동 API는 `/api/exploration`이다. `20260928101208_rename_exploration_activity_storage.sql`은 `public.exploration_activities` → `public.exploration`, 저장·삭제 RPC → `save_exploration` / `delete_exploration`으로 이름을 변경한다. 행 데이터·RLS·보고서 객체 경로는 유지한다. 기존 코치는 별도 exploration 테이블을 사용하지 않는다. 로컬 적용·회귀 검증 완료이며 운영에는 미적용이다. 운영의 최초 저장 migration 적용 여부에 따라 최초 저장 → 이름 변경 두 개 또는 이름 변경 하나를 검토 후 적용한다.

@@ -177,9 +177,22 @@ export type ActivityReference = {
   selection: string;
   usage: string;
 };
+export type ActivityReport = {
+  clientKey: string;
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+  path?: string;
+  file?: File;
+};
 export type Activity = {
-  clientKey: number;
-  reports?: { clientKey: string; file: File }[];
+  clientKey: string;
+  revision: number;
+  status: 'draft' | 'confirmed';
+  updatedAt: string;
+  localVersion?: string;
+  reports?: ActivityReport[];
   values: Record<FieldKey, string> & {
     references: ActivityReference[];
   };
