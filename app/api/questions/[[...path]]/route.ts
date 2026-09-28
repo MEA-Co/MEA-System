@@ -111,14 +111,16 @@ async function handle(request: Request, context: Context) {
     }
     // Graphs, question relationships and the composer explicitly request the full
     // library. Batch reads to avoid the Data API's per-response row limit.
+    const relationshipsOnly = params.get('mode') === 'relationships';
+    const columns = relationshipsOnly
+      ? 'id,created_by,title,prompt,fields,row_mode,max_rows,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at'
+      : '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)';
     const blocks: QuestionBlockRow[] = [];
     const batchSize = 500;
     for (let start = 0; ; start += batchSize) {
       const result = await client
         .from('questions')
-        .select(
-          '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)',
-        )
+        .select(columns)
         .is('archived_at', null)
         .order('updated_at', { ascending: false })
         .order('id', { ascending: false })

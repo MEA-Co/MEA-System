@@ -179,12 +179,9 @@ function QuestionnaireContent({
           {error.message}
         </p>
       )}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2
-            id="questionnaire-management-title"
-            className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"
-          >
+      <div className="mb-8 flex flex-wrap items-center justify-end gap-4">
+        <div className="sr-only">
+          <h2 id="questionnaire-management-title" className="sr-only">
             질문지
           </h2>
         </div>

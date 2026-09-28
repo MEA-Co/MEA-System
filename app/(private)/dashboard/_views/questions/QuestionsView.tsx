@@ -30,7 +30,7 @@ export function QuestionsView({
     Boolean(params.get('draft')) ||
     params.get('tab') === 'questionnaires' ||
     params.get('view') === 'questionnaire';
-  const editing = Boolean(params.get('question') || params.get('draft'));
+  const editing = Boolean(params.get('draft'));
 
   return (
     <div className="space-y-6">

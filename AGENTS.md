@@ -16,7 +16,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
-- 질문 테이블은 `/api/questions?page=&search=`와 `list_questions_page` RPC로 20개씩 서버 검색·페이지 조회한다. 이름·서식 제거한 본문을 부분 일치로 검색하고 입력은 300ms 디바운스한다. 조건 설명은 해당 페이지의 직접 참조 질문을 함께 받아 표시한다. 그래프·질문 편집·질문지 배치만 전체 조회를 사용하며 서버에서 500개씩 나누어 읽는다. 로컬 migration `20260928052431_question_server_pagination.sql`, 검증 `supabase/tests/question_server_pagination.sql`, `scripts/verify-question-pagination-api.mjs`, 설명 `docs/question-search-pagination.md`.
+- 질문 생성·수정은 QuestionLibraryView의 Drawer로 열며 목록의 검색·페이지·스크롤을 유지한다. question URL 매개변수와 미저장 닫기 확인을 지원한다. useQuestionEditorData는 개별 상세와 설명을 제외한 /api/questions?mode=relationships를 별도로 SWR 캐싱한다. PC는 넓은 오른쪽 패널, 모바일은 전체 높이다. DB migration 없음. 검증 scripts/verify-question-drawer.mjs, scripts/verify-question-pagination-api.mjs.
+
+- 질문 테이블은 `/api/questions?page=&search=`와 `list_questions_page` RPC로 10개씩 서버 검색·페이지 조회한다. 이름·서식 제거한 본문을 부분 일치로 검색하고 입력은 300ms 디바운스한다. 조건 설명은 해당 페이지의 직접 참조 질문을 함께 받아 표시한다. 그래프·질문지 배치만 기존 전체 조회를 사용하며 서버에서 500개씩 나누어 읽는다. 로컬 migration `20260928052431_question_server_pagination.sql`, 검증 `supabase/tests/question_server_pagination.sql`, `scripts/verify-question-pagination-api.mjs`, 설명 `docs/question-search-pagination.md`.
 
 - 질문지 목록은 `questions/components/questionnaire/QuestionnaireList.tsx`의 검색·상태 필터 테이블이며 `QuestionnaireStatusSelect`에서 수정 중/게시/배포/보관을 변경한다. 보관은 삭제와 분리하고 복원할 수 있다. 배포→수정 중은 원본 배포본과 답변을 유지하고 별도 질문지 초안을 생성한다. `PATCH /api/questionnaires/:id/status`와 `change_questionnaire_status`는 권한·revision·이전 상태·보관 시각·요청 ID를 검증한다. 배치 질문지의 배포 차단은 유지한다. 로컬 migration `20260928050243_questionnaire_status_management.sql`, SQL 검증 `supabase/tests/questionnaire_status.sql`.
 

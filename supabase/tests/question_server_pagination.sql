@@ -6,7 +6,7 @@ insert into public.profiles(id,role,name) select id,role,'페이지 검증' from
 grant select on question_page_users to authenticated;
 set local role authenticated;
 do $$
-declare owner_id uuid; docs jsonb[]:='{}'; d jsonb; first_page jsonb; second_page jsonb; last_page jsonb; result jsonb; i integer;
+declare owner_id uuid; docs jsonb[]:='{}'; d jsonb; first_page jsonb; second_page jsonb; last_page jsonb; all_pages jsonb:='[]'::jsonb; result jsonb; i integer;
 begin
  select id into owner_id from question_page_users where role='consultant_lead';
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
@@ -16,11 +16,16 @@ begin
  end loop;
  first_page:=public.list_questions_page('페이지검증',1);
  second_page:=public.list_questions_page('페이지검증',2);
- last_page:=public.list_questions_page('페이지검증',3);
- if (first_page->>'total')::int<>45 or jsonb_array_length(first_page->'blocks')<>20 or jsonb_array_length(second_page->'blocks')<>20 or jsonb_array_length(last_page->'blocks')<>5 then raise exception 'Wrong page size/count'; end if;
- if (select count(distinct value->>'id') from jsonb_array_elements((first_page->'blocks')||(second_page->'blocks')||(last_page->'blocks')))<>45 then raise exception 'Pages overlap'; end if;
+ last_page:=public.list_questions_page('페이지검증',5);
+ if (first_page->>'total')::int<>45 or jsonb_array_length(first_page->'blocks')<>10 or jsonb_array_length(second_page->'blocks')<>10 or jsonb_array_length(last_page->'blocks')<>5 then raise exception 'Wrong page size/count'; end if;
+ for i in 1..5 loop
+   result:=public.list_questions_page('페이지검증',i);
+   if (result->>'pageSize')::int<>10 or jsonb_array_length(result->'blocks')>10 then raise exception 'Page exceeds ten'; end if;
+   all_pages:=all_pages||(result->'blocks');
+ end loop;
+ if (select count(distinct value->>'id') from jsonb_array_elements(all_pages))<>45 then raise exception 'Pages overlap'; end if;
  if first_page<>public.list_questions_page('페이지검증',1) then raise exception 'Unstable tie sorting'; end if;
- if (public.list_questions_page('페이지검증',99)->>'page')::int<>3 then raise exception 'Invalid page not clamped'; end if;
+ if (public.list_questions_page('페이지검증',99)->>'page')::int<>5 then raise exception 'Invalid page not clamped'; end if;
  if (public.list_questions_page('  진로  ',1)->>'total')::int<>1 then raise exception 'Formatting split text not searched'; end if;
  if (public.list_questions_page('alpha',1)->>'total')::int<>1 then raise exception 'Case insensitive search failed'; end if;
  if (public.list_questions_page('%_',1)->>'total')::int<>1 then raise exception 'Wildcard was not literal'; end if;

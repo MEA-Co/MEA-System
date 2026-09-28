@@ -2,7 +2,6 @@
 
 import { Tabs } from '@base-ui/react/tabs';
 import {
-  ArrowLeft,
   Blocks,
   Eye,
   LoaderCircle,
@@ -33,11 +32,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
 
-import { DashboardPageCategory } from '../../../../_components/DashboardPageCategory';
+import { useQuestionEditorData } from '../../hooks/useQuestionEditorData';
 import {
   documentFromRow,
   emptyQuestionBlock,
@@ -233,15 +239,14 @@ export function QuestionLibraryView() {
     null,
   );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [closingId, setClosingId] = useState<string | null>(null);
 
-  const fullLibrary = Boolean(requestedId) || listMode === 'graph';
+  const fullLibrary = listMode === 'graph';
   const requestUrl = fullLibrary
     ? '/api/questions'
     : `/api/questions?page=${page}&search=${encodeURIComponent(search)}`;
   const loading =
-    fetching ||
-    loadedUrl !== requestUrl ||
-    (!fullLibrary && query.trim() !== search);
+    loadedUrl !== requestUrl || (!fullLibrary && query.trim() !== search);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(query.trim()), 300);
@@ -271,7 +276,7 @@ export function QuestionLibraryView() {
         setFetching(false);
       }
     }
-  }, [requestUrl, fullLibrary, page]);
+  }, [requestUrl, fullLibrary, page, setPage]);
 
   useEffect(() => {
     // This fetch synchronizes the editor or current server page with its URL.
@@ -290,13 +295,26 @@ export function QuestionLibraryView() {
         richTextPlainText(block.prompt).toLocaleLowerCase().includes(search),
     );
   }, [blocks, query]);
-  const pageSize = 20;
+  const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * pageSize;
   const pageQuestions = blocks;
-  const existing = blocks.find((block) => block.id === draft?.id);
-  const candidates = blocks.filter((block) => block.id !== draft?.id);
+  const localSession =
+    requestedId && userId ? readLocalDraft(userId, requestedId) : null;
+  const unsaved =
+    (draft?.id === requestedId && revision === 0) ||
+    (!!localSession && localSession.revision === 0);
+  const editorData = useQuestionEditorData(
+    requestedId === closingId ? null : requestedId,
+    unsaved,
+  );
+  const relatedQuestions = editorData.relationships.data ?? [];
+  const candidates = relatedQuestions.filter((block) => block.id !== draft?.id);
+  const opener = useRef<HTMLElement | null>(null);
+  const listHeading = useRef<HTMLHeadingElement | null>(null);
+  const openedFromList = useRef(false);
+  const pendingRoute = useRef<string | null>(null);
   const dirty = draft
     ? !savedDocument || stableDocument(draft) !== stableDocument(savedDocument)
     : false;
@@ -351,7 +369,37 @@ export function QuestionLibraryView() {
   }
 
   const syncQuestionRoute = useEffectEvent(() => {
-    if (loading || loadError || !userId) return;
+    if (!userId) return;
+    // history.back() finishes asynchronously; do not reopen or fetch a discarded draft.
+    if (closingId && requestedId === closingId) return;
+    if (closingId) setClosingId(null);
+    if (
+      activeId.current &&
+      draft &&
+      requestedId !== activeId.current &&
+      (dirty || savingRef.current)
+    ) {
+      rememberDraft();
+      pendingRoute.current = requestedId;
+      // Recreate the editor history entry after Back so cancel keeps the
+      // drawer open and a confirmed close can still return to the list.
+      navigateQuestion(activeId.current);
+      if (savingRef.current) {
+        toast.add({ type: 'info', title: '저장이 끝난 뒤 닫아 주세요.' });
+        return;
+      }
+      setConfirmDiscard(true);
+      return;
+    }
+    if (
+      requestedId &&
+      requestedId !== 'new' &&
+      !unsaved &&
+      (editorData.detail.isLoading ||
+        editorData.detail.error ||
+        editorData.detail.data === undefined)
+    )
+      return;
     if (
       requestedId === activeId.current &&
       (requestedId === null || draft?.id === requestedId)
@@ -378,7 +426,7 @@ export function QuestionLibraryView() {
       navigateQuestion(document.id, true);
       return;
     }
-    const remote = blocks.find((block) => block.id === requestedId);
+    const remote = unsaved ? null : editorData.detail.data;
     const local =
       sessions.current.get(requestedId) ?? readLocalDraft(userId, requestedId);
     if (
@@ -426,7 +474,15 @@ export function QuestionLibraryView() {
     // Browser history is the external source of truth for the active editor.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     syncQuestionRoute();
-  }, [requestedId, loading, loadError, userId]);
+  }, [
+    requestedId,
+    userId,
+    closingId,
+    unsaved,
+    editorData.detail.isLoading,
+    editorData.detail.error,
+    editorData.detail.data,
+  ]);
 
   function updateDraft(changes: Partial<QuestionBlockDocument>) {
     setDraft((current) => (current ? { ...current, ...changes } : null));
@@ -446,14 +502,25 @@ export function QuestionLibraryView() {
   }
 
   function returnToList() {
-    navigateQuestion(null);
+    if (openedFromList.current) {
+      openedFromList.current = false;
+      window.history.back();
+    } else navigateQuestion(null, true);
   }
   function leaveEditor() {
-    if (dirty) setConfirmDiscard(true);
-    else returnToList();
+    if (savingRef.current) return;
+    if (dirty) {
+      pendingRoute.current = null;
+      setConfirmDiscard(true);
+    } else returnToList();
   }
 
   function openEditor(block?: QuestionBlockRow) {
+    opener.current =
+      window.document.activeElement instanceof HTMLElement
+        ? window.document.activeElement
+        : null;
+    openedFromList.current = true;
     if (!block) {
       const document = emptyQuestionBlock();
       storeSession({
@@ -537,10 +604,15 @@ export function QuestionLibraryView() {
         return;
       }
       const saved = data.block as QuestionBlockRow;
-      setBlocks((current) => [
-        saved,
-        ...current.filter((block) => block.id !== saved.id),
-      ]);
+      void loadBlocks();
+      void editorData.detail.mutate(saved, { revalidate: false });
+      void editorData.relationships.mutate(
+        (current) =>
+          current
+            ? [saved, ...current.filter((block) => block.id !== saved.id)]
+            : undefined,
+        { revalidate: false },
+      );
       const session = sessions.current.get(attemptId);
       if (session)
         storeSession({
@@ -570,7 +642,13 @@ export function QuestionLibraryView() {
   }
 
   const autoSave = useEffectEvent(() => {
-    if (draft?.id === requestedId && dirty && valid && !conflicted)
+    if (
+      draft?.id === requestedId &&
+      dirty &&
+      valid &&
+      !conflicted &&
+      !confirmDiscard
+    )
       void save(false);
   });
   useEffect(() => {
@@ -636,241 +714,21 @@ export function QuestionLibraryView() {
   }
 
   return (
-    <section
-      aria-labelledby="question-management-title"
-      data-question-editor={draft ? '' : undefined}
-      className="space-y-6"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          {draft && <DashboardPageCategory view="questions" />}
-          <h2
-            id="question-management-title"
-            className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"
-          >
-            {draft ? (existing ? '질문 수정' : '질문 만들기') : '질문'}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            질문과 답변 열을 만들고, 질문 간 순서와 조건을 설정합니다.
-          </p>
-        </div>
-        {draft ? (
-          <Button
-            disabled={busy || conflicted || (!dirty && !!savedAt)}
-            onClick={() => void save()}
-          >
-            {busy ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Save aria-hidden="true" />
-            )}
-            {busy ? '저장 중…' : '저장'}
-          </Button>
-        ) : (
-          <Button disabled={loading || loadError} onClick={() => openEditor()}>
-            <Plus aria-hidden="true" /> 질문 만들기
-          </Button>
-        )}
+    <section aria-labelledby="question-management-title" className="space-y-6">
+      <div className="flex flex-wrap items-end justify-end gap-4">
+        <h2
+          ref={listHeading}
+          tabIndex={-1}
+          id="question-management-title"
+          className="sr-only"
+        >
+          질문
+        </h2>
+        <Button disabled={loading || loadError} onClick={() => openEditor()}>
+          <Plus aria-hidden="true" /> 질문 만들기
+        </Button>
       </div>
-
-      {draft ? (
-        <div className="space-y-6">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={leaveEditor}
-          >
-            <ArrowLeft aria-hidden="true" /> 목록으로
-          </Button>
-
-          <Tabs.Root defaultValue="edit">
-            <Tabs.List
-              className="mb-5 inline-flex gap-1 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800"
-              aria-label="질문 보기 방식"
-            >
-              {[
-                { value: 'edit', label: '편집', icon: PencilLine },
-                { value: 'preview', label: '미리보기', icon: Eye },
-              ].map(({ value, label, icon: Icon }) => (
-                <Tabs.Tab
-                  key={value}
-                  value={value}
-                  className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                  {label}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-            <Tabs.Panel value="preview">
-              <QuestionBlockPreview
-                key={`${draft.id}:${draft.sourceBlockId ?? draft.condition?.clauses[0]?.blockId ?? ''}`}
-                document={draft}
-                questions={blocks}
-              />
-            </Tabs.Panel>
-            <Tabs.Panel
-              value="edit"
-              keepMounted
-              className="space-y-6 data-hidden:hidden"
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="block-title">관리용 이름 (선택)</Label>
-                  <Input
-                    id="block-title"
-                    maxLength={200}
-                    value={draft.title}
-                    onChange={(event) =>
-                      updateDraft({ title: event.target.value })
-                    }
-                    placeholder="입력하지 않으면 질문 내용이 이름으로 표시됩니다."
-                    className="bg-background"
-                  />
-                </div>
-                {(busy || conflicted || saveError || valid) && (
-                  <p className="text-xs text-muted-foreground" role="status">
-                    {busy
-                      ? '저장 중…'
-                      : conflicted
-                        ? '다른 곳에서 수정됐어요. 작성 내용은 유지됩니다.'
-                        : saveError
-                          ? saveError
-                          : dirty
-                            ? '변경 사항이 있어요 · 10초마다 자동 저장'
-                            : savedAt
-                              ? '모든 변경 사항을 저장했어요 · 10초마다 자동 저장'
-                              : '내용을 입력하면 10초마다 자동 저장됩니다.'}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">질문과 답변 구성</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    질문과 답변의 내용을 구성합니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-xl border border-neutral-200 bg-background p-5 sm:p-6 dark:border-neutral-700">
-                <h3 className="font-semibold">질문</h3>
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="w-6 shrink-0 pt-3 text-sm font-semibold text-neutral-600 dark:text-neutral-300"
-                  >
-                    #
-                  </span>
-                  <QuestionRichTextEditor
-                    id={`question-prompt-${draft.id}`}
-                    value={draft.prompt}
-                    onChange={(prompt) => updateDraft({ prompt })}
-                    placeholder="질문을 입력하세요"
-                    ariaLabel="질문"
-                    maxLength={10000}
-                    compact
-                    className="min-w-0 flex-1 rounded-lg"
-                  />
-                </div>
-                <QuestionDetailsEditor
-                  details={draft.details ?? []}
-                  onChange={(details) => updateDraft({ details })}
-                />
-              </div>
-
-              <div className="space-y-4">
-                {draft.fields.map((field, index) => (
-                  <QuestionBlockFieldEditor
-                    key={field.id}
-                    field={field}
-                    index={index}
-                    fieldCount={draft.fields.length}
-                    onChange={(updated) => updateField(field.id, updated)}
-                    onRemove={() =>
-                      updateDraft({
-                        fields: draft.fields.filter(
-                          (item) => item.id !== field.id,
-                        ),
-                      })
-                    }
-                  />
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-12 w-full border-dashed"
-                  disabled={draft.fields.length >= 20}
-                  onClick={() =>
-                    updateDraft({
-                      fields: [
-                        ...draft.fields,
-                        {
-                          id: crypto.randomUUID(),
-                          label: `답변 ${draft.fields.length + 1}`,
-                          kind: 'text',
-                        },
-                      ],
-                    })
-                  }
-                >
-                  <Plus aria-hidden="true" /> 답변 열 추가
-                </Button>
-              </div>
-
-              <div className="space-y-2 rounded-xl border bg-background p-5 sm:p-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  {draft.rowMode === 'reference' ? (
-                    <p className="text-sm text-muted-foreground">
-                      앞선 질문의 응답 항목 수에 맞춰 반복됩니다.
-                    </p>
-                  ) : (
-                    <>
-                      <Label htmlFor="max-rows">최대</Label>
-                      <MaxItemsInput
-                        value={
-                          draft.rowMode === 'repeatable'
-                            ? (draft.maxRows ?? 1)
-                            : 1
-                        }
-                        disabled={false}
-                        onChange={(count) => {
-                          if (draft.rowMode === 'reference') return;
-                          updateDraft({
-                            rowMode: count > 1 ? 'repeatable' : 'single',
-                            maxRows: count > 1 ? count : null,
-                          });
-                        }}
-                      />
-                      <Label htmlFor="max-rows">개 항목 입력</Label>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                <div>
-                  <h2 className="font-semibold">조건 설정</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    질문들간의 관계를 설정합니다.
-                  </p>
-                </div>
-              </div>
-              <QuestionConditionEditor
-                key={draft.id}
-                questions={candidates}
-                document={draft}
-                onChange={updateDraft}
-              />
-              <p className="text-sm text-muted-foreground">
-                만든 질문은 질문지 탭에서 선택해 배치할 수 있습니다.
-              </p>
-            </Tabs.Panel>
-          </Tabs.Root>
-        </div>
-      ) : (
+      <div aria-busy={fetching}>
         <div className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="relative w-full max-w-md">
@@ -987,9 +845,296 @@ export function QuestionLibraryView() {
             />
           )}
         </div>
-      )}
+      </div>
+      <Drawer
+        open={Boolean(requestedId)}
+        onOpenChange={(open) => {
+          if (!open) leaveEditor();
+        }}
+      >
+        <DrawerContent
+          className="h-dvh max-h-dvh rounded-none md:w-[min(960px,90vw)] md:max-w-none"
+          finalFocus={() =>
+            opener.current?.isConnected ? opener.current : listHeading.current
+          }
+        >
+          <DrawerHeader className="shrink-0 border-b">
+            <DrawerTitle className="sr-only">질문 편집</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              질문 내용과 답변, 조건을 편집합니다.
+            </DrawerDescription>
+            <div className="flex justify-end pr-2">
+              <Button
+                disabled={
+                  !draft ||
+                  draft.id !== requestedId ||
+                  busy ||
+                  conflicted ||
+                  (!dirty && !!savedAt)
+                }
+                onClick={() => void save()}
+              >
+                {busy ? (
+                  <LoaderCircle className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save aria-hidden="true" />
+                )}
+                {busy ? '저장 중…' : '저장'}
+              </Button>
+            </div>
+          </DrawerHeader>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-8"
+            data-question-editor
+          >
+            {!userId && loadError ? (
+              <div role="alert">
+                <p>질문 편집 정보를 불러오지 못했어요.</p>
+                <Button variant="outline" onClick={() => void loadBlocks()}>
+                  다시 시도
+                </Button>
+              </div>
+            ) : editorData.detail.error ? (
+              <div role="alert">
+                <p>{editorData.detail.error.message}</p>
+                <Button
+                  variant="outline"
+                  onClick={() => void editorData.detail.mutate()}
+                >
+                  다시 시도
+                </Button>
+              </div>
+            ) : draft && draft.id === requestedId ? (
+              <div className="space-y-6">
+                <Tabs.Root defaultValue="edit">
+                  <Tabs.List
+                    className="mb-5 inline-flex gap-1 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800"
+                    aria-label="질문 보기 방식"
+                  >
+                    {[
+                      { value: 'edit', label: '편집', icon: PencilLine },
+                      { value: 'preview', label: '미리보기', icon: Eye },
+                    ].map(({ value, label, icon: Icon }) => (
+                      <Tabs.Tab
+                        key={value}
+                        value={value}
+                        className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
+                      >
+                        <Icon className="size-4" aria-hidden="true" />
+                        {label}
+                      </Tabs.Tab>
+                    ))}
+                  </Tabs.List>
+                  <Tabs.Panel value="preview">
+                    {editorData.relationships.error ? (
+                      <p role="alert">
+                        참조 질문을 불러오지 못했어요. 조건 설정의 다시 시도를
+                        눌러 주세요.
+                      </p>
+                    ) : editorData.relationships.isLoading ? (
+                      <p role="status">참조 질문을 불러오고 있어요…</p>
+                    ) : (
+                      <QuestionBlockPreview
+                        key={`${draft.id}:${draft.sourceBlockId ?? draft.condition?.clauses[0]?.blockId ?? ''}`}
+                        document={draft}
+                        questions={relatedQuestions}
+                      />
+                    )}
+                  </Tabs.Panel>
+                  <Tabs.Panel
+                    value="edit"
+                    keepMounted
+                    className="space-y-6 data-hidden:hidden"
+                  >
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="block-title">관리용 이름 (선택)</Label>
+                        <Input
+                          id="block-title"
+                          maxLength={200}
+                          value={draft.title}
+                          onChange={(event) =>
+                            updateDraft({ title: event.target.value })
+                          }
+                          placeholder="입력하지 않으면 질문 내용이 이름으로 표시됩니다."
+                        />
+                      </div>
+                      {(busy || conflicted || saveError || valid) && (
+                        <p
+                          className="text-xs text-muted-foreground"
+                          role="status"
+                        >
+                          {busy
+                            ? '저장 중…'
+                            : conflicted
+                              ? '다른 곳에서 수정됐어요. 작성 내용은 유지됩니다.'
+                              : saveError
+                                ? saveError
+                                : dirty
+                                  ? '변경 사항이 있어요 · 10초마다 자동 저장'
+                                  : savedAt
+                                    ? '모든 변경 사항을 저장했어요 · 10초마다 자동 저장'
+                                    : '내용을 입력하면 10초마다 자동 저장됩니다.'}
+                        </p>
+                      )}
+                    </div>
 
-      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h2 className="font-semibold">질문과 답변 구성</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          질문과 답변의 내용을 구성합니다.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 rounded-xl border border-neutral-200 bg-background p-5 sm:p-6 dark:border-neutral-700">
+                      <h3 className="font-semibold">질문</h3>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <span
+                          aria-hidden="true"
+                          className="w-6 shrink-0 pt-3 text-sm font-semibold text-neutral-600 dark:text-neutral-300"
+                        >
+                          #
+                        </span>
+                        <QuestionRichTextEditor
+                          id={`question-prompt-${draft.id}`}
+                          value={draft.prompt}
+                          onChange={(prompt) => updateDraft({ prompt })}
+                          placeholder="질문을 입력하세요"
+                          ariaLabel="질문"
+                          maxLength={10000}
+                          compact
+                          className="min-w-0 flex-1 rounded-lg"
+                        />
+                      </div>
+                      <QuestionDetailsEditor
+                        details={draft.details ?? []}
+                        onChange={(details) => updateDraft({ details })}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      {draft.fields.map((field, index) => (
+                        <QuestionBlockFieldEditor
+                          key={field.id}
+                          field={field}
+                          index={index}
+                          fieldCount={draft.fields.length}
+                          onChange={(updated) => updateField(field.id, updated)}
+                          onRemove={() =>
+                            updateDraft({
+                              fields: draft.fields.filter(
+                                (item) => item.id !== field.id,
+                              ),
+                            })
+                          }
+                        />
+                      ))}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-12 w-full border-dashed"
+                        disabled={draft.fields.length >= 20}
+                        onClick={() =>
+                          updateDraft({
+                            fields: [
+                              ...draft.fields,
+                              {
+                                id: crypto.randomUUID(),
+                                label: `답변 ${draft.fields.length + 1}`,
+                                kind: 'text',
+                              },
+                            ],
+                          })
+                        }
+                      >
+                        <Plus aria-hidden="true" /> 답변 열 추가
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2 rounded-xl border bg-background p-5 sm:p-6">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {draft.rowMode === 'reference' ? (
+                          <p className="text-sm text-muted-foreground">
+                            앞선 질문의 응답 항목 수에 맞춰 반복됩니다.
+                          </p>
+                        ) : (
+                          <>
+                            <Label htmlFor="max-rows">최대</Label>
+                            <MaxItemsInput
+                              value={
+                                draft.rowMode === 'repeatable'
+                                  ? (draft.maxRows ?? 1)
+                                  : 1
+                              }
+                              disabled={false}
+                              onChange={(count) => {
+                                if (draft.rowMode === 'reference') return;
+                                updateDraft({
+                                  rowMode: count > 1 ? 'repeatable' : 'single',
+                                  maxRows: count > 1 ? count : null,
+                                });
+                              }}
+                            />
+                            <Label htmlFor="max-rows">개 항목 입력</Label>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                      <div>
+                        <h2 className="font-semibold">조건 설정</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          질문들간의 관계를 설정합니다.
+                        </p>
+                      </div>
+                    </div>
+                    {editorData.relationships.error ? (
+                      <div role="alert">
+                        <p>참조 질문을 불러오지 못했어요.</p>
+                        <Button
+                          variant="outline"
+                          onClick={() => void editorData.relationships.mutate()}
+                        >
+                          다시 시도
+                        </Button>
+                      </div>
+                    ) : editorData.relationships.isLoading ? (
+                      <p role="status">참조 질문을 불러오고 있어요…</p>
+                    ) : (
+                      <QuestionConditionEditor
+                        key={draft.id}
+                        questions={candidates}
+                        document={draft}
+                        onChange={updateDraft}
+                      />
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      만든 질문은 질문지 탭에서 선택해 배치할 수 있습니다.
+                    </p>
+                  </Tabs.Panel>
+                </Tabs.Root>
+              </div>
+            ) : (
+              <p
+                role="status"
+                className="py-12 text-center text-sm text-muted-foreground"
+              >
+                질문을 불러오고 있어요…
+              </p>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Dialog
+        open={confirmDiscard}
+        onOpenChange={(open) => {
+          if (!busy) setConfirmDiscard(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>작성 중인 내용을 버릴까요?</DialogTitle>
@@ -998,12 +1143,18 @@ export function QuestionLibraryView() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => setConfirmDiscard(false)}
+            >
               계속 작성
             </Button>
             <Button
               variant="destructive"
+              disabled={busy}
               onClick={() => {
+                setClosingId(requestedId);
                 if (draft) {
                   clearLocalDraft(userId, draft.id);
                   sessions.current.delete(draft.id);
@@ -1012,7 +1163,9 @@ export function QuestionLibraryView() {
                 activeId.current = null;
                 setDraft(null);
                 setConfirmDiscard(false);
-                returnToList();
+                if (pendingRoute.current)
+                  navigateQuestion(pendingRoute.current, true);
+                else returnToList();
               }}
             >
               변경 내용 버리기

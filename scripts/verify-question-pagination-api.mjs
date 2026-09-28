@@ -36,7 +36,7 @@ function setup({
               references: [],
               total: 41,
               page: args.p_page,
-              pageSize: 20,
+              pageSize: 10,
             },
             error: rpcError,
           };
@@ -44,7 +44,10 @@ function setup({
         from: (table) => {
           calls.push({ table });
           const builder = {
-            select: () => builder,
+            select: (columns) => {
+              calls.push({ columns });
+              return builder;
+            },
             is: () => builder,
             order: (column, options) => {
               calls.push({ column, options });
@@ -103,7 +106,7 @@ test('paged search uses the database RPC and returns count without fetching the 
   ]);
   const result = await response.json();
   assert.equal(result.total, 41);
-  assert.equal(result.pageSize, 20);
+  assert.equal(result.pageSize, 10);
   assert.equal(result.role, 'consultant_lead');
 });
 test('bad pages and search lengths are rejected before any database call', async () => {
@@ -148,4 +151,15 @@ test('explicit full-library request batches past the API row limit with stable o
     ],
   );
   assert.equal(client.calls.filter((c) => c.column === 'id').length, 3);
+});
+
+test('relationship mode excludes explanations and storage metadata', async () => {
+  const client = setup();
+  assert.equal((await client.get('?mode=relationships')).status, 200);
+  const columns = client.calls.find((call) => call.columns).columns;
+  assert.ok(columns.includes('fields'));
+  assert.ok(columns.includes('condition'));
+  assert.ok(!columns.includes('*'));
+  assert.ok(!columns.includes('details'));
+  assert.ok(!columns.includes('save_id'));
 });
