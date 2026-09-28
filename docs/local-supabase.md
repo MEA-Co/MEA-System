@@ -115,3 +115,10 @@ done
 `20260928034945_questionnaire_question_placements.sql`을 로컬에 적용했다. 배치의 원본 질문 FK·중복 방지·참조 선행 순서 검사·원본 보관 보호를 추가했다. 새 방식의 배포는 버전 고정과 열/행 응답 저장 연결 전까지 차단한다. 기존 질문지·답변 경로는 유지한다. 상세 구조와 삭제 후보는 `questionnaire-question-placement.md`에 있다.
 
 직접 SQL 적용으로 검증한 뒤 `db diff --local --schema public,private`의 차이가 없음을 확인했고, 해당 migration 하나만 `migration repair --local --status applied 20260928034945`로 로컬 이력에 등록했다. 이는 새 로컬 변경의 동등성 확인 후 수행했으며 기존 이력과 운영 DB는 변경하지 않았다. 로컬 보안 advisor 통과, 관련 SQL 20개 중 19개 통과, 실패 1개는 위에 기록된 기존 `questionnaire_published_deletion.sql` 오류다.
+
+
+## 기존 서술형 질문지 이전 도구 (2026-09-28)
+
+`20260928042153_import_legacy_text_questionnaire.sql`은 운영자 전용 이전 함수와 private 대응 기록 테이블을 설치한다. migration 자체는 실제 운영 질문을 복사하지 않는다. `docs/legacy-questionnaire-import.md`와 `supabase/snippets/legacy-questionnaire-import-{check,dry-run,apply,verify}.sql`을 순서대로 사용한다.
+
+로컬에는 함수·이력 테이블만 적용했다. 가상 질문 16개·설명 32개·섹션 3개(빈 섹션 포함)를 사용한 `supabase/tests/import_legacy_text_questionnaire.sql`, 실제 전달할 검사/실행/비교 SQL의 롤백 테스트, 보안 advisor를 통과했다. 전체 migration 재생과 로컬 public/private 스키마 차이 없음 확인 후 이 migration 하나의 로컬 이력을 등록했다. 운영 데이터는 읽거나 변경하지 않았으며 운영 실행은 사용자가 수행한다.

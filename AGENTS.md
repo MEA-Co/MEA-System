@@ -14,6 +14,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 기존 서술형 질문지의 원본을 보존하고 독립 질문·배치형 새 초안을 생성하는 운영자 도구는 `private.import_legacy_text_questionnaire(uuid,integer)`다. `private.legacy_questionnaire_imports`에 대응 ID를 보존하며 앱 역할 실행은 차단한다. migration 설치만으로 실제 데이터를 이전하지 않는다. 응답 없는 활성 게시본만 지원하고 재실행 시 기존 결과를 반환한다. 절차 `docs/legacy-questionnaire-import.md`, 검사·예행연습·실행·비교는 `supabase/snippets/legacy-questionnaire-import-*.sql`, 로컬 회귀 `supabase/tests/import_legacy_text_questionnaire.sql`, migration `20260928042153_import_legacy_text_questionnaire.sql`.
+
 - 질문지 제작은 `QuestionnaireComposer`에서 질문 관리의 저장된 질문을 검색·배치한다. `questionnaire_questions.source_question_id`로 원본 ID를 참조하고 배치 ID는 독립적으로 유지한다. 제작·게시 중에는 원본의 최신 질문·열·조건·설명을 읽으며 섹션/질문 이동, 참조 선행 순서 검증, 공유 응답 미리보기를 제공한다. 새 배치를 포함한 배포는 질문 버전 고정·열/행 응답 저장 구현 전까지 DB에서 차단한다. 기존 배포본은 유지한다. 기존 편집 파일은 삭제하지 않았고 삭제 후보 3개 및 데이터 계약은 `docs/questionnaire-question-placement.md`에 기록했다. 로컬 migration `20260928034945_questionnaire_question_placements.sql`, 검증 `scripts/verify-questionnaire-placements.mjs`, `supabase/tests/questionnaire_question_placements.sql`. 운영에는 미적용이다.
 
 - 질문 조건 UI는 공통 Select로 질문 → 특정 열/모든 열 → 조건 순서다. `선택했을 때`는 직접 입력 없는 선택형 열에서만 메뉴에 표시하고 선택지를 같은 줄에 고른다. 특정 열의 answered는 그 열, fieldId 없는 모든 열 answered는 같은 행의 모든 열이 입력됐는지 판정한다. 참조도 일치 행만 따른다. 로컬 migration `20260923085519_question_answered_column_references.sql`.
