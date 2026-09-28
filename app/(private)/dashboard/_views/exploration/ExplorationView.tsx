@@ -1,6 +1,13 @@
 'use client';
 
-import { ArrowLeft, NotebookPen, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -13,28 +20,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
-import { ExplorationCompetencyInput } from './components/ExplorationCompetencyInput';
+import { ExplorationFieldIcon } from './components/ExplorationFieldIcon';
 import { ExplorationRecordFields } from './components/ExplorationRecordFields';
 import { ExplorationReferencesInput } from './components/ExplorationReferencesInput';
-import { ExplorationTypeHelp } from './components/ExplorationTypeHelp';
+import { ExplorationReportInput } from './components/ExplorationReportInput';
+import { ExplorationRequiredMark } from './components/ExplorationRequiredMark';
+import { ExplorationWritingGuide } from './components/ExplorationWritingGuide';
 import { type Activity, emptyValues, groups } from './lib/fields';
 
 export function ExplorationView() {
   const nextClientKey = useRef(0);
+  const opener = useRef<HTMLElement | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [draft, setDraft] = useState<Activity | null>(null);
   const [query, setQuery] = useState('');
@@ -48,7 +52,11 @@ export function ExplorationView() {
       .flatMap((value) =>
         typeof value === 'string'
           ? [value]
-          : value.flatMap(({ title, link, usage }) => [title, link, usage]),
+          : value.flatMap(({ title, selection, usage }) => [
+              title,
+              selection,
+              usage,
+            ]),
       )
       .some((value) =>
         value.toLowerCase().includes(query.trim().toLowerCase()),
@@ -58,8 +66,10 @@ export function ExplorationView() {
   function returnToList() {
     if (
       draft &&
-      JSON.stringify(draft.values) !==
-        JSON.stringify(existing?.values ?? emptyValues())
+      (JSON.stringify(draft.values) !==
+        JSON.stringify(existing?.values ?? emptyValues()) ||
+        JSON.stringify(draft.reports ?? []) !==
+          JSON.stringify(existing?.reports ?? []))
     ) {
       setConfirmDiscard(true);
     } else {
@@ -79,396 +89,395 @@ export function ExplorationView() {
             id="exploration-management-title"
             className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"
           >
-            {draft
-              ? existing
-                ? '탐구활동 상세 · 수정'
-                : '탐구활동 작성'
-              : '탐구활동 관리'}
+            탐구활동 관리
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {draft
-              ? '탐구의 과정과 결과를 한곳에 정리해 주세요.'
-              : '탐구활동을 추가하고 작성한 내용을 확인하세요.'}
-          </p>
         </div>
-        {!draft && (
-          <Button
-            onClick={() =>
-              setDraft({
-                clientKey: nextClientKey.current++,
-                values: emptyValues(),
-              })
-            }
-          >
-            <Plus aria-hidden="true" />
-            탐구활동 추가
-          </Button>
-        )}
-      </div>
-      <p className="rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-        화면 미리보기 단계입니다. 입력한 내용은 현재 화면에서만 유지되며,
-        새로고침하거나 다른 메뉴로 이동하면 초기화됩니다.
-      </p>
-      {draft ? (
-        <form
-          className="space-y-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!draft.values.topic.trim()) return;
-            const saved = {
-              ...draft,
-              values: { ...draft.values, topic: draft.values.topic.trim() },
-            };
-            setActivities((current) =>
-              existing
-                ? current.map((activity) =>
-                    activity.clientKey === saved.clientKey ? saved : activity,
-                  )
-                : [saved, ...current],
-            );
-            setDraft(null);
-            toast.add({
-              title: existing
-                ? '탐구활동을 수정했습니다.'
-                : '탐구활동을 추가했습니다.',
-              type: 'success',
-            });
-          }}
+        <Button
+          onClick={(event) => (
+            (opener.current = event.currentTarget),
+            setDraft({
+              clientKey: nextClientKey.current++,
+              values: emptyValues(),
+            })
+          )}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={returnToList}
-            >
-              <ArrowLeft aria-hidden="true" />
-              목록으로
-            </Button>
-          </div>
-          {groups.map((group, index) => (
-            <section
-              key={group.title}
-              aria-labelledby={`activity-group-${index}`}
-              className="rounded-2xl border p-5 md:p-6"
-            >
-              <h2 id={`activity-group-${index}`} className="font-semibold">
-                {group.title}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {group.description}
+          <Plus aria-hidden="true" />
+          탐구활동 추가
+        </Button>
+      </div>
+      <Drawer
+        open={!!draft}
+        onOpenChange={(open) => {
+          if (!open) returnToList();
+        }}
+      >
+        <DrawerContent
+          className="h-dvh max-h-dvh rounded-none md:w-[min(1200px,94vw)] md:max-w-none"
+          finalFocus={() => opener.current}
+        >
+          <DrawerTitle className="sr-only">
+            {existing ? '탐구활동 상세 · 수정' : '탐구활동 추가'}
+          </DrawerTitle>
+          <div className="h-12 shrink-0" aria-hidden="true" />
+          {confirmDiscard && (
+            <div role="alert" className="space-y-3 border-b bg-muted/50 p-6">
+              <p className="font-medium">작성을 취소할까요?</p>
+              <p className="text-sm text-muted-foreground">
+                저장하지 않은 변경 내용이 사라집니다.
               </p>
-              <div className="mt-5 grid gap-5 md:grid-cols-2">
-                {group.fields.map((field) => {
-                  if (field.key === 'inquirySubtype') {
-                    const selected = draft.values.inquirySubtype
-                      .split('\n')
-                      .filter(Boolean);
-                    return (
-                      <fieldset
-                        key={field.key}
-                        className="min-w-0 md:col-span-2"
-                      >
-                        <legend className="mb-3 text-sm font-medium">
-                          {field.label}
-                        </legend>
-                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                          {field.options.map((option) => (
-                            <label
-                              key={option}
-                              className="flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-checked:border-primary/40 has-checked:bg-primary/5"
-                            >
-                              <input
-                                type="checkbox"
-                                name="inquirySubtype"
-                                value={option}
-                                checked={selected.includes(option)}
-                                className="size-4 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                onChange={(event) => {
-                                  const next = event.target.checked
-                                    ? [...selected, option]
-                                    : selected.filter(
-                                        (item) => item !== option,
-                                      );
-                                  setDraft({
-                                    ...draft,
-                                    values: {
-                                      ...draft.values,
-                                      inquirySubtype: field.options
-                                        .filter((item) => next.includes(item))
-                                        .join('\n'),
-                                    },
-                                  });
-                                }}
-                              />
-                              {option}
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-                    );
-                  }
-                  if (field.key === 'references') {
-                    return (
-                      <ExplorationReferencesInput
-                        key={field.key}
-                        references={draft.values.references}
-                        onChange={(references) =>
-                          setDraft({
-                            ...draft,
-                            values: { ...draft.values, references },
-                          })
-                        }
-                      />
-                    );
-                  }
-                  if (field.key === 'competencies') {
-                    return (
-                      <ExplorationCompetencyInput
-                        key={field.key}
-                        value={draft.values.competencies}
-                        onChange={(competencies) =>
-                          setDraft({
-                            ...draft,
-                            values: { ...draft.values, competencies },
-                          })
-                        }
-                      />
-                    );
-                  }
-                  if (field.key === 'semester' || field.key === 'recordArea')
-                    return null;
-                  if (field.key === 'grade' || field.key === 'recordType') {
-                    return (
-                      <ExplorationRecordFields
-                        key={field.key}
-                        section={field.key}
-                        values={draft.values}
-                        onChange={(values) => setDraft({ ...draft, values })}
-                      />
-                    );
-                  }
-                  const multiline = 'multiline' in field && field.multiline;
-                  const required = 'required' in field && field.required;
-                  const props = {
-                    id: `activity-${field.key}`,
-                    name: field.key,
-                    value: draft.values[field.key],
-                    placeholder: field.placeholder,
-                    required,
-                    onChange: (
-                      event: React.ChangeEvent<
-                        HTMLInputElement | HTMLTextAreaElement
-                      >,
-                    ) =>
-                      setDraft({
-                        ...draft,
-                        values: {
-                          ...draft.values,
-                          [field.key]: event.target.value,
-                        },
-                      }),
-                  };
-                  return (
-                    <div
-                      key={field.key}
-                      className={
-                        multiline || field.key === 'topic'
-                          ? 'space-y-2 md:col-span-2'
-                          : 'space-y-2'
-                      }
-                    >
-                      <div className="flex items-center gap-1">
-                        <Label htmlFor={props.id}>
-                          {field.label}
-                          {required && (
-                            <span className="text-xs text-muted-foreground">
-                              필수
-                            </span>
-                          )}
-                        </Label>
-                        {field.key === 'inquiryType' && <ExplorationTypeHelp />}
-                      </div>
-                      {'options' in field && field.options ? (
-                        <Select
-                          name={field.key}
-                          value={draft.values[field.key] || null}
-                          onValueChange={(value) =>
-                            setDraft({
-                              ...draft,
-                              values: {
-                                ...draft.values,
-                                [field.key]: value ?? '',
-                              },
-                            })
-                          }
-                        >
-                          <SelectTrigger
-                            id={props.id}
-                            className="w-full rounded-xl"
-                          >
-                            <SelectValue placeholder={field.placeholder} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : multiline ? (
-                        <Textarea
-                          {...props}
-                          className="min-h-32 resize-y rounded-xl"
-                        />
-                      ) : (
-                        <Input {...props} className="rounded-xl" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-          <div className="flex justify-end gap-2 border-t pt-5">
-            <Button type="button" variant="outline" onClick={returnToList}>
-              취소
-            </Button>
-            <Button type="submit" disabled={!draft.values.topic.trim()}>
-              {existing ? '변경 내용 저장' : '목록에 추가'}
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 font-semibold">
-              탐구활동 목록{' '}
-              <Badge variant="secondary">{activities.length}</Badge>
-            </h2>
-            <div className="relative w-full sm:w-72">
-              <Search
-                aria-hidden="true"
-                className="absolute top-2.5 left-3 size-4 text-muted-foreground"
-              />
-              <Input
-                aria-label="탐구활동 검색"
-                placeholder="주제, 교과명, 활동 내용 검색"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="rounded-xl pl-9"
-              />
-            </div>
-          </div>
-          {filtered.length ? (
-            <ul className="divide-y rounded-2xl border">
-              {filtered.map((activity) => (
-                <li
-                  key={activity.clientKey}
-                  className="flex flex-wrap items-center gap-4 p-5"
-                >
-                  <div className="min-w-0 flex-1 basis-60">
-                    <button
-                      className="rounded-sm text-left font-semibold break-words hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                      onClick={() =>
-                        setDraft({
-                          ...activity,
-                          values: { ...activity.values },
-                        })
-                      }
-                    >
-                      {activity.values.topic}
-                    </button>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {[
-                        [
-                          activity.values.grade &&
-                            `${activity.values.grade}학년`,
-                          activity.values.semester &&
-                            `${activity.values.semester}학기`,
-                        ]
-                          .filter(Boolean)
-                          .join(' '),
-                        [activity.values.recordType, activity.values.recordArea]
-                          .filter(Boolean)
-                          .join(' 영역 '),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || '기재 영역 미입력'}
-                    </p>
-                    {activity.values.record && (
-                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                        {activity.values.record}
-                      </p>
-                    )}
-                    {activity.values.inquiryType && (
-                      <Badge variant="outline" className="mt-3">
-                        {activity.values.inquiryType}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setDraft({
-                          ...activity,
-                          values: { ...activity.values },
-                        })
-                      }
-                    >
-                      상세 · 수정
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`${activity.values.topic} 삭제`}
-                      onClick={() => setPendingDelete(activity)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                      삭제
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center">
-              <NotebookPen
-                aria-hidden="true"
-                className="mb-4 size-8 text-muted-foreground"
-              />
-              <h3 className="font-medium">
-                {activities.length
-                  ? '검색 결과가 없습니다'
-                  : '아직 등록한 탐구활동이 없습니다'}
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {activities.length
-                  ? '다른 검색어로 찾아보세요.'
-                  : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
-              </p>
-              {!activities.length && (
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="mt-5"
-                  onClick={() =>
-                    setDraft({
-                      clientKey: nextClientKey.current++,
-                      values: emptyValues(),
-                    })
-                  }
+                  onClick={() => setConfirmDiscard(false)}
                 >
-                  <Plus aria-hidden="true" />
-                  탐구활동 추가
+                  계속 작성
                 </Button>
-              )}
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setConfirmDiscard(false);
+                    setDraft(null);
+                  }}
+                >
+                  변경 내용 버리기
+                </Button>
+              </div>
             </div>
           )}
+          {draft && (
+            <form
+              noValidate
+              className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const topic = draft.values.topic.trim();
+                if (!topic) {
+                  toast.add({
+                    title: '탐구 주제를 입력해 주세요.',
+                    type: 'error',
+                  });
+                  event.currentTarget
+                    .querySelector<HTMLInputElement>('[name="topic"]')
+                    ?.focus();
+                  return;
+                }
+                const saved = { ...draft, values: { ...draft.values, topic } };
+                setActivities((current) =>
+                  existing
+                    ? current.map((activity) =>
+                        activity.clientKey === saved.clientKey
+                          ? saved
+                          : activity,
+                      )
+                    : [saved, ...current],
+                );
+                setConfirmDiscard(false);
+                toast.add({
+                  title: '작성 중인 탐구활동을 저장했습니다.',
+                  type: 'success',
+                });
+              }}
+            >
+              {groups.map((group, index) => (
+                <section
+                  key={group.title}
+                  aria-label={'hideHeading' in group ? group.title : undefined}
+                  aria-labelledby={
+                    'hideHeading' in group
+                      ? undefined
+                      : `activity-group-${index}`
+                  }
+                  className="rounded-2xl border p-5 md:p-6"
+                >
+                  {!('hideHeading' in group) && (
+                    <>
+                      <h2
+                        id={`activity-group-${index}`}
+                        className="flex items-center gap-2 font-semibold"
+                      >
+                        <ExplorationFieldIcon field="process" />
+                        <span>{group.title}</span>
+                      </h2>
+                      <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">
+                        {group.description}
+                      </p>
+                    </>
+                  )}
+                  <div
+                    className={`grid gap-5 ${'columns' in group ? 'gap-y-12 md:grid-cols-3 md:gap-x-10 md:gap-y-5' : 'md:grid-cols-2'} ${'hideHeading' in group ? '' : 'mt-5'}`}
+                  >
+                    {group.fields.map((field, fieldIndex) => {
+                      if (
+                        field.key === 'semester' ||
+                        field.key === 'recordArea'
+                      )
+                        return null;
+                      if (field.key === 'grade' || field.key === 'recordType') {
+                        return (
+                          <ExplorationRecordFields
+                            key={field.key}
+                            section={field.key}
+                            values={draft.values}
+                            onChange={(values) =>
+                              setDraft({ ...draft, values })
+                            }
+                          />
+                        );
+                      }
+                      const multiline = 'multiline' in field && field.multiline;
+                      const fullWidth =
+                        'fullWidth' in field ? field.fullWidth : multiline;
+                      const required =
+                        'required' in field && field.required === true;
+                      const props = {
+                        id: `activity-${field.key}`,
+                        name: field.key,
+                        value: draft.values[field.key],
+                        placeholder: field.placeholder,
+                        required,
+                        'aria-describedby':
+                          'description' in field || 'example' in field
+                            ? `activity-${field.key}-help`
+                            : undefined,
+                        onChange: (
+                          event: React.ChangeEvent<
+                            HTMLInputElement | HTMLTextAreaElement
+                          >,
+                        ) =>
+                          setDraft({
+                            ...draft,
+                            values: {
+                              ...draft.values,
+                              [field.key]: event.target.value,
+                            },
+                          }),
+                      };
+                      return (
+                        <div
+                          key={field.key}
+                          className={
+                            fullWidth
+                              ? 'relative min-w-0 space-y-2 md:col-span-2'
+                              : 'relative min-w-0 space-y-2'
+                          }
+                        >
+                          {'columns' in group && fieldIndex > 0 && (
+                            <ArrowRight
+                              aria-hidden="true"
+                              className="absolute -top-9 left-1/2 size-5 -translate-x-1/2 rotate-90 text-muted-foreground md:top-40 md:-left-[30px] md:translate-x-0 md:rotate-0"
+                            />
+                          )}
+                          <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                            <Label htmlFor={props.id} className="min-h-5 gap-2">
+                              <ExplorationFieldIcon field={field.key} />
+                              <span>
+                                {field.label}
+                                {'optional' in field && (
+                                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                                    (선택)
+                                  </span>
+                                )}
+                                {required && <ExplorationRequiredMark />}
+                              </span>
+                            </Label>
+                            {'guide' in field && (
+                              <ExplorationWritingGuide
+                                title={field.label}
+                                guide={field.guide}
+                              />
+                            )}
+                          </div>
+                          {multiline ? (
+                            <Textarea
+                              {...props}
+                              className={
+                                'columns' in group
+                                  ? 'h-72 min-h-72 field-sizing-fixed resize-y rounded-xl leading-relaxed'
+                                  : field.key === 'record' ||
+                                      field.key === 'competencies'
+                                    ? 'h-32 min-h-32 field-sizing-fixed resize-y rounded-xl'
+                                    : 'min-h-32 resize-y rounded-xl'
+                              }
+                            />
+                          ) : (
+                            <Input {...props} className="rounded-xl" />
+                          )}
+                          {'description' in field && (
+                            <p
+                              id={`activity-${field.key}-help`}
+                              className="text-sm whitespace-pre-line text-muted-foreground"
+                            >
+                              {field.description}
+                            </p>
+                          )}
+                          {'example' in field && (
+                            <p
+                              id={`activity-${field.key}-help`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {field.example}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+              <ExplorationReportInput
+                reports={draft.reports ?? []}
+                onChange={(reports) => setDraft({ ...draft, reports })}
+              />
+              <div className="rounded-2xl border p-5 md:p-6">
+                <ExplorationReferencesInput
+                  references={draft.values.references}
+                  onChange={(references) =>
+                    setDraft({
+                      ...draft,
+                      values: { ...draft.values, references },
+                    })
+                  }
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t pt-5">
+                <Button type="button" variant="outline" onClick={returnToList}>
+                  취소
+                </Button>
+                <Button type="submit" disabled={!draft.values.topic.trim()}>
+                  저장
+                </Button>
+              </div>
+            </form>
+          )}
+        </DrawerContent>
+      </Drawer>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-semibold">
+            탐구활동 목록 <Badge variant="secondary">{activities.length}</Badge>
+          </h2>
+          <div className="relative w-full sm:w-72">
+            <Search
+              aria-hidden="true"
+              className="absolute top-2.5 left-3 size-4 text-muted-foreground"
+            />
+            <Input
+              aria-label="탐구활동 검색"
+              placeholder="주제, 교과명, 활동 내용 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="rounded-xl pl-9"
+            />
+          </div>
         </div>
-      )}
+        {filtered.length ? (
+          <ul className="divide-y rounded-2xl border">
+            {filtered.map((activity) => (
+              <li
+                key={activity.clientKey}
+                className="flex flex-wrap items-center gap-4 p-5"
+              >
+                <div className="min-w-0 flex-1 basis-60">
+                  <button
+                    className="rounded-sm text-left font-semibold wrap-break-word hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                    onClick={(event) => (
+                      (opener.current = event.currentTarget),
+                      setDraft({
+                        ...activity,
+                        values: { ...activity.values },
+                      })
+                    )}
+                  >
+                    {activity.values.topic.trim() ||
+                      activity.values.recordArea.trim() ||
+                      '탐구활동'}
+                  </button>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {[
+                      [
+                        activity.values.grade && `${activity.values.grade}학년`,
+                        activity.values.semester &&
+                          `${activity.values.semester}학기`,
+                      ]
+                        .filter(Boolean)
+                        .join(' '),
+                      [activity.values.recordType, activity.values.recordArea]
+                        .filter(Boolean)
+                        .join(' 영역 '),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '기재 영역 미입력'}
+                  </p>
+                  {activity.values.record && (
+                    <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {activity.values.record}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title="상세 · 수정"
+                    aria-label={`${activity.values.topic.trim() || '탐구활동'} 상세 · 수정`}
+                    onClick={(event) => (
+                      (opener.current = event.currentTarget),
+                      setDraft({
+                        ...activity,
+                        values: { ...activity.values },
+                      })
+                    )}
+                  >
+                    <Pencil aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title="삭제"
+                    aria-label={`${activity.values.topic.trim() || activity.values.recordArea.trim() || '탐구활동'} 삭제`}
+                    onClick={() => setPendingDelete(activity)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center">
+            <NotebookPen
+              aria-hidden="true"
+              className="mb-4 size-8 text-muted-foreground"
+            />
+            <h3 className="font-medium">
+              {activities.length
+                ? '검색 결과가 없습니다'
+                : '아직 등록한 탐구활동이 없습니다'}
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {activities.length
+                ? '다른 검색어로 찾아보세요.'
+                : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
+            </p>
+            {!activities.length && (
+              <Button
+                variant="outline"
+                className="mt-5"
+                onClick={(event) => (
+                  (opener.current = event.currentTarget),
+                  setDraft({
+                    clientKey: nextClientKey.current++,
+                    values: emptyValues(),
+                  })
+                )}
+              >
+                <Plus aria-hidden="true" />
+                탐구활동 추가
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
       <Dialog
         open={!!pendingDelete}
         onOpenChange={(open) => {
@@ -478,9 +487,13 @@ export function ExplorationView() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>탐구활동을 삭제할까요?</DialogTitle>
-            <DialogDescription className="break-words">
-              ‘{pendingDelete?.values.topic}’의 작성 내용이 목록에서 삭제됩니다.
-              삭제한 내용은 되돌릴 수 없습니다.
+            <DialogDescription className="wrap-break-word">
+              ‘
+              {pendingDelete?.values.topic.trim() ||
+                pendingDelete?.values.recordArea.trim() ||
+                '탐구활동'}
+              ’의 작성 내용이 목록에서 삭제됩니다. 삭제한 내용은 되돌릴 수
+              없습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -504,29 +517,6 @@ export function ExplorationView() {
               }}
             >
               삭제
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>작성을 취소할까요?</DialogTitle>
-            <DialogDescription>
-              저장하지 않은 변경 내용이 사라집니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
-              계속 작성
-            </Button>
-            <Button
-              onClick={() => {
-                setConfirmDiscard(false);
-                setDraft(null);
-              }}
-            >
-              변경 내용 버리기
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 import { type ActivityReference } from '../lib/fields';
 
+import { ExplorationFieldIcon } from './ExplorationFieldIcon';
+
 export function ExplorationReferencesInput({
   references,
   onChange,
@@ -33,12 +35,20 @@ export function ExplorationReferencesInput({
       className="min-w-0 space-y-4 md:col-span-2"
     >
       <div className="space-y-2">
-        <h3 id="activity-references-heading" className="text-sm font-medium">
-          참고자료와 각각의 활용 방안
+        <h3
+          id="activity-references-heading"
+          className="flex items-center gap-2 text-base font-semibold text-foreground"
+        >
+          <ExplorationFieldIcon field="references" />
+          <span>
+            참고 자료{' '}
+            <span className="text-sm font-normal text-muted-foreground">
+              (선택)
+            </span>
+          </span>
         </h3>
         <p className="text-sm leading-6 text-muted-foreground">
-          참고자료를 하나씩 추가하고 활용 방안을 작성해 주세요. 링크가 있으면
-          함께 입력해 주세요.
+          이 탐구에서 참고한 자료가 있다면 작성해 주세요.
         </p>
       </div>
       {references.map((reference, index) => {
@@ -71,13 +81,16 @@ export function ExplorationReferencesInput({
                 삭제
               </Button>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor={`${id}-title`}>자료명</Label>
+                <Label htmlFor={`${id}-title`}>
+                  <ExplorationFieldIcon field="title" />
+                  참고 자료명
+                </Label>
                 <Input
                   id={`${id}-title`}
                   value={reference.title}
-                  placeholder="책, 논문, 기사 등의 자료명"
+                  placeholder="예) 논문명, 도서명, 기사명 등"
                   className="rounded-xl"
                   onChange={(event) =>
                     updateReference(reference.clientKey, {
@@ -87,29 +100,31 @@ export function ExplorationReferencesInput({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`${id}-link`}>
-                  링크{' '}
-                  <span className="text-xs text-muted-foreground">선택</span>
+                <Label htmlFor={`${id}-selection`}>
+                  <ExplorationFieldIcon field="selection" />
+                  자료 선정 과정/방법/선택 이유
                 </Label>
-                <Input
-                  id={`${id}-link`}
-                  inputMode="url"
-                  value={reference.link}
-                  placeholder="https://"
-                  className="rounded-xl"
+                <Textarea
+                  id={`${id}-selection`}
+                  value={reference.selection}
+                  placeholder="이 자료를 선택한 과정이나 방법, 선택 이유를 작성해 주세요."
+                  className="min-h-24 resize-y rounded-xl"
                   onChange={(event) =>
                     updateReference(reference.clientKey, {
-                      link: event.target.value,
+                      selection: event.target.value,
                     })
                   }
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor={`${id}-usage`}>활용 방안</Label>
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-usage`}>
+                  <ExplorationFieldIcon field="usage" />
+                  탐구 내 자료 활용법
+                </Label>
                 <Textarea
                   id={`${id}-usage`}
                   value={reference.usage}
-                  placeholder="이 자료를 탐구활동에 어떻게 활용했거나 활용할지 작성해 주세요"
+                  placeholder="이 자료를 탐구 과정에서 어떻게 활용했는지 작성해 주세요."
                   className="min-h-24 resize-y rounded-xl"
                   onChange={(event) =>
                     updateReference(reference.clientKey, {
@@ -128,7 +143,12 @@ export function ExplorationReferencesInput({
         onClick={() =>
           onChange([
             ...references,
-            { clientKey: crypto.randomUUID(), title: '', link: '', usage: '' },
+            {
+              clientKey: crypto.randomUUID(),
+              title: '',
+              selection: '',
+              usage: '',
+            },
           ])
         }
       >

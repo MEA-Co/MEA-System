@@ -15,6 +15,9 @@ import {
   semesterOptions,
 } from '../lib/fields';
 
+import { ExplorationFieldIcon } from './ExplorationFieldIcon';
+import { ExplorationRequiredMark } from './ExplorationRequiredMark';
+
 function RecordSelect({
   name,
   label,
@@ -30,6 +33,7 @@ function RecordSelect({
 }) {
   return (
     <Select
+      required
       name={name}
       value={value || null}
       onValueChange={(next) => onChange(next ?? '')}
@@ -60,9 +64,15 @@ export function ExplorationRecordFields({
   return (
     <fieldset className="min-w-0 space-y-2">
       <legend className="text-sm font-medium">
-        {section === 'grade'
-          ? '기재 영역 · 학년 및 학기'
-          : '기재 영역 · 창체 또는 세특'}
+        <span className="flex min-h-5 items-center gap-2">
+          <ExplorationFieldIcon field={section} />
+          <span>
+            {section === 'grade'
+              ? '기재 영역 · 학년 및 학기'
+              : '기재 영역 · 창체 또는 세특'}
+            <ExplorationRequiredMark />
+          </span>
+        </span>
       </legend>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {section === 'grade' ? (
@@ -111,11 +121,12 @@ export function ExplorationRecordFields({
               />
             ) : (
               <Input
+                required
                 name="recordArea"
                 aria-label="과목명"
                 placeholder={
                   values.recordType === '세특'
-                    ? '과목명 입력'
+                    ? '예) 영어 독해와 작문'
                     : '기재 유형을 먼저 선택해 주세요'
                 }
                 disabled={!values.recordType}
