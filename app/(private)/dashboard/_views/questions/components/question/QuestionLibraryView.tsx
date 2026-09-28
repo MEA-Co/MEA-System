@@ -713,7 +713,7 @@ export function QuestionLibraryView() {
             <Tabs.Panel
               value="edit"
               keepMounted
-              className="space-y-6 data-[hidden]:hidden"
+              className="space-y-6 data-hidden:hidden"
             >
               <div className="space-y-4">
                 <div className="space-y-2">
