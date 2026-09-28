@@ -3,14 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -28,6 +22,7 @@ import {
   NewPublicationBadge,
   usePublicationNotifications,
 } from './PublicationNotifications';
+import { questionnaireStatusColors } from './questionnaire-styles';
 import {
   questionnaireStatusLabels,
   QuestionnaireStatusSelect,
@@ -54,7 +49,12 @@ export function QuestionnaireList({
 }) {
   const { unreadIds } = usePublicationNotifications();
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('active');
+  const [statuses, setStatuses] = useState<string[]>([
+    'draft',
+    'published',
+    'distributed',
+  ]);
+  const [page, setPage] = useState(1);
   const items = useMemo(
     () =>
       [...drafts, ...published, ...distributed, ...archived]
@@ -63,18 +63,16 @@ export function QuestionnaireList({
             .toLocaleLowerCase()
             .includes(query.trim().toLocaleLowerCase()),
         )
-        .filter(
-          (item) =>
-            status === 'all' ||
-            (status === 'active'
-              ? !item.archivedAt
-              : status === 'archived'
-                ? !!item.archivedAt
-                : !item.archivedAt && item.status === status),
+        .filter((item) =>
+          statuses.includes(item.archivedAt ? 'archived' : item.status),
         )
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    [drafts, published, distributed, archived, query, status],
+    [drafts, published, distributed, archived, query, statuses],
   );
+  const pageCount = Math.max(1, Math.ceil(items.length / 10));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * 10;
+  const pageItems = items.slice(pageStart, pageStart + 10);
   if (!staff) return <ConsultantQuestionnaireList items={distributed} />;
   return (
     <div className="space-y-4">
@@ -84,33 +82,35 @@ export function QuestionnaireList({
           aria-label="질문지 검색"
           placeholder="질문지 제목으로 검색"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
         />
-        <Select
-          value={status}
-          onValueChange={(value) => value && setStatus(value)}
+        <div
+          role="group"
+          aria-label="질문지 상태 필터"
+          className="flex flex-wrap gap-2"
         >
-          <SelectTrigger aria-label="질문지 상태 필터">
-            <SelectValue>
-              {status === 'active'
-                ? '보관 제외'
-                : status === 'all'
-                  ? '전체 상태'
-                  : questionnaireStatusLabels[
-                      status as keyof typeof questionnaireStatusLabels
-                    ]}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">보관 제외</SelectItem>
-            <SelectItem value="all">전체 상태</SelectItem>
-            {Object.entries(questionnaireStatusLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          {Object.entries(questionnaireStatusLabels).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={statuses.includes(value)}
+              onClick={() => {
+                setStatuses((current) =>
+                  current.includes(value)
+                    ? current.filter((status) => status !== value)
+                    : [...current, value],
+                );
+                setPage(1);
+              }}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statuses.includes(value) ? questionnaireStatusColors[value as keyof typeof questionnaireStatusColors] : 'border-border bg-background text-muted-foreground hover:bg-muted'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <p className="text-sm text-muted-foreground">{items.length}개</p>
       </div>
       <div className="overflow-hidden rounded-xl border bg-background">
@@ -125,7 +125,7 @@ export function QuestionnaireList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
+            {pageItems.map((item) => (
               <TableRow
                 key={item.id}
                 className={
@@ -142,6 +142,7 @@ export function QuestionnaireList({
                       </span>
                     ) : (
                       <Link
+                        scroll={false}
                         prefetch={false}
                         href={`/dashboard?view=questions&tab=questionnaires&draft=${item.id}`}
                         className="font-medium hover:underline"
@@ -193,7 +194,9 @@ export function QuestionnaireList({
                   colSpan={5}
                   className="h-32 text-center text-muted-foreground"
                 >
-                  {query || status !== 'active'
+                  {query ||
+                  statuses.length !== 3 ||
+                  statuses.includes('archived')
                     ? '조건에 맞는 질문지가 없어요.'
                     : '아직 만든 질문지가 없어요. 새 질문지를 제작해 보세요.'}
                 </TableCell>
@@ -202,6 +205,38 @@ export function QuestionnaireList({
           </TableBody>
         </Table>
       </div>
+      {items.length > 0 && (
+        <nav
+          aria-label="질문지 목록 페이지"
+          className="flex flex-wrap items-center justify-between gap-3"
+        >
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            전체 {items.length}개 중 {pageStart + 1}–
+            {Math.min(pageStart + 10, items.length)}개
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              이전
+            </Button>
+            <span className="text-sm tabular-nums">
+              {currentPage} / {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === pageCount}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              다음
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

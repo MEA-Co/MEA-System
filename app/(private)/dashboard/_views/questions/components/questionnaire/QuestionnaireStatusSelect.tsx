@@ -24,6 +24,8 @@ import { toast } from '@/components/ui/toast';
 import { useQuestionnaireApi } from '../../lib/questionnaire/api-client';
 import type { QuestionnaireListItem } from '../../lib/questionnaire/types';
 
+import { questionnaireStatusColors } from './questionnaire-styles';
+
 export const questionnaireStatusLabels = {
   draft: '수정 중',
   published: '게시',
@@ -100,7 +102,7 @@ export function QuestionnaireStatusSelect({
         value={current}
         disabled={!canChange || pending}
         onValueChange={(value) => {
-          if (value && value !== current)
+          if (value === 'draft' && value !== current)
             setChange({
               status: value as Status,
               requestId: crypto.randomUUID(),
@@ -110,7 +112,7 @@ export function QuestionnaireStatusSelect({
       >
         <SelectTrigger
           size="sm"
-          className="min-w-28"
+          className={`min-w-28 ${questionnaireStatusColors[current]}`}
           aria-label={`${item.title || '제목 없는 질문지'} 상태`}
         >
           <SelectValue>{questionnaireStatusLabels[current]}</SelectValue>
@@ -120,11 +122,7 @@ export function QuestionnaireStatusSelect({
             <SelectItem
               key={value}
               value={value}
-              disabled={
-                value !== current &&
-                ((!item.isOwner && value !== 'archived') ||
-                  (item.status === 'distributed' && value === 'published'))
-              }
+              disabled={value !== 'draft' || !item.isOwner}
             >
               {label}
             </SelectItem>

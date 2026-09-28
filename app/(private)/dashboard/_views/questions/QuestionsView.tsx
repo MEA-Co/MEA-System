@@ -30,24 +30,21 @@ export function QuestionsView({
     Boolean(params.get('draft')) ||
     params.get('tab') === 'questionnaires' ||
     params.get('view') === 'questionnaire';
-  const editing = Boolean(params.get('draft'));
 
   return (
     <div className="space-y-6">
-      {!editing && (
-        <header>
-          <DashboardPageCategory view="questions" />
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
-            질문 관리
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {staff
-              ? '질문을 만들고, 질문지를 구성하세요.'
-              : '배포된 질문지를 확인하고 답변을 작성하세요.'}
-          </p>
-        </header>
-      )}
-      {staff && !editing && (
+      <header>
+        <DashboardPageCategory view="questions" />
+        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+          질문 관리
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {staff
+            ? '질문을 만들고, 질문지를 구성하세요.'
+            : '배포된 질문지를 확인하고 답변을 작성하세요.'}
+        </p>
+      </header>
+      {staff && (
         <nav
           aria-label="질문 관리"
           className="flex w-fit gap-1 rounded-full bg-muted p-1"

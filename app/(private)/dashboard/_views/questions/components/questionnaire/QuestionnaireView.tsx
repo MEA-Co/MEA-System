@@ -3,9 +3,23 @@
 import { ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 import {
   type QuestionnaireApiError,
@@ -20,9 +34,124 @@ import { QuestionnaireList } from './QuestionnaireList';
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 
+export type QuestionnaireEditorState = {
+  dirty: boolean;
+  saving: boolean;
+  emptyTitle: boolean;
+  childEditorOpen?: boolean;
+};
 export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
-  const searchParams = useSearchParams();
-  const id = searchParams.get('draft') ?? requestedId;
+  const requested = useSearchParams().get('draft') ?? undefined;
+  const [active, setActive] = useState(requested ?? requestedId);
+  const [confirm, setConfirm] = useState(false);
+  const [emptyTitle, setEmptyTitle] = useState(false);
+  const editor = useRef<QuestionnaireEditorState>({
+    dirty: false,
+    saving: false,
+    emptyTitle: true,
+  });
+  const report = useCallback((state: QuestionnaireEditorState) => {
+    editor.current = state;
+  }, []);
+  function navigate(id?: string) {
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set('draft', id);
+    else url.searchParams.delete('draft');
+    window.history.replaceState(null, '', url);
+  }
+  function close() {
+    editor.current = { dirty: false, saving: false, emptyTitle: true };
+    setConfirm(false);
+    setActive(undefined);
+    navigate();
+  }
+  function requestClose() {
+    if (editor.current.saving) return;
+    if (editor.current.childEditorOpen) {
+      if (
+        !editor.current.dirty ||
+        window.confirm(
+          '질문과 질문지의 저장하지 않은 변경 내용을 버리고 목록으로 돌아갈까요?',
+        )
+      )
+        close();
+      return;
+    }
+    if (editor.current.dirty) {
+      setEmptyTitle(editor.current.emptyTitle);
+      setConfirm(true);
+    } else close();
+  }
+  const syncRoute = useEffectEvent(() => {
+    if (requested === active) return;
+    // First save replaces "new" with the persisted UUID without closing the editor.
+    if (active && requested && active === 'new') {
+      setActive(requested);
+      return;
+    }
+    if (active && (editor.current.dirty || editor.current.saving)) {
+      navigate(active);
+      requestClose();
+      return;
+    }
+    editor.current = { dirty: false, saving: false, emptyTitle: true };
+    setActive(requested);
+  });
+  useEffect(() => {
+    // Synchronize browser history without unmounting unsaved work.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    syncRoute();
+  }, [requested]);
+  return (
+    <>
+      <div hidden={!!active}>
+        <QuestionnairePanel />
+      </div>
+      {active && (
+        <div className="mx-auto max-w-5xl space-y-5">
+          <Button variant="ghost" onClick={requestClose}>
+            <ArrowLeft />
+            질문지 목록으로
+          </Button>
+          <QuestionnairePanel
+            id={active}
+            onEditorState={report}
+            paused={confirm}
+          />
+        </div>
+      )}
+      <Dialog open={confirm} onOpenChange={setConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>작성 중인 내용을 버릴까요?</DialogTitle>
+            <DialogDescription>
+              {emptyTitle
+                ? '질문지 제목이 비어 있어 저장할 수 없어요. 계속 작성해 제목을 입력하거나 변경 내용을 버려 주세요.'
+                : '저장하지 않은 질문지의 변경 내용은 사라집니다.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirm(false)}>
+              계속 작성
+            </Button>
+            <Button variant="destructive" onClick={close}>
+              변경 내용 버리기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+function QuestionnairePanel({
+  id,
+  onEditorState,
+  paused = false,
+}: {
+  id?: string;
+  onEditorState?: (state: QuestionnaireEditorState) => void;
+  paused?: boolean;
+}) {
   const [creation, setCreation] = useState(() => ({
     id,
     key: crypto.randomUUID(),
@@ -56,13 +185,19 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
       key={document?.versionId ?? 'list'}
       data={data}
       error={error}
+      onEditorState={onEditorState}
+      paused={paused}
     />
   );
 }
 function QuestionnaireContent({
   data,
   error,
+  onEditorState,
+  paused,
 }: {
+  onEditorState?: (state: QuestionnaireEditorState) => void;
+  paused?: boolean;
   data: QuestionnaireViewData;
   error?: QuestionnaireApiError;
 }) {
@@ -111,22 +246,6 @@ function QuestionnaireContent({
         {((staff && selected?.status === 'published' && !selected.isOwner) ||
           (!staff && selected?.status === 'distributed')) &&
           selected && <PublicationReadMarker versionId={selected.id} />}
-        <div className="mx-auto mb-6 max-w-4xl">
-          <Button
-            variant="ghost"
-            size="sm"
-            render={
-              <Link
-                href="/dashboard?view=questions&tab=questionnaires"
-                prefetch={false}
-              />
-            }
-            nativeButton={false}
-          >
-            <ArrowLeft aria-hidden="true" />
-            질문지 목록으로
-          </Button>
-        </div>
         {reviewContext?.isOwner && pendingReviewCount > 0 && (
           <div
             role="status"
@@ -154,6 +273,8 @@ function QuestionnaireContent({
           <QuestionnaireComposer
             key={`editor:${editorDraft.versionId}`}
             initialDraft={editorDraft}
+            onEditorState={onEditorState}
+            paused={paused}
             remoteUnavailable={editUnavailable}
             reviewContext={reviewContext}
           />
@@ -191,6 +312,7 @@ function QuestionnaireContent({
               <Link
                 href="/dashboard?view=questions&tab=questionnaires&draft=new"
                 prefetch={false}
+                scroll={false}
               />
             }
             nativeButton={false}

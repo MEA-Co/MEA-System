@@ -44,7 +44,7 @@ export function QuestionnairePreview({
     }),
   );
   return (
-    <div className="space-y-8 p-5 sm:p-10">
+    <div className="space-y-8 rounded-2xl bg-neutral-100 p-5 sm:p-10 dark:bg-neutral-950">
       <h2 className="whitespace-pre-wrap wrap-break-word text-3xl font-semibold">
         {title || '제목 없는 질문지'}
       </h2>

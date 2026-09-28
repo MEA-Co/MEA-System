@@ -270,6 +270,12 @@ export async function saveQuestionnaireDraft(
       error:
         '질문지 입력을 확인해 주세요. 제목은 500자, 본문은 20,000자까지 저장할 수 있어요.',
     };
+  if (!parsed.data.document.title.trim())
+    return {
+      ok: false,
+      code: 'invalid',
+      error: '질문지 제목이 비어 있어 저장할 수 없어요. 제목을 입력해 주세요.',
+    };
   const client = createClient(await cookies());
   if (
     parsed.data.document.sections.some((section) =>

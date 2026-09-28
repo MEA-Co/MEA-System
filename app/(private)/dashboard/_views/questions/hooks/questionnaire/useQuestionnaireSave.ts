@@ -17,6 +17,8 @@ export function useQuestionnaireSave(
   onRemoteDocument?: (draft: QuestionnaireDraft) => void,
   remoteUnavailable = false,
   validationError: string | null = null,
+  paused = false,
+  childEditorOpen = false,
 ) {
   const { saveQuestionnaire, refresh } = useQuestionnaireApi();
   const [session] = useState(
@@ -67,7 +69,10 @@ export function useQuestionnaireSave(
   async function save(manual = true) {
     if (session.pending || session.blocked || remoteUnavailable) return false;
     if (validationError) {
-      if (manual) setError(validationError);
+      if (manual) {
+        setError(validationError);
+        toast.add({ type: 'error', title: validationError });
+      }
       return false;
     }
     if (!session.hasChanges(document) && session.revision > 0) return true;
@@ -143,7 +148,8 @@ export function useQuestionnaireSave(
   }
 
   const autoSave = useEffectEvent(() => {
-    if (session.hasChanges(document) && !session.blocked) void save(false);
+    if (!paused && session.hasChanges(document) && !session.blocked)
+      void save(false);
   });
   useEffect(() => {
     const timer = window.setInterval(autoSave, 10000);
@@ -151,7 +157,7 @@ export function useQuestionnaireSave(
   }, []);
 
   useEffect(() => {
-    if (!dirty && !saving) return;
+    if (!dirty && !saving && !childEditorOpen) return;
     const beforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
@@ -192,7 +198,7 @@ export function useQuestionnaireSave(
       window.removeEventListener('beforeunload', beforeUnload);
       window.document.removeEventListener('click', beforeNavigate, true);
     };
-  }, [dirty, saving]);
+  }, [dirty, saving, childEditorOpen]);
 
   return {
     save,

@@ -19,28 +19,32 @@ const labels = {
 export function QuestionPlacementCard({
   question,
   showPrivate = true,
+  showSourceLink = true,
 }: {
   question: QuestionBlockRow;
   showPrivate?: boolean;
+  showSourceLink?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold">{questionName(question)}</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          render={
-            <Link
-              href={`/dashboard?view=questions&question=${question.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
-          nativeButton={false}
-        >
-          원본 질문 열기
-        </Button>
+        {showSourceLink && (
+          <Button
+            variant="ghost"
+            size="sm"
+            render={
+              <Link
+                href={`/dashboard?view=questions&question=${question.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+            nativeButton={false}
+          >
+            원본 질문 열기
+          </Button>
+        )}
       </div>
       <RichTextContent value={question.prompt} />
       <div className="flex flex-wrap gap-2">

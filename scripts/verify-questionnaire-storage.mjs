@@ -354,7 +354,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
         },
       );
       const result = await saveQuestionnaireDraft({
-        document: document(),
+        document: { ...document(), title: '검증 질문지' },
         expectedRevision: 1,
         saveId: randomUUID(),
       });
@@ -675,6 +675,7 @@ test('placements cannot silently save through a database without the placement m
       },
     );
     const doc = document();
+    doc.title = '배치 검증';
     doc.sections[0].questions[0].sourceQuestionId = randomUUID();
     const result = await saveQuestionnaireDraft({
       document: doc,
@@ -684,4 +685,31 @@ test('placements cannot silently save through a database without the placement m
     assert.equal(result.ok, available);
     assert.equal(rpcCalls, available ? 1 : 0);
   }
+});
+
+test('server refuses whitespace-only questionnaire titles before database writes', async () => {
+  const { saveQuestionnaireDraft } = load(
+    'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
+    {
+      '@/lib/admin': { getViewRole: async (role) => role },
+      'next/headers': { cookies: async () => ({}) },
+      '@/lib/auth': {
+        getUserAccess: async () => ({
+          user: { id: randomUUID() },
+          role: 'consultant_lead',
+          isOnboarded: true,
+        }),
+      },
+      '@/lib/supabase/server': {
+        createClient: () => assert.fail('Empty title must not write to DB'),
+      },
+    },
+  );
+  const result = await saveQuestionnaireDraft({
+    document: { ...document(), title: '   ' },
+    expectedRevision: 0,
+    saveId: randomUUID(),
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /제목이 비어/);
 });

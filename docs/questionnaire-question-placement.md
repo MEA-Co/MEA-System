@@ -60,3 +60,14 @@
 - `PublishedQuestionnaire`, `QuestionnairePreview`, `QuestionnaireReviews`, `PublishedExplanation`, `QuestionExplanationForm`: 새 배치와 기존 문서의 상세·미리보기·검토·설명에 필요하다.
 - 질문지 API·저장 훅·저장 세션·타입·스키마·서버·목록·알림 파일: 새 제작 화면도 재사용한다.
 - 모든 기존 migration과 DB 회귀 테스트: 운영 이력 및 기존 응답 호환 검증에 필요하다.
+
+
+## 질문지 안에서 질문 만들기 (2026-09-28)
+
+질문지 제작은 페이지 편집기로 진행한다. 질문 추가하기를 누르면 단일 Drawer에서 질문 관리의 QuestionLibraryView를 embedded 모드로 재사용한다. 질문지의 제목·섹션·배치는 뒤쪽 페이지에 유지한다. 새 질문을 저장하고 질문지에 배치하면 독립 질문의 ID를 참조하는 배치를 생성하며 기존 선행 질문·중복·순서 검증을 적용한다. 질문지 저장은 별도로 기존 자동/수동 저장을 따른다.
+
+저장된 질문 불러오기는 별도 팝업 없이 같은 Drawer 내부 목록으로 제공한다. 선택한 질문을 제작 UI로 불러와 수정한 뒤 배치할 수 있다. 배치 카드의 질문 수정도 같은 Drawer를 연다. 수정은 기존 원본 ID로 PUT 저장하며 캐시를 갱신한다. 완료 버튼은 이미 있는 배치를 중복 추가하지 않는다. 새 질문과 불러오기 사이를 전환해도 새 질문 입력은 유지된다. 작성 중인 질문을 버리고 기존 질문을 배치할 때 확인을 제공한다. 질문 작성 중에는 질문지 자동 저장을 멈추고 질문 자체의 자동 저장은 유지한다. 부모의 닫기 확인 또는 배치 처리 중에는 질문 자동 저장도 멈춘다.
+
+이전 Drawer 안 Dialog의 바깥 클릭에서 숨겨진 부모 Drawer로 포커스가 돌아가던 경로는 제거했다. Drawer 진입 시 제목으로, 닫으면 원래 추가·수정 버튼으로 포커스를 이동한다. Drawer 내부 미저장 닫기 확인은 브라우저 확인창으로 처리해 별도 Dialog와 중첩하지 않는다. 기존 독립 질문 관리 Drawer는 유지한다.
+
+DB 구조와 API 계약 변경은 없으며 migration 없이 앱만 배포한다. 검증: scripts/verify-question-drawer.mjs (독립/embedded 저장·닫기), scripts/verify-questionnaire-drawer.mjs (페이지 이동·인라인 생성/불러오기·입력 보존), scripts/verify-questionnaire-placements.mjs, scripts/verify-questionnaire-storage.mjs. 실제 브라우저 테스트는 별도다.

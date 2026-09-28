@@ -6,7 +6,15 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 // Exercise state/history/requests without running a browser.
-function mount({ delayedBack = false, failSave = false } = {}) {
+function mount({
+  delayedBack = false,
+  failSave = false,
+  embedded = false,
+} = {}) {
+  const placed = [];
+  const saves = [];
+  const reported = [];
+  let cancelled = false;
   let autoSave;
   let pendingBack = null;
   const detailRequests = [];
@@ -183,6 +191,27 @@ function mount({ delayedBack = false, failSave = false } = {}) {
       fetch: async (url, options) => {
         calls.push(url);
         if (failSave && options?.method) throw new Error('offline');
+        if (options?.method) {
+          saves.push({
+            url,
+            method: options.method,
+            body: JSON.parse(options.body),
+          });
+          const doc = JSON.parse(options.body).document;
+          return {
+            ok: true,
+            json: async () => ({
+              block: {
+                ...row,
+                id: doc.id,
+                title: doc.title,
+                prompt: doc.prompt,
+                fields: doc.fields,
+                revision: 2,
+              },
+            }),
+          };
+        }
         return {
           ok: true,
           json: async () => ({
@@ -247,7 +276,20 @@ function mount({ delayedBack = false, failSave = false } = {}) {
       if (changed) {
         changed = false;
         index = 0;
-        tree = exports.QuestionLibraryView();
+        tree = exports.QuestionLibraryView(
+          embedded
+            ? {
+                embedded: {
+                  questionId: embedded === 'existing' ? row.id : undefined,
+                  onPlace: (q) => placed.push(q),
+                  onCancel: () => {
+                    cancelled = true;
+                  },
+                  onStateChange: (state) => reported.push(state),
+                },
+              }
+            : {},
+        );
         const run = effects;
         effects = [];
         run.forEach((fn) => fn());
@@ -260,6 +302,7 @@ function mount({ delayedBack = false, failSave = false } = {}) {
     if (!node) return null;
     if (Array.isArray(node)) {
       for (const child of node) {
+        if (child == null) continue;
         const found = find(type, predicate, child);
         if (found) return found;
       }
@@ -282,6 +325,10 @@ function mount({ delayedBack = false, failSave = false } = {}) {
     toasts,
     completeBack: () => pendingBack?.(),
     tick: () => autoSave?.(),
+    placed,
+    saves,
+    reported,
+    isCancelled: () => cancelled,
   };
 }
 
@@ -486,4 +533,69 @@ test('automatic save failure shows a toast, preserves input, and does not repeat
   app.tick();
   await app.flush();
   assert.equal(app.toasts.length, count);
+});
+
+test('inline question creation shares editor and only places a saved question without changing URL', async () => {
+  const app = mount({ embedded: true });
+  const url = app.window.location.href;
+  await app.flush();
+  assert.equal(app.find('Drawer'), null);
+  assert.equal(app.find('QuestionManagementTable'), null);
+  assert.ok(app.find('QuestionRichTextEditor'));
+  assert.equal(
+    app.find('Button', (p) => p.children === '질문지에 배치').props.disabled,
+    true,
+  );
+  app.find('QuestionRichTextEditor').props.onChange('새 질문 본문');
+  await app.flush();
+  assert.equal(app.reported.at(-1).dirty, true);
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.equal(
+    app.find('Button', (p) => p.children === '질문지에 배치').props.disabled,
+    false,
+  );
+  app.find('Button', (p) => p.children === '질문지에 배치').props.onClick();
+  assert.equal(app.placed.length, 1);
+  assert.equal(app.placed[0].prompt, '새 질문 본문');
+  assert.equal(app.window.location.href, url);
+});
+test('inline question omits return button and nested scroll container', async () => {
+  const app = mount({ embedded: true });
+  await app.flush();
+  assert.equal(
+    app.find('Button', (p) => p.children === '질문지로 돌아가기'),
+    null,
+  );
+  assert.equal(
+    app.find('div', (p) => p.className?.includes('overscroll-contain')),
+    null,
+  );
+  assert.equal(
+    app.find('Dialog', (p) => p.open),
+    null,
+  );
+});
+
+test('editing a loaded question saves to the original ID rather than creating a copy', async () => {
+  const app = mount({ embedded: 'existing' });
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('원본 수정');
+  await app.flush();
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+  assert.equal(app.saves[0].method, 'PUT');
+  assert.equal(app.saves[0].url, '/api/questions/' + app.row.id);
+  assert.equal(app.saves[0].body.document.id, app.row.id);
 });
