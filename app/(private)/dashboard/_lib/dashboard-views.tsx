@@ -46,9 +46,6 @@ const DASHBOARD_VIEWS = {
   questions: ({ role, questionnaireId }) => (
     <QuestionsView role={role} requestedId={questionnaireId} />
   ),
-  questionnaire: ({ role, questionnaireId }) => (
-    <QuestionsView role={role} requestedId={questionnaireId} />
-  ),
   exploration: ({ userId, role }) => (
     <ExplorationView
       key={`${userId}:${role}`}

@@ -3,7 +3,6 @@
 import {
   Blocks,
   BriefcaseBusiness,
-  FilePenLine,
   GraduationCap,
   MessagesSquare,
   NotebookPen,
@@ -38,7 +37,6 @@ const icons = {
   students: GraduationCap,
   consultants: BriefcaseBusiness,
   questions: Blocks,
-  questionnaire: FilePenLine,
   exploration: NotebookPen,
   consulting: MessagesSquare,
 };
@@ -92,10 +90,9 @@ export function DashboardNavigation({
                       >
                         <Icon />
                         <span>{page.label}</span>
-                        {page.view === 'questions' &&
-                          unreadIds.length > 0 && (
-                            <NewPublicationBadge count={unreadIds.length} />
-                          )}
+                        {page.view === 'questions' && unreadIds.length > 0 && (
+                          <NewPublicationBadge count={unreadIds.length} />
+                        )}
                       </SidebarMenuButton>
                       {count !== undefined ? (
                         <SidebarMenuBadge>{count}</SidebarMenuBadge>

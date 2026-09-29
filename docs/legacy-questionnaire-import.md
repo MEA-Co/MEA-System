@@ -23,9 +23,11 @@ migration은 운영자 전용 테이블·함수만 설치한다. 운영 데이�
 
 ## 사용자가 운영에서 실행할 순서
 
+이 문서는 일회성 데이터 이전용이다. 이미 이전했다면 재실행 전에 대응 기록을 확인한다. 일반 기능과 최신 배포 절차는 [통합 안내](questions.md)·[운영 안내](questions-operations.md)를 따른다. 아래 예전 버전의 조회 결과만으로 현재 운영 상태를 판단하지 않는다.
+
 1. SQL Editor에서 `legacy-questionnaire-import-check.sql` 전체 실행. 한 행이며 `ready_to_import=true`인지 확인한다. false거나 결과가 없으면 진행하지 않는다. 질문 10,000자, 설명 제목 200자/본문 10,000자, 질문당 설명 20개 제한을 넘으면 내용을 자르지 말고 별도 처리한다.
-2. 터미널에서 `npx supabase db push --linked --dry-run --skip-vault` 실행. 새 도구 설치 migration 하나만 대기 중인지 확인한다. 다르면 운영 적용 전에 이력을 검토한다.
-3. `PGOPTIONS='-c lock_timeout=5s -c statement_timeout=60s' npx supabase db push --linked --skip-vault` 실행. 이 단계는 함수 설치일 뿐 질문 복사는 아직 없다.
+2. 도구 설치 migration이 미적용이라면 [운영 안내](questions-operations.md)의 연결 대상 확인 → 이력 비교 → dry-run 순서로 적용 대상을 확인한다. 이미 적용됐다면 설치를 건너뛴다.
+3. 대상과 이력 검토 후 같은 운영 안내의 DB 적용·이력 재확인을 수행한다. 이 단계는 함수 설치일 뿐 질문 복사는 아직 없다.
 4. SQL Editor의 postgres 역할에서 `legacy-questionnaire-import-dry-run.sql` 전체 실행. 성공 결과는 `status=imported`, `questions=16`이며 마지막은 ROLLBACK이다. 여기서 받은 ID는 폐기된다.
 5. 예행연습이 성공하면 `legacy-questionnaire-import-apply.sql` 전체 실행. 성공 시 COMMIT되며 원본 ID는 그대로, 대상 초안 ID는 결과의 `targetVersionId`다. 재실행하면 `already_imported`로 같은 ID를 반환하고 데이터는 추가하거나 덮어쓰지 않는다.
 6. `legacy-questionnaire-import-verify.sql` 전체 실행. 배치 16개, 예상 설명 수, 모든 비교 결과 true인지 확인한다. 원본이 이후 수정됐거나 새 초안을 편집한 뒤에는 비교 결과가 달라질 수 있으므로 바로 검증한다.

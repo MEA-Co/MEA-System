@@ -25,7 +25,13 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
     student: ['profile'],
     consultant: ['profile', 'questions', 'exploration'],
     consultant_lead: ['consultants', 'questions', 'exploration', 'consulting'],
-    admin: ['students', 'consultants', 'questions', 'consulting'],
+    admin: [
+      'students',
+      'consultants',
+      'questions',
+      'exploration',
+      'consulting',
+    ],
   };
   const homes = {
     student: 'consulting',
@@ -73,14 +79,19 @@ test('questionnaires and explorations belong to data management', () => {
   assert.equal(resolveDashboardView('consultant', 'consulting'), 'questions');
 });
 
-test('legacy questionnaire URLs resolve to the unified view', () => {
-  for (const role of ['admin', 'consultant_lead', 'consultant']) {
-    assert.equal(resolveDashboardView(role, 'questionnaire'), 'questions');
+test('removed questionnaire entry is neither a page nor a role permission', () => {
+  assert.equal(Object.hasOwn(exports.DASHBOARD_PAGES, 'questionnaire'), false);
+  for (const [role, pages] of Object.entries(exports.DASHBOARD_ROLES)) {
+    assert.equal(Object.hasOwn(pages, 'questionnaire'), false);
     assert.equal(
-      getDashboardNavigation(role).filter((page) => page.view === 'questions')
-        .length,
-      1,
+      resolveDashboardView(role, 'questionnaire'),
+      exports.DASHBOARD_DEFAULT_VIEWS[role],
     );
+    if (role !== 'student')
+      assert.equal(
+        getDashboardNavigation(role).filter((page) => page.view === 'questions')
+          .length,
+        1,
+      );
   }
-  assert.equal(resolveDashboardView('student', 'questionnaire'), 'consulting');
 });

@@ -24,8 +24,7 @@ export function QuestionsView({
   const questionnaire =
     !staff ||
     Boolean(params.get('draft')) ||
-    params.get('tab') === 'questionnaires' ||
-    params.get('view') === 'questionnaire';
+    params.get('tab') === 'questionnaires';
 
   const overview =
     staff &&

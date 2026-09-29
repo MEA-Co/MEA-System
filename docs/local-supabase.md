@@ -112,7 +112,7 @@ done
 
 ## 저장된 질문 배치 (2026-09-28)
 
-`20260928034945_questionnaire_question_placements.sql`을 로컬에 적용했다. 배치의 원본 질문 FK·중복 방지·참조 선행 순서 검사·원본 보관 보호를 추가했다. 새 방식의 배포는 버전 고정과 열/행 응답 저장 연결 전까지 차단한다. 기존 질문지·답변 경로는 유지한다. 상세 구조와 삭제 후보는 `questionnaire-question-placement.md`에 있다.
+`20260928034945_questionnaire_question_placements.sql`을 로컬에 적용했다. 배치의 원본 질문 FK·중복 방지·참조 선행 순서 검사·원본 보관 보호를 추가했다. 새 방식의 배포는 버전 고정과 열/행 응답 저장 연결 전까지 차단한다. 기존 질문지·답변 경로는 유지한다. 상세 구조와 삭제 후보는 `questions.md`에 있다.
 
 직접 SQL 적용으로 검증한 뒤 `db diff --local --schema public,private`의 차이가 없음을 확인했고, 해당 migration 하나만 `migration repair --local --status applied 20260928034945`로 로컬 이력에 등록했다. 이는 새 로컬 변경의 동등성 확인 후 수행했으며 기존 이력과 운영 DB는 변경하지 않았다. 로컬 보안 advisor 통과, 관련 SQL 20개 중 19개 통과, 실패 1개는 위에 기록된 기존 `questionnaire_published_deletion.sql` 오류다.
 
@@ -131,7 +131,7 @@ done
 
 ## 질문 서버 검색·페이지네이션 (2026-09-28)
 
-`20260928052431_question_server_pagination.sql`은 질문 표시 텍스트를 추출하는 함수·저장 생성 열, pg_trgm 검색 인덱스, 20개 단위 security invoker 조회 RPC를 추가한다. 기존 원문과 권한은 유지한다. 로컬 DB에 먼저 적용해 45개 가상 질문으로 SQL 검증과 보안 advisor를 통과했다. 기본 pg-delta 생성기가 pg_trgm 의존성에서 실패해 `db pull --local --schema public,private --diff-engine migra`로 생성하고, 빠진 확장/권한과 함수→생성 열 순서를 보완했다. 로컬 이력만 등록했으며 운영 DB에는 적용하지 않았다. 사용 방법은 `question-search-pagination.md`를 참고한다.
+`20260928052431_question_server_pagination.sql`은 질문 표시 텍스트를 추출하는 함수·저장 생성 열, pg_trgm 검색 인덱스, 20개 단위 security invoker 조회 RPC를 추가한다. 기존 원문과 권한은 유지한다. 로컬 DB에 먼저 적용해 45개 가상 질문으로 SQL 검증과 보안 advisor를 통과했다. 기본 pg-delta 생성기가 pg_trgm 의존성에서 실패해 `db pull --local --schema public,private --diff-engine migra`로 생성하고, 빠진 확장/권한과 함수→생성 열 순서를 보완했다. 로컬 이력만 등록했으며 운영 DB에는 적용하지 않았다. 사용 방법은 `questions-operations.md`를 참고한다.
 
 
 ## 탐구활동 확정 저장 (2026-09-28)
@@ -152,4 +152,4 @@ done
 
 ## 탐구활동 참조형 질문 (2026-09-29)
 
-`20260929053605_question_exploration_type.sql`을 로컬에 적용했다. 독립 질문 열의 `exploration` 유형 저장을 허용한다. 제작·저장·미리보기만 연결하며 배치형 배포 차단은 유지한다. SQL 회귀 4개와 보안 advisor 통과 후 로컬 db pull로 migration 및 로컬 이력을 생성했다. 운영 미적용. 절차는 `docs/question-exploration-type.md`를 참고한다.
+`20260929053605_question_exploration_type.sql`을 로컬에 적용했다. 독립 질문 열의 `exploration` 유형 저장을 허용한다. 제작·저장·미리보기만 연결하며 배치형 배포 차단은 유지한다. SQL 회귀 4개와 보안 advisor 통과 후 로컬 db pull로 migration 및 로컬 이력을 생성했다. 운영 미적용. 절차는 `docs/questions-operations.md`를 참고한다.

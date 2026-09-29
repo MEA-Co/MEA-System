@@ -23,6 +23,11 @@ begin
  end;
  perform public.publish_questionnaire(vid,1);
  perform set_config('request.jwt.claim.sub',reviewer_id::text,true);
+ begin
+   perform public.add_questionnaire_explanation(note_id,vid,qid,'제목','본문',false);
+   raise exception 'Nonowner admin added explanation'; exception when insufficient_privilege then null;
+ end;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
  perform public.add_questionnaire_explanation(note_id,vid,qid,'제목','본문',false);
  perform public.add_questionnaire_explanation(note_id,vid,qid,'제목','본문',false);
  if (select revision from public.questionnaire_versions where id=vid) <> 2 then raise exception 'Retry bumped revision'; end if;

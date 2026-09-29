@@ -12,7 +12,6 @@ export const DASHBOARD_PAGES = {
   students: { label: '학생 관리', group: 'members' },
   consultants: { label: '컨설턴트 관리', group: 'members' },
   questions: { label: '질문 관리', group: 'data' },
-  questionnaire: { label: '질문지 관리', group: 'data' },
   exploration: { label: '탐구활동 관리', group: 'data' },
   consulting: { label: '컨설팅 관리', group: 'operations' },
 } as const;
@@ -31,13 +30,11 @@ export const DASHBOARD_ROLES = {
   consultant: {
     profile: { sidebar: true },
     questions: { sidebar: true },
-    questionnaire: { sidebar: false },
     exploration: { sidebar: true },
   },
   consultant_lead: {
     consultants: { sidebar: true },
     questions: { sidebar: true },
-    questionnaire: { sidebar: false },
     exploration: { sidebar: true },
     consulting: { sidebar: true },
   },
@@ -45,7 +42,6 @@ export const DASHBOARD_ROLES = {
     students: { sidebar: true },
     consultants: { sidebar: true },
     questions: { sidebar: true },
-    questionnaire: { sidebar: false },
     exploration: { sidebar: true },
     consulting: { sidebar: true },
   },
@@ -73,9 +69,7 @@ export function resolveDashboardView(
     !Object.hasOwn(DASHBOARD_PAGES, requested)
   )
     return DASHBOARD_DEFAULT_VIEWS[role];
-  const view = (
-    requested === 'questionnaire' ? 'questions' : requested
-  ) as DashboardView;
+  const view = requested as DashboardView;
   return canAccessDashboardView(role, view)
     ? view
     : DASHBOARD_DEFAULT_VIEWS[role];
