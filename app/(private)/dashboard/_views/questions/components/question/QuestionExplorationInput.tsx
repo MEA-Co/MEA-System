@@ -94,7 +94,7 @@ export function QuestionExplorationInput({
                           </Menu.RadioItemIndicator>
                         </span>
                         <span className="min-w-0">
-                          <span className="block break-words">
+                          <span className="block wrap-break-word">
                             {activity.values.topic}
                           </span>
                           <span className="block text-xs text-muted-foreground">
@@ -115,7 +115,9 @@ export function QuestionExplorationInput({
       {selected && (
         <div className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
           <div className="min-w-0">
-            <p className="break-words font-medium">{selected.values.topic}</p>
+            <p className="wrap-break-word font-medium">
+              {selected.values.topic}
+            </p>
             <p className="text-muted-foreground">
               {selected.values.grade}학년 · {selected.values.semester}학기 ·{' '}
               {selected.values.recordArea}
