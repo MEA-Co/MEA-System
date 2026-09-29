@@ -20,7 +20,7 @@ export const fieldSchema = z
   .object({
     id: z.uuid(),
     label: z.string().trim().min(1).max(100),
-    kind: z.enum(['text', 'scale', 'single', 'multiple']),
+    kind: z.enum(['text', 'scale', 'single', 'multiple', 'exploration']),
     options: z.array(optionSchema).max(20).optional(),
     scaleMax: z.number().int().min(2).max(9).optional(),
     scaleConfig: scaleConfigSchema.optional(),

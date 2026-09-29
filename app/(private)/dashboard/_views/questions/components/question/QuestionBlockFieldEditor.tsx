@@ -19,7 +19,10 @@ function asField(
   const kind = question.kind ?? 'text';
   return {
     id: field.id,
-    label: field.label,
+    label:
+      kind === 'exploration' && field.kind !== 'exploration'
+        ? '탐구활동'
+        : field.label,
     kind,
     options:
       kind === 'single' || kind === 'multiple' ? question.options : undefined,

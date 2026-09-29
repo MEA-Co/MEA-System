@@ -149,3 +149,7 @@ done
 ## 탐구활동 리드·관리자 조회 (2026-09-29)
 
 `20260929050548_exploration_staff_read.sql`을 로컬에 적용했다. 전체 확정 활동과 연결된 보고서에 한해 리드·관리자의 SELECT를 허용하며 타인 쓰기는 허용하지 않는다. SQL 회귀·실제 Storage 통합·보안 advisor 검증과 전체 migration 재생 후 public/private/storage 차이 없음을 확인하고 이 migration만 로컬 이력에 등록했다. 운영 미적용이며 적용 순서는 `docs/exploration-activity-storage.md`에 기록했다.
+
+## 탐구활동 참조형 질문 (2026-09-29)
+
+`20260929053605_question_exploration_type.sql`을 로컬에 적용했다. 독립 질문 열의 `exploration` 유형 저장을 허용한다. 제작·저장·미리보기만 연결하며 배치형 배포 차단은 유지한다. SQL 회귀 4개와 보안 advisor 통과 후 로컬 db pull로 migration 및 로컬 이력을 생성했다. 운영 미적용. 절차는 `docs/question-exploration-type.md`를 참고한다.

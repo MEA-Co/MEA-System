@@ -8,15 +8,15 @@ import { ExplorationReportInput } from './ExplorationReportInput';
 export function ExplorationActivityDetails({
   activity,
   onClose,
+  notice = '다른 작성자의 탐구활동입니다. 읽기 전용으로 표시됩니다.',
 }: {
   activity: Activity;
+  notice?: string;
   onClose: () => void;
 }) {
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pt-4 md:px-6 md:pt-6">
-      <p className="text-sm text-muted-foreground">
-        다른 작성자의 탐구활동입니다. 읽기 전용으로 표시됩니다.
-      </p>
+      <p className="text-sm text-muted-foreground">{notice}</p>
       {groups.map((group) => (
         <section key={group.title} className="rounded-2xl border p-5 md:p-6">
           <dl className="grid gap-6 md:grid-cols-2">

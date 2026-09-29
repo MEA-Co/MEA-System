@@ -17,6 +17,7 @@ const labels = {
   scale: '척도형',
   single: '단일선택형',
   multiple: '다수선택형',
+  exploration: '탐구활동 참조형',
 };
 
 export function QuestionPlacementCard({

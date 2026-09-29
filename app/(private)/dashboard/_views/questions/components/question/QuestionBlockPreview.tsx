@@ -31,6 +31,7 @@ import { richTextPlainText } from '../../lib/rich-text';
 
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';
+  if (field.kind === 'exploration') return '탐구활동 첨부됨';
   if (field.kind === 'text') return richTextPlainText(value).trim();
   if (field.kind === 'scale') {
     const { score } = scaleAnswer(value);

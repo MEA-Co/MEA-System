@@ -458,3 +458,19 @@ test('리드·관리자는 전체 조회, 관리자 컨설턴트 미리보기는
     );
   }
 });
+
+test('질문 첨부용 own scope는 리드·관리자도 본인만 조회', async () => {
+  for (const role of ['consultant', 'consultant_lead', 'admin']) {
+    const userId = randomUUID();
+    const h = apiHarness({ role, userId });
+    const response = await h.api.GET(
+      new Request('http://localhost/api/exploration?scope=own'),
+      { params: Promise.resolve({}) },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(
+      h.filters.some(([key, value]) => key === 'owner_id' && value === userId),
+      true,
+    );
+  }
+});

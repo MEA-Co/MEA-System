@@ -5,6 +5,7 @@ export const QUESTION_TYPES = [
   { value: 'scale', label: '척도형' },
   { value: 'single', label: '단일선택형' },
   { value: 'multiple', label: '다수선택형' },
+  { value: 'exploration', label: '탐구활동 참조형' },
 ] as const;
 export type QuestionKind = (typeof QUESTION_TYPES)[number]['value'];
 export function orderedChoiceOptions<T extends { isOther?: boolean }>(
@@ -170,6 +171,10 @@ export function validTypedAnswer(
   if (!value.trim()) return !complete;
   const kind = question.kind ?? 'text';
   if (kind === 'text') return true;
+  if (kind === 'exploration')
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    );
   if (kind === 'scale') {
     const config = scaleConfig(question);
     const answer = scaleAnswer(value);

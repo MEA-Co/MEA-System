@@ -18,6 +18,7 @@ import {
 import type { Question } from '../../lib/types';
 
 import { questionStyles } from './question-styles';
+import { QuestionExplorationInput } from './QuestionExplorationInput';
 
 export function QuestionChoiceInput({
   question,
@@ -34,6 +35,15 @@ export function QuestionChoiceInput({
   onScaleLabelChange?: (key: 'low' | 'middle' | 'high', value: string) => void;
   scaleLabelEditingDisabled?: boolean;
 }) {
+  if (question.kind === 'exploration') {
+    return (
+      <QuestionExplorationInput
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    );
+  }
   if (question.kind === 'scale') {
     const config = scaleConfig(question);
     const answer = scaleAnswer(value);

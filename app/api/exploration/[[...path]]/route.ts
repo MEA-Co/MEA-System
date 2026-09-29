@@ -31,7 +31,9 @@ async function handle(request: Request, context: Context) {
       return json({ error: '잘못된 요청입니다.' }, 403);
   }
   const viewRole = await getViewRole(access.role!);
-  const ownOnly = viewRole !== 'admin' && viewRole !== 'consultant_lead';
+  const ownOnly =
+    new URL(request.url).searchParams.get('scope') === 'own' ||
+    (viewRole !== 'admin' && viewRole !== 'consultant_lead');
   const client = createClient(await cookies());
   const path = (await context.params).path ?? [];
   const id = path[0];

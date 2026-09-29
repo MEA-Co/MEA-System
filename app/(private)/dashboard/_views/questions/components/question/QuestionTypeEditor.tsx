@@ -7,7 +7,10 @@ import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -81,13 +84,30 @@ export function QuestionTypeEditor({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {QUESTION_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>기본 유형</SelectLabel>
+                {QUESTION_TYPES.filter(
+                  (type) => type.value !== 'exploration',
+                ).map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel>특수 유형</SelectLabel>
+                <SelectItem value="exploration">탐구활동 참조형</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
+        </div>
+      )}
+      {part === 'settings' && kind === 'exploration' && (
+        <div className="space-y-2">
+          <Button variant="outline" disabled>
+            탐구활동 첨부
+          </Button>
         </div>
       )}
       {part === 'settings' && kind === 'text' && (
