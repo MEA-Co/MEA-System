@@ -147,7 +147,7 @@ export function QuestionnaireList({
                       <Link
                         scroll={false}
                         prefetch={false}
-                        href={`/dashboard?view=questions&tab=questionnaires&draft=${item.id}`}
+                        href={`/dashboard?view=questions&tab=questionnaires&draft=${item.id}${item.status === 'published' ? '&return=dashboard' : ''}`}
                         className="font-medium hover:underline"
                       >
                         {item.title || '제목 없는 질문지'}

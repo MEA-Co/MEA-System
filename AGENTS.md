@@ -16,6 +16,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 게시된 질문지는 작성자에게 편집기, 다른 리드·관리자에게 실제 질문지 미리보기 형태와 질문별 검토 요청을 제공한다. 게시본의 돌아가기는 질문 관리 대시보드로 연결한다. 설명 추가·수정·삭제는 질문지 작성자만 가능하며 이전 타인 설명 작성 권한을 대체한다. 게시 목록 제작자명은 게시본 범위 전용 RPC로 조회한다. migration: `20260929071720_questionnaire_published_review_permissions.sql`.
+
+
+- 질문지 상태 Select의 `게시`를 활성화했다. 타 리드의 게시본은 `read_published_question_sources` RPC로 해당 질문지의 원본 질문만 읽으며 독립 질문의 작성자 전용 RLS는 유지한다. 배포·보관은 UI 비활성 유지. migration `20260929063207_questionnaire_published_sources.sql`, 검증 `supabase/tests/questionnaire_published_sources.sql`, 운영 순서 `docs/questionnaire-publishing-rollout.md`.
+
+
 - 탐구활동은 관리자 사이드바에도 표시한다. 컨설턴트는 본인 확정 활동만, 리드·관리자는 전체 확정 활동을 조회한다. 타인 활동은 읽기 전용이며 수정·삭제는 작성자만 가능하다. 관리자 컨설턴트 미리보기는 API에서 본인 목록·첨부만 반환한다. 타인 파일은 활성 확정본에서 참조된 객체만 공유하며 임시저장은 본인 브라우저에만 남는다. migration `20260929050548_exploration_staff_read.sql`, 회귀 `supabase/tests/exploration_activity_storage.sql`, `scripts/verify-exploration-storage{,-local}.mjs`.
 
 

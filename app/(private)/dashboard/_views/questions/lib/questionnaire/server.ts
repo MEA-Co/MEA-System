@@ -11,6 +11,8 @@ import {
 } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
+import type { QuestionBlockRow } from '../question-blocks';
+
 import { QuestionnaireHttpError } from './http-error';
 import { normalizeRichTextValue, richTextPlainText } from './rich-text';
 import { savedDraftSchema, saveQuestionnaireSchema } from './schema';
@@ -109,6 +111,19 @@ export async function loadQuestionnaireView(
     questionnaires: { archived_at: string | null; created_by: string };
     questionnaire_review_requests: { count: number }[];
   }>;
+  const authors = new Map<string, string>();
+  if (staff && rows.some((row) => row.status === 'published')) {
+    const result = await client.rpc('published_questionnaire_authors');
+    if (result.error)
+      throw new Error('제작자 이름을 불러오지 못했어요.', {
+        cause: result.error,
+      });
+    for (const author of (result.data ?? []) as {
+      versionId: string;
+      name: string;
+    }[])
+      authors.set(author.versionId, author.name);
+  }
   const distributedIds = new Set(
     rows
       .filter((item) => item.status === 'distributed')
@@ -124,6 +139,7 @@ export async function loadQuestionnaireView(
     .map((item) => ({
       id: item.id,
       title: item.title,
+      creatorName: authors.get(item.id) ?? null,
       status: item.status,
       archivedAt: item.questionnaires.archived_at,
       publishedAt: item.published_at,
@@ -142,6 +158,7 @@ export async function loadQuestionnaireView(
           item.questionnaires.created_by === access.user.id),
     }));
   const result = {
+    publishedSources: [] as QuestionBlockRow[],
     editableExplanationIds: [] as string[],
     drafts: versions.filter(
       (item) => !item.archivedAt && item.status === 'draft',
@@ -191,21 +208,6 @@ export async function loadQuestionnaireView(
       '보관된 질문지예요. 목록에서 상태를 복원한 뒤 열어 주세요.',
     );
   const editable = selected.isOwner && selected.status !== 'distributed';
-  if (staff && !editable && selected.status === 'published') {
-    const authored = await client
-      .from('questionnaire_question_details')
-      .select('id, questionnaire_questions!inner(version_id)')
-      .eq('created_by', access.user.id)
-      .eq('questionnaire_questions.version_id', requestedId)
-      .order('position');
-    if (authored.error)
-      throw new Error('설명 작성 권한을 확인하지 못했어요.', {
-        cause: authored.error,
-      });
-    result.editableExplanationIds = (authored.data ?? []).map(
-      (detail) => detail.id,
-    );
-  }
   const documentResult = await client.rpc(
     editable ? 'read_questionnaire_draft' : 'read_published_questionnaire',
     { p_version_id: requestedId },
@@ -226,6 +228,23 @@ export async function loadQuestionnaireView(
         );
       }),
     );
+  if (
+    staff &&
+    !editable &&
+    selected.status === 'published' &&
+    document.sections.some((section) =>
+      section.questions.some((question) => question.sourceQuestionId),
+    )
+  ) {
+    const sources = await client.rpc('read_published_question_sources', {
+      p_version_id: requestedId,
+    });
+    if (sources.error)
+      throw new Error('게시된 질문지의 질문을 불러오지 못했어요.', {
+        cause: sources.error,
+      });
+    result.publishedSources = (sources.data ?? []) as QuestionBlockRow[];
+  }
   result.selected = selected;
   if (editable) result.initialDraft = document;
   else result.publishedDocument = document;
@@ -505,7 +524,10 @@ export async function addQuestionnaireExplanation(
   if (error)
     return {
       status: mutationStatus(error.code),
-      error: '설명을 추가하지 못했어요. 게시 상태와 질문을 확인해 주세요.',
+      error:
+        error.code === '42501'
+          ? '질문지 작성자만 설명을 추가할 수 있어요.'
+          : '설명을 추가하지 못했어요. 게시 상태와 질문을 확인해 주세요.',
     };
   return {};
 }

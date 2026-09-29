@@ -1,3 +1,5 @@
+import type { QuestionBlockRow } from '../question-blocks';
+
 import type { QuestionKind } from './question-types';
 
 export type ScaleConfig = {
@@ -62,6 +64,7 @@ export type SaveQuestionnaireResult =
 
 export type QuestionnaireStatus = 'draft' | 'published' | 'distributed';
 export type QuestionnaireListItem = {
+  creatorName?: string | null;
   id: string;
   title: string;
   status: QuestionnaireStatus;
@@ -94,6 +97,7 @@ export type QuestionnaireReviewContext = {
 };
 
 export type QuestionnaireViewData = {
+  publishedSources?: QuestionBlockRow[];
   editableExplanationIds: string[];
   drafts: QuestionnaireListItem[];
   published: QuestionnaireListItem[];

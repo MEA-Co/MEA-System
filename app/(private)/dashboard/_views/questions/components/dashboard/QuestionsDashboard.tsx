@@ -7,6 +7,14 @@ import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
 import {
@@ -43,14 +51,13 @@ export function QuestionsDashboard() {
   const published = (data?.published ?? [])
     .filter(
       (item) =>
-        !item.isOwner &&
         !item.archivedAt &&
         item.title
           .toLocaleLowerCase()
           .includes(search.trim().toLocaleLowerCase()),
     )
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const pages = Math.max(1, Math.ceil(published.length / 6));
+  const pages = Math.max(1, Math.ceil(published.length / 10));
   const current = Math.min(page, pages);
   return (
     <div className="space-y-8">
@@ -166,11 +173,11 @@ export function QuestionsDashboard() {
               게시된 질문지
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              공유된 질문지를 살펴보고 내용을 검토하세요.
+              내가 게시한 질문지와 다른 사람이 공유한 질문지를 살펴보세요.
             </p>
           </div>
           <Input
-            aria-label="다른 사람이 게시한 질문지 검색"
+            aria-label="게시된 질문지 검색"
             placeholder="질문지 제목으로 검색"
             className="max-w-sm"
             value={search}
@@ -190,38 +197,82 @@ export function QuestionsDashboard() {
           </p>
         ) : !published.length ? (
           <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {search
-              ? '검색 결과가 없어요.'
-              : '다른 사람이 게시한 질문지가 아직 없어요.'}
+            {search ? '검색 결과가 없어요.' : '게시된 질문지가 아직 없어요.'}
           </p>
         ) : (
           <>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {published.slice((current - 1) * 6, current * 6).map((item) => (
-                <Link
-                  key={item.id}
-                  href={`${base}&tab=questionnaires&draft=${item.id}`}
-                  prefetch={false}
-                  className="space-y-4 rounded-xl border bg-background p-5 transition-colors hover:bg-muted/40"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-200">
-                      게시
-                    </span>
-                    {unreadIds.includes(item.id) && <NewPublicationBadge />}
-                  </div>
-                  <h3 className="line-clamp-2 font-semibold">
-                    {item.title || '제목 없는 질문지'}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    게시일{' '}
-                    {date.format(new Date(item.publishedAt ?? item.updatedAt))}
-                  </p>
-                </Link>
-              ))}
+            <div className="overflow-hidden rounded-xl border bg-background">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-[50%] pl-5">질문지</TableHead>
+                    <TableHead>제작자</TableHead>
+                    <TableHead>게시일</TableHead>
+                    <TableHead>최근 수정</TableHead>
+                    <TableHead className="pr-5 text-right">확인 상태</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {published
+                    .slice((current - 1) * 10, current * 10)
+                    .map((item) => {
+                      const unread =
+                        !item.isOwner && unreadIds.includes(item.id);
+                      return (
+                        <TableRow
+                          key={item.id}
+                          className={
+                            unread
+                              ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30 dark:hover:bg-blue-950/50'
+                              : undefined
+                          }
+                        >
+                          <TableCell className="pl-5">
+                            <Link
+                              href={`${base}&tab=questionnaires&draft=${item.id}&return=dashboard`}
+                              prefetch={false}
+                              className={`flex items-center gap-2 py-2 font-medium hover:underline focus-visible:outline-ring ${unread ? 'text-blue-700 dark:text-blue-300' : ''}`}
+                            >
+                              {unread && (
+                                <span
+                                  className="size-2 shrink-0 rounded-full bg-blue-500"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              <span className="line-clamp-2 whitespace-normal">
+                                {item.title || '제목 없는 질문지'}
+                              </span>
+                              {unread && <NewPublicationBadge />}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {item.creatorName?.trim() || '이름 없음'}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {date.format(
+                              new Date(item.publishedAt ?? item.updatedAt),
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {date.format(new Date(item.updatedAt))}
+                          </TableCell>
+                          <TableCell
+                            className={`pr-5 text-right text-xs ${unread ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-muted-foreground'}`}
+                          >
+                            {item.isOwner
+                              ? '내가 게시함'
+                              : unread
+                                ? '미확인'
+                                : '확인함'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
             </div>
             <nav
-              aria-label="다른 사람이 게시한 질문지 페이지"
+              aria-label="게시된 질문지 페이지"
               className="flex items-center justify-between gap-3"
             >
               <span className="text-sm text-muted-foreground">

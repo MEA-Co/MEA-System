@@ -5,7 +5,7 @@ import { Eye, FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 
-import { useQuestionLibrary } from '../../hooks/questionnaire/useQuestionLibrary';
+import type { QuestionBlockRow } from '../../lib/question-blocks';
 import type {
   QuestionnaireDraft,
   QuestionnaireReviewContext,
@@ -23,21 +23,43 @@ import { QuestionPlacementCard } from './QuestionPlacementCard';
 import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
+  sources = [],
   distributed = false,
   staff = true,
   reviewContext,
   editableExplanationIds = [],
 }: {
   document: QuestionnaireDraft;
+  sources?: QuestionBlockRow[];
   distributed?: boolean;
   staff?: boolean;
   reviewContext?: QuestionnaireReviewContext;
   editableExplanationIds?: string[];
 }) {
-  const hasPlacements = document.sections.some((s) =>
-    s.questions.some((q) => q.sourceQuestionId),
-  );
-  const library = useQuestionLibrary(staff && hasPlacements);
+  if (staff && !distributed)
+    return (
+      <div className="mx-auto max-w-4xl">
+        <QuestionnairePreview
+          title={document.title}
+          sections={document.sections}
+          library={sources}
+          renderQuestionFooter={
+            reviewContext
+              ? (questionId) => (
+                  <QuestionnaireReviews
+                    {...reviewContext}
+                    questionId={questionId}
+                    canRequest={!reviewContext.isOwner}
+                    initialReviews={reviewContext.initialReviews.filter(
+                      (review) => review.question_id === questionId,
+                    )}
+                  />
+                )
+              : undefined
+          }
+        />
+      </div>
+    );
   const content = (
     <article className="mx-auto max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
@@ -60,16 +82,17 @@ export function PublishedQuestionnaire({
               </h3>
               {question.sourceQuestionId ? (
                 (() => {
-                  const source = library.data?.find(
+                  const source = sources.find(
                     (q) => q.id === question.sourceQuestionId,
                   );
                   return source ? (
-                    <QuestionPlacementCard question={source} />
+                    <QuestionPlacementCard
+                      question={source}
+                      showSourceLink={false}
+                    />
                   ) : (
                     <p role="status">
-                      {library.error
-                        ? '질문을 불러오지 못했어요.'
-                        : '질문을 불러오고 있어요.'}
+                      질문을 불러오지 못했어요. 새로고침해 주세요.
                     </p>
                   );
                 })()
@@ -94,7 +117,7 @@ export function PublishedQuestionnaire({
                   }
                 />
               ))}
-              {staff && !distributed && (
+              {staff && !distributed && reviewContext?.isOwner && (
                 <QuestionExplanationForm
                   versionId={document.versionId}
                   questionId={question.id}
@@ -159,7 +182,7 @@ export function PublishedQuestionnaire({
         <QuestionnairePreview
           title={document.title}
           sections={document.sections}
-          library={library.data}
+          library={sources}
         />
       </Tabs.Panel>
     </Tabs.Root>

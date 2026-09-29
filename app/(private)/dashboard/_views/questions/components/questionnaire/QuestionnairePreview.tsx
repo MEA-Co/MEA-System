@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -22,10 +22,12 @@ export function QuestionnairePreview({
   title,
   sections,
   library = [],
+  renderQuestionFooter,
 }: {
   title: string;
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
+  renderQuestionFooter?: (questionId: string) => ReactNode;
 }) {
   const [answers, setAnswers] = useState<Record<string, PreviewAnswerRow[]>>(
     {},
@@ -71,14 +73,16 @@ export function QuestionnairePreview({
           </h3>
           {section.questions.map((question, questionIndex) =>
             question.sourceQuestionId ? (
-              <PlacedPreview
-                key={question.id}
-                sourceId={question.sourceQuestionId}
-                number={questionIndex + 1}
-                library={placedLibrary}
-                answers={answers}
-                onRows={onRows}
-              />
+              <div key={question.id} className="space-y-3">
+                <PlacedPreview
+                  sourceId={question.sourceQuestionId}
+                  number={questionIndex + 1}
+                  library={placedLibrary}
+                  answers={answers}
+                  onRows={onRows}
+                />
+                {renderQuestionFooter?.(question.id)}
+              </div>
             ) : (
               <div
                 key={question.id}
@@ -116,6 +120,7 @@ export function QuestionnairePreview({
                 ) : (
                   <QuestionTextAnswerPreview variant="questionnaire" />
                 )}
+                {renderQuestionFooter?.(question.id)}
               </div>
             ),
           )}

@@ -41,7 +41,9 @@ export type QuestionnaireEditorState = {
   childEditorOpen?: boolean;
 };
 export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
-  const requested = useSearchParams().get('draft') ?? undefined;
+  const searchParams = useSearchParams();
+  const requested = searchParams.get('draft') ?? undefined;
+  const returnToDashboard = searchParams.get('return') === 'dashboard';
   const [active, setActive] = useState(requested ?? requestedId);
   const [confirm, setConfirm] = useState(false);
   const [emptyTitle, setEmptyTitle] = useState(false);
@@ -56,7 +58,14 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
   function navigate(id?: string) {
     const url = new URL(window.location.href);
     if (id) url.searchParams.set('draft', id);
-    else url.searchParams.delete('draft');
+    else {
+      url.searchParams.delete('draft');
+      if (returnToDashboard) {
+        url.searchParams.delete('tab');
+        url.searchParams.delete('return');
+        url.searchParams.set('view', 'questions');
+      }
+    }
     window.history.replaceState(null, '', url);
   }
   function close() {
@@ -111,7 +120,7 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
         <div className="mx-auto max-w-5xl space-y-5">
           <Button variant="ghost" onClick={requestClose}>
             <ArrowLeft />
-            질문지 목록으로
+            {returnToDashboard ? '질문 관리 대시보드로' : '질문지 목록으로'}
           </Button>
           <QuestionnairePanel
             id={active}
@@ -265,8 +274,8 @@ function QuestionnaireContent({
         )}
         {initialDraft && selected?.status === 'published' && (
           <p className="mx-auto mb-4 max-w-4xl rounded-lg bg-muted p-4 text-sm">
-            게시 중인 질문지예요. 저장한 수정 내용은 다른 리드와 관리자에게도
-            반영됩니다. 배포는 목록에서 진행할 수 있어요.
+            게시 중인 질문지입니다. 저장한 수정 내용은 다른 리드와 관리자에게도
+            반영됩니다.
           </p>
         )}
         {editorDraft ? (
@@ -281,6 +290,7 @@ function QuestionnaireContent({
         ) : publishedDocument && !error ? (
           <PublishedQuestionnaire
             document={publishedDocument}
+            sources={data.publishedSources}
             distributed={selected?.status === 'distributed'}
             staff={staff}
             editableExplanationIds={data.editableExplanationIds}

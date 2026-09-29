@@ -453,6 +453,11 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
             },
             rpc: async (name) => {
               calls.push(name);
+              if (name === 'published_questionnaire_authors')
+                return {
+                  data: [{ versionId: row.id, name: '제작자' }],
+                  error: null,
+                };
               return {
                 data: {
                   ...structuredClone(doc),
@@ -482,14 +487,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
           column === 'questionnaire_review_requests.resolved_at',
       ),
     );
-    assert.equal(
-      result.editableExplanationIds.length,
-      scenario.visible === 'admin' &&
-        !scenario.editable &&
-        scenario.status === 'published'
-        ? 1
-        : 0,
-    );
+    assert.equal(result.editableExplanationIds.length, 0);
     assert.equal(
       result.selected.pendingReviewCount,
       result.selected.isOwner ? 2 : 0,
@@ -500,7 +498,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
         (scenario.user === ownerId || scenario.visible === 'admin'),
     );
     assert.equal(
-      calls[0],
+      calls.find((name) => name.startsWith('read_')),
       scenario.editable
         ? 'read_questionnaire_draft'
         : 'read_published_questionnaire',

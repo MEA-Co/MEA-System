@@ -102,7 +102,14 @@ export function QuestionnaireStatusSelect({
         value={current}
         disabled={!canChange || pending}
         onValueChange={(value) => {
-          if (value === 'draft' && value !== current)
+          if (
+            (value === 'draft' ||
+              (value === 'published' &&
+                current === 'draft' &&
+                !item.archivedAt)) &&
+            item.isOwner &&
+            value !== current
+          )
             setChange({
               status: value as Status,
               requestId: crypto.randomUUID(),
@@ -122,7 +129,15 @@ export function QuestionnaireStatusSelect({
             <SelectItem
               key={value}
               value={value}
-              disabled={value !== 'draft' || !item.isOwner}
+              disabled={
+                !item.isOwner ||
+                (value !== 'draft' &&
+                  !(
+                    value === 'published' &&
+                    current === 'draft' &&
+                    !item.archivedAt
+                  ))
+              }
             >
               {label}
             </SelectItem>
@@ -152,7 +167,7 @@ export function QuestionnaireStatusSelect({
                   : change?.status === 'distributed'
                     ? '컨설턴트에게 질문지가 표시됩니다. 배포된 내용은 고정되며 이후 수정은 새 초안에서 진행합니다.'
                     : change?.status === 'published'
-                      ? '다른 리드와 관리자가 내용을 확인하고 검토 요청을 남길 수 있습니다.'
+                      ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
                       : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
             </DialogDescription>
           </DialogHeader>
