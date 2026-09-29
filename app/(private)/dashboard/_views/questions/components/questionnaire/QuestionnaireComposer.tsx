@@ -327,7 +327,7 @@ export function QuestionnaireComposer({
           <Tabs.Panel
             value="edit"
             keepMounted
-            className="space-y-8 rounded-2xl border bg-background p-5 sm:p-8 data-[hidden]:hidden"
+            className="space-y-8 rounded-2xl border bg-background p-5 sm:p-8 data-hidden:hidden"
           >
             <div>
               <label
@@ -622,7 +622,7 @@ export function QuestionnaireComposer({
                 <Tabs.Panel
                   value="new"
                   keepMounted
-                  className="data-[hidden]:hidden"
+                  className="data-hidden:hidden"
                 >
                   {editingQuestionId && addMode === 'new' && (
                     <p className="text-sm text-muted-foreground">
