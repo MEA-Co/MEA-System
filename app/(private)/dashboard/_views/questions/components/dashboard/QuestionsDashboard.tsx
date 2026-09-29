@@ -202,7 +202,7 @@ export function QuestionsDashboard() {
         ) : (
           <>
             <div className="overflow-hidden rounded-xl border bg-background">
-              <Table className="min-w-[640px]">
+              <Table className="min-w-160">
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="w-[50%] pl-5">질문지</TableHead>
