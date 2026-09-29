@@ -85,3 +85,31 @@ npx supabase db advisors --local --type security --level warn --fail-on error
 - 실제 브라우저 조작 테스트는 프로젝트 지침에 따라 실행하지 않았다.
 
 이름 변경 검증: 기존 행의 내용·UUID·소유자·revision을 migration 전후 비교하는 롤백 테스트를 통과했다. 새 API 경로와 테이블/RPC 이름으로 저장 회귀, 실제 파일 업로드·다운로드·권한 검증, 기존 코치 테스트 및 빌드도 통과했다. 전체 migration shadow 재생 후 public/private/storage 스키마 차이가 없음을 확인하고 이름 변경 migration 한 건만 로컬 이력에 등록했다.
+
+
+## 역할별 조회 범위 (2026-09-29)
+
+`20260929050548_exploration_staff_read.sql`은 컨설턴트 리드·관리자에게 전체 확정 활동의 조회를 허용한다. 컨설턴트는 본인 활동만 조회한다. 관리자 사이드바에도 탐구활동 관리를 표시하며, 관리자 컨설턴트 미리보기에서는 API가 본인 목록·파일만 반환한다. 실제 DB 권한은 계정 역할을 따른다.
+
+타인 활동은 읽기 전용 상세 화면에서 확인하고, 수정·삭제 RPC는 작성자만 허용한다. 임시저장은 기존처럼 본인 브라우저에만 남는다. 타인 첨부파일은 삭제되지 않은 확정 활동의 reports에 실제로 참조된 객체만 읽을 수 있으며 확정 전 업로드·연결 해제된 파일은 공유하지 않는다.
+
+로컬 SQL 역할 회귀, 실제 Storage 다운로드/쓰기 차단, API 테스트, 타입 검사·lint 및 전체 migration 재생을 검증했다. 운영에는 적용하지 않았다.
+
+운영 반영 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run --skip-vault
+```
+
+운영 대상은 `epwlcallocdjkmgdmtlv`인지 확인한다. 기존 migration을 모두 적용했다면 이번 예상 파일은 `20260929050548_exploration_staff_read.sql` 한 개다. 다른 파일이 나오면 적용 전에 이력을 검토한다. `--include-all`이나 원격 reset/repair로 강제하지 않는다.
+
+```bash
+npx supabase db push --linked --skip-vault
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run --skip-vault
+```
+
+적용 대기가 없음을 확인한 뒤 앱을 배포한다. 컨설턴트는 본인 목록만, 리드·관리자는 전체 목록과 첨부파일을 확인할 수 있는지 검사한다. 타인 활동의 수정·삭제 버튼이 없고 본인 활동은 계속 수정 가능한지도 확인한다.

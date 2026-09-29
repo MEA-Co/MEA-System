@@ -307,12 +307,14 @@ test('첨부 파일 업로드 후 확정 실패 시 파일을 삭제하지 않�
 
 function apiHarness({
   role = 'consultant',
+  viewRole = role,
   userId = randomUUID(),
   rpcError = null,
   rows = [],
 } = {}) {
   const filters = [];
   let rpcCalls = 0;
+  let page = [];
   const query = {
     select() {
       return this;
@@ -327,10 +329,13 @@ function apiHarness({
     order() {
       return this;
     },
-    range: async (start, end) => ({
-      data: rows.slice(start, end + 1),
-      error: null,
-    }),
+    range(start, end) {
+      page = rows.slice(start, end + 1);
+      return this;
+    },
+    then(resolve) {
+      return Promise.resolve({ data: page, error: null }).then(resolve);
+    },
     maybeSingle: async () => ({ data: null, error: null }),
   };
   const client = {
@@ -346,6 +351,7 @@ function apiHarness({
       'next/headers': { cookies: async () => ({}) },
       zod: require('zod'),
       '@/app/(private)/dashboard/_views/exploration/lib/storage-model': model,
+      '@/lib/admin': { getViewRole: async () => viewRole },
       '@/lib/auth': {
         getUserAccess: async () => ({
           user: userId ? { id: userId } : null,
@@ -372,10 +378,10 @@ test('API 인증·역할·교차 출처 검사로 권한 없는 저장 차단', 
   ]) {
     const h = apiHarness(options);
     const r = await h.api.PUT(
-      new Request(
-        'http://localhost/api/exploration/' + randomUUID(),
-        { method: 'PUT', body: '{}' },
-      ),
+      new Request('http://localhost/api/exploration/' + randomUUID(), {
+        method: 'PUT',
+        body: '{}',
+      }),
       { params: Promise.resolve({ path: [randomUUID()] }) },
     );
     assert.equal(r.status, status);
@@ -392,14 +398,13 @@ test('API 인증·역할·교차 출처 검사로 권한 없는 저장 차단', 
   );
   assert.equal(r.status, 403);
 });
-test('API 목록은 관리자도 본인 필터로 500개씩 끝까지 조회', async () => {
+test('API 목록은 컨설턴트 본인 필터로 500개씩 끝까지 조회', async () => {
   const rows = Array.from({ length: 501 }, () => ({ id: randomUUID() }));
   const userId = randomUUID();
-  const h = apiHarness({ role: 'admin', userId, rows });
-  const r = await h.api.GET(
-    new Request('http://localhost/api/exploration'),
-    { params: Promise.resolve({}) },
-  );
+  const h = apiHarness({ role: 'consultant', userId, rows });
+  const r = await h.api.GET(new Request('http://localhost/api/exploration'), {
+    params: Promise.resolve({}),
+  });
   assert.equal((await r.json()).activities.length, 501);
   assert.equal(
     h.filters.filter(([key, value]) => key === 'owner_id' && value === userId)
@@ -432,4 +437,24 @@ test('API 필수 입력 누락은 RPC 호출 전에 거절하고 DB 충돌은 40
   Object.assign(body.values, { grade: '1', semester: '1', recordType: '세특' });
   assert.equal((await put()).status, 409);
   assert.equal(h.rpcCalls, 1);
+});
+
+test('리드·관리자는 전체 조회, 관리자 컨설턴트 미리보기는 본인 조회', async () => {
+  for (const [role, viewRole, ownOnly] of [
+    ['consultant', 'consultant', true],
+    ['consultant_lead', 'consultant_lead', false],
+    ['admin', 'admin', false],
+    ['admin', 'consultant', true],
+  ]) {
+    const h = apiHarness({ role, viewRole });
+    const response = await h.api.GET(
+      new Request('http://localhost/api/exploration'),
+      { params: Promise.resolve({}) },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(
+      h.filters.some(([key]) => key === 'owner_id'),
+      ownOnly,
+    );
+  }
 });

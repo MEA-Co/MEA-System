@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  Eye,
   NotebookPen,
   Pencil,
   Plus,
@@ -23,10 +24,18 @@ import {
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
+import { ExplorationActivityDetails } from './components/ExplorationActivityDetails';
 import { ExplorationFieldIcon } from './components/ExplorationFieldIcon';
 import { ExplorationRecordFields } from './components/ExplorationRecordFields';
 import { ExplorationReferencesInput } from './components/ExplorationReferencesInput';
@@ -37,7 +46,13 @@ import { useExplorationStorage } from './hooks/useExplorationStorage';
 import { type Activity, groups } from './lib/fields';
 import { hasInput, missingFields } from './lib/storage-model';
 
-export function ExplorationView({ userId }: { userId: string }) {
+export function ExplorationView({
+  userId,
+  canViewOthers = false,
+}: {
+  userId: string;
+  canViewOthers?: boolean;
+}) {
   const opener = useRef<HTMLElement | null>(null);
   const {
     activities,
@@ -57,10 +72,47 @@ export function ExplorationView({ userId }: { userId: string }) {
     remove,
   } = useExplorationStorage(userId);
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState<'mine' | 'others'>('mine');
+  const [otherMode, setOtherMode] = useState<'all' | 'person'>('all');
+  const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const readOnly = !!draft?.ownerId && draft.ownerId !== userId;
+  const canEdit = (activity: Activity) =>
+    !activity.ownerId || activity.ownerId === userId;
   const existing = draft && draft.revision > 0;
-  const filtered = activities.filter((activity) =>
+  const showOthers = canViewOthers && scope === 'others';
+  const mine = activities.filter(canEdit);
+  const others = canViewOthers
+    ? activities.filter((activity) => !canEdit(activity))
+    : [];
+  const people = Array.from(
+    new Map(
+      others.map((activity) => [
+        activity.ownerId!,
+        activity.ownerName?.trim() || '이름 비공개',
+      ]),
+    ).entries(),
+  )
+    .sort(
+      ([idA, nameA], [idB, nameB]) =>
+        nameA.localeCompare(nameB, 'ko') || idA.localeCompare(idB),
+    )
+    .map(([id, name], index, entries) => ({
+      id,
+      label:
+        entries.filter(([, value]) => value === name).length > 1
+          ? `${name} (${index + 1})`
+          : name,
+    }));
+  const ownerLabel = (id?: string) =>
+    people.find((person) => person.id === id)?.label ?? '이름 비공개';
+  const scoped = showOthers
+    ? others.filter(
+        (activity) => otherMode === 'all' || activity.ownerId === owner,
+      )
+    : mine;
+  const filtered = scoped.filter((activity) =>
     Object.values(activity.values)
       .flatMap((value) =>
         typeof value === 'string'
@@ -145,7 +197,11 @@ export function ExplorationView({ userId }: { userId: string }) {
           finalFocus={() => opener.current}
         >
           <DrawerTitle className="sr-only">
-            {existing ? '탐구활동 상세 · 수정' : '탐구활동 추가'}
+            {readOnly
+              ? '탐구활동 상세'
+              : existing
+                ? '탐구활동 상세 · 수정'
+                : '탐구활동 추가'}
           </DrawerTitle>
           <div className="h-12 shrink-0" aria-hidden="true" />
           {confirmDiscard && (
@@ -173,7 +229,13 @@ export function ExplorationView({ userId }: { userId: string }) {
               </div>
             </div>
           )}
-          {draft && (
+          {draft && readOnly && (
+            <ExplorationActivityDetails
+              activity={draft}
+              onClose={returnToList}
+            />
+          )}
+          {draft && !readOnly && (
             <form
               noValidate
               className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pt-4 md:px-6 md:pt-6"
@@ -392,9 +454,97 @@ export function ExplorationView({ userId }: { userId: string }) {
         </DrawerContent>
       </Drawer>
       <div className="space-y-4">
+        {canViewOthers && (
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="탐구활동 구분"
+          >
+            <Button
+              variant={scope === 'mine' ? 'secondary' : 'ghost'}
+              aria-pressed={scope === 'mine'}
+              onClick={() => {
+                setScope('mine');
+                setQuery('');
+              }}
+            >
+              내 탐구활동 <Badge variant="outline">{mine.length}</Badge>
+            </Button>
+            <Button
+              variant={scope === 'others' ? 'secondary' : 'ghost'}
+              aria-pressed={scope === 'others'}
+              onClick={() => {
+                setScope('others');
+                setQuery('');
+              }}
+            >
+              다른 사람의 탐구활동{' '}
+              <Badge variant="outline">{others.length}</Badge>
+            </Button>
+          </div>
+        )}
+        {showOthers && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              className="flex gap-1 rounded-xl bg-muted/50 p-1"
+              role="group"
+              aria-label="다른 사람의 탐구활동 보기 방식"
+            >
+              <Button
+                size="sm"
+                variant={otherMode === 'all' ? 'secondary' : 'ghost'}
+                aria-pressed={otherMode === 'all'}
+                onClick={() => setOtherMode('all')}
+              >
+                전체 보기
+              </Button>
+              <Button
+                size="sm"
+                variant={otherMode === 'person' ? 'secondary' : 'ghost'}
+                aria-pressed={otherMode === 'person'}
+                onClick={() => setOtherMode('person')}
+              >
+                사람별 보기
+              </Button>
+            </div>
+            {otherMode === 'person' && (
+              <Select
+                value={owner || null}
+                onValueChange={(value) => setOwner(value ?? '')}
+              >
+                <SelectTrigger
+                  className="min-w-48"
+                  aria-label="탐구활동 작성자 선택"
+                >
+                  <SelectValue placeholder="작성자를 선택해 주세요">
+                    {owner ? ownerLabel(owner) : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.label} (
+                      {
+                        others.filter(
+                          (activity) => activity.ownerId === person.id,
+                        ).length
+                      }
+                      개)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 font-semibold">
-            탐구활동 목록 <Badge variant="secondary">{activities.length}</Badge>
+            {showOthers
+              ? otherMode === 'person' && owner
+                ? `${ownerLabel(owner)}님의 탐구활동`
+                : '다른 사람의 탐구활동'
+              : '내 탐구활동'}{' '}
+            <Badge variant="secondary">{filtered.length}</Badge>
           </h2>
           <div className="relative w-full sm:w-72">
             <Search
@@ -442,6 +592,11 @@ export function ExplorationView({ userId }: { userId: string }) {
                         : '임시저장'
                       : '확정'}
                   </Badge>
+                  {showOthers && (
+                    <p className="mt-2 text-sm font-medium">
+                      작성자: {ownerLabel(activity.ownerId)}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-muted-foreground">
                     {[
                       [
@@ -469,25 +624,31 @@ export function ExplorationView({ userId }: { userId: string }) {
                     variant="ghost"
                     size="icon-sm"
                     disabled={busy || !ready}
-                    title="상세 · 수정"
-                    aria-label={`${activity.values.topic.trim() || '탐구활동'} 상세 · 수정`}
+                    title={canEdit(activity) ? '상세 · 수정' : '상세 보기'}
+                    aria-label={`${activity.values.topic.trim() || '탐구활동'} ${canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
                     onClick={(event) => (
                       (opener.current = event.currentTarget),
                       open(activity)
                     )}
                   >
-                    <Pencil aria-hidden="true" />
+                    {canEdit(activity) ? (
+                      <Pencil aria-hidden="true" />
+                    ) : (
+                      <Eye aria-hidden="true" />
+                    )}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={busy}
-                    title="삭제"
-                    aria-label={`${activity.values.topic.trim() || activity.values.recordArea.trim() || '탐구활동'} 삭제`}
-                    onClick={() => setPendingDelete(activity)}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </Button>
+                  {canEdit(activity) && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={busy}
+                      title="삭제"
+                      aria-label={`${activity.values.topic.trim() || activity.values.recordArea.trim() || '탐구활동'} 삭제`}
+                      onClick={() => setPendingDelete(activity)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -499,16 +660,22 @@ export function ExplorationView({ userId }: { userId: string }) {
               className="mb-4 size-8 text-muted-foreground"
             />
             <h3 className="font-medium">
-              {activities.length
-                ? '검색 결과가 없습니다'
-                : '아직 등록한 탐구활동이 없습니다'}
+              {showOthers && otherMode === 'person' && !owner
+                ? '작성자를 선택해 주세요'
+                : query.trim()
+                  ? '검색 결과가 없습니다'
+                  : '등록된 탐구활동이 없습니다'}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {activities.length
-                ? '다른 검색어로 찾아보세요.'
-                : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
+              {showOthers && otherMode === 'person' && !owner
+                ? '작성자를 선택하면 해당 사람의 탐구활동을 볼 수 있습니다.'
+                : query.trim()
+                  ? '다른 검색어로 찾아보세요.'
+                  : showOthers
+                    ? '다른 사람이 확정한 탐구활동이 여기에 표시됩니다.'
+                    : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
             </p>
-            {!activities.length && (
+            {!showOthers && !mine.length && (
               <Button
                 variant="outline"
                 className="mt-5"

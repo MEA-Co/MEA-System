@@ -53,6 +53,9 @@ async function account(role) {
 try {
   const owner = await account('consultant');
   const other = await account('consultant_lead');
+  const peerLead = await account('consultant_lead');
+  const staffAdmin = await account('admin');
+  const peer = await account('consultant');
   const id = randomUUID();
   const fileId = randomUUID();
   const path = `${owner.id}/${id}/${fileId}.pdf`;
@@ -126,20 +129,71 @@ try {
   const saved = await owner.client.rpc('save_exploration', args);
   assert.equal(saved.error, null, `Confirm: ${saved.error?.message}`);
   assert.equal(saved.data.revision, 1);
+  const leadActivityId = randomUUID();
+  const leadSaved = await peerLead.client.rpc('save_exploration', {
+    ...args,
+    p_id: leadActivityId,
+    p_reports: [],
+    p_save_id: randomUUID(),
+  });
+  assert.equal(leadSaved.error, null);
+  for (const activityId of [id, leadActivityId]) {
+    const author = await other.client
+      .from('exploration')
+      .select('owner:profiles!owner_id(name)')
+      .eq('id', activityId)
+      .single();
+    assert.equal(author.error, null);
+    assert.equal(
+      author.data.owner?.name,
+      '탐구활동 로컬 검사',
+      'Lead sees consultant and fellow lead names',
+    );
+  }
+
+  const named = await other.client
+    .from('exploration')
+    .select('*, owner:profiles!owner_id(name)')
+    .eq('id', id)
+    .single();
+  assert.equal(named.error, null, 'Author join is available to leads');
+  assert.ok(
+    named.data.owner?.name,
+    'Author name is included for person filtering',
+  );
   assert.equal(
     (await owner.client.rpc('save_exploration', args)).data.revision,
     1,
     'Idempotent retry',
   );
   assert.equal(
-    (
-      await other.client
-        .from('exploration')
-        .select('id')
-        .eq('id', id)
-    ).data.length,
+    (await other.client.from('exploration').select('id').eq('id', id)).data
+      .length,
+    1,
+  );
+  for (const viewer of [other, staffAdmin]) {
+    assert.equal(
+      (await viewer.client.storage.from(bucket).createSignedUrl(path, 60))
+        .error,
+      null,
+      'Staff can download confirmed reports',
+    );
+    assert.ok(
+      (
+        await viewer.client.rpc('delete_exploration', {
+          p_id: id,
+          p_expected_revision: 1,
+        })
+      ).error,
+      'Staff cannot delete others',
+    );
+  }
+  assert.equal(
+    (await peer.client.from('exploration').select('id').eq('id', id)).data
+      .length,
     0,
   );
+  assert.ok((await peer.client.storage.from(bucket).download(path)).error);
   await owner.client.storage.from(bucket).remove([path]);
   assert.equal(
     (await owner.client.storage.from(bucket).info(path)).error,
@@ -161,6 +215,10 @@ try {
       })
     ).error,
     null,
+  );
+  assert.ok(
+    (await other.client.storage.from(bucket).download(path)).error,
+    'Deleted report is no longer shared',
   );
   assert.equal(
     (await owner.client.storage.from(bucket).remove([path])).error,

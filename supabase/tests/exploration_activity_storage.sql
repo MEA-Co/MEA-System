@@ -1,8 +1,8 @@
 begin;
 create temporary table exploration_test_users(id uuid, role text);
-insert into exploration_test_users select gen_random_uuid(), r from unnest(array['consultant','consultant_lead','admin','student']) r;
+insert into exploration_test_users select gen_random_uuid(), r from unnest(array['consultant','consultant_other','consultant_lead','admin','student']) r;
 insert into auth.users(id) select id from exploration_test_users;
-insert into public.profiles(id,role,name,student_period) select id,role,'탐구활동 회귀',case when role='student' then '1학년 1학기' end from exploration_test_users;
+insert into public.profiles(id,role,name,student_period) select id,case when role='consultant_other' then 'consultant' else role end,'탐구활동 회귀',case when role='student' then '1학년 1학기' end from exploration_test_users;
 grant select on exploration_test_users to authenticated;
 create temporary table exploration_test_doc(id uuid, owner_id uuid, vals jsonb, save_id uuid, report jsonb);
 insert into exploration_test_doc
@@ -54,8 +54,8 @@ begin
  exception when insufficient_privilege then null; end;
  for other_user in select id from exploration_test_users where id<>d.owner_id loop
   perform set_config('request.jwt.claim.sub',other_user::text,true);
-  if exists(select 1 from public.exploration where id=d.id) then raise exception 'Other account can read'; end if;
-  if exists(select 1 from storage.objects where bucket_id='exploration-reports' and name=d.report#>>'{0,path}') then raise exception 'Other account can download'; end if;
+  if exists(select 1 from public.exploration where id=d.id) <> (select role in ('admin','consultant_lead') from exploration_test_users where id=other_user) then raise exception 'Incorrect cross-owner read access'; end if;
+  if exists(select 1 from storage.objects where bucket_id='exploration-reports' and name=d.report#>>'{0,path}') <> (select role in ('admin','consultant_lead') from exploration_test_users where id=other_user) then raise exception 'Incorrect cross-owner download access'; end if;
   begin
    perform public.save_exploration(d.id,d.vals,d.report,1,gen_random_uuid());
    raise exception 'Other account can edit';

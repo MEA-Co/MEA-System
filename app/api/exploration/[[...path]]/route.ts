@@ -6,6 +6,7 @@ import {
   confirmRequestSchema,
   REPORT_BUCKET,
 } from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
+import { getViewRole } from '@/lib/admin';
 import { getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -29,6 +30,8 @@ async function handle(request: Request, context: Context) {
     if (origin && origin !== new URL(request.url).origin)
       return json({ error: '잘못된 요청입니다.' }, 403);
   }
+  const viewRole = await getViewRole(access.role!);
+  const ownOnly = viewRole !== 'admin' && viewRole !== 'consultant_lead';
   const client = createClient(await cookies());
   const path = (await context.params).path ?? [];
   const id = path[0];
@@ -37,14 +40,15 @@ async function handle(request: Request, context: Context) {
   if (request.method === 'GET' && !id) {
     const activities: ActivityRow[] = [];
     for (let offset = 0; ; offset += 500) {
-      const { data, error } = await client
+      let query = client
         .from('exploration')
-        .select('*')
-        .eq('owner_id', access.user.id)
+        .select('*, owner:profiles!owner_id(name)')
         .is('deleted_at', null)
         .order('updated_at', { ascending: false })
         .order('id')
         .range(offset, offset + 499);
+      if (ownOnly) query = query.eq('owner_id', access.user.id);
+      const { data, error } = await query;
       if (error)
         return json(
           {
@@ -59,13 +63,13 @@ async function handle(request: Request, context: Context) {
     return json({ activities });
   }
   if (request.method === 'GET' && path.length === 3 && path[1] === 'files') {
-    const { data, error } = await client
+    let query = client
       .from('exploration')
       .select('reports')
       .eq('id', id)
-      .eq('owner_id', access.user.id)
-      .is('deleted_at', null)
-      .maybeSingle();
+      .is('deleted_at', null);
+    if (ownOnly) query = query.eq('owner_id', access.user.id);
+    const { data, error } = await query.maybeSingle();
     if (error) return json({ error: '파일을 불러오지 못했습니다.' }, 503);
     const report = (data?.reports as ActivityRow['reports'] | undefined)?.find(
       (r) => r.clientKey === path[2],
@@ -161,4 +165,4 @@ async function route(request: Request, context: Context) {
     );
   }
 }
-export { route as DELETE,route as GET, route as PUT };
+export { route as DELETE, route as GET, route as PUT };

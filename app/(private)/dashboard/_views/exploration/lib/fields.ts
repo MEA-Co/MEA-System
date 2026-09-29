@@ -187,6 +187,8 @@ export type ActivityReport = {
   file?: File;
 };
 export type Activity = {
+  ownerId?: string;
+  ownerName?: string;
   clientKey: string;
   revision: number;
   status: 'draft' | 'confirmed';

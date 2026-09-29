@@ -46,6 +46,7 @@ export const DASHBOARD_ROLES = {
     consultants: { sidebar: true },
     questions: { sidebar: true },
     questionnaire: { sidebar: false },
+    exploration: { sidebar: true },
     consulting: { sidebar: true },
   },
 } as const satisfies Record<MemberRole, RolePages>;

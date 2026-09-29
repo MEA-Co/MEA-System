@@ -20,7 +20,9 @@ export function ExplorationReportInput({
   activityId,
   reports,
   onChange,
+  readOnly = false,
 }: {
+  readOnly?: boolean;
   activityId: string;
   reports: Reports;
   onChange: (reports: Reports) => void;
@@ -88,51 +90,55 @@ export function ExplorationReportInput({
           </span>
         </span>
       </h2>
-      <p className="text-sm text-muted-foreground">
-        학생 보고서 원문 파일을 첨부할 수 있습니다.
-      </p>
-      <div
-        className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border border-dashed p-5 ${dragging ? 'border-primary bg-muted' : 'bg-muted/50'}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          if (!event.currentTarget.closest('fieldset')?.disabled)
-            addFiles(Array.from(event.dataTransfer.files));
-        }}
-      >
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <CloudUpload aria-hidden="true" className="size-8 shrink-0" />
-          <div className="space-y-1">
-            <p>파일을 드래그하거나 파일 첨부 버튼을 눌러 첨부하세요.</p>
-            <p>PDF, HWP, HWPX, DOC, DOCX, PPT, PPTX (파일당 최대 20MB)</p>
+      {!readOnly && (
+        <>
+          <p className="text-sm text-muted-foreground">
+            학생 보고서 원문 파일을 첨부할 수 있습니다.
+          </p>
+          <div
+            className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border border-dashed p-5 ${dragging ? 'border-primary bg-muted' : 'bg-muted/50'}`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              if (!event.currentTarget.closest('fieldset')?.disabled)
+                addFiles(Array.from(event.dataTransfer.files));
+            }}
+          >
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <CloudUpload aria-hidden="true" className="size-8 shrink-0" />
+              <div className="space-y-1">
+                <p>파일을 드래그하거나 파일 첨부 버튼을 눌러 첨부하세요.</p>
+                <p>PDF, HWP, HWPX, DOC, DOCX, PPT, PPTX (파일당 최대 20MB)</p>
+              </div>
+            </div>
+            <input
+              ref={input}
+              type="file"
+              multiple
+              accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx"
+              className="hidden"
+              aria-label="보고서 원문 파일"
+              onChange={(event) => {
+                addFiles(Array.from(event.target.files ?? []));
+                event.target.value = '';
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => input.current?.click()}
+            >
+              <Upload aria-hidden="true" />
+              파일 첨부
+            </Button>
           </div>
-        </div>
-        <input
-          ref={input}
-          type="file"
-          multiple
-          accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx"
-          className="hidden"
-          aria-label="보고서 원문 파일"
-          onChange={(event) => {
-            addFiles(Array.from(event.target.files ?? []));
-            event.target.value = '';
-          }}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => input.current?.click()}
-        >
-          <Upload aria-hidden="true" />
-          파일 첨부
-        </Button>
-      </div>
+        </>
+      )}
       {reports.length > 0 && (
         <ul className="divide-y rounded-xl border">
           {reports.map(({ clientKey, name, size, file, path }) => (
@@ -172,20 +178,24 @@ export function ExplorationReportInput({
                   <Download aria-hidden="true" />
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label={`${name} 첨부 삭제`}
-                onClick={() =>
-                  onChange(
-                    reports.filter((report) => report.clientKey !== clientKey),
-                  )
-                }
-              >
-                <Trash2 aria-hidden="true" />
-                삭제
-              </Button>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`${name} 첨부 삭제`}
+                  onClick={() =>
+                    onChange(
+                      reports.filter(
+                        (report) => report.clientKey !== clientKey,
+                      ),
+                    )
+                  }
+                >
+                  <Trash2 aria-hidden="true" />
+                  삭제
+                </Button>
+              )}
             </li>
           ))}
         </ul>

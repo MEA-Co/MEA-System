@@ -48,6 +48,8 @@ export const localActivitySchema = z
     clientKey: z.uuid(),
     revision: z.number().int().nonnegative(),
     status: z.literal('draft'),
+    ownerId: z.uuid().optional(),
+    ownerName: z.string().optional(),
     updatedAt: z.iso.datetime(),
     localVersion: z.uuid(),
     values: valuesSchema,
@@ -128,6 +130,7 @@ export const confirmRequestSchema = z
 export type ActivityRow = {
   id: string;
   owner_id: string;
+  owner?: { name: string } | null;
   values: Activity['values'];
   reports: z.infer<typeof reportSchema>[];
   revision: number;
@@ -138,6 +141,8 @@ export type ActivityRow = {
 export function fromRow(row: ActivityRow): Activity {
   return {
     clientKey: row.id,
+    ownerId: row.owner_id,
+    ownerName: row.owner?.name ?? undefined,
     values: row.values,
     reports: row.reports,
     revision: row.revision,

@@ -49,7 +49,13 @@ const DASHBOARD_VIEWS = {
   questionnaire: ({ role, questionnaireId }) => (
     <QuestionsView role={role} requestedId={questionnaireId} />
   ),
-  exploration: ({ userId }) => <ExplorationView key={userId} userId={userId} />,
+  exploration: ({ userId, role }) => (
+    <ExplorationView
+      key={`${userId}:${role}`}
+      userId={userId}
+      canViewOthers={role === 'admin' || role === 'consultant_lead'}
+    />
+  ),
 } satisfies Record<DashboardView, (context: ViewContext) => ReactNode>;
 
 export function renderDashboardView(

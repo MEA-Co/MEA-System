@@ -123,7 +123,12 @@ export function useExplorationStorage(userId: string) {
     });
   }
   function saveLocal() {
-    if (!draft || !hasInput(draft)) return;
+    if (
+      !draft ||
+      (draft.ownerId && draft.ownerId !== userId) ||
+      !hasInput(draft)
+    )
+      return;
     void run(async () => {
       const saved = await saveDraft(userId, draft);
       setDraft(saved);
@@ -133,7 +138,7 @@ export function useExplorationStorage(userId: string) {
     });
   }
   function confirm() {
-    if (!draft) return;
+    if (!draft || (draft.ownerId && draft.ownerId !== userId)) return;
     const missing = missingFields(draft.values);
     if (missing.length) {
       toast.add({
@@ -190,6 +195,7 @@ export function useExplorationStorage(userId: string) {
     });
   }
   async function remove(activity: Activity) {
+    if (activity.ownerId && activity.ownerId !== userId) return false;
     let success = false;
     await run(async () => {
       if (activity.status === 'draft') {

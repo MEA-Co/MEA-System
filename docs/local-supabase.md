@@ -144,3 +144,8 @@ done
 ## 탐구활동 API·DB 이름 정리 (2026-09-28)
 
 기존 AI 코치의 `/api/exploration`은 `/api/exploration-coach`로 이동했다. 새 탐구활동 API는 `/api/exploration`이다. `20260928101208_rename_exploration_activity_storage.sql`은 `public.exploration_activities` → `public.exploration`, 저장·삭제 RPC → `save_exploration` / `delete_exploration`으로 이름을 변경한다. 행 데이터·RLS·보고서 객체 경로는 유지한다. 기존 코치는 별도 exploration 테이블을 사용하지 않는다. 로컬 적용·회귀 검증 완료이며 운영에는 미적용이다. 운영의 최초 저장 migration 적용 여부에 따라 최초 저장 → 이름 변경 두 개 또는 이름 변경 하나를 검토 후 적용한다.
+
+
+## 탐구활동 리드·관리자 조회 (2026-09-29)
+
+`20260929050548_exploration_staff_read.sql`을 로컬에 적용했다. 전체 확정 활동과 연결된 보고서에 한해 리드·관리자의 SELECT를 허용하며 타인 쓰기는 허용하지 않는다. SQL 회귀·실제 Storage 통합·보안 advisor 검증과 전체 migration 재생 후 public/private/storage 차이 없음을 확인하고 이 migration만 로컬 이력에 등록했다. 운영 미적용이며 적용 순서는 `docs/exploration-activity-storage.md`에 기록했다.

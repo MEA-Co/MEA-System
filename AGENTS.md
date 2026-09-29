@@ -16,6 +16,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 탐구활동은 관리자 사이드바에도 표시한다. 컨설턴트는 본인 확정 활동만, 리드·관리자는 전체 확정 활동을 조회한다. 타인 활동은 읽기 전용이며 수정·삭제는 작성자만 가능하다. 관리자 컨설턴트 미리보기는 API에서 본인 목록·첨부만 반환한다. 타인 파일은 활성 확정본에서 참조된 객체만 공유하며 임시저장은 본인 브라우저에만 남는다. migration `20260929050548_exploration_staff_read.sql`, 회귀 `supabase/tests/exploration_activity_storage.sql`, `scripts/verify-exploration-storage{,-local}.mjs`.
+
+
 - 질문 제작의 `minRows`(기본 1)·`rowLabels`(빈 이름은 순서 숫자)는 `questions.min_rows`·`row_labels`로 저장한다. 반복형 최소는 최대 이하이며 질문/질문지 미리보기에서 최소 행을 유지한다. 참조형 행 수는 원본 응답을 따른다. migration `20260928102529_question_row_settings.sql`, SQL 회귀 `supabase/tests/question_row_settings.sql`.
 
 
@@ -126,3 +129,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 전체 검토는 관리자·컨설턴트에게 제공하며 `_lib/review.ts`에서 도입 → 4개 산출물 → 모아보기로 구성한다. `전공 세부 키워드`의 하위 화면은 `1순위 전공`, `추가 전공`, `키워드 작성`을 같은 검토 단계의 `states`로 묶는다. 실제 Plan의 전공 입력 노드를 별도 최상위 검토 단계로 나열하지 않는다.
 
 - 새 게시 표시는 `questionnaire_publication_reads`의 사용자·버전별 확인 기록으로 관리한다. 본인 게시·초안·배포본·보관본은 제외하고 미확인 게시본만 사이드바/게시 탭에 NEW 개수, 목록 항목에 NEW와 연한 파란 배경을 표시한다. `PublicationNotifications`가 상태를 공유하며 상세 화면의 `PublicationReadMarker`가 마운트된 뒤 REST API로 확인 처리한다. 프리패치·목록 방문은 확인 처리하지 않고 편집기를 새로고침하지 않는다. 수정/자동 저장은 확인 여부를 초기화하지 않는다. 기존 미확인 게시본도 새 게시로 표시하며 SWR로 열린 화면에서 60초마다 최신 목록을 조회한다. 컨설턴트 표시 역할에서는 게시 대신 새 배포 알림을 조회하고 응답 행 생성으로 확인 처리한다. 검증은 `supabase/tests/questionnaire_publication_reads.sql`.
+
+- 탐구활동 목록은 내 활동/다른 사람의 활동을 분리한다. 컨설턴트는 내 활동만 표시하며 리드·관리자는 다른 사람의 활동에서 전체 보기/작성자 선택 사람별 보기를 사용한다. API는 기존 profiles RLS를 따르는 작성자 이름만 함께 조회하고, 이름을 볼 수 없으면 비공개 표시한다. 추가 DB migration 없음.
