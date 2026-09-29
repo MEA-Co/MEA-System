@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
 import type { QuestionnaireListItem as Item } from '../../lib/questionnaire/types';
 
 import { ConsultantQuestionnaireList } from './ConsultantQuestionnaireList';
@@ -132,7 +133,9 @@ export function QuestionnaireList({
               <TableRow
                 key={item.id}
                 className={
-                  item.isOwner && item.pendingReviewCount > 0
+                  QUESTIONNAIRE_REVIEWS_VISIBLE &&
+                  item.isOwner &&
+                  item.pendingReviewCount > 0
                     ? 'bg-green-50/50 dark:bg-green-950/20'
                     : undefined
                 }

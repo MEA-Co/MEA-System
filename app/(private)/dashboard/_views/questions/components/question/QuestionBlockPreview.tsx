@@ -198,7 +198,7 @@ export function QuestionBlockPreview({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {!runtime && (
         <p className="text-sm text-muted-foreground">
           사용자가 보는 답변 화면을 체험할 수 있어요. 여기서 입력한 답변은
@@ -217,7 +217,7 @@ export function QuestionBlockPreview({
           />
         </div>
       )}
-      <div className="space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
+      <div className="min-w-0 max-w-full space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
         <div className="flex items-start gap-3 font-medium">
           <span className="w-6 shrink-0 text-sm font-semibold">
             {questionNumber}
@@ -256,7 +256,7 @@ export function QuestionBlockPreview({
           </p>
         )}
         {repeated ? (
-          <div className="overflow-x-auto rounded-xl border">
+          <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-xl border">
             <table className="w-full border-collapse text-left text-sm">
               <caption className="sr-only">
                 답변 목록. 항목을 누르면 열별 답변을 입력할 수 있습니다.

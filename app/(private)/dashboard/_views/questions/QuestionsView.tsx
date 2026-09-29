@@ -33,7 +33,7 @@ export function QuestionsView({
     params.get('tab') !== 'questions';
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       {overview && (
         <header>
           <DashboardPageCategory view="questions" />

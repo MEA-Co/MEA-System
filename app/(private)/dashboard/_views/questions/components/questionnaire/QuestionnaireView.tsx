@@ -25,6 +25,7 @@ import {
   type QuestionnaireApiError,
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
+import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
 import type { QuestionnaireViewData } from '../../lib/questionnaire/types';
 
 import { PublicationReadMarker } from './PublicationNotifications';
@@ -228,7 +229,10 @@ function QuestionnaireContent({
     error?.status === 401 ||
     (!!openedDraft && !initialDraft);
   const reviewContext =
-    selected && selected.status !== 'draft' && staff
+    QUESTIONNAIRE_REVIEWS_VISIBLE &&
+    selected &&
+    selected.status !== 'draft' &&
+    staff
       ? {
           versionId: selected.id,
           isOwner: selected.isOwner,

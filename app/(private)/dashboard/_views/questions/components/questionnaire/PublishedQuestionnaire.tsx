@@ -34,7 +34,7 @@ export function PublishedQuestionnaire({
 }) {
   if (staff && !distributed)
     return (
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto w-full min-w-0 max-w-4xl">
         <QuestionnairePreview
           title={document.title}
           sections={document.sections}
@@ -57,7 +57,7 @@ export function PublishedQuestionnaire({
       </div>
     );
   const content = (
-    <article className="mx-auto max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
+    <article className="mx-auto w-full min-w-0 max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
         <Badge variant="secondary">
           {distributed ? '배포된 질문지' : '게시된 질문지'}
@@ -130,7 +130,10 @@ export function PublishedQuestionnaire({
       </QuestionnaireAnswers>
     );
   return (
-    <Tabs.Root defaultValue="detail" className="mx-auto max-w-4xl">
+    <Tabs.Root
+      defaultValue="detail"
+      className="mx-auto w-full min-w-0 max-w-4xl"
+    >
       <Tabs.List
         className="mb-4 inline-flex max-w-full gap-1 rounded-xl bg-muted p-1"
         aria-label="질문지 보기 방식"

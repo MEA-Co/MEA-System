@@ -7,12 +7,21 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 
 import { useQuestionnaireApi } from '../../lib/questionnaire/api-client';
+import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
 import type { QuestionnaireReviewContext } from '../../lib/questionnaire/types';
 
 import { QuestionAnnotationEditor } from './QuestionAnnotationEditor';
 import { RichTextContent } from './RichTextContent';
 
-export function QuestionnaireReviews({
+export function QuestionnaireReviews(
+  props: QuestionnaireReviewContext & { questionId?: string },
+) {
+  return QUESTIONNAIRE_REVIEWS_VISIBLE ? (
+    <QuestionnaireReviewsContent {...props} />
+  ) : null;
+}
+
+function QuestionnaireReviewsContent({
   versionId,
   questionId,
   isOwner,
