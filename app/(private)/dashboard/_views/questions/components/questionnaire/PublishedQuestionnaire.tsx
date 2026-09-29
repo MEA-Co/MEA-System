@@ -11,10 +11,8 @@ import type {
   QuestionnaireReviewContext,
 } from '../../lib/questionnaire/types';
 
-import { PublishedExplanation } from './PublishedExplanation';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
-import { QuestionExplanationForm } from './QuestionExplanationForm';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
@@ -27,14 +25,12 @@ export function PublishedQuestionnaire({
   distributed = false,
   staff = true,
   reviewContext,
-  editableExplanationIds = [],
 }: {
   document: QuestionnaireDraft;
   sources?: QuestionBlockRow[];
   distributed?: boolean;
   staff?: boolean;
   reviewContext?: QuestionnaireReviewContext;
-  editableExplanationIds?: string[];
 }) {
   if (staff && !distributed)
     return (
@@ -102,28 +98,6 @@ export function PublishedQuestionnaire({
               {staff && question.kind && question.kind !== 'text' && (
                 <QuestionChoiceInput question={question} disabled />
               )}
-              {question.details.map((detail) => (
-                <PublishedExplanation
-                  key={detail.id}
-                  detail={detail}
-                  versionId={document.versionId}
-                  questionId={question.id}
-                  revision={document.revision}
-                  staff={staff}
-                  canManage={
-                    staff &&
-                    !distributed &&
-                    editableExplanationIds.includes(detail.id)
-                  }
-                />
-              ))}
-              {staff && !distributed && reviewContext?.isOwner && (
-                <QuestionExplanationForm
-                  versionId={document.versionId}
-                  questionId={question.id}
-                  count={question.details.length}
-                />
-              )}
               {staff && reviewContext && (
                 <QuestionnaireReviews
                   {...reviewContext}
@@ -183,6 +157,7 @@ export function PublishedQuestionnaire({
           title={document.title}
           sections={document.sections}
           library={sources}
+          legacyResponsePreview={distributed}
         />
       </Tabs.Panel>
     </Tabs.Root>

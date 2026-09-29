@@ -95,7 +95,24 @@ export const questionnaireDocumentSchema = z
   });
 
 export const saveQuestionnaireSchema = z.object({
-  document: questionnaireDocumentSchema,
+  document: questionnaireDocumentSchema.superRefine((document, context) => {
+    document.sections.forEach((section, si) =>
+      section.questions.forEach((question, qi) => {
+        if (question.details.length)
+          context.addIssue({
+            code: 'custom',
+            path: ['sections', si, 'questions', qi, 'details'],
+            message: '설명은 원본 질문에서 수정해 주세요.',
+          });
+        if (!question.sourceQuestionId)
+          context.addIssue({
+            code: 'custom',
+            path: ['sections', si, 'questions', qi, 'sourceQuestionId'],
+            message: '원본 질문을 먼저 저장한 뒤 배치해 주세요.',
+          });
+      }),
+    );
+  }),
   expectedRevision: z.number().int().nonnegative().max(2147483646),
   saveId: z.uuid(),
 });

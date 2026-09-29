@@ -23,11 +23,14 @@ export function QuestionnairePreview({
   sections,
   library = [],
   renderQuestionFooter,
+  legacyResponsePreview = false,
 }: {
   title: string;
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
   renderQuestionFooter?: (questionId: string) => ReactNode;
+  /** Only the retained distributed-response screen renders inline questions. */
+  legacyResponsePreview?: boolean;
 }) {
   const [answers, setAnswers] = useState<Record<string, PreviewAnswerRow[]>>(
     {},
@@ -83,7 +86,7 @@ export function QuestionnairePreview({
                 />
                 {renderQuestionFooter?.(question.id)}
               </div>
-            ) : (
+            ) : legacyResponsePreview ? (
               <div
                 key={question.id}
                 className={questionnaireStyles.questionCard}
@@ -99,22 +102,6 @@ export function QuestionnairePreview({
                     value={question.text || '작성하지 않은 질문'}
                   />
                 </div>
-                {question.details
-                  .filter((detail) => detail.visibleToConsultants)
-                  .map((detail) => (
-                    <div
-                      key={detail.id}
-                      className={questionnaireStyles.explanation}
-                    >
-                      <p className="wrap-break-word text-sm font-semibold">
-                        {detail.title || '제목 없는 항목'}
-                      </p>
-                      <RichTextContent
-                        className="mt-2 text-sm leading-7 text-neutral-700 dark:text-neutral-300"
-                        value={detail.text || '작성하지 않은 내용'}
-                      />
-                    </div>
-                  ))}
                 {question.kind && question.kind !== 'text' ? (
                   <QuestionChoiceInput question={question} disabled />
                 ) : (
@@ -122,6 +109,15 @@ export function QuestionnairePreview({
                 )}
                 {renderQuestionFooter?.(question.id)}
               </div>
+            ) : (
+              <p
+                key={question.id}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                원본 질문이 없는 배치예요. 원본 질문을 저장한 뒤 다시 배치해
+                주세요.
+              </p>
             ),
           )}
         </section>

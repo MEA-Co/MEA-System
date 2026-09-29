@@ -98,7 +98,6 @@ export type QuestionnaireReviewContext = {
 
 export type QuestionnaireViewData = {
   publishedSources?: QuestionBlockRow[];
-  editableExplanationIds: string[];
   drafts: QuestionnaireListItem[];
   published: QuestionnaireListItem[];
   distributed: QuestionnaireListItem[];

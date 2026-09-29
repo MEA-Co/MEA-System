@@ -9,11 +9,9 @@ import {
 import { QuestionnaireHttpError } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/http-error';
 import { loadUnreadQuestionnairePublications } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/publication-notifications';
 import {
-  addQuestionnaireExplanation,
   changeQuestionnaireStatus,
   deleteQuestionnaireDraft,
   loadQuestionnaireView,
-  manageQuestionnaireExplanation,
   manageQuestionnaireReview,
   publishQuestionnaireDraft,
   saveQuestionnaireDraft,
@@ -134,22 +132,6 @@ async function handle(request: Request, context: Context) {
       result = await publishQuestionnaireDraft(
         { ...body, versionId: id },
         resource === 'publication' ? 'publish' : 'distribute',
-      );
-    else if (
-      method === 'POST' &&
-      path.length === 2 &&
-      resource === 'explanations'
-    )
-      result = await addQuestionnaireExplanation({ ...body, versionId: id });
-    else if (
-      (method === 'PATCH' || method === 'DELETE') &&
-      path.length === 3 &&
-      resource === 'explanations' &&
-      z.uuid().safeParse(childId).success
-    )
-      result = await manageQuestionnaireExplanation(
-        { ...body, versionId: id, id: childId },
-        method === 'DELETE' ? 'delete' : 'update',
       );
     else if (method === 'POST' && path.length === 2 && resource === 'reviews')
       result = await manageQuestionnaireReview(

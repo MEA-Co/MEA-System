@@ -159,7 +159,6 @@ export async function loadQuestionnaireView(
     }));
   const result = {
     publishedSources: [] as QuestionBlockRow[],
-    editableExplanationIds: [] as string[],
     drafts: versions.filter(
       (item) => !item.archivedAt && item.status === 'draft',
     ),
@@ -480,114 +479,6 @@ export async function manageQuestionnaireReview(
       status: mutationStatus(result.error.code),
       error:
         '검토 요청을 처리하지 못했어요. 권한과 질문지 상태를 확인해 주세요.',
-    };
-  return {};
-}
-
-export async function addQuestionnaireExplanation(
-  input: unknown,
-): Promise<{ error?: string; status?: number }> {
-  const access = await getUserAccess();
-  if (
-    !access.user ||
-    !access.isOnboarded ||
-    !['admin', 'consultant_lead'].includes(access.role ?? '')
-  )
-    return { status: 403, error: '설명을 추가할 권한이 없어요.' };
-  const parsed = z
-    .object({
-      id: z.uuid(),
-      versionId: z.uuid(),
-      questionId: z.uuid(),
-      title: z.string().trim().min(1).max(500),
-      description: z
-        .string()
-        .trim()
-        .max(20000)
-        .transform(normalizeRichTextValue)
-        .refine((value) => richTextPlainText(value).trim().length > 0),
-      visibleToConsultants: z.boolean(),
-    })
-    .safeParse(input);
-  if (!parsed.success)
-    return { status: 400, error: '설명 제목과 내용을 입력해 주세요.' };
-  const d = parsed.data;
-  const client = createClient(await cookies());
-  const { error } = await client.rpc('add_questionnaire_explanation', {
-    p_id: d.id,
-    p_version_id: d.versionId,
-    p_question_id: d.questionId,
-    p_title: d.title,
-    p_description: d.description,
-    p_visible: d.visibleToConsultants,
-  });
-  if (error)
-    return {
-      status: mutationStatus(error.code),
-      error:
-        error.code === '42501'
-          ? '질문지 작성자만 설명을 추가할 수 있어요.'
-          : '설명을 추가하지 못했어요. 게시 상태와 질문을 확인해 주세요.',
-    };
-  return {};
-}
-
-export async function manageQuestionnaireExplanation(
-  input: unknown,
-  mode: 'update' | 'delete',
-): Promise<{ error?: string; status?: number }> {
-  const access = await getUserAccess();
-  if (
-    !access.user ||
-    !access.isOnboarded ||
-    !['admin', 'consultant_lead'].includes(access.role ?? '')
-  )
-    return { status: 403, error: '설명을 수정하거나 삭제할 권한이 없어요.' };
-  const base = z.object({
-    id: z.uuid(),
-    versionId: z.uuid(),
-    revision: z.number().int().min(1).max(2147483646),
-  });
-  const parsed = (
-    mode === 'delete'
-      ? base
-      : base.extend({
-          title: z.string().trim().min(1).max(500),
-          description: z
-            .string()
-            .trim()
-            .max(20000)
-            .transform(normalizeRichTextValue)
-            .refine((value) => richTextPlainText(value).trim().length > 0),
-          visibleToConsultants: z.boolean(),
-        })
-  ).safeParse(input);
-  if (!parsed.success)
-    return { status: 400, error: '설명과 저장 상태를 확인해 주세요.' };
-  const data = parsed.data;
-  const client = createClient(await cookies());
-  const result =
-    'title' in data && 'description' in data && 'visibleToConsultants' in data
-      ? await client.rpc('update_questionnaire_explanation', {
-          p_version_id: data.versionId,
-          p_id: data.id,
-          p_revision: data.revision,
-          p_title: data.title,
-          p_description: data.description,
-          p_visible: data.visibleToConsultants,
-        })
-      : await client.rpc('delete_questionnaire_explanation', {
-          p_version_id: data.versionId,
-          p_id: data.id,
-          p_revision: data.revision,
-        });
-  if (result.error)
-    return {
-      status: mutationStatus(result.error.code),
-      error:
-        result.error.code === '40001'
-          ? '질문지가 변경되었어요. 작성한 내용을 복사한 뒤 다시 열어 주세요.'
-          : '설명을 변경하지 못했어요. 질문지 제작자 또는 설명 작성자만 게시 중에 수정·삭제할 수 있어요.',
     };
   return {};
 }

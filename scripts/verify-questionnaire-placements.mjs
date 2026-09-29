@@ -42,7 +42,7 @@ const { createPlacement, questionsToPlace, placementError } = load(
 const { placementPreviewState } = load(
   `${root}/questions/lib/questionnaire/placement-preview.ts`,
 );
-const { questionnaireDocumentSchema } = load(
+const { questionnaireDocumentSchema, saveQuestionnaireSchema } = load(
   `${root}/questions/lib/questionnaire/schema.ts`,
 );
 const plain = (value) => JSON.parse(JSON.stringify(value));
@@ -126,6 +126,15 @@ test('schema keeps placement source identity and reads legacy nullable source me
   const parsed = questionnaireDocumentSchema.parse(doc);
   assert.equal(parsed.sections[0].questions[0].sourceQuestionId, a.id);
   s.questions[0].sourceQuestionId = null;
+  assert.equal(
+    saveQuestionnaireSchema.safeParse({
+      document: doc,
+      expectedRevision: 0,
+      saveId: randomUUID(),
+    }).success,
+    false,
+  );
+  assert.ok(placementError([s], [a]));
   assert.equal(
     questionnaireDocumentSchema.parse(doc).sections[0].questions[0]
       .sourceQuestionId,

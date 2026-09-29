@@ -39,13 +39,11 @@ import type {
 } from '../../lib/questionnaire/types';
 import { QuestionLibraryView } from '../question/QuestionLibraryView';
 
-import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionLibraryPicker } from './QuestionLibraryPicker';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
-import { RichTextContent } from './RichTextContent';
 
 export function QuestionnaireComposer({
   initialDraft,
@@ -93,8 +91,7 @@ export function QuestionnaireComposer({
   const hasPlacements = sections.some((s) =>
     s.questions.some((q) => q.sourceQuestionId),
   );
-  const validation =
-    hasPlacements && library.data ? placementError(sections, questions) : null;
+  const validation = library.data ? placementError(sections, questions) : null;
   const saveState = useQuestionnaireSave(
     {
       questionnaireId: initialDraft.questionnaireId,
@@ -437,7 +434,6 @@ export function QuestionnaireComposer({
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium text-muted-foreground">
                           질문 {qi + 1}
-                          {!question.sourceQuestionId && ' · 기존 질문'}
                         </span>
                         <div className="flex gap-1">
                           {[-1, 1].map((direction) => (
@@ -483,24 +479,18 @@ export function QuestionnaireComposer({
                             disabled={blocked}
                             aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
                             onClick={() => {
-                              if (
-                                question.sourceQuestionId ||
-                                window.confirm(
-                                  '이 기존 질문을 질문지에서 제거할까요? 저장된 답변이 없는 질문만 편집할 수 있습니다.',
-                                )
-                              )
-                                commit(
-                                  sections.map((s) =>
-                                    s.id === section.id
-                                      ? {
-                                          ...s,
-                                          questions: s.questions.filter(
-                                            (q) => q.id !== question.id,
-                                          ),
-                                        }
-                                      : s,
-                                  ),
-                                );
+                              commit(
+                                sections.map((s) =>
+                                  s.id === section.id
+                                    ? {
+                                        ...s,
+                                        questions: s.questions.filter(
+                                          (q) => q.id !== question.id,
+                                        ),
+                                      }
+                                    : s,
+                                ),
+                              );
                             }}
                           >
                             <Trash2 />
@@ -512,38 +502,18 @@ export function QuestionnaireComposer({
                           question={source}
                           showSourceLink={false}
                         />
-                      ) : question.sourceQuestionId ? (
-                        <p className="text-sm text-muted-foreground">
+                      ) : (
+                        <p
+                          role="alert"
+                          className="text-sm text-muted-foreground"
+                        >
                           {library.error
                             ? '질문을 불러오지 못했어요.'
                             : library.isLoading
                               ? '질문을 불러오고 있어요.'
-                              : '원본 질문을 찾을 수 없어요.'}
+                              : '원본 질문을 찾을 수 없어요. 원본 질문을 저장한 뒤 다시 배치해 주세요.'}
                         </p>
-                      ) : (
-                        <>
-                          <RichTextContent value={question.text} />
-                          {question.kind && question.kind !== 'text' && (
-                            <QuestionChoiceInput question={question} disabled />
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            기존 방식으로 작성된 질문입니다. 내용은 보존되며
-                            순서 변경과 제거가 가능합니다.
-                          </p>
-                        </>
                       )}
-                      {question.details.map((detail) => (
-                        <div
-                          key={detail.id}
-                          className="rounded-lg bg-muted/40 p-3 text-sm"
-                        >
-                          <p className="mb-2 font-medium">
-                            {detail.title || '설명'} ·{' '}
-                            {detail.visibleToConsultants ? '공개' : '비공개'}
-                          </p>
-                          <RichTextContent value={detail.text} />
-                        </div>
-                      ))}
                       {reviewContext && (
                         <QuestionnaireReviews
                           {...reviewContext}

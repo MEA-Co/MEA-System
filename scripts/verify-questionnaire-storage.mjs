@@ -204,15 +204,9 @@ const document = () => ({
         {
           id: randomUUID(),
           logicalKey: randomUUID(),
+          sourceQuestionId: randomUUID(),
           text: '',
-          details: [
-            {
-              id: randomUUID(),
-              title: '',
-              text: '',
-              visibleToConsultants: false,
-            },
-          ],
+          details: [],
         },
       ],
     },
@@ -315,8 +309,14 @@ test('input validation preserves UUID identities and rejects duplicates, invalid
   duplicate.document.sections.push(duplicate.document.sections[0]);
   assert.equal(saveQuestionnaireSchema.safeParse(duplicate).success, false);
   const invalid = structuredClone(request);
-  invalid.document.sections[0].questions[0].details[0].visibleToConsultants =
-    'false';
+  invalid.document.sections[0].questions[0].details = [
+    {
+      id: randomUUID(),
+      title: '설명',
+      text: '본문',
+      visibleToConsultants: true,
+    },
+  ];
   assert.equal(saveQuestionnaireSchema.safeParse(invalid).success, false);
   assert.equal(
     saveQuestionnaireSchema.safeParse({
@@ -345,6 +345,9 @@ test('server save checks actual role/onboarding and maps database conflicts with
           },
           '@/lib/supabase/server': {
             createClient: () => ({
+              from: () => ({
+                select: () => ({ limit: async () => ({ error: null }) }),
+              }),
               rpc: async (...args) => {
                 calls.push(args);
                 return { data: null, error: { code: '40001' } };
@@ -377,7 +380,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       user: ownerId,
       status: 'published',
       editable: true,
-      details: 1,
+      details: 0,
     },
     {
       actual: 'admin',
@@ -385,7 +388,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       user: otherId,
       status: 'published',
       editable: false,
-      details: 1,
+      details: 0,
     },
     {
       actual: 'consultant',
@@ -440,12 +443,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
                 },
                 eq: () => builder,
                 order: async () => ({
-                  data:
-                    table === 'questionnaire_versions'
-                      ? [row]
-                      : table === 'questionnaire_question_details'
-                        ? [{ id: doc.sections[0].questions[0].details[0].id }]
-                        : [],
+                  data: table === 'questionnaire_versions' ? [row] : [],
                   error: null,
                 }),
               };
@@ -487,7 +485,6 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
           column === 'questionnaire_review_requests.resolved_at',
       ),
     );
-    assert.equal(result.editableExplanationIds.length, 0);
     assert.equal(
       result.selected.pendingReviewCount,
       result.selected.isOwner ? 2 : 0,

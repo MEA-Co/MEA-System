@@ -28,8 +28,6 @@ function route({
     'loadAnswers',
     'loadAnswerStatuses',
     'saveAnswers',
-    'manageQuestionnaireExplanation',
-    'addQuestionnaireExplanation',
     'loadQuestionnaireView',
     'saveQuestionnaireDraft',
     'deleteQuestionnaireDraft',
@@ -237,61 +235,18 @@ test('every workflow command uses its REST resource and deletion/errors are not 
   assert.deepEqual(await response.json(), { error: 'deleted' });
 });
 
-test('explanations use their own resource and remain restricted to staff', async () => {
-  const id = randomUUID();
-  const payload = {
-    id: randomUUID(),
-    questionId: randomUUID(),
-    title: '추가 설명',
-    description: '내용',
-    visibleToConsultants: false,
-  };
-  const client = route();
-  assert.equal(
-    (await client.request('POST', [id, 'explanations'], payload)).status,
-    200,
-  );
-  assert.equal(client.calls[0][0], 'addQuestionnaireExplanation');
-  assert.equal(client.calls[0][1].title, payload.title);
-  assert.equal(client.calls[0][1].versionId, id);
-  const consultant = route({ role: 'consultant' });
-  assert.equal(
-    (await consultant.request('POST', [id, 'explanations'], payload)).status,
-    403,
-  );
-  assert.equal(consultant.calls.length, 0);
-});
-
-test('explanation updates and deletes bind the path IDs and preserve revision', async () => {
-  const version = randomUUID(),
-    explanation = randomUUID();
-  const client = route();
-  assert.equal(
-    (
-      await client.request('PATCH', [version, 'explanations', explanation], {
-        id: randomUUID(),
-        versionId: randomUUID(),
-        revision: 4,
-        title: '수정',
-        description: '본문',
-        visibleToConsultants: false,
-      })
-    ).status,
-    200,
-  );
-  assert.equal(client.calls[0][0], 'manageQuestionnaireExplanation');
-  assert.equal(client.calls[0][1].id, explanation);
-  assert.equal(client.calls[0][1].versionId, version);
-  assert.equal(client.calls[0][2], 'update');
-  assert.equal(
-    (
-      await client.request('DELETE', [version, 'explanations', explanation], {
-        revision: 4,
-      })
-    ).status,
-    200,
-  );
-  assert.equal(client.calls[1][2], 'delete');
+test('removed questionnaire explanation endpoints return 404 without mutations', async () => {
+  const id = randomUUID(),
+    detail = randomUUID(),
+    client = route();
+  for (const [method, path] of [
+    ['POST', [id, 'explanations']],
+    ['PATCH', [id, 'explanations', detail]],
+    ['DELETE', [id, 'explanations', detail]],
+  ]) {
+    assert.equal((await client.request(method, path, {})).status, 404);
+  }
+  assert.equal(client.calls.length, 0);
 });
 
 test('consultants can save their response and read distribution notifications without gaining staff mutations', async () => {

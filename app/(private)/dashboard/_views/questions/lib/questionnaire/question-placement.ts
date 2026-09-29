@@ -21,7 +21,8 @@ export function placementError(
   const seen = new Set<string>();
   const byId = new Map(library.map((question) => [question.id, question]));
   for (const placement of sections.flatMap((section) => section.questions)) {
-    if (!placement.sourceQuestionId) continue;
+    if (!placement.sourceQuestionId)
+      return '원본 질문이 없는 배치예요. 원본 질문을 저장한 뒤 다시 배치해 주세요.';
     const question = byId.get(placement.sourceQuestionId);
     if (!question || question.archived_at)
       return '배치된 질문을 찾을 수 없어요. 질문 목록을 새로고침하거나 해당 배치를 제거해 주세요.';

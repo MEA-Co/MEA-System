@@ -293,7 +293,6 @@ function QuestionnaireContent({
             sources={data.publishedSources}
             distributed={selected?.status === 'distributed'}
             staff={staff}
-            editableExplanationIds={data.editableExplanationIds}
             reviewContext={reviewContext}
           />
         ) : null}

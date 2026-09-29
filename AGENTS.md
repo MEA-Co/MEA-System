@@ -16,6 +16,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 로컬 `20260929081236_questionnaire_placement_definitions.sql`: source_question_id가 있는 배치는 body/kind/options/scale_config/choice_style/choice_allow_text를 NULL로 유지하고 원본에서 읽는다. 해당 열은 이전 배포본 답변 검증이 사용하므로 삭제하지 않는다. 저장 RPC·DB 제약이 중복 정의를 차단하며 이전 행은 보존한다. 운영 미적용. 검증 `supabase/tests/questionnaire_legacy_response_compatibility.sql`, `questionnaire_published_sources.sql`.
+
+
+- 원본 설명 통일(로컬만): `20260929080341_questionnaire_source_details_only.sql`에서 빈 questionnaire_question_details·전용 RPC/UI/API를 제거했다. 설명은 원본 question_details/save_question으로 관리하며 검토 요청은 별도 유지한다. 이전 import 함수는 명시적 폐기 오류로 중단하고 대응 이력은 보존한다. 운영은 미적용이며 데이터가 있으면 새 migration은 중단한다.
+
+
+- 원본 참조 저장 통일(로컬만): `20260929075817_questionnaire_source_required.sql`. 모든 제작 저장에 sourceQuestionId가 필요하며 질문지 안 새 질문은 원본 저장 후 배치한다. 현재 운영의 이전 게시본을 같은 ID/상태로 전환하기 전에는 이 단계 앱/migration을 운영 배포하지 않는다. 테이블·열 제거 및 이전 설명 구조 정리는 후속 단계다.
+
+
+- DB 정리 범위(2026-09-29): 사용자는 질문·질문지 통합 후 미사용 **테이블 구조** 점검을 요청했다. 기존 게시본·전환본 데이터는 유지하며 테이블 점검을 데이터 삭제·보관 요청으로 해석하지 않는다. 오삭제했던 기존 게시본은 삭제 전 백업과 모든 열을 비교해 복원 완료했다. 자세한 기록은 `docs/questionnaire-storage-design.md`를 따른다.
+
+
 - 진행 상태(2026-09-29): 질문지 게시까지 구현했으며, 게시 후 검토 요청 흐름은 사용자가 아직 점검하지 않았다. 구현 완료와 사용자 점검 완료를 구분하고 검토 요청을 검증 완료로 간주하지 않는다.
 
 
