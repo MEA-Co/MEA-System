@@ -24,6 +24,7 @@ export function QuestionnairePreview({
   library = [],
   renderQuestionFooter,
   legacyResponsePreview = false,
+  showPrivateDetails = false,
 }: {
   title: string;
   sections: QuestionnaireSection[];
@@ -31,6 +32,7 @@ export function QuestionnairePreview({
   renderQuestionFooter?: (questionId: string) => ReactNode;
   /** Only the retained distributed-response screen renders inline questions. */
   legacyResponsePreview?: boolean;
+  showPrivateDetails?: boolean;
 }) {
   const [answers, setAnswers] = useState<Record<string, PreviewAnswerRow[]>>(
     {},
@@ -83,6 +85,7 @@ export function QuestionnairePreview({
                   library={placedLibrary}
                   answers={answers}
                   onRows={onRows}
+                  showPrivateDetails={showPrivateDetails}
                 />
                 {renderQuestionFooter?.(question.id)}
               </div>
@@ -132,7 +135,9 @@ function PlacedPreview({
   library,
   answers,
   onRows,
+  showPrivateDetails,
 }: {
+  showPrivateDetails: boolean;
   sourceId: string;
   number: number;
   library: QuestionBlockRow[];
@@ -154,6 +159,7 @@ function PlacedPreview({
     <QuestionBlockPreview
       key={`${source.id}:${source.revision}`}
       document={documentFromRow(source)}
+      showPrivateDetails={showPrivateDetails}
       questions={library}
       questionNumber={number}
       runtime={placementPreviewState(source, library, answers)}

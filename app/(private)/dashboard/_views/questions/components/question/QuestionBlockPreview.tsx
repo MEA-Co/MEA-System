@@ -3,6 +3,7 @@
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import { matchingChoiceRows } from '../../lib/choice-condition';
@@ -66,6 +67,7 @@ export function QuestionBlockPreview({
   onAnsweredRowsChange,
   runtime,
   questionNumber = 1,
+  showPrivateDetails = false,
 }: {
   document: QuestionBlockDocument;
   questions?: QuestionBlockRow[];
@@ -73,6 +75,7 @@ export function QuestionBlockPreview({
   onAnsweredRowsChange?: (rows: PreviewRow[]) => void;
   runtime?: { waiting: boolean; matchedRows: PreviewRow[] };
   questionNumber?: number;
+  showPrivateDetails?: boolean;
 }) {
   const nextRow = useRef(2);
   const previewId = useId();
@@ -228,15 +231,30 @@ export function QuestionBlockPreview({
           />
         </div>
         {(document.details ?? [])
-          .filter((detail) => detail.visibleToConsultants)
+          .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
           .map((detail) => (
             <div
               key={detail.id}
               className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4"
             >
-              {detail.title && (
-                <h3 className="mb-2 text-sm font-semibold">{detail.title}</h3>
-              )}
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <h3 className="min-w-0 flex-1 text-sm font-semibold [overflow-wrap:anywhere]">
+                  {detail.title}
+                </h3>
+                {showPrivateDetails && (
+                  <Badge
+                    className={
+                      detail.visibleToConsultants
+                        ? 'shrink-0 border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        : 'shrink-0 border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+                    }
+                  >
+                    {detail.visibleToConsultants
+                      ? '컨설턴트 공개'
+                      : '컨설턴트 비공개'}
+                  </Badge>
+                )}
+              </div>
               <RichTextContent value={detail.text} />
             </div>
           ))}
@@ -256,25 +274,19 @@ export function QuestionBlockPreview({
           </p>
         )}
         {repeated ? (
-          <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-xl border">
-            <table className="w-full border-collapse text-left text-sm">
+          <div className="w-full min-w-0 max-w-full rounded-xl border">
+            <table className="w-full table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">
                 답변 목록. 항목을 누르면 열별 답변을 입력할 수 있습니다.
               </caption>
               <thead className="bg-muted/60">
                 <tr>
-                  <th scope="col" className="w-24 whitespace-nowrap px-4 py-3">
+                  <th scope="col" className="w-24 px-3 py-3">
                     항목
                   </th>
-                  {document.fields.map((field, index) => (
-                    <th
-                      key={field.id}
-                      scope="col"
-                      className="min-w-40 px-4 py-3 font-medium"
-                    >
-                      {field.label || `답변 ${index + 1}`}
-                    </th>
-                  ))}
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    답변
+                  </th>
                   <th scope="col" className="w-12 px-2 py-3">
                     <span className="sr-only">삭제</span>
                   </th>
@@ -296,6 +308,7 @@ export function QuestionBlockPreview({
                             type="button"
                             variant="ghost"
                             size="sm"
+                            className="h-auto w-full min-w-0 whitespace-normal [overflow-wrap:anywhere]"
                             aria-expanded={expanded}
                             aria-controls={expanded ? panelId : undefined}
                             aria-label={`항목 ${document.rowLabels?.[index]?.trim() || index + 1} 답변 ${expanded ? '접기' : '입력'}`}
@@ -311,21 +324,28 @@ export function QuestionBlockPreview({
                             {document.rowLabels?.[index]?.trim() || index + 1}
                           </Button>
                         </th>
-                        {document.fields.map((field) => {
-                          const summary = answerSummary(
-                            field,
-                            row.answers[field.id] ?? '',
-                          );
-                          return (
-                            <td key={field.id} className="max-w-72 px-4 py-3">
-                              <span
-                                className={`line-clamp-2 whitespace-pre-wrap break-words ${summary ? '' : 'text-muted-foreground'}`}
-                              >
-                                {summary || '미입력'}
-                              </span>
-                            </td>
-                          );
-                        })}
+                        <td className="px-4 py-3">
+                          <dl className="grid min-w-0 gap-3 [overflow-wrap:anywhere]">
+                            {document.fields.map((field, fieldIndex) => {
+                              const summary = answerSummary(
+                                field,
+                                row.answers[field.id] ?? '',
+                              );
+                              return (
+                                <div key={field.id} className="min-w-0">
+                                  <dt className="text-xs font-medium text-muted-foreground">
+                                    {field.label || `답변 ${fieldIndex + 1}`}
+                                  </dt>
+                                  <dd
+                                    className={`line-clamp-2 whitespace-pre-wrap ${summary ? '' : 'text-muted-foreground'}`}
+                                  >
+                                    {summary || '미입력'}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
+                        </td>
                         <td className="px-2 py-3">
                           <Button
                             type="button"
@@ -354,7 +374,7 @@ export function QuestionBlockPreview({
                       {expanded && (
                         <tr>
                           <td
-                            colSpan={document.fields.length + 2}
+                            colSpan={3}
                             className="border-t bg-muted/20 p-4 sm:p-6"
                           >
                             <div
@@ -388,7 +408,7 @@ export function QuestionBlockPreview({
                 })}
                 {!reference && !waiting && (
                   <tr className="border-t border-dashed">
-                    <td colSpan={document.fields.length + 2} className="p-0">
+                    <td colSpan={3} className="p-0">
                       <Button
                         type="button"
                         variant="ghost"

@@ -39,6 +39,7 @@ export function PublishedQuestionnaire({
           title={document.title}
           sections={document.sections}
           library={sources}
+          showPrivateDetails
           renderQuestionFooter={
             reviewContext
               ? (questionId) => (
