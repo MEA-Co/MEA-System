@@ -32,13 +32,15 @@ export async function questionnaireFetcher<T>(url: string): Promise<T> {
     );
   return data;
 }
-export function useQuestionnaireResource<T>(path: string | null) {
+export function useQuestionnaireResource<T>(
+  path: string | null,
+  refreshInterval = QUESTIONNAIRE_REFRESH_INTERVAL,
+) {
   return useSWR<T, QuestionnaireApiError>(
     path === null ? null : `${QUESTIONNAIRE_API}${path}`,
     questionnaireFetcher<T>,
     {
-      refreshInterval:
-        path?.split('?')[0] === '/new' ? 0 : QUESTIONNAIRE_REFRESH_INTERVAL,
+      refreshInterval: path?.split('?')[0] === '/new' ? 0 : refreshInterval,
       revalidateOnFocus: path?.split('?')[0] !== '/new',
       revalidateOnReconnect: path?.split('?')[0] !== '/new',
       revalidateIfStale: path?.split('?')[0] !== '/new',

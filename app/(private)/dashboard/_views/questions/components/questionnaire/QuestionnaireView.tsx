@@ -171,7 +171,10 @@ function QuestionnairePanel({
   const newKey = creation.key;
   const path = id === 'new' ? `/new?instance=${newKey}` : id ? `/${id}` : '';
   const { data, error, mutate, isLoading } =
-    useQuestionnaireResource<QuestionnaireViewData>(path);
+    useQuestionnaireResource<QuestionnaireViewData>(
+      path,
+      id && id !== 'new' ? 5_000 : undefined,
+    );
   if (!data || (id === 'new' && isLoading)) {
     if (!error) return <QuestionnaireLoading />;
     return (

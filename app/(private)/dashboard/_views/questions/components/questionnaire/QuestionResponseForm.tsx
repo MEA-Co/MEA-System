@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 
 import {
+  mergeLiveResponseRows,
   type QuestionResponseSave,
   type QuestionResponseSnapshot,
   snapshotRows,
@@ -125,6 +126,9 @@ function ResponseEditor({
   const [pendingSave, setPendingSave] = useState<QuestionResponseSave | null>(
     null,
   );
+  const latestRemoteHandler = useRef<
+    ((next: QuestionResponseSnapshot) => void) | null
+  >(null);
   const dirty = JSON.stringify(rows) !== saved || !!pendingSave;
   const locked = blocked;
   const change = useCallback(
@@ -215,7 +219,7 @@ function ResponseEditor({
         if ([401, 403, 404].includes(error.status)) setBlocked(true);
         if (error.status === 409) {
           try {
-            applyRemote(await request(versionId, 'GET'));
+            latestRemoteHandler.current?.(await request(versionId, 'GET'));
           } catch {
             setBlocked(true);
           }
@@ -261,11 +265,15 @@ function ResponseEditor({
           responseStructure(old.definition) !== responseStructure(q.definition)
         );
       });
-      if (changed.length) {
+      const removed = snapshot.questions.filter(
+        (old) =>
+          !next.questions.some((q) => q.definition.id === old.definition.id),
+      );
+      if (changed.length || removed.length) {
         setRecovered((current) => ({
           ...current,
           ...Object.fromEntries(
-            changed.map((q) => [
+            [...changed, ...removed].map((q) => [
               q.definition.id,
               formatRows(
                 snapshot.questions.find(
@@ -276,16 +284,15 @@ function ResponseEditor({
             ]),
           ),
         }));
-        setReviewRequired(true);
+        if (changed.length) setReviewRequired(true);
       }
+      const remoteRows = snapshotRows(next);
+      setSaved(JSON.stringify(remoteRows));
       setRows((current) =>
-        Object.fromEntries(
-          next.questions.map((q) => [
-            q.definition.id,
-            changed.some((item) => item.definition.id === q.definition.id)
-              ? []
-              : (current[q.definition.id] ?? []),
-          ]),
+        mergeLiveResponseRows(
+          current,
+          remoteRows,
+          changed.map((q) => q.definition.id),
         ),
       );
     }
@@ -296,10 +303,20 @@ function ResponseEditor({
     )
       setReviewRequired(true);
   }
+  useEffect(() => {
+    latestRemoteHandler.current = applyRemote;
+  });
   const refresh = useEffectEvent(async () => {
     if (session.current.busy || locked || session.current.retry) return;
     try {
-      applyRemote(await request(versionId, 'GET'));
+      const next = await request(versionId, 'GET');
+      if (
+        session.current.busy ||
+        session.current.retry ||
+        next.revision < session.current.revision
+      )
+        return;
+      latestRemoteHandler.current?.(next);
     } catch (error) {
       if (
         error instanceof QuestionnaireApiError &&
@@ -394,6 +411,20 @@ function ResponseEditor({
                 .filter(Boolean)
                 .join('\n\n')}
             </pre>
+          </details>
+        ))}
+      {Object.entries(recovered)
+        .filter(
+          ([id, value]) =>
+            value && !snapshot.questions.some((q) => q.definition.id === id),
+        )
+        .map(([id, value]) => (
+          <details key={id} className="rounded-xl border p-4 text-sm">
+            <summary>질문지에서 제외된 질문의 작성 중인 답변</summary>
+            <p className="mt-2 text-muted-foreground">
+              필요한 내용을 복사할 수 있도록 이 화면에 보관했어요.
+            </p>
+            <pre className="mt-2 whitespace-pre-wrap break-all">{value}</pre>
           </details>
         ))}
       <QuestionnairePreview

@@ -43,6 +43,7 @@ export function QuestionRichTextEditor({
   value,
   onChange,
   placeholder = '내용을 작성하세요',
+  placeholderTone = 'default',
   disabled = false,
   required = false,
   maxLength = 20000,
@@ -56,6 +57,7 @@ export function QuestionRichTextEditor({
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  placeholderTone?: 'default' | 'example';
   disabled?: boolean;
   required?: boolean;
   maxLength?: number;
@@ -201,7 +203,15 @@ export function QuestionRichTextEditor({
   }
 
   return (
-    <div ref={editorAnchor} className="min-w-0">
+    <div
+      ref={editorAnchor}
+      className={cn(
+        'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
+        explorationRecommended && !disabled && 'focus-within:outline-blue-500',
+        disabled && 'opacity-50',
+        className,
+      )}
+    >
       <Popover.Root
         open={pickerOpen && !disabled}
         onOpenChange={(open) => {
@@ -308,14 +318,7 @@ export function QuestionRichTextEditor({
             if (!event.currentTarget.contains(event.relatedTarget))
               setFocusWithin(false);
           }}
-          className={cn(
-            'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
-            explorationRecommended &&
-              !disabled &&
-              'focus-within:outline-blue-500',
-            disabled && 'opacity-50',
-            className,
-          )}
+          className="relative min-w-0"
         >
           {commandOpen && (
             <div
@@ -352,15 +355,34 @@ export function QuestionRichTextEditor({
               )}
             </div>
           )}
-          {state?.empty && (
-            <span
-              className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground"
-              aria-hidden="true"
-            >
-              {placeholder}
-            </span>
+          {placeholderTone === 'example' ? (
+            <div className="grid">
+              {state?.empty && (
+                <span
+                  className="pointer-events-none col-start-1 row-start-1 px-3 py-2 text-sm whitespace-pre-wrap text-blue-400 [overflow-wrap:anywhere] dark:text-blue-300"
+                  aria-hidden="true"
+                >
+                  {placeholder}
+                </span>
+              )}
+              <EditorContent
+                editor={editor}
+                className="relative col-start-1 row-start-1 min-w-0 [&_.tiptap]:h-full"
+              />
+            </div>
+          ) : (
+            <>
+              {state?.empty && (
+                <span
+                  className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground"
+                  aria-hidden="true"
+                >
+                  {placeholder}
+                </span>
+              )}
+              <EditorContent editor={editor} />
+            </>
           )}
-          <EditorContent editor={editor} />
           {required && (
             <textarea
               className="pointer-events-none absolute size-px opacity-0"

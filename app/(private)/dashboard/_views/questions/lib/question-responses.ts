@@ -43,3 +43,19 @@ export function snapshotRows(snapshot: QuestionResponseSnapshot) {
     ]),
   );
 }
+
+// Keep local edits for surviving questions; only new/re-added questions hydrate
+// from the server. Removed questions are excluded from the next save payload.
+export function mergeLiveResponseRows(
+  current: Record<string, PreviewAnswerRow[]>,
+  remote: Record<string, PreviewAnswerRow[]>,
+  resetIds: string[],
+) {
+  const reset = new Set(resetIds);
+  return Object.fromEntries(
+    Object.entries(remote).map(([id, rows]) => [
+      id,
+      reset.has(id) ? [] : (current[id] ?? rows),
+    ]),
+  );
+}

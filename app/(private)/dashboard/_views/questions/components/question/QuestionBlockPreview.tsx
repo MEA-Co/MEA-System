@@ -6,6 +6,7 @@ import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import { matchingChoiceRows } from '../../lib/choice-condition';
 import { questionFromField } from '../../lib/field-question';
 import type { GuideAnswer } from '../../lib/guide-answers';
@@ -55,7 +56,9 @@ function answerSummary(field: QuestionBlockField, value: string): string {
     .join(', ');
 }
 
+import { QuestionAnswerTable } from './QuestionAnswerTable';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
+import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { RichTextContent } from './RichTextContent';
 
@@ -185,38 +188,48 @@ export function QuestionBlockPreview({
     );
   }
 
-  function renderInputs(row: (typeof rows)[number]) {
+  function renderField(
+    row: PreviewRow,
+    field: QuestionBlockField,
+    fieldIndex: number,
+    placeholder = '답변을 입력해 주세요',
+  ) {
+    const question = questionFromField(field);
+    question.id = `${previewId}-${row.id}-${field.id}`;
+    return field.kind === 'text' ? (
+      <QuestionRichTextEditor
+        id={question.id}
+        disabled={disabled}
+        explorationRecommended={field.explorationRecommended}
+        value={row.answers[field.id] ?? ''}
+        onChange={(value) => updateAnswer(row.id, field.id, value)}
+        placeholder={placeholder}
+        placeholderTone={
+          document.id === CAREER_FLOW_QUESTION_ID ? 'example' : 'default'
+        }
+        ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || '항목'} · ${field.label || `답변 ${fieldIndex + 1}`}`}
+      />
+    ) : (
+      <QuestionChoiceInput
+        question={question}
+        disabled={disabled}
+        value={row.answers[field.id] ?? ''}
+        onChange={(value) => updateAnswer(row.id, field.id, value)}
+      />
+    );
+  }
+
+  function renderInputs(row: PreviewRow) {
     return (
       <div className="space-y-5">
-        {document.fields.map((field, fieldIndex) => {
-          const question = questionFromField(field);
-          question.id = `preview-${row.id}-${field.id}`;
-          return (
-            <div key={field.id} className="space-y-2">
-              <p className="text-sm font-medium">
-                {field.label || `답변 ${fieldIndex + 1}`}
-              </p>
-              {field.kind === 'text' ? (
-                <QuestionRichTextEditor
-                  id={question.id}
-                  disabled={disabled}
-                  explorationRecommended={field.explorationRecommended}
-                  value={row.answers[field.id] ?? ''}
-                  onChange={(value) => updateAnswer(row.id, field.id, value)}
-                  placeholder="답변을 입력해 주세요"
-                  ariaLabel={`미리보기 답변 ${fieldIndex + 1}`}
-                />
-              ) : (
-                <QuestionChoiceInput
-                  question={question}
-                  disabled={disabled}
-                  value={row.answers[field.id] ?? ''}
-                  onChange={(value) => updateAnswer(row.id, field.id, value)}
-                />
-              )}
-            </div>
-          );
-        })}
+        {document.fields.map((field, fieldIndex) => (
+          <div key={field.id} className="space-y-2">
+            <p className="text-sm font-medium">
+              {field.label || `답변 ${fieldIndex + 1}`}
+            </p>
+            {renderField(row, field, fieldIndex)}
+          </div>
+        ))}
       </div>
     );
   }
@@ -280,57 +293,66 @@ export function QuestionBlockPreview({
             </div>
           ))}
         {guideAnswer?.rows?.length ? (
-          <details className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4">
-            <summary className="cursor-pointer text-sm font-semibold">
-              가이드 답변
-            </summary>
-            <div className="mt-3 space-y-4">
-              {guideAnswer.rows.map((row) => (
-                <div key={row.id} className="space-y-2">
-                  {(document.rowMode !== 'single' ||
-                    guideAnswer.rows.length > 1) && (
-                    <h4 className="text-sm font-semibold">{row.label}</h4>
-                  )}
-                  <dl className="space-y-3">
-                    {document.fields.map((field) => {
-                      const value = row.answers[field.id] ?? '';
-                      if (!value.trim()) return null;
-                      const extra =
-                        field.kind === 'scale'
-                          ? scaleAnswer(value).text
-                          : field.kind === 'single' || field.kind === 'multiple'
-                            ? choiceAnswerValue(
-                                value,
-                                field.kind === 'multiple',
-                              ).text
-                            : '';
-                      return (
-                        <div key={field.id} className="min-w-0">
-                          <dt className="text-xs text-muted-foreground">
-                            {field.label}
-                          </dt>
-                          <dd className="mt-1 text-sm">
-                            {field.kind === 'text' ? (
-                              <RichTextContent value={value} />
-                            ) : (
-                              <p className="whitespace-pre-wrap wrap-break-word">
-                                {answerSummary(field, value)}
-                              </p>
-                            )}
-                            {extra && (
-                              <p className="mt-1 whitespace-pre-wrap wrap-break-word">
-                                {extra}
-                              </p>
-                            )}
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </dl>
-                </div>
-              ))}
-            </div>
-          </details>
+          document.id === CAREER_FLOW_QUESTION_ID ? (
+            <QuestionGuideAnswerTable
+              document={document}
+              answer={guideAnswer}
+              summary={answerSummary}
+            />
+          ) : (
+            <details className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4">
+              <summary className="cursor-pointer text-sm font-semibold">
+                가이드 답변
+              </summary>
+              <div className="mt-3 space-y-4">
+                {guideAnswer.rows.map((row) => (
+                  <div key={row.id} className="space-y-2">
+                    {(document.rowMode !== 'single' ||
+                      guideAnswer.rows.length > 1) && (
+                      <h4 className="text-sm font-semibold">{row.label}</h4>
+                    )}
+                    <dl className="space-y-3">
+                      {document.fields.map((field) => {
+                        const value = row.answers[field.id] ?? '';
+                        if (!value.trim()) return null;
+                        const extra =
+                          field.kind === 'scale'
+                            ? scaleAnswer(value).text
+                            : field.kind === 'single' ||
+                                field.kind === 'multiple'
+                              ? choiceAnswerValue(
+                                  value,
+                                  field.kind === 'multiple',
+                                ).text
+                              : '';
+                        return (
+                          <div key={field.id} className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">
+                              {field.label}
+                            </dt>
+                            <dd className="mt-1 text-sm">
+                              {field.kind === 'text' ? (
+                                <RichTextContent value={value} />
+                              ) : (
+                                <p className="whitespace-pre-wrap wrap-break-word">
+                                  {answerSummary(field, value)}
+                                </p>
+                              )}
+                              {extra && (
+                                <p className="mt-1 whitespace-pre-wrap wrap-break-word">
+                                  {extra}
+                                </p>
+                              )}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )
         ) : null}
         {sourceId && !source && !runtime && (
           <p className="text-sm text-muted-foreground">
@@ -347,7 +369,35 @@ export function QuestionBlockPreview({
             조건에 맞는 앞선 응답 {matchedRows.length}개에 맞춰 입력합니다.
           </p>
         )}
-        {repeated ? (
+        {document.id === CAREER_FLOW_QUESTION_ID ? (
+          <QuestionAnswerTable
+            document={document}
+            rows={visibleRows}
+            waiting={waiting}
+            disabled={disabled}
+            renderField={renderField}
+            summary={answerSummary}
+            canAdd={!reference && repeated && visibleRows.length < maxRows}
+            canRemove={!reference && repeated && visibleRows.length > minRows}
+            onAdd={() => {
+              if (
+                disabled ||
+                waiting ||
+                reference ||
+                visibleRows.length >= maxRows
+              )
+                return;
+              const id = Math.max(Date.now(), nextRow.current++);
+              nextRow.current = id + 1;
+              setRows([...visibleRows, { id, answers: {} }]);
+            }}
+            onRemove={(id) => {
+              if (disabled || reference || visibleRows.length <= minRows)
+                return;
+              setRows(visibleRows.filter((row) => row.id !== id));
+            }}
+          />
+        ) : repeated ? (
           <div className="w-full min-w-0 max-w-full rounded-xl border">
             <table className="w-full table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">

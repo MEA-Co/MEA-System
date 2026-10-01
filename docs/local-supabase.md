@@ -153,3 +153,8 @@ done
 ## 탐구활동 참조형 질문 (2026-09-29)
 
 `20260929053605_question_exploration_type.sql`을 로컬에 적용했다. 독립 질문 열의 `exploration` 유형 저장을 허용한다. 제작·저장·미리보기만 연결하며 배치형 배포 차단은 유지한다. SQL 회귀 4개와 보안 advisor 통과 후 로컬 db pull로 migration 및 로컬 이력을 생성했다. 운영 미적용. 절차는 `docs/questions-operations.md`를 참고한다.
+
+
+## 게시본 최신 구성 동기화 (2026-10-01)
+
+로컬 `20261001075311_live_published_response_layout.sql`을 적용했다. 게시본 최신 구성 조회와 기존 답변 보존을 검증한 뒤 보안 advisor를 통과하고 `db pull live_published_response_layout --local --schema public,private --yes`로 migration 및 로컬 이력을 생성했다. CLI의 remoteHistoryUpdated는 여기서는 로컬 DB 이력이다. 운영은 변경하지 않았다. 현재 가이드 UUID 설정 함수는 변경하지 않는다. 자세한 검증과 운영 순서는 `questions-operations.md` 최신 절을 따른다.
