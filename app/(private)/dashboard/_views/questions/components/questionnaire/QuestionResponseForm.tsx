@@ -105,6 +105,7 @@ function ResponseEditor({
 }) {
   const [rows, setRows] = useState(() => snapshotRows(initial));
   const [snapshot, setSnapshot] = useState(initial);
+  const [remoteAnswerVersion, setRemoteAnswerVersion] = useState(0);
   const [reviewRequired, setReviewRequired] = useState(
     initial.questions.some((q) => q.needsReview),
   );
@@ -244,6 +245,9 @@ function ResponseEditor({
         return;
       }
       session.current.revision = next.revision;
+      // Reinitialize local row inputs only when adopting answers from elsewhere.
+      // Saving our own answers must preserve expanded rows and editor focus.
+      setRemoteAnswerVersion((version) => version + 1);
       setRows(snapshotRows(next));
       setSaved(JSON.stringify(snapshotRows(next)));
       setSavedAt(next.savedAt);
@@ -393,7 +397,7 @@ function ResponseEditor({
           </details>
         ))}
       <QuestionnairePreview
-        key={snapshot.revision}
+        key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}
         library={snapshot.questions.map((q) => q.definition)}

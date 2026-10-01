@@ -218,7 +218,7 @@ export function QuestionRichTextEditor({
             editor={editor}
             appendTo={bubbleMenuContainer}
             options={{ placement: 'top', offset: 8, strategy: 'fixed' }}
-            className="z-[60] rounded-xl border bg-popover p-1 shadow-lg"
+            className="z-60 rounded-xl border bg-popover p-1 shadow-lg"
             role="toolbar"
             aria-label="선택한 글 서식"
           >
