@@ -1,13 +1,16 @@
 'use client';
 
 import { type ReactNode, useCallback, useState } from 'react';
+import useSWR from 'swr';
 
 import { cn } from '@/lib/utils';
 
+import type { GuideAnswer } from '../../lib/guide-answers';
 import {
   documentFromRow,
   type QuestionBlockRow,
 } from '../../lib/question-blocks';
+import { questionnaireFetcher } from '../../lib/questionnaire/api-client';
 import { placementPreviewState } from '../../lib/questionnaire/placement-preview';
 import type { QuestionnaireSection } from '../../lib/questionnaire/types';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
@@ -25,6 +28,7 @@ export function QuestionnairePreview({
   renderQuestionFooter,
   legacyResponsePreview = false,
   showPrivateDetails = false,
+  showGuideAnswers = false,
   response,
 }: {
   title: string;
@@ -34,6 +38,7 @@ export function QuestionnairePreview({
   /** Only the retained distributed-response screen renders inline questions. */
   legacyResponsePreview?: boolean;
   showPrivateDetails?: boolean;
+  showGuideAnswers?: boolean;
   response?: {
     rows: Record<string, PreviewAnswerRow[]>;
     onChange: (id: string, rows: PreviewAnswerRow[]) => void;
@@ -50,6 +55,22 @@ export function QuestionnairePreview({
         : { ...current, [id]: rows },
     );
   }, []);
+  const guideIds = [
+    ...new Set(
+      sections.flatMap((section) =>
+        section.questions.flatMap((q) =>
+          q.sourceQuestionId ? [q.sourceQuestionId] : [],
+        ),
+      ),
+    ),
+  ].sort();
+  const { data: guideAnswers } = useSWR<Record<string, GuideAnswer>>(
+    (showPrivateDetails || showGuideAnswers) && guideIds.length
+      ? `/api/questionnaires/guide-answers?questions=${guideIds.join(',')}`
+      : null,
+    questionnaireFetcher,
+    { refreshInterval: 10000 },
+  );
   const placedLibrary = sections.flatMap((section) =>
     section.questions.flatMap((q) => {
       const source = library.find((item) => item.id === q.sourceQuestionId);
@@ -86,6 +107,7 @@ export function QuestionnairePreview({
               <div key={question.id} className="space-y-3">
                 <PlacedPreview
                   sourceId={question.sourceQuestionId}
+                  guideAnswer={guideAnswers?.[question.sourceQuestionId]}
                   number={questionIndex + 1}
                   library={placedLibrary}
                   answers={answers}
@@ -137,6 +159,7 @@ export function QuestionnairePreview({
 
 function PlacedPreview({
   sourceId,
+  guideAnswer,
   number,
   library,
   answers,
@@ -145,6 +168,7 @@ function PlacedPreview({
   response,
 }: {
   showPrivateDetails: boolean;
+  guideAnswer?: GuideAnswer;
   response?: {
     rows: Record<string, PreviewAnswerRow[]>;
     onChange: (id: string, rows: PreviewAnswerRow[]) => void;
@@ -176,6 +200,7 @@ function PlacedPreview({
     <QuestionBlockPreview
       key={`${source.id}:${source.revision}`}
       document={documentFromRow(source)}
+      guideAnswer={guideAnswer}
       showPrivateDetails={showPrivateDetails}
       questions={library}
       questionNumber={number}

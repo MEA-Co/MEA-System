@@ -28,6 +28,10 @@ import {
 
 import { richTextClasses } from './RichTextContent';
 
+function bubbleMenuContainer() {
+  return document.body;
+}
+
 export function QuestionRichTextEditor({
   id,
   value,
@@ -212,8 +216,9 @@ export function QuestionRichTextEditor({
         {editor && !disabled && (
           <BubbleMenu
             editor={editor}
-            options={{ placement: 'top', offset: 8 }}
-            className="z-50 rounded-xl border bg-popover p-1 shadow-lg"
+            appendTo={bubbleMenuContainer}
+            options={{ placement: 'top', offset: 8, strategy: 'fixed' }}
+            className="z-[60] rounded-xl border bg-popover p-1 shadow-lg"
             role="toolbar"
             aria-label="선택한 글 서식"
           >
@@ -240,7 +245,7 @@ export function QuestionRichTextEditor({
         <TooltipContent
           id={hintId}
           side="top"
-          align="start"
+          align="end"
           sideOffset={8}
           className="block max-w-[min(24rem,calc(100vw-2rem))] bg-blue-600 text-white"
         >

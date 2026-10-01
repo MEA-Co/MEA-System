@@ -11,6 +11,7 @@ import type {
   QuestionnaireReviewContext,
 } from '../../lib/questionnaire/types';
 
+import { PublishedResponse } from './PublishedResponse';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
@@ -19,7 +20,6 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
-import { QuestionResponseForm } from './QuestionResponseForm';
 import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
@@ -38,8 +38,9 @@ export function PublishedQuestionnaire({
 }) {
   if (staff && !distributed)
     return (
-      <QuestionResponseForm
-        versionId={document.versionId}
+      <PublishedResponse
+        document={document}
+        sources={sources}
         onEditorState={onEditorState}
       />
     );

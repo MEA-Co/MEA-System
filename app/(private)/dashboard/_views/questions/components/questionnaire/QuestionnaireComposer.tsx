@@ -27,6 +27,7 @@ import { toast } from '@/components/ui/toast';
 import { useQuestionLibrary } from '../../hooks/questionnaire/useQuestionLibrary';
 import { useQuestionnaireSave } from '../../hooks/questionnaire/useQuestionnaireSave';
 import type { QuestionBlockRow } from '../../lib/question-blocks';
+import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
 import {
   createPlacement,
   placementError,
@@ -44,9 +45,11 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
+import { QuestionResponseForm } from './QuestionResponseForm';
 
 export function QuestionnaireComposer({
   initialDraft,
+  published = false,
   remoteUnavailable = false,
   reviewContext,
   onEditorState,
@@ -55,9 +58,25 @@ export function QuestionnaireComposer({
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
   initialDraft: QuestionnaireDraft;
+  published?: boolean;
   remoteUnavailable?: boolean;
   reviewContext?: QuestionnaireReviewContext;
 }) {
+  const { data: guideAccess } = useQuestionnaireResource<{ canWrite: boolean }>(
+    published ? '/guide-access' : null,
+  );
+  const [tab, setTab] = useState('edit');
+  const [responseState, setResponseState] = useState({
+    dirty: false,
+    saving: false,
+  });
+  const reportResponse = useCallback((state: QuestionnaireEditorState) => {
+    setResponseState((current) =>
+      current.dirty === state.dirty && current.saving === state.saving
+        ? current
+        : { dirty: state.dirty, saving: state.saving },
+    );
+  }, []);
   const [title, setTitle] = useState(initialDraft.title);
   const [sections, setSections] = useState(initialDraft.sections);
   const [pickerSection, setPickerSection] = useState<string | null>(null);
@@ -117,8 +136,8 @@ export function QuestionnaireComposer({
   const { save, saving, dirty, savedAt, blocked, error } = saveState;
   useEffect(() => {
     onEditorState?.({
-      dirty: dirty || questionState.dirty,
-      saving: saving || questionState.saving || placing,
+      dirty: dirty || questionState.dirty || responseState.dirty,
+      saving: saving || questionState.saving || placing || responseState.saving,
       emptyTitle: !title.trim(),
       childEditorOpen: pickerSection !== null,
     });
@@ -128,6 +147,7 @@ export function QuestionnaireComposer({
     saving,
     title,
     questionState,
+    responseState,
     placing,
     pickerSection,
   ]);
@@ -297,7 +317,19 @@ export function QuestionnaireComposer({
             {validation || error}
           </p>
         )}
-        <Tabs.Root defaultValue="edit">
+        <Tabs.Root
+          value={tab}
+          onValueChange={(value) => {
+            if (responseState.saving) return;
+            if (
+              responseState.dirty &&
+              !window.confirm('저장되지 않은 답변을 버리고 화면을 전환할까요?')
+            )
+              return;
+            setResponseState({ dirty: false, saving: false });
+            setTab(value as string);
+          }}
+        >
           <Tabs.List
             className="mb-4 inline-flex gap-1 rounded-full bg-muted p-1"
             aria-label="질문지 보기 방식"
@@ -318,11 +350,19 @@ export function QuestionnaireComposer({
             </Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="preview" className="rounded-2xl border">
-            <QuestionnairePreview
-              title={title}
-              sections={sections}
-              library={questions}
-            />
+            {published && guideAccess?.canWrite ? (
+              <QuestionResponseForm
+                versionId={initialDraft.versionId}
+                onEditorState={reportResponse}
+              />
+            ) : (
+              <QuestionnairePreview
+                title={title}
+                sections={sections}
+                library={questions}
+                showGuideAnswers
+              />
+            )}
           </Tabs.Panel>
           <Tabs.Panel
             value="edit"

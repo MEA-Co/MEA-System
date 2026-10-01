@@ -2,6 +2,7 @@ begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
 insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
 grant select on publish_users to authenticated;
@@ -48,7 +49,7 @@ begin
  again:=public.open_question_response_session(vid);
  if initial->>'id'<>again->>'id' then raise exception 'Duplicate session'; end if;
  qid:=initial#>>'{questions,0,definition,id}'; fid:=initial#>>'{questions,0,definition,fields,0,id}';
- payload:=jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(fid,'첫 답변')),jsonb_build_object('id',2,'answers',jsonb_build_object(fid,'둘째 답변'))));
+ payload:=jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',-1,'answers',jsonb_build_object(fid,'::mea-rich-text:v1::{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"첫 답변","marks":[{"type":"highlight"}]}]}]}')),jsonb_build_object('id',2,'answers',jsonb_build_object(fid,'둘째 답변'))));
  result:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
  if result->>'revision'<>'1' or result#>>'{questions,0,rows,0,answers}' is null then raise exception 'Not saved'; end if;
  again:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
@@ -65,8 +66,12 @@ set local role authenticated;
 do $$ declare vid uuid; x jsonb; begin
  select (doc->>'versionId')::uuid into vid from publish_docs;
  if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_responses) or exists(select 1 from public.question_versions) then raise exception 'Other user responses leaked'; end if;
- x:=public.open_question_response_session(vid);
- if x->>'revision'<>'0' then raise exception 'Shared answers'; end if;
+ if public.can_write_guide_answers() then raise exception 'Ordinary lead marked guide'; end if;
+ begin x:=public.open_question_response_session(vid); raise exception 'Non-guide persisted response'; exception when insufficient_privilege then null; end;
+ x:=public.read_guide_answers(array[(select source_id from publish_docs)]);
+ if x#>>array[(select source_id::text from publish_docs),'rows','0','label']<>'첫째' or x#>>array[(select source_id::text from publish_docs),'rows','1','label']<>'둘째' or (x->(select source_id::text from publish_docs))::text not like '%첫 답변%' then raise exception 'Guide answer not visible'; end if;
+ if x::text not like '%highlight%' then raise exception 'Guide formatting lost'; end if;
+ if public.read_guide_answers(array[gen_random_uuid()])<>'{}'::jsonb then raise exception 'Foreign answer exposed'; end if;
 end $$;
 reset role;
 -- A source edit must not rewrite a question version already used by an answer.
@@ -82,6 +87,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ begin
  begin perform public.open_question_response_session((select (doc->>'versionId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
+ begin perform public.read_guide_answers(array[(select source_id from publish_docs)]); raise exception 'Consultant read guide before distribution'; exception when insufficient_privilege then null; end;
  if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_versions) then raise exception 'Consultant leaked'; end if;
 end $$;
 reset role;

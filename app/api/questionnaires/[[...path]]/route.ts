@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
   listMyPublishedResponses,
+  loadGuideAnswers,
   questionResponseCommand,
 } from '@/app/(private)/dashboard/_views/questions/lib/question-response-server';
 import {
@@ -50,6 +51,22 @@ async function handle(request: Request, context: Context) {
     const [id, resource, childId] = path;
     const method = request.method;
     if (method === 'GET') {
+      if (path.length === 1 && id === 'guide-access' && staff)
+        return json(await loadGuideAnswers());
+      if (path.length === 1 && id === 'guide-answers' && staff) {
+        const ids = z
+          .array(z.uuid())
+          .max(500)
+          .safeParse(
+            (new URL(request.url).searchParams.get('questions') ?? '')
+              .split(',')
+              .filter(Boolean),
+          );
+        if (!ids.success)
+          return json({ error: '질문 목록을 확인해 주세요.' }, 400);
+        return json(await loadGuideAnswers(ids.data));
+      }
+
       if (path.length === 1 && id === 'my-responses' && staff)
         return json(await listMyPublishedResponses());
       if (path.length === 1 && id === 'unread')

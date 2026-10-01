@@ -34,7 +34,6 @@ import { QuestionnaireComposer } from './QuestionnaireComposer';
 import { QuestionnaireList } from './QuestionnaireList';
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
-import { QuestionResponseForm } from './QuestionResponseForm';
 
 export type QuestionnaireEditorState = {
   dirty: boolean;
@@ -213,19 +212,7 @@ function QuestionnaireContent({
   error?: QuestionnaireApiError;
 }) {
   const [openedDraft] = useState(data.initialDraft);
-  const [responding, setResponding] = useState(false);
-  const currentEditor = useRef<QuestionnaireEditorState>({
-    dirty: false,
-    saving: false,
-    emptyTitle: false,
-  });
-  const reportEditor = useCallback(
-    (state: QuestionnaireEditorState) => {
-      currentEditor.current = state;
-      onEditorState?.(state);
-    },
-    [onEditorState],
-  );
+  const reportEditor = onEditorState;
   const {
     initialDraft,
     drafts,
@@ -296,40 +283,11 @@ function QuestionnaireContent({
             반영됩니다.
           </p>
         )}
-        {editorDraft && selected?.status === 'published' && (
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (currentEditor.current.saving) return;
-                if (
-                  !currentEditor.current.dirty ||
-                  window.confirm(
-                    '저장되지 않은 내용을 버리고 화면을 전환할까요?',
-                  )
-                ) {
-                  reportEditor({
-                    dirty: false,
-                    saving: false,
-                    emptyTitle: false,
-                  });
-                  setResponding((value) => !value);
-                }
-              }}
-            >
-              {responding ? '질문지 편집' : '내 답변 작성'}
-            </Button>
-          </div>
-        )}
-        {responding && selected?.status === 'published' ? (
-          <QuestionResponseForm
-            versionId={selected.id}
-            onEditorState={reportEditor}
-          />
-        ) : editorDraft ? (
+        {editorDraft ? (
           <QuestionnaireComposer
             key={`editor:${editorDraft.versionId}`}
             initialDraft={editorDraft}
+            published={selected?.status === 'published'}
             onEditorState={reportEditor}
             paused={paused}
             remoteUnavailable={editUnavailable}

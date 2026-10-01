@@ -229,7 +229,6 @@ export async function loadQuestionnaireView(
     );
   if (
     staff &&
-    !editable &&
     selected.status === 'published' &&
     document.sections.some((section) =>
       section.questions.some((question) => question.sourceQuestionId),

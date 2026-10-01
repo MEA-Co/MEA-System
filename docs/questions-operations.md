@@ -300,3 +300,67 @@ npx supabase db push --linked --dry-run
 5. 적용 대기 없음 확인: `npx supabase migration list --linked`, `npx supabase db push --linked --dry-run`.
 6. 앱 배포. 새 저장 API는 definitionToken을 함께 보내므로 이번 앱과 DB 변경을 함께 배포한다.
 7. 리드 응답 저장/재수정, 원본 본문 수정 반영, 구조 변경 안내/이전 답변, 내 응답 목록을 확인한다. 삭제 후 보존/원본 질문 삭제 테스트는 별도 테스트용 질문지·질문으로 진행하며 실제 게시본을 테스트 목적으로 삭제하지 않는다.
+
+
+## 가이드 계정의 게시 응답 (2026-10-01, 최신 정책)
+
+`20261001055107_guide_consultant_published_answers.sql`은 게시 단계의 실제 응답 작성을 지정 계정으로 제한한다. 계정 UUID는 사용자 지정값 `b338f03e-9d7f-4367-be1e-96eb1d5473be`이며 `private.guide_consultant_id()` 한 곳에서 관리한다. 로컬 프로필의 consultant_lead 역할을 확인했다. 계정 ID와 리드/관리자 역할이 모두 맞아야 하며 다른 관리자도 실제 게시 응답을 저장할 수 없다.
+
+- 대시보드 `내 응답` 영역 제거. 게시된 질문지를 열어 작성·수정한다.
+- `PublishedResponse`가 실제 작성과 저장 없는 미리보기를 분기한다. 질문지 작성자는 편집 화면에서 가이드일 때 `내 답변 작성`, 그 외에는 `질문지 미리보기`로 전환한다.
+- 일반 리드는 미리보기 입력만 가능하며 응답 저장 API/RPC는 차단한다. 일반 컨설턴트의 게시본 접근 제한은 그대로다.
+- 가이드 답변을 별도 종류나 테이블로 복제하지 않는다. 기존 개인 응답 중 지정 계정의 질문별 최신 저장 본문을 예시로 조회한다. 원래 응답자 소유 정보와 일반 질문–응답 데이터의 의미를 유지한다.
+- 질문지 제작 미리보기와 게시본 미리보기에서 각 질문 설명 아래에 같은 배경/테두리 스타일의 `가이드 답변` 접힘 영역을 표시한다. 답변이 없거나 최신 질문 구조에 재작성이 필요하면 예시를 표시하지 않는다. 작성 중인 미저장 입력과 구조 변경 이전 답변 기록은 타인에게 공유하지 않는다.
+- 조회 요청은 최대 500개 질문 ID로 제한하고 작성자/관리자 또는 활성 게시본에 포함된 질문만 반환한다. 독립 질문 RLS와 개인 응답 테이블 RLS는 넓히지 않는다.
+- 기존에 저장한 비가이드 리드의 응답은 삭제하지 않았다. 기존 배포 응답 로직도 변경하지 않았다.
+
+검증: 가이드 저장/수정, 일반 리드 저장 거부, 미리보기용 가이드 조회, 일반 컨설턴트 조회 거부, 배포 응답 호환 SQL 회귀·타입 검사·린트. 브라우저 실사용 검증은 별도다.
+
+
+### 운영 적용 순서 — 가이드 계정 지정
+
+현재 운영은 변경하지 않았다. 계정이 운영에서도 동일 UUID의 리드/관리자인지 확인한 뒤 적용한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+직전 변경까지 적용했다면 예상 신규 파일은 `20261001055107_guide_consultant_published_answers.sql` 하나다. 이전 변경이 미적용이면 `20261001034040` → `20261001043026` → `20261001044352` → `20261001045140` → `20261001050017` → `20261001052151` → `20261001055107` 순서다. 예상과 다른 파일/이력이 나오면 실제 적용 전에 검토한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음 확인 → 앱 배포 → 지정 계정으로 게시본 저장/재수정 → 다른 리드에서 미리보기 입력이 저장되지 않는지 확인 → 설명 아래 가이드 답변 펼침/접힘 확인 순서로 진행한다.
+
+
+## 가이드 답변 서식·행 이름 수정 (2026-10-01)
+
+`20261001060231_guide_answer_rich_rows.sql`은 가이드 조회 결과를 요약 문자열에서 `{ rows: [{ id, label, answers }] }`로 바꾼다. 저장된 rows의 RichText 원문에는 하이라이트가 유지되고 있었으나 이전 화면이 AI/검색용 plain-text body를 보여주면서 서식이 사라지고 내부 행 ID가 노출됐다. 표시에는 RichTextContent와 현재 질문의 열 이름을 사용하며, 행 이름은 row_labels 또는 원래 행 순서(1부터)를 사용한다. ID는 React 식별에만 쓰고 화면에 출력하지 않는다. 활성·비어 있지 않은 행만 공유하며 과거/비활성 응답은 노출하지 않는다. 기존 데이터 재저장이나 변환은 필요 없다.
+
+로컬 회귀는 하이라이트 원문 유지, 음수 ID와 표시 이름 분리, 조건상 숨겨진 행 미노출을 검증한다. 운영 적용은 아직 하지 않았다.
+
+
+운영 적용 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+직전 가이드 변경까지 적용했다면 예상 신규 파일은 `20261001060231_guide_answer_rich_rows.sql` 하나다. 미적용 선행 파일은 앞 절 순서대로 함께 확인하며 예상과 다른 파일/이력은 적용 전에 검토한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음 확인 → 앱 배포 → 가이드 답변 하이라이트·행 이름·척도/선택 추가 서술 확인 순서로 진행한다.

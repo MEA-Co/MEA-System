@@ -95,3 +95,19 @@ export async function listMyPublishedResponses() {
     throw new QuestionnaireHttpError(503, '내 응답을 불러오지 못했어요.');
   return data;
 }
+
+export async function loadGuideAnswers(questionIds?: string[]) {
+  const access = await requireUserAccess({
+    allowedRoles: ['admin', 'consultant_lead'],
+  });
+  const role = await getViewRole(access.role);
+  if (role !== 'admin' && role !== 'consultant_lead')
+    throw new QuestionnaireHttpError(403, '조회 권한이 없어요.');
+  const client = createClient(await cookies());
+  const { data, error } = questionIds
+    ? await client.rpc('read_guide_answers', { p_question_ids: questionIds })
+    : await client.rpc('can_write_guide_answers');
+  if (error)
+    throw new QuestionnaireHttpError(503, '가이드 답변을 확인하지 못했어요.');
+  return questionIds ? data : { canWrite: data === true };
+}

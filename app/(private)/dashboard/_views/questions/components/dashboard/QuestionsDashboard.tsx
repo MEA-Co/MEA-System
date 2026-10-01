@@ -22,7 +22,6 @@ import {
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
 import type { QuestionnaireViewData } from '../../lib/questionnaire/types';
-import { MyPublishedResponses } from '../questionnaire/MyPublishedResponses';
 import {
   NewPublicationBadge,
   usePublicationNotifications,
@@ -304,7 +303,6 @@ export function QuestionsDashboard() {
           </>
         )}
       </section>
-      <MyPublishedResponses />
     </div>
   );
 }

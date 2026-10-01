@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 
 import { matchingChoiceRows } from '../../lib/choice-condition';
 import { questionFromField } from '../../lib/field-question';
+import type { GuideAnswer } from '../../lib/guide-answers';
 import type {
   QuestionBlockDocument,
   QuestionBlockField,
@@ -68,6 +69,7 @@ export function QuestionBlockPreview({
   runtime,
   questionNumber = 1,
   showPrivateDetails = false,
+  guideAnswer,
   initialRows,
   onStoredRowsChange,
   disabled = false,
@@ -79,6 +81,7 @@ export function QuestionBlockPreview({
   runtime?: { waiting: boolean; matchedRows: PreviewRow[] };
   questionNumber?: number;
   showPrivateDetails?: boolean;
+  guideAnswer?: GuideAnswer;
   initialRows?: PreviewRow[];
   onStoredRowsChange?: (rows: PreviewRow[]) => void;
   disabled?: boolean;
@@ -276,6 +279,59 @@ export function QuestionBlockPreview({
               <RichTextContent value={detail.text} />
             </div>
           ))}
+        {guideAnswer?.rows?.length ? (
+          <details className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4">
+            <summary className="cursor-pointer text-sm font-semibold">
+              가이드 답변
+            </summary>
+            <div className="mt-3 space-y-4">
+              {guideAnswer.rows.map((row) => (
+                <div key={row.id} className="space-y-2">
+                  {(document.rowMode !== 'single' ||
+                    guideAnswer.rows.length > 1) && (
+                    <h4 className="text-sm font-semibold">{row.label}</h4>
+                  )}
+                  <dl className="space-y-3">
+                    {document.fields.map((field) => {
+                      const value = row.answers[field.id] ?? '';
+                      if (!value.trim()) return null;
+                      const extra =
+                        field.kind === 'scale'
+                          ? scaleAnswer(value).text
+                          : field.kind === 'single' || field.kind === 'multiple'
+                            ? choiceAnswerValue(
+                                value,
+                                field.kind === 'multiple',
+                              ).text
+                            : '';
+                      return (
+                        <div key={field.id} className="min-w-0">
+                          <dt className="text-xs text-muted-foreground">
+                            {field.label}
+                          </dt>
+                          <dd className="mt-1 text-sm">
+                            {field.kind === 'text' ? (
+                              <RichTextContent value={value} />
+                            ) : (
+                              <p className="whitespace-pre-wrap wrap-break-word">
+                                {answerSummary(field, value)}
+                              </p>
+                            )}
+                            {extra && (
+                              <p className="mt-1 whitespace-pre-wrap wrap-break-word">
+                                {extra}
+                              </p>
+                            )}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
         {sourceId && !source && !runtime && (
           <p className="text-sm text-muted-foreground">
             앞선 질문을 불러올 수 없어요. 조건 설정을 확인해 주세요.

@@ -10,6 +10,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 가이드 답변 표시 수정(2026-10-01): 로컬 `20261001060231_guide_answer_rich_rows.sql`. read_guide_answers는 요약 body 대신 활성 응답 행의 서식 원문과 표시용 label을 반환한다. 내부 음수 행 ID를 표시하지 않고 row_labels/순서 번호를 사용한다. QuestionBlockPreview는 서술형을 RichTextContent로 렌더링하여 하이라이트를 보존하며 척도/선택 추가 서술도 표시한다. 빈 행·조건상 비활성 행은 제외한다. 원본 저장 데이터 변경 없음, 운영 미적용.
+
+- 가이드 게시 응답(2026-10-01, 기존 전체 리드 저장 허용보다 우선): `20261001055107_guide_consultant_published_answers.sql` 로컬 적용. `private.guide_consultant_id()`의 UUID b338f03e-9d7f-4367-be1e-96eb1d5473be만 게시 응답을 실제 저장/수정한다(리드·관리자 역할도 필요). 다른 리드는 저장 없는 미리보기다. 대시보드 내 응답 영역은 제거했고 게시본이 진입점이다. `PublishedResponse`가 권한을 분기하고 작성자의 상단 전환 버튼은 제거했다. 가이드 작성자는 기존 미리보기 탭에서 실제 응답하고, 다른 작성자는 저장 없는 미리보기를 사용한다. 가이드 답변은 별도 답변 종류/테이블을 만들지 않고 지정 계정의 기존 question_responses 중 질문별 최신 저장을 읽는다. 질문지 미리보기에서 설명 아래 접힘 영역으로 표시하며 구조가 바뀌어 재작성 필요한 답변은 예시에서 제외한다. 조회는 작성자/관리자 또는 활성 게시본에 포함된 질문으로 제한한다. 기존 비가이드 응답은 삭제하지 않는다. 운영 미적용.
+
 - 게시 응답 정책 변경(2026-10-01, 이전 고정/완료 잠금 설명보다 우선): `20261001052151_published_live_editable_responses.sql` 로컬 적용. 게시 응답은 원본 질문의 최신 정의를 읽고 완료 상태여도 수정 가능하다. 개인 응답 시작 당시 제목/섹션/배치 구성을 유지하며 질문지 삭제 후에도 대시보드 내 응답→session ID로 읽기/수정한다. 질문 구조 변경은 definitionToken으로 오래된 저장을 차단하고 previous_responses에 이전 정의/행/본문을 보존한다. UI는 5초 및 포커스 복귀 조회, 구조 변경 확인 후 재작성, 미저장 입력 보존을 제공한다. 원본 질문 삭제(archive) 시 연결된 게시 응답만 삭제하고 배포 응답 보호는 유지한다. 기존 배치/참조 질문 삭제 제한은 유지한다. 배포 정책은 이번에 바꾸지 않았다. SQL 회귀 및 타입/린트 검증, 브라우저 실사용 미검증. 운영 미적용.
 
 - 응답 전환 4단계(2026-10-01): 로컬 `20261001050017_remove_legacy_response_tables.sql`로 빈 questionnaire_answers/questionnaire_responses를 제거했다. 적용 중 잠금·0건 검사를 수행하며 데이터가 있으면 중단한다. 구형 이전/검증 함수·미이전 보호·상태/NEW fallback을 제거하고 질문지 삭제는 새 응답을 보존한다. 공개 RPC 호환과 구형 배포 정의 열은 유지한다. 운영 미적용. 현재 회귀는 question_responses, question_response_conditions, question_response_types, distributed_response_path, questionnaire_legacy_response_compatibility, legacy_response_cleanup SQL이다. 구형 테이블을 직접 조작하는 과거 SQL 테스트와 이전 snippet은 해당 시점 migration 전용이며 현재 스키마에서 실행하지 않는다.

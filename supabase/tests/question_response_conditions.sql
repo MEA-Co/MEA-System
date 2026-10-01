@@ -2,6 +2,7 @@ begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
 insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
 grant select on publish_users to authenticated;
@@ -62,6 +63,7 @@ begin
  result:=public.save_question_response_session(vid,payload,1,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
  select value into ref from jsonb_array_elements(result->'questions') where value#>>'{definition,id}'=followid;
  if ref->'activeRowIds'<>'[]'::jsonb or ref#>>array['rows','0','answers',followfield]<>'이유' then raise exception 'Inactive answer lost or active'; end if;
+ if public.read_guide_answers(array[qid::uuid,followid::uuid])<>'{}'::jsonb then raise exception 'Inactive or blank guide rows exposed'; end if;
  -- Completion must require minimum rows and all visible fields.
  begin perform public.save_question_response_session(vid,payload,2,gen_random_uuid(),true,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Incomplete submitted'; exception when invalid_parameter_value then null; end;
 end $$;
