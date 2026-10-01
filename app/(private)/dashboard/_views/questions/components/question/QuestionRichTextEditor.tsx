@@ -7,10 +7,15 @@ import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import { Highlighter } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 import { QuestionList } from '../../lib/list-extension';
@@ -35,6 +40,7 @@ export function QuestionRichTextEditor({
   className,
   ariaLabel,
   ariaLabelledBy,
+  explorationRecommended = false,
 }: {
   id: string;
   value: string;
@@ -47,7 +53,12 @@ export function QuestionRichTextEditor({
   className?: string;
   ariaLabel?: string;
   ariaLabelledBy?: string;
+  explorationRecommended?: boolean;
 }) {
+  const hintId = useId();
+  const triggerId = useId();
+  const [hintOpen, setHintOpen] = useState(false);
+  const showHint = explorationRecommended && !disabled && hintOpen;
   const lengthLimit = useMemo(
     () =>
       Extension.create({
@@ -117,6 +128,7 @@ export function QuestionRichTextEditor({
           ? { 'aria-labelledby': ariaLabelledBy }
           : { 'aria-label': ariaLabel ?? placeholder }),
         'aria-required': String(required),
+        ...(showHint ? { 'aria-describedby': hintId } : {}),
         class: cn(
           richTextClasses,
           'px-3 py-2 text-sm outline-none',
@@ -148,63 +160,96 @@ export function QuestionRichTextEditor({
   }, [editor, value]);
 
   return (
-    <div
-      className={cn(
-        'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
-        disabled && 'opacity-50',
-        className,
-      )}
+    <Tooltip
+      open={showHint}
+      triggerId={triggerId}
+      onOpenChange={(_, details) => {
+        if (details.reason === 'escape-key') setHintOpen(false);
+      }}
     >
-      {state?.empty && (
-        <span
-          className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground"
-          aria-hidden="true"
-        >
-          {placeholder}
-        </span>
-      )}
-      <EditorContent editor={editor} />
-      {required && (
-        <textarea
-          className="pointer-events-none absolute size-px opacity-0"
-          aria-hidden="true"
-          tabIndex={-1}
-          required
-          disabled={disabled}
-          value={richTextPlainText(value).trim()}
-          onChange={() => {}}
-          onInvalid={(event) => {
-            event.preventDefault();
-            editor?.commands.focus();
-          }}
-        />
-      )}
-      {editor && !disabled && (
-        <BubbleMenu
-          editor={editor}
-          options={{ placement: 'top', offset: 8 }}
-          className="z-50 rounded-xl border bg-popover p-1 shadow-lg"
-          role="toolbar"
-          aria-label="선택한 글 서식"
-        >
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            aria-pressed={state?.highlighted ?? false}
-            className={
-              state?.highlighted
-                ? 'bg-yellow-100 text-yellow-950 hover:bg-yellow-200'
-                : ''
-            }
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
+      <TooltipTrigger
+        id={triggerId}
+        render={<div />}
+        tabIndex={-1}
+        closeOnClick={false}
+        onFocusCapture={(event) => {
+          if (event.target.id === id) setHintOpen(true);
+        }}
+        onBlurCapture={() => setHintOpen(false)}
+        className={cn(
+          'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
+          explorationRecommended &&
+            !disabled &&
+            'focus-within:outline-blue-500',
+          disabled && 'opacity-50',
+          className,
+        )}
+      >
+        {state?.empty && (
+          <span
+            className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground"
+            aria-hidden="true"
           >
-            <Highlighter className="size-4" aria-hidden="true" />
-            {state?.highlighted ? '하이라이트 해제' : '하이라이트'}
-          </Button>
-        </BubbleMenu>
+            {placeholder}
+          </span>
+        )}
+        <EditorContent editor={editor} />
+        {required && (
+          <textarea
+            className="pointer-events-none absolute size-px opacity-0"
+            aria-hidden="true"
+            tabIndex={-1}
+            required
+            disabled={disabled}
+            value={richTextPlainText(value).trim()}
+            onChange={() => {}}
+            onInvalid={(event) => {
+              event.preventDefault();
+              editor?.commands.focus();
+            }}
+          />
+        )}
+        {editor && !disabled && (
+          <BubbleMenu
+            editor={editor}
+            options={{ placement: 'top', offset: 8 }}
+            className="z-50 rounded-xl border bg-popover p-1 shadow-lg"
+            role="toolbar"
+            aria-label="선택한 글 서식"
+          >
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-pressed={state?.highlighted ?? false}
+              className={
+                state?.highlighted
+                  ? 'bg-yellow-100 text-yellow-950 hover:bg-yellow-200'
+                  : ''
+              }
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => editor.chain().focus().toggleHighlight().run()}
+            >
+              <Highlighter className="size-4" aria-hidden="true" />
+              {state?.highlighted ? '하이라이트 해제' : '하이라이트'}
+            </Button>
+          </BubbleMenu>
+        )}
+      </TooltipTrigger>
+      {explorationRecommended && (
+        <TooltipContent
+          id={hintId}
+          side="top"
+          align="start"
+          sideOffset={8}
+          className="block max-w-[min(24rem,calc(100vw-2rem))] bg-blue-600 text-white"
+        >
+          <p className="font-semibold">탐구활동 참조가 필요한 질문입니다.</p>
+          <p>
+            &apos;@탐구활동&apos; 을 입력하여 탐구활동을 언급하며 답변해주세요!
+          </p>
+        </TooltipContent>
       )}
-    </div>
+    </Tooltip>
   );
 }

@@ -26,8 +26,15 @@ export const fieldSchema = z
     scaleConfig: scaleConfigSchema.optional(),
     choiceStyle: z.enum(['list', 'chip']).optional(),
     choiceAllowText: z.boolean().optional(),
+    explorationRecommended: z.boolean().optional(),
   })
   .superRefine((field, context) => {
+    if (field.explorationRecommended !== undefined && field.kind !== 'text') {
+      context.addIssue({
+        code: 'custom',
+        message: '탐구활동 참조 권장은 서술형에서만 설정할 수 있어요.',
+      });
+    }
     if (field.kind === 'single' || field.kind === 'multiple') {
       if (!field.options || field.options.length < 2) {
         context.addIssue({

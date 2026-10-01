@@ -24,6 +24,8 @@ function asField(
         ? '탐구활동'
         : field.label,
     kind,
+    explorationRecommended:
+      kind === 'text' ? question.explorationRecommended : undefined,
     options:
       kind === 'single' || kind === 'multiple' ? question.options : undefined,
     choiceStyle:

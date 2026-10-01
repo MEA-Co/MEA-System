@@ -8,6 +8,12 @@
 - 기존 운영 서술형 자료의 일회성 전환: [이전 절차](legacy-questionnaire-import.md)
 - 미구현 후속 설계: [질문–답변 자료 설계안](consultant-qa-data-design.md)
 
+## 서술형 탐구활동 참조 권장
+
+각 서술형 답변 열의 설정에 `탐구활동 참조 권장` 체크박스를 둔다. 기본은 해제이며 체크/해제를 저장·재조회할 수 있다. 옵션을 켜면 질문 및 질문지 미리보기의 해당 답변 입력에 포커스하면 파란 테두리와 파란 말풍선을 표시한다. 말풍선은 `탐구활동 참조가 필요한 질문입니다.`와 `/탐구활동 을 입력하여 탐구활동을 언급하며 답변해주세요!` 두 줄이며 포커스를 벗어나면 숨긴다. 다른 답변 유형으로 바꾸면 옵션을 제거한다. 권장 안내이며 탐구활동 첨부를 필수로 요구하지 않는다.
+
+설정은 기존 `questions.fields` JSONB의 `explorationRecommended` boolean으로 저장한다. API 스키마와 DB 검증 함수가 서술형에만 허용한다. 기존 필드에 속성이 없으면 해제로 해석하며 데이터 일괄 변경은 하지 않는다. 로컬 migration `20261001034040_question_text_exploration_recommendation.sql`, 운영 순서는 `questions-operations.md`의 같은 날짜 절을 따른다.
+
 ## 진입점과 파일 구조
 
 대시보드 페이지 키는 `questions` 하나다. 이전 `view=questionnaire` 접근 항목·별도 렌더러·아이콘·호환 분기는 제거했다. 이전 URL은 다른 미지원 view와 같이 역할별 기본 화면으로 처리한다. `questionnaires` 탭 값과 `/api/questionnaires`는 현행 질문지 기능이므로 유지한다.

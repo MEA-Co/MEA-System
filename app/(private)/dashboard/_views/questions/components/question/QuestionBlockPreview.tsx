@@ -181,6 +181,7 @@ export function QuestionBlockPreview({
               {field.kind === 'text' ? (
                 <QuestionRichTextEditor
                   id={question.id}
+                  explorationRecommended={field.explorationRecommended}
                   value={row.answers[field.id] ?? ''}
                   onChange={(value) => updateAnswer(row.id, field.id, value)}
                   placeholder="답변을 입력해 주세요"
@@ -281,7 +282,7 @@ export function QuestionBlockPreview({
               </caption>
               <thead className="bg-muted/60">
                 <tr>
-                  <th scope="col" className="w-24 px-3 py-3">
+                  <th scope="col" className="w-36 px-3 py-3">
                     항목
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
@@ -308,7 +309,7 @@ export function QuestionBlockPreview({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-auto w-full min-w-0 whitespace-normal [overflow-wrap:anywhere]"
+                            className="h-auto w-full min-w-0 justify-start gap-2 whitespace-normal px-2"
                             aria-expanded={expanded}
                             aria-controls={expanded ? panelId : undefined}
                             aria-label={`항목 ${document.rowLabels?.[index]?.trim() || index + 1} 답변 ${expanded ? '접기' : '입력'}`}
@@ -319,9 +320,11 @@ export function QuestionBlockPreview({
                           >
                             <ChevronDown
                               aria-hidden="true"
-                              className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                              className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
                             />
-                            {document.rowLabels?.[index]?.trim() || index + 1}
+                            <span className="min-w-0 break-keep text-left [overflow-wrap:anywhere]">
+                              {document.rowLabels?.[index]?.trim() || index + 1}
+                            </span>
                           </Button>
                         </th>
                         <td className="px-4 py-3">

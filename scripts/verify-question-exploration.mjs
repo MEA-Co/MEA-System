@@ -68,3 +68,64 @@ test('exploration answers require an activity UUID and complete requires selecti
     true,
   );
 });
+
+const fieldQuestions = load(base + 'lib/field-question.ts', {
+  './question-types': types,
+});
+test('text exploration recommendation survives save validation and editor/readback conversions', () => {
+  const document = blocks.emptyQuestionBlock();
+  document.prompt = '탐구활동을 참고해 작성해 주세요';
+  for (const enabled of [true, false]) {
+    document.fields[0].explorationRecommended = enabled;
+    const parsed = blocks.questionBlockSchema.parse(document);
+    assert.equal(parsed.fields[0].explorationRecommended, enabled);
+    assert.equal(
+      fieldQuestions.questionFromField(parsed.fields[0]).explorationRecommended,
+      enabled,
+    );
+    const row = {
+      id: document.id,
+      title: document.title,
+      prompt: document.prompt,
+      fields: parsed.fields,
+      row_mode: document.rowMode,
+      max_rows: document.maxRows,
+      source_block_id: null,
+      source_field_id: null,
+      after_block_id: null,
+      condition: null,
+    };
+    assert.equal(
+      blocks.documentFromRow(row).fields[0].explorationRecommended,
+      enabled,
+    );
+  }
+  delete document.fields[0].explorationRecommended;
+  assert.equal(
+    blocks.questionBlockSchema.parse(document).fields[0].explorationRecommended,
+    undefined,
+  );
+});
+test('recommendation accepts only text-field boolean settings', () => {
+  const field = { id: randomUUID(), label: '답변', kind: 'text' };
+  for (const value of ['true', 1, null]) {
+    assert.equal(
+      blocks.fieldSchema.safeParse({ ...field, explorationRecommended: value })
+        .success,
+      false,
+    );
+  }
+  for (const kind of ['exploration', 'scale', 'single', 'multiple']) {
+    const other = {
+      ...field,
+      kind,
+      explorationRecommended: true,
+      scaleMax: 5,
+      options: [
+        { id: randomUUID(), label: 'A' },
+        { id: randomUUID(), label: 'B' },
+      ],
+    };
+    assert.equal(blocks.fieldSchema.safeParse(other).success, false);
+  }
+});

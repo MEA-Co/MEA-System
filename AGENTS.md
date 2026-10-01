@@ -16,6 +16,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 회원 역할
 
+- 서술형 답변 열은 `탐구활동 참조 권장` 체크박스로 `questions.fields[].explorationRecommended`를 설정한다. 기본 해제, 다른 유형 전환 시 제거하며 질문/질문지 미리보기 입력에 포커스할 때 파란 테두리와 참조 안내 말풍선을 표시한다. API/DB는 서술형 boolean만 허용한다. 로컬 migration `20261001034040_question_text_exploration_recommendation.sql`, 검증 `supabase/tests/question_exploration_recommendation.sql`·`scripts/verify-question-exploration.mjs`. 기존 데이터 변경 없음, 운영 적용 순서는 `docs/questions-operations.md`를 따른다.
+
+
 - 로컬 `20260929081236_questionnaire_placement_definitions.sql`: source_question_id가 있는 배치는 body/kind/options/scale_config/choice_style/choice_allow_text를 NULL로 유지하고 원본에서 읽는다. 해당 열은 이전 배포본 답변 검증이 사용하므로 삭제하지 않는다. 저장 RPC·DB 제약이 중복 정의를 차단하며 이전 행은 보존한다. 운영 미적용. 검증 `supabase/tests/questionnaire_legacy_response_compatibility.sql`, `questionnaire_published_sources.sql`.
 
 

@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -59,6 +60,8 @@ export function QuestionTypeEditor({
               onChange({
                 ...question,
                 kind: next,
+                explorationRecommended:
+                  next === 'text' ? question.explorationRecommended : undefined,
                 scaleConfig:
                   next === 'scale'
                     ? scaleConfig(question)
@@ -111,7 +114,25 @@ export function QuestionTypeEditor({
         </div>
       )}
       {part === 'settings' && kind === 'text' && (
-        <QuestionTextAnswerPreview variant="editor" />
+        <div className="space-y-3">
+          <QuestionTextAnswerPreview variant="editor" />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`exploration-recommended-${question.id}`}
+              checked={question.explorationRecommended ?? false}
+              disabled={disabled}
+              onCheckedChange={(checked) =>
+                onChange({ ...question, explorationRecommended: checked })
+              }
+            />
+            <label
+              htmlFor={`exploration-recommended-${question.id}`}
+              className="cursor-pointer text-sm"
+            >
+              탐구활동 참조 권장
+            </label>
+          </div>
+        </div>
       )}
       {part === 'settings' && kind === 'scale' && (
         <ScaleSettings

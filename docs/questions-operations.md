@@ -138,3 +138,29 @@ npx supabase migration list --local
 전환부터 migration·앱 배포 완료까지 질문/질문지 편집을 중지하고 기존 편집 탭을 닫는다. 운영 SQL은 이번에 조회한 특정 게시본과 16/19건만 대상으로 하며 다른 이전 설명이 있으면 중단한다. 실제 적용 성공 후 대기 migration이 확인한 3개뿐인지 dry-run으로 재확인하고 db push --linked → migration list --linked → db push --linked --dry-run → 앱 배포 순서로 진행한다. 오류가 발생하면 후속 단계는 실행하지 않는다. 기존 import 검증 SQL은 연결 전 상태를 전제하므로 전환 후 source_placements_unchanged 등이 false인 것이 정상이며 재사용하지 않는다.
 
 로컬에서는 폐기 전 설명 테이블/내용 보호 함수를 트랜잭션 안에서 재현해 16질문·19설명과 수정된 원본 1개로 전환 및 전후 보존 검사를 실행한 후 전부 롤백했다. 운영 실제 전환은 사용자가 수행하며 아직 실행 결과를 받지 않았다.
+
+
+## 서술형 탐구활동 참조 권장 (2026-10-01)
+
+`20261001034040_question_text_exploration_recommendation.sql`은 기존 `private.question_editor_settings_valid(jsonb)` 검증 함수에 `explorationRecommended`의 서술형 전용 boolean 검사를 추가한다. 테이블·열·권한 변경이나 기존 행 수정은 없다. UI는 각 서술형 답변 열에서 체크박스로 설정하며 질문/질문지 미리보기 입력에 포커스할 때 파란 테두리와 탐구활동 참조 안내 말풍선을 표시한다. 유형 변경 시 옵션을 제거한다. 필수 첨부/실제 응답 저장 기능을 추가하는 변경은 아니다.
+
+로컬 적용·저장/조회/끄기/재시도·잘못된 값 거절 SQL 회귀(`supabase/tests/question_exploration_recommendation.sql`)와 앱 스키마/변환 회귀(`scripts/verify-question-exploration.mjs`), 타입·린트 및 보안 advisor를 검증했다. 운영에는 자동 적용하지 않았다. 실제 브라우저 테스트는 진행하지 않았다.
+
+운영 적용 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+운영 프로젝트가 `epwlcallocdjkmgdmtlv`이고, 이번 추가 대상이 `20261001034040_question_text_exploration_recommendation.sql`인지 확인한다. 예상과 다른 migration이 나오면 적용 전에 이력을 검토한다. 확인 후:
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기가 없음을 확인한 뒤 앱을 배포한다. 서술형에서 체크 → 저장 → 다시 열어 체크 상태 유지 → 미리보기 권장 안내 → 체크 해제/저장 → 안내 사라짐을 확인한다. 다른 유형에서 옵션이 보이지 않는지도 확인한다.
