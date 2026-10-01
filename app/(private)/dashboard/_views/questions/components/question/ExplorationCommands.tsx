@@ -1,24 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import useSWR from 'swr';
 
 import { ExplorationActivityDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationActivityDetails';
 import { ExplorationView } from '@/app/(private)/dashboard/_views/exploration/ExplorationView';
-import {
-  type ActivityRow,
-  fromRow,
-} from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
+import { useExplorationList } from '@/app/(private)/dashboard/_views/exploration/hooks/useExplorationList';
+import { fromRow } from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-
-async function load(
-  url: string,
-): Promise<{ userId: string; activities: ActivityRow[] }> {
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) throw new Error('탐구활동을 불러오지 못했어요.');
-  return response.json();
-}
 
 export function ExplorationPicker({
   onSelect,
@@ -27,7 +16,7 @@ export function ExplorationPicker({
   onSelect: (id: string, title: string) => void;
   onEditorOpenChange?: (open: boolean) => void;
 }) {
-  const { data, error, mutate } = useSWR('/api/exploration?scope=own', load);
+  const { data, error, mutate } = useExplorationList('own');
   if (error)
     return (
       <div role="alert">
@@ -57,10 +46,7 @@ export function ExplorationReferenceContent({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { data, error, mutate } = useSWR(
-    open ? '/api/exploration' : null,
-    load,
-  );
+  const { data, error, mutate } = useExplorationList('accessible', open);
   const activity = data?.activities.find((item) => item.id === id);
   return (
     <>

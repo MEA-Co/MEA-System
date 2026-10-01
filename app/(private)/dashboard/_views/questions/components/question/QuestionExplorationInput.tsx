@@ -3,13 +3,10 @@
 import { Menu } from '@base-ui/react/menu';
 import { Check, Eye, Paperclip, X } from 'lucide-react';
 import { useState } from 'react';
-import useSWR from 'swr';
 
 import { ExplorationActivityDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationActivityDetails';
-import {
-  type ActivityRow,
-  fromRow,
-} from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
+import { useExplorationList } from '@/app/(private)/dashboard/_views/exploration/hooks/useExplorationList';
+import { fromRow } from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -18,13 +15,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
-
-async function fetchActivities(url: string): Promise<ActivityRow[]> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('탐구활동을 불러오지 못했어요.');
-  const data = await response.json();
-  return data.activities;
-}
 
 export function QuestionExplorationInput({
   value = '',
@@ -36,11 +26,12 @@ export function QuestionExplorationInput({
   disabled?: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const { data, error, isLoading, mutate } = useSWR(
-    disabled ? null : '/api/exploration?scope=own',
-    fetchActivities,
+  const { data, error, isLoading, mutate } = useExplorationList(
+    'own',
+    !disabled,
   );
-  const selected = data?.find((activity) => activity.id === value);
+  const activities = data?.activities;
+  const selected = activities?.find((activity) => activity.id === value);
   if (disabled)
     return (
       <Button variant="outline" disabled>
@@ -60,7 +51,7 @@ export function QuestionExplorationInput({
         <p role="status" className="text-sm text-muted-foreground">
           탐구활동을 불러오는 중이에요.
         </p>
-      ) : !data?.length ? (
+      ) : !activities?.length ? (
         <p className="text-sm text-muted-foreground">
           첨부할 활동이 없어요. 탐구활동 관리에서 활동을 확정해 주세요.
         </p>
@@ -80,7 +71,7 @@ export function QuestionExplorationInput({
                     onValueChange={(id) => onChange?.(id)}
                     aria-label="첨부할 탐구활동"
                   >
-                    {data.map((activity) => (
+                    {activities.map((activity) => (
                       <Menu.RadioItem
                         key={activity.id}
                         value={activity.id}
