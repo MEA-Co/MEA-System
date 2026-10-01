@@ -164,3 +164,139 @@ npx supabase db push --linked --dry-run
 ```
 
 적용 대기가 없음을 확인한 뒤 앱을 배포한다. 서술형에서 체크 → 저장 → 다시 열어 체크 상태 유지 → 미리보기 권장 안내 → 체크 해제/저장 → 안내 사라짐을 확인한다. 다른 유형에서 옵션이 보이지 않는지도 확인한다.
+
+## 2026-10-01 질문 중심 응답 전환 — 1단계
+
+`20261001043026_question_centric_responses.sql`은 `question_versions`, `response_sessions`, `question_responses`를 생성한다. 게시된 배치형 질문지에 리드·관리자가 실제 답변을 작성한다. 타인 답변 조회는 허용하지 않으며 일반 컨설턴트의 게시본 접근과 배치형 배포는 계속 차단한다. 이전 응답 테이블·데이터를 삭제하거나 옮기지 않는다.
+
+### 전체 전환 순서
+
+1. **이번 변경:** 새 테이블/RPC를 추가하고 게시본 리드 응답을 새 경로로 저장한다. 로컬에 적용하고 SQL 회귀·보안 검사를 수행했다. 기존 질문지·원본 질문·게시 상태는 유지한다.
+2. **기존 경로 교체:** 일반 컨설턴트의 응답/목록/확인 기록과 구형 저장 RPC를 새 구조에 연결하고 기존 배포본 회귀를 검증한다. 리드와 컨설턴트의 공개 설명 범위는 구분한다. 로컬 완료.
+3. **이전 데이터 확인:** 로컬·운영 모두 구형 응답 0건으로 확인했다. 별도 수동 데이터 이전은 불필요하다. 로컬 이전 migration 및 가상 데이터 보존 회귀는 완료했다. 아래 3단계 최신 기록을 따른다.
+4. **마지막 정리:** 이전 내용의 동등성·새 경로 사용·롤백 가능성을 검증한 뒤 별도 migration으로 `questionnaire_answers`, `questionnaire_responses`와 더 이상 참조되지 않는 구형 정의 열을 제거한다. 빈 테이블이라도 의존 함수가 있으므로 지금 DROP하지 않는다.
+
+### 운영 적용 순서
+
+아래는 **1단계만** 적용하는 절차다. 로컬 적용 완료와 운영 적용은 별개이며 운영은 아직 적용하지 않았다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+연결 대상이 의도한 운영 프로젝트인지 확인한다. 이번 신규 파일은 `20261001043026_question_centric_responses.sql` 하나다. 앞선 `20261001034040_question_text_exploration_recommendation.sql`을 아직 운영에 적용하지 않았다면 이 파일이 먼저 나올 수 있다. 예상하지 않은 다른 migration 또는 이력 차이가 보이면 적용 전에 내용을 검토한다. 이력 확인 없이 `--include-all`, 원격 reset, `migration repair`를 실행하지 않는다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음과 이력 일치를 확인한 다음 앱을 배포한다. 배포 후 다른 리드로 게시본 열기 → 답변 입력 → 수동/10초 자동 저장 → 다시 열어 복원 → 조건 질문 응답 → 답변 완료 후 잠금을 확인한다. 작성자는 게시본 편집 화면의 `내 답변 작성`으로 본인 응답을 작성한다. 일반 컨설턴트 접근 차단, 타인 응답 비노출, 원본 수정 뒤 기존 응답 질문 내용 유지도 확인한다. 브라우저 실사용 검증은 아직 수행하지 않았다.
+
+SQL 검증: `supabase/tests/question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`. 모두 트랜잭션을 롤백하며 로컬 기존 데이터를 바꾸지 않는다.
+
+## 2026-10-01 기존 배포본 응답 경로 전환 — 2단계
+
+사용자가 1단계 게시본 응답 기능의 실사용을 확인했다. 모든 단계는 우선 로컬에서 진행하고, 운영은 전체 정리 후 별도로 진행한다.
+
+`20261001044352_distributed_question_response_path.sql`을 로컬에 적용했다. 기존 일반 컨설턴트의 `/answers` 조회·저장·완료, `/responses` 상태 조회, `/read` 확인과 NEW 알림은 새 응답 테이블/RPC를 사용한다. 자동 저장·재시도·revision·완료 잠금·자유 응답 생략 시 보존을 유지한다. 개인 Realtime 알림도 `response_sessions`에서 발생한다. 기존 open/save RPC는 새 저장 함수로 연결하여 예전 클라이언트도 이전 테이블에 새 데이터를 쓰지 않는다.
+
+구형 배포 질문은 독립 원본이 없으므로 `question_versions.legacy_question_id`에 역사적 질문 ID를 보존하고 본문/답변 정의를 불변 버전으로 캡처한다. `question_id`와 `legacy_question_id`는 정확히 하나만 존재한다. 질문 라이브러리에 임의의 원본을 생성하지 않는다. 일반 컨설턴트에게 비공개 설명을 노출하지 않으며 배치형 질문지의 배포 기능은 계속 차단한다.
+
+**데이터 이전은 아직 3단계다.** 이전 세션이 있는데 같은 ID의 새 세션으로 이전되지 않았다면 조회·저장을 `Legacy response migration required`로 중단한다. 빈 답변을 생성하거나 기존 답변을 덮어쓰지 않는다. 미이전 세션의 완료/확인 표시는 이전 테이블을 읽어 유지한다. 이 두 읽기와 이전 보호 검사는 3~4단계에서 정리한다. 이전 테이블은 삭제하지 않았다.
+
+로컬 검증: `supabase/tests/distributed_response_path.sql`, `questionnaire_legacy_response_compatibility.sql`, 기존 질문 중심 응답 SQL 3개, 답변 세션/Realtime Node 테스트. 브라우저 실사용은 2단계에서 별도로 수행하지 않았다.
+
+### 나중에 운영에 적용할 때
+
+지금은 실행하지 않는다. 3단계 데이터 이전과 4단계 정리 파일이 완성되면 아래 예상 파일 목록에 함께 포함하여 검토한다. 기존 응답이 있는 운영에 2단계만 배포하면 이전 보호에 따라 해당 응답 작성이 중단될 수 있다.
+
+1. 프로젝트로 이동: `cd /Users/mealdm/Desktop/MEA/system`
+2. 연결 대상·이력 확인: `cat supabase/.temp/project-ref`, `npx supabase migration list --linked`
+3. 예상 파일 확인: `npx supabase db push --linked --dry-run`. 현재 새 구조 파일은 `20261001043026_question_centric_responses.sql` → `20261001044352_distributed_question_response_path.sql` 순서다. 아직 적용하지 않은 이전 migration과 앞으로 추가할 이전/정리 migration을 함께 검토한다. 예상과 다른 파일 또는 이력 차이는 적용 전에 해결하며 무조건 repair/include-all 하지 않는다.
+4. 실제 적용: `npx supabase db push --linked`
+5. 대기 없음 재확인: `npx supabase migration list --linked`, `npx supabase db push --linked --dry-run`
+6. 앱 배포.
+7. 리드 게시본과 일반 컨설턴트 기존 배포본에서 답변 복원·저장·완료·NEW·권한을 확인한다.
+
+
+## 2026-10-01 데이터 확인 — 3단계 완료 및 절차 단축
+
+사용자 요청으로 연결된 운영 `epwlcallocdjkmgdmtlv`를 읽기 전용 조회했다. `questionnaire_responses` 0건, `questionnaire_answers` 0건, `source_question_id` 없는 배치 0건이며 질문지 버전은 게시본 2개다. 새 `response_sessions`/`question_responses`는 아직 없고 운영 최신 migration은 `20260929081236`이다. 운영 DB에는 아무 변경도 적용하지 않았다.
+
+따라서 별도 백업 복사·수동 데이터 이전·행별 대조 절차는 요구하지 않는다. 다음 4단계는 남은 구형 읽기/함수 의존성을 제거하고, 적용 시 대상 테이블이 여전히 비어 있는지 검사한 후 두 구형 응답 테이블을 제거하는 것이다. 기존 게시본 2개와 원본 질문·배치 구조는 유지한다. 데이터가 생겼다면 삭제를 중단한다.
+
+로컬 `20261001045140_migrate_legacy_question_responses.sql`은 이전 데이터 0건으로 완료됐다. 이미 작성한 이전 함수는 migration 내에서 자동 실행되어 빈 DB에서는 아무 응답도 만들지 않는다. 운영자가 별도로 실행할 필요는 없다. 가상 세션 3개·답변 8개로 ID/작성자/본문/선택/자유 응답/시각/완료 상태, 중복 실행, 이전 후 수정 보존과 충돌 시 전체 취소를 확인했다. 테스트 데이터는 롤백했다. 이 단계에서 테이블 삭제는 수행하지 않았다.
+
+나중에 운영 적용할 때는 앞 절의 명령 순서를 따른다: 프로젝트 이동 → 대상·이력 확인 → dry-run 예상 파일 확인 → 실제 적용 → 대기 없음 확인 → 앱 배포 → 기능 확인. 현재 응답 전환 파일 순서는 `20261001043026` → `20261001044352` → `20261001045140`이다. 앞으로 추가할 4단계 정리 파일과 아직 운영 미적용인 선행 파일도 함께 검토한다. 예상과 다른 파일이 있으면 적용 전에 이력을 검토한다. 지금은 운영 적용하지 않는다.
+
+
+## 구형 응답 테이블 제거 — 4단계 (2026-10-01)
+
+로컬 `20261001050017_remove_legacy_response_tables.sql` 적용 완료. `questionnaire_answers`, `questionnaire_responses` 두 테이블과 구형 이전·검증·미이전 보호·완료 잠금 함수를 제거했다. 상태/NEW 조회는 새 응답 세션만 읽는다. 질문지 삭제는 원본 질문과 질문별 응답·불변 질문 버전을 보존하고 세션의 질문지 연결만 NULL로 만든다. 게시된 기존 질문지 데이터는 삭제하지 않았다.
+
+migration 첫 부분에서 두 테이블을 잠그고 0건인지 확인한다. 데이터가 있으면 전체 적용을 중단한다. CASCADE로 다른 객체를 무작정 제거하지 않는다. 기존 공개 open/save 응답 RPC는 새 저장 함수로 연결하는 호환 진입점으로 유지한다. 구형 배포 질문의 정의 열과 화면 호환은 이번 정리에서 제거하지 않았으며 새 배치형 배포도 활성화하지 않았다. 저장 테이블 통합과 모든 응답 UI/검증 함수의 완전한 통합을 구분한다.
+
+검증: 게시본 저장·조건·유형 SQL, 구형 배포 경로/호환 SQL, 삭제 후 답변 보존, 남은 함수 참조 부재 검사. 구형 테이블을 직접 사용하는 과거 테스트는 해당 migration 시점 전용이다. `migrate_legacy_question_responses.sql` 및 이전 dry-run/verify snippet은 3단계까지만 실행 가능하다. 현재 회귀는 `question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`, `distributed_response_path.sql`, `questionnaire_legacy_response_compatibility.sql`, `legacy_response_cleanup.sql`이다.
+
+
+### 나중에 운영에 적용하는 순서 (현재 미적용)
+
+1. 프로젝트 이동 후 연결 대상과 이력을 확인한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+운영 대상은 `epwlcallocdjkmgdmtlv`다. 2026-10-01 읽기 확인 기준 최신 이력은 `20260929081236`이므로 이후 파일은 다음 순서로 예상한다.
+
+- `20261001034040_question_text_exploration_recommendation.sql`
+- `20261001043026_question_centric_responses.sql`
+- `20261001044352_distributed_question_response_path.sql`
+- `20261001045140_migrate_legacy_question_responses.sql`
+- `20261001050017_remove_legacy_response_tables.sql`
+
+이미 적용한 파일은 제외된다. 예상과 다른 migration이나 이력 차이가 나오면 적용 전에 이력을 검토한다. 임의 repair/include-all/reset은 사용하지 않는다. 수동 이전 snippet은 실행하지 않는다.
+
+2. 예상 목록이 맞을 때 실제 적용 후 대기 없음까지 확인한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+3. 앱을 배포한다.
+4. 기존 게시본 2개와 원본 질문 유지, 리드 응답 저장/재조회/완료 잠금, 일반 컨설턴트의 게시본 접근 차단을 확인한다. 별도 운영 데이터 삭제나 실사용 게시본 삭제 테스트는 하지 않는다.
+
+
+## 게시 단계의 수정 가능한 응답 (2026-10-01, 최신 정책)
+
+`20261001052151_published_live_editable_responses.sql`은 게시 단계에 대한 이전의 질문 고정/완료 잠금 정책을 대체한다. 배포 단계의 기존 동작은 변경하지 않는다.
+
+- 게시본을 연 리드·관리자는 본인 응답을 저장하고 다시 수정한다. 게시 응답 UI에서 완료 잠금 버튼을 제거했고 이미 완료했던 게시 응답도 수정할 수 있다.
+- `question_versions`는 마지막 저장 당시 정의 및 과거 답변 해석용으로 유지하지만, 게시 응답 화면과 검증은 원본 `questions`의 최신 정의를 사용한다. 질문 본문 수정은 기존 입력을 보존하고 반영한다. 5초 주기와 화면 포커스 복귀 시 최신 내용을 조회한다.
+- 응답 시작 당시 제목·섹션·배치 구성을 개인 세션에 유지한다. 이후 원본 질문지의 배치를 복사본에 다시 덮어쓰지는 않는다. 원본 질문지가 삭제돼도 대시보드 `내 응답` 목록과 `response=<세션 ID>`로 본인 응답을 조회·수정한다. 원본이 다시 draft가 되어도 이미 연결된 본인 응답은 유지한다. 신규 응답 시작은 활성 게시본에만 허용한다.
+- 유형/열/선택지/행/조건 등 답변 구조 변경 시 재작성 안내와 이전 답변을 표시한다. 사용자가 확인하기 전 자동 저장을 막는다. 저장된 이전 정의·행·본문은 `question_responses.previous_responses`에 보관하며 화면에서 다시 볼 수 있다. 작성 중 구조가 바뀐 미저장 입력도 현재 화면에 따로 남긴다.
+- `definitionToken`과 세션 revision을 저장 시 검증하여 오래된 질문 구조로 저장하거나 원격 응답을 덮어쓰지 않는다. 질문/설명 정보는 연결된 본인 게시 응답에 대해서만 서버에서 읽으며 독립 질문 RLS는 넓히지 않는다.
+- 원본 질문을 삭제하는 기존 archive 작업은 연결된 게시 응답과 그 이전 답변 기록도 제거한다. 다른 질문지/질문이 사용 중인 질문의 삭제 제한은 그대로다. 기존 배포 응답은 이 삭제 대상에서 제외한다.
+
+테스트는 게시 응답 수정, 원본 본문 반영, 질문지 삭제 후 응답 조회/수정, 구조 변경 감지와 과거 답변 보존, 오래된 토큰 거부, 타인 세션 접근 거부, 원본 질문 삭제 후 응답 제거를 포함한다. 일반 컨설턴트의 게시본 접근 차단과 기존 배포 완료 잠금도 유지한다. 브라우저 실사용 테스트는 별도다.
+
+
+### 이번 변경의 운영 적용 (아직 실행하지 않음)
+
+1. 프로젝트 이동: `cd /Users/mealdm/Desktop/MEA/system`
+2. 연결 대상·이력 확인: `cat supabase/.temp/project-ref`, `npx supabase migration list --linked`.
+3. `npx supabase db push --linked --dry-run`으로 예상 파일 확인. 앞서 안내한 전환 migration을 모두 적용했다면 신규 파일은 `20261001052151_published_live_editable_responses.sql` 하나다. 아직 적용하지 않았다면 `20261001034040` → `20261001043026` → `20261001044352` → `20261001045140` → `20261001050017` → `20261001052151` 순서다. 예상과 다른 파일/이력은 적용 전에 검토한다.
+4. 실제 적용: `npx supabase db push --linked`.
+5. 적용 대기 없음 확인: `npx supabase migration list --linked`, `npx supabase db push --linked --dry-run`.
+6. 앱 배포. 새 저장 API는 definitionToken을 함께 보내므로 이번 앱과 DB 변경을 함께 배포한다.
+7. 리드 응답 저장/재수정, 원본 본문 수정 반영, 구조 변경 안내/이전 답변, 내 응답 목록을 확인한다. 삭제 후 보존/원본 질문 삭제 테스트는 별도 테스트용 질문지·질문으로 진행하며 실제 게시본을 테스트 목적으로 삭제하지 않는다.

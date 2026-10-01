@@ -17,7 +17,9 @@ import { QuestionnaireAnswers } from './QuestionnaireAnswers';
 import { QuestionnaireFreeResponse } from './QuestionnaireFreeResponse';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
+import { QuestionResponseForm } from './QuestionResponseForm';
 import { RichTextContent } from './RichTextContent';
 export function PublishedQuestionnaire({
   document,
@@ -25,37 +27,21 @@ export function PublishedQuestionnaire({
   distributed = false,
   staff = true,
   reviewContext,
+  onEditorState,
 }: {
   document: QuestionnaireDraft;
   sources?: QuestionBlockRow[];
   distributed?: boolean;
   staff?: boolean;
   reviewContext?: QuestionnaireReviewContext;
+  onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
   if (staff && !distributed)
     return (
-      <div className="mx-auto w-full min-w-0 max-w-4xl">
-        <QuestionnairePreview
-          title={document.title}
-          sections={document.sections}
-          library={sources}
-          showPrivateDetails
-          renderQuestionFooter={
-            reviewContext
-              ? (questionId) => (
-                  <QuestionnaireReviews
-                    {...reviewContext}
-                    questionId={questionId}
-                    canRequest={!reviewContext.isOwner}
-                    initialReviews={reviewContext.initialReviews.filter(
-                      (review) => review.question_id === questionId,
-                    )}
-                  />
-                )
-              : undefined
-          }
-        />
-      </div>
+      <QuestionResponseForm
+        versionId={document.versionId}
+        onEditorState={onEditorState}
+      />
     );
   const content = (
     <article className="mx-auto w-full min-w-0 max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">

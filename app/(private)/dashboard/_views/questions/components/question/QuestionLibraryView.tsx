@@ -1383,7 +1383,8 @@ export function QuestionLibraryView({
             <DialogTitle>질문을 삭제할까요?</DialogTitle>
             <DialogDescription>
               ‘{pendingArchive ? questionName(pendingArchive) : '이 질문'}’을
-              삭제합니다. 삭제 후 되돌릴 수 없습니다.
+              삭제합니다. 이 질문에 연결된 게시 단계의 응답도 함께 삭제되며
+              되돌릴 수 없습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

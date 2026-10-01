@@ -34,6 +34,7 @@ import { QuestionnaireComposer } from './QuestionnaireComposer';
 import { QuestionnaireList } from './QuestionnaireList';
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { QuestionResponseForm } from './QuestionResponseForm';
 
 export type QuestionnaireEditorState = {
   dirty: boolean;
@@ -137,7 +138,7 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
             <DialogDescription>
               {emptyTitle
                 ? '질문지 제목이 비어 있어 저장할 수 없어요. 계속 작성해 제목을 입력하거나 변경 내용을 버려 주세요.'
-                : '저장하지 않은 질문지의 변경 내용은 사라집니다.'}
+                : '저장하지 않은 변경 내용이나 답변은 사라집니다.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -212,6 +213,19 @@ function QuestionnaireContent({
   error?: QuestionnaireApiError;
 }) {
   const [openedDraft] = useState(data.initialDraft);
+  const [responding, setResponding] = useState(false);
+  const currentEditor = useRef<QuestionnaireEditorState>({
+    dirty: false,
+    saving: false,
+    emptyTitle: false,
+  });
+  const reportEditor = useCallback(
+    (state: QuestionnaireEditorState) => {
+      currentEditor.current = state;
+      onEditorState?.(state);
+    },
+    [onEditorState],
+  );
   const {
     initialDraft,
     drafts,
@@ -282,17 +296,48 @@ function QuestionnaireContent({
             반영됩니다.
           </p>
         )}
-        {editorDraft ? (
+        {editorDraft && selected?.status === 'published' && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (currentEditor.current.saving) return;
+                if (
+                  !currentEditor.current.dirty ||
+                  window.confirm(
+                    '저장되지 않은 내용을 버리고 화면을 전환할까요?',
+                  )
+                ) {
+                  reportEditor({
+                    dirty: false,
+                    saving: false,
+                    emptyTitle: false,
+                  });
+                  setResponding((value) => !value);
+                }
+              }}
+            >
+              {responding ? '질문지 편집' : '내 답변 작성'}
+            </Button>
+          </div>
+        )}
+        {responding && selected?.status === 'published' ? (
+          <QuestionResponseForm
+            versionId={selected.id}
+            onEditorState={reportEditor}
+          />
+        ) : editorDraft ? (
           <QuestionnaireComposer
             key={`editor:${editorDraft.versionId}`}
             initialDraft={editorDraft}
-            onEditorState={onEditorState}
+            onEditorState={reportEditor}
             paused={paused}
             remoteUnavailable={editUnavailable}
             reviewContext={reviewContext}
           />
         ) : publishedDocument && !error ? (
           <PublishedQuestionnaire
+            onEditorState={reportEditor}
             document={publishedDocument}
             sources={data.publishedSources}
             distributed={selected?.status === 'distributed'}

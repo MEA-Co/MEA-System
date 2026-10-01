@@ -25,9 +25,9 @@ do $$ declare f record; r jsonb; aid uuid; begin
   raise exception 'Invalid selection accepted';
  exception when invalid_parameter_value then null; end;
  perform public.save_questionnaire_response(f.version_id,jsonb_build_object(f.question_id::text,'11111111-1111-4111-8111-111111111111'),0,gen_random_uuid(),false);
- select id into aid from public.questionnaire_answers where question_id=f.question_id;
+ select id into aid from public.question_responses where origin_placement_id=f.question_id;
  perform public.save_questionnaire_response(f.version_id,jsonb_build_object(f.question_id::text,'22222222-2222-4222-8222-222222222222'),1,gen_random_uuid(),true);
- if not exists(select 1 from public.questionnaire_answers where id=aid and selection='"22222222-2222-4222-8222-222222222222"' and body='Second') then raise exception 'Answer ID or definition lost'; end if;
+ if not exists(select 1 from public.question_responses where id=aid and rows#>>array['0','answers',f.question_id::text]='22222222-2222-4222-8222-222222222222' and body='Second') then raise exception 'Answer ID or definition lost'; end if;
  begin
   perform public.save_questionnaire_response(f.version_id,jsonb_build_object(f.question_id::text,'11111111-1111-4111-8111-111111111111'),2,gen_random_uuid(),false);
   raise exception 'Submitted answer edited';

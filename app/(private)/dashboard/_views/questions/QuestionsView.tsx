@@ -11,6 +11,7 @@ import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 import { QuestionsDashboard } from './components/dashboard/QuestionsDashboard';
 import { QuestionLibraryView } from './components/question/QuestionLibraryView';
 import { QuestionnaireView } from './components/questionnaire/QuestionnaireView';
+import { QuestionResponseForm } from './components/questionnaire/QuestionResponseForm';
 
 export function QuestionsView({
   role,
@@ -26,8 +27,10 @@ export function QuestionsView({
     Boolean(params.get('draft')) ||
     params.get('tab') === 'questionnaires';
 
+  const responseId = staff ? params.get('response') : null;
   const overview =
     staff &&
+    !responseId &&
     !questionnaire &&
     !params.get('question') &&
     params.get('tab') !== 'questions';
@@ -55,7 +58,9 @@ export function QuestionsView({
           질문 관리 대시보드
         </Link>
       )}
-      {overview ? (
+      {responseId ? (
+        <QuestionResponseForm key={responseId} versionId={responseId} />
+      ) : overview ? (
         <QuestionsDashboard />
       ) : questionnaire ? (
         <QuestionnaireView requestedId={requestedId} />

@@ -25,6 +25,7 @@ export function QuestionnairePreview({
   renderQuestionFooter,
   legacyResponsePreview = false,
   showPrivateDetails = false,
+  response,
 }: {
   title: string;
   sections: QuestionnaireSection[];
@@ -33,6 +34,11 @@ export function QuestionnairePreview({
   /** Only the retained distributed-response screen renders inline questions. */
   legacyResponsePreview?: boolean;
   showPrivateDetails?: boolean;
+  response?: {
+    rows: Record<string, PreviewAnswerRow[]>;
+    onChange: (id: string, rows: PreviewAnswerRow[]) => void;
+    disabled: boolean;
+  };
 }) {
   const [answers, setAnswers] = useState<Record<string, PreviewAnswerRow[]>>(
     {},
@@ -55,10 +61,9 @@ export function QuestionnairePreview({
       <h2 className="whitespace-pre-wrap wrap-break-word text-3xl font-semibold">
         {title || '제목 없는 질문지'}
       </h2>
-      {placedLibrary.length > 0 && (
+      {!response && placedLibrary.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          앞선 질문에 답하면 조건에 따라 다음 질문이 열립니다. 미리보기 답변은
-          저장되지 않습니다.
+          미리보기 답변은 저장되지 않습니다.
         </p>
       )}
       {sections.map((section, sectionIndex) => (
@@ -86,6 +91,7 @@ export function QuestionnairePreview({
                   answers={answers}
                   onRows={onRows}
                   showPrivateDetails={showPrivateDetails}
+                  response={response}
                 />
                 {renderQuestionFooter?.(question.id)}
               </div>
@@ -136,8 +142,14 @@ function PlacedPreview({
   answers,
   onRows,
   showPrivateDetails,
+  response,
 }: {
   showPrivateDetails: boolean;
+  response?: {
+    rows: Record<string, PreviewAnswerRow[]>;
+    onChange: (id: string, rows: PreviewAnswerRow[]) => void;
+    disabled: boolean;
+  };
   sourceId: string;
   number: number;
   library: QuestionBlockRow[];
@@ -148,6 +160,11 @@ function PlacedPreview({
   const report = useCallback(
     (rows: PreviewAnswerRow[]) => onRows(sourceId, rows),
     [onRows, sourceId],
+  );
+  const onStoredChange = response?.onChange;
+  const store = useCallback(
+    (rows: PreviewAnswerRow[]) => onStoredChange?.(sourceId, rows),
+    [onStoredChange, sourceId],
   );
   if (!source)
     return (
@@ -164,6 +181,9 @@ function PlacedPreview({
       questionNumber={number}
       runtime={placementPreviewState(source, library, answers)}
       onAnsweredRowsChange={report}
+      initialRows={response?.rows[sourceId]}
+      onStoredRowsChange={response ? store : undefined}
+      disabled={response?.disabled}
     />
   );
 }

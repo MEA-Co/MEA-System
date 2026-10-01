@@ -2,6 +2,10 @@ import { cookies } from 'next/headers';
 import { z } from 'zod';
 
 import {
+  listMyPublishedResponses,
+  questionResponseCommand,
+} from '@/app/(private)/dashboard/_views/questions/lib/question-response-server';
+import {
   loadAnswers,
   loadAnswerStatuses,
   saveAnswers,
@@ -46,6 +50,8 @@ async function handle(request: Request, context: Context) {
     const [id, resource, childId] = path;
     const method = request.method;
     if (method === 'GET') {
+      if (path.length === 1 && id === 'my-responses' && staff)
+        return json(await listMyPublishedResponses());
       if (path.length === 1 && id === 'unread')
         return json(await loadUnreadQuestionnairePublications(!staff));
       if (path.length === 1 && id === 'responses')
@@ -56,6 +62,13 @@ async function handle(request: Request, context: Context) {
         z.uuid().safeParse(id).success
       )
         return json(await loadAnswers(id));
+      if (
+        path.length === 2 &&
+        resource === 'question-responses' &&
+        z.uuid().safeParse(id).success &&
+        staff
+      )
+        return json(await questionResponseCommand(id, 'read'));
       if (path.length > 1)
         return json({ error: '경로를 찾을 수 없어요.' }, 404);
       if (id && id !== 'new' && !z.uuid().safeParse(id).success)
@@ -92,6 +105,20 @@ async function handle(request: Request, context: Context) {
     }
     if (!body || typeof body !== 'object' || Array.isArray(body))
       return json({ error: '요청을 확인해 주세요.' }, 400);
+    if (
+      path.length === 2 &&
+      resource === 'question-responses' &&
+      z.uuid().safeParse(id).success &&
+      staff &&
+      ['POST', 'PUT'].includes(method)
+    )
+      return json(
+        await questionResponseCommand(
+          id,
+          method === 'POST' ? 'open' : 'save',
+          body,
+        ),
+      );
     if (memberCommand && resource === 'answers')
       return json(await saveAnswers(id, body));
     if (
@@ -162,7 +189,7 @@ async function handle(request: Request, context: Context) {
       const { error } = await client.rpc(
         staff
           ? 'mark_questionnaire_publication_read'
-          : 'open_questionnaire_response',
+          : 'open_distributed_response',
         { p_version_id: id },
       );
       if (error) return json({ error: '확인 상태를 저장하지 못했어요.' }, 503);

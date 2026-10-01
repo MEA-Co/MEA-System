@@ -68,6 +68,9 @@ export function QuestionBlockPreview({
   runtime,
   questionNumber = 1,
   showPrivateDetails = false,
+  initialRows,
+  onStoredRowsChange,
+  disabled = false,
 }: {
   document: QuestionBlockDocument;
   questions?: QuestionBlockRow[];
@@ -76,11 +79,18 @@ export function QuestionBlockPreview({
   runtime?: { waiting: boolean; matchedRows: PreviewRow[] };
   questionNumber?: number;
   showPrivateDetails?: boolean;
+  initialRows?: PreviewRow[];
+  onStoredRowsChange?: (rows: PreviewRow[]) => void;
+  disabled?: boolean;
 }) {
-  const nextRow = useRef(2);
+  const nextRow = useRef(
+    Math.max(1, ...(initialRows ?? []).map((row) => row.id)) + 1,
+  );
   const previewId = useId();
   const [activeRowId, setActiveRowId] = useState<number | null>(null);
-  const [rows, setRows] = useState<PreviewRow[]>([{ id: 1, answers: {} }]);
+  const [rows, setRows] = useState<PreviewRow[]>(
+    initialRows ?? [{ id: 1, answers: {} }],
+  );
   const [sourceRows, setSourceRows] = useState<PreviewRow[]>([]);
   const reference = document.rowMode === 'reference';
   const repeated = document.rowMode !== 'single';
@@ -145,7 +155,12 @@ export function QuestionBlockPreview({
     onAnsweredRowsChange?.(answeredRows);
   }, [answeredRows, onAnsweredRowsChange]);
 
+  useEffect(() => {
+    onStoredRowsChange?.(rows);
+  }, [rows, onStoredRowsChange]);
+
   function updateAnswer(rowId: number, fieldId: string, value: string) {
+    if (disabled) return;
     if (!reference) {
       setRows(
         visibleRows.map((row) =>
@@ -181,6 +196,7 @@ export function QuestionBlockPreview({
               {field.kind === 'text' ? (
                 <QuestionRichTextEditor
                   id={question.id}
+                  disabled={disabled}
                   explorationRecommended={field.explorationRecommended}
                   value={row.answers[field.id] ?? ''}
                   onChange={(value) => updateAnswer(row.id, field.id, value)}
@@ -190,6 +206,7 @@ export function QuestionBlockPreview({
               ) : (
                 <QuestionChoiceInput
                   question={question}
+                  disabled={disabled}
                   value={row.answers[field.id] ?? ''}
                   onChange={(value) => updateAnswer(row.id, field.id, value)}
                 />
@@ -355,12 +372,18 @@ export function QuestionBlockPreview({
                             variant="ghost"
                             size="icon-sm"
                             disabled={
-                              reference || visibleRows.length <= minRows
+                              disabled ||
+                              reference ||
+                              visibleRows.length <= minRows
                             }
                             aria-label={`미리보기 항목 ${document.rowLabels?.[index]?.trim() || index + 1} 삭제`}
                             onClick={(event) => {
                               event.stopPropagation();
-                              if (reference || visibleRows.length <= minRows)
+                              if (
+                                disabled ||
+                                reference ||
+                                visibleRows.length <= minRows
+                              )
                                 return;
                               setRows(
                                 visibleRows.filter(
@@ -416,10 +439,11 @@ export function QuestionBlockPreview({
                         type="button"
                         variant="ghost"
                         className="h-12 w-full rounded-none text-muted-foreground"
-                        disabled={visibleRows.length >= maxRows}
+                        disabled={disabled || visibleRows.length >= maxRows}
                         onClick={() => {
                           if (visibleRows.length >= maxRows) return;
-                          const id = nextRow.current++;
+                          const id = Math.max(Date.now(), nextRow.current++);
+                          nextRow.current = id + 1;
                           setRows(() => [
                             ...visibleRows.slice(0, maxRows - 1),
                             { id, answers: {} },

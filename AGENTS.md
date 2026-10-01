@@ -10,11 +10,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 게시 응답 정책 변경(2026-10-01, 이전 고정/완료 잠금 설명보다 우선): `20261001052151_published_live_editable_responses.sql` 로컬 적용. 게시 응답은 원본 질문의 최신 정의를 읽고 완료 상태여도 수정 가능하다. 개인 응답 시작 당시 제목/섹션/배치 구성을 유지하며 질문지 삭제 후에도 대시보드 내 응답→session ID로 읽기/수정한다. 질문 구조 변경은 definitionToken으로 오래된 저장을 차단하고 previous_responses에 이전 정의/행/본문을 보존한다. UI는 5초 및 포커스 복귀 조회, 구조 변경 확인 후 재작성, 미저장 입력 보존을 제공한다. 원본 질문 삭제(archive) 시 연결된 게시 응답만 삭제하고 배포 응답 보호는 유지한다. 기존 배치/참조 질문 삭제 제한은 유지한다. 배포 정책은 이번에 바꾸지 않았다. SQL 회귀 및 타입/린트 검증, 브라우저 실사용 미검증. 운영 미적용.
+
+- 응답 전환 4단계(2026-10-01): 로컬 `20261001050017_remove_legacy_response_tables.sql`로 빈 questionnaire_answers/questionnaire_responses를 제거했다. 적용 중 잠금·0건 검사를 수행하며 데이터가 있으면 중단한다. 구형 이전/검증 함수·미이전 보호·상태/NEW fallback을 제거하고 질문지 삭제는 새 응답을 보존한다. 공개 RPC 호환과 구형 배포 정의 열은 유지한다. 운영 미적용. 현재 회귀는 question_responses, question_response_conditions, question_response_types, distributed_response_path, questionnaire_legacy_response_compatibility, legacy_response_cleanup SQL이다. 구형 테이블을 직접 조작하는 과거 SQL 테스트와 이전 snippet은 해당 시점 migration 전용이며 현재 스키마에서 실행하지 않는다.
+
+- 응답 전환 3단계(2026-10-01): 운영 `epwlcallocdjkmgdmtlv` 읽기 전용 확인 결과 questionnaire_responses=0, questionnaire_answers=0, source_question_id 없는 배치=0, 게시본=2. 운영 최신 이력은 20260929081236이며 새 응답 테이블은 아직 없다. 별도 운영 데이터 이전/수동 비교 절차는 생략하고 다음 단계에서 빈 테이블 검사 후 구형 의존성/테이블을 정리한다. 게시본 2개·원본 질문은 유지한다. 로컬 20261001045140_migrate_legacy_question_responses.sql은 0건 처리했고 가상 세션 3개/답변 8개 회귀를 검증했다. 실제 운영 변경·테이블 삭제는 아직 하지 않았다.
+
 - 운영 DB migration이 필요한 변경을 완료하면 최종 안내에 실행 명령어와 순서를 반드시 함께 제공한다. 프로젝트 경로 이동 → 연결된 운영 대상·이력 확인 → dry-run 및 예상 migration 파일 확인 → 실제 적용 → 적용 대기 없음 재확인 → 앱 배포 → 기능 확인 순서로 안내한다. 예상과 다른 migration이 나오면 적용 전에 이력을 검토하도록 명시하고, 로컬 검증과 운영 적용 여부를 구분한다.
 
 - 로컬 구성·migration 복구와 운영 이력 차이는 `docs/local-supabase.md`를 먼저 확인한다. 전공 검색 migration 3개는 운영 객체가 있지만 운영 이력이 없고, 복구한 가치관 구조도 운영에 이미 있다. 이력 동등성 검토 없이 `db push`/원격 reset/`migration repair`를 실행하지 않는다. 개발 DB 초기화는 명시적으로 `db reset --local`을 사용한다. 로컬 Supabase 실행만으로 앱의 `.env` 연결이 바뀌지 않으며, 개발 환경 변수·Google OAuth·기준 데이터는 별도로 설정한다.
 
 ## 회원 역할
+
+- 질문 중심 응답 2단계(2026-10-01): 사용자가 1단계 기능 정상 동작을 확인했다. 로컬 `20261001044352_distributed_question_response_path.sql`에서 일반 컨설턴트 기존 배포본의 조회/저장/완료/자유응답/NEW/Realtime을 새 응답 테이블로 전환했다. 기존 open/save RPC도 새 경로로 연결된다. 구형 원본 없는 질문 버전은 `legacy_question_id`를 사용한다. 이전 응답이 남아 있으면 동일 ID로 이전되기 전 빈 세션 생성을 차단하며 상태/NEW는 이전 데이터를 읽어 유지한다. 데이터 일괄 이전(3단계)과 이전 테이블 삭제(4단계)는 아직 안 했다. 사용자 방침: 전체 로컬 완료 후 운영 적용. 검증 `distributed_response_path.sql`, `questionnaire_legacy_response_compatibility.sql` 및 새 응답 SQL 3개. 운영 절차는 `docs/questions-operations.md`의 2단계 절을 따른다.
+
+- 질문 중심 응답 1단계(2026-10-01): `question_versions`·`response_sessions`·`question_responses`로 게시본 리드/관리자의 실제 응답을 저장한다. `QuestionResponseForm`과 `/api/questionnaires/:id/question-responses`를 사용한다. 질문 버전은 원본 revision별 불변이며 응답 시작 시 고정한다. 조건 비활성 입력은 보존하고 서버가 active_row_ids/body를 계산한다. 본인 응답만 조회/저장하며 일반 컨설턴트의 게시본 접근은 차단한다. 작성자도 `내 답변 작성`으로 전환할 수 있다. 기존 배포본의 `questionnaire_responses`/`questionnaire_answers`와 RPC는 아직 유지한다. 전체 이전/삭제가 끝난 것으로 간주하지 않는다. 로컬 migration `20261001043026_question_centric_responses.sql`, 검증 `supabase/tests/question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`. 운영 적용은 `docs/questions-operations.md`의 단계별 절차를 따른다.
 
 - 서술형 답변 열은 `탐구활동 참조 권장` 체크박스로 `questions.fields[].explorationRecommended`를 설정한다. 기본 해제, 다른 유형 전환 시 제거하며 질문/질문지 미리보기 입력에 포커스할 때 파란 테두리와 참조 안내 말풍선을 표시한다. API/DB는 서술형 boolean만 허용한다. 로컬 migration `20261001034040_question_text_exploration_recommendation.sql`, 검증 `supabase/tests/question_exploration_recommendation.sql`·`scripts/verify-question-exploration.mjs`. 기존 데이터 변경 없음, 운영 적용 순서는 `docs/questions-operations.md`를 따른다.
 
