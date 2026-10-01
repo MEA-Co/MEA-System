@@ -31,7 +31,7 @@ function load(path, imports = {}, globals = {}) {
           );
         if (name === './rich-text')
           return load(
-            'app/(private)/dashboard/_views/questions/lib/questionnaire/rich-text.ts',
+            'app/(private)/dashboard/_views/questions/lib/rich-text.ts',
           );
         if (name === './schema')
           return load(

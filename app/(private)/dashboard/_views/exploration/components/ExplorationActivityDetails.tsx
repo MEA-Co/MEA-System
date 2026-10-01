@@ -8,7 +8,7 @@ import { ExplorationReportInput } from './ExplorationReportInput';
 export function ExplorationActivityDetails({
   activity,
   onClose,
-  notice = '다른 작성자의 탐구활동입니다. 읽기 전용으로 표시됩니다.',
+  notice = '탐구활동을 읽기 전용으로 표시합니다.',
 }: {
   activity: Activity;
   notice?: string;

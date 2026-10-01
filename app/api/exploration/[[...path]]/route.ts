@@ -62,7 +62,7 @@ async function handle(request: Request, context: Context) {
       activities.push(...(data as ActivityRow[]));
       if (data.length < 500) break;
     }
-    return json({ activities });
+    return json({ activities, userId: access.user.id });
   }
   if (request.method === 'GET' && path.length === 3 && path[1] === 'files') {
     let query = client

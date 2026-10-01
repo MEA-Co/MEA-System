@@ -1,3 +1,12 @@
+export function isExplorationId(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
+}
+
 /** Versioned, text-column-compatible content. Legacy strings remain literal text. */
 export const RICH_TEXT_PREFIX = '::mea-rich-text:v1::';
 export type RichTextNode = {
@@ -11,7 +20,10 @@ export type RichTextNode = {
     | 'hardBreak';
   text?: string;
   attrs?: { marker?: 'plus'; start?: number };
-  marks?: { type: 'highlight' }[];
+  marks?: (
+    | { type: 'highlight' }
+    | { type: 'explorationReference'; attrs: { id: string } }
+  )[];
   content?: RichTextNode[];
 };
 
@@ -36,7 +48,12 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
         n.marks !== undefined &&
         (!Array.isArray(n.marks) ||
           n.marks.some(
-            (m) => !m || typeof m !== 'object' || m.type !== 'highlight',
+            (m) =>
+              !m ||
+              typeof m !== 'object' ||
+              (m.type !== 'highlight' &&
+                (m.type !== 'explorationReference' ||
+                  !isExplorationId(m.attrs?.id))),
           ))
       )
         return null;
@@ -44,7 +61,16 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
         type: 'text',
         text: n.text,
         ...(Array.isArray(n.marks) && n.marks.length
-          ? { marks: [{ type: 'highlight' as const }] }
+          ? {
+              marks: n.marks.map((m) =>
+                m.type === 'highlight'
+                  ? { type: 'highlight' as const }
+                  : {
+                      type: 'explorationReference' as const,
+                      attrs: { id: m.attrs.id as string },
+                    },
+              ),
+            }
           : {}),
       };
     }

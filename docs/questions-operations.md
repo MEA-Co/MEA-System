@@ -364,3 +364,11 @@ npx supabase db push --linked --dry-run
 ```
 
 적용 대기 없음 확인 → 앱 배포 → 가이드 답변 하이라이트·행 이름·척도/선택 추가 서술 확인 순서로 진행한다.
+
+## 운영 가이드 계정 지정 (2026-10-01)
+
+사용자가 20261001060231까지 운영 migration 적용 완료를 확인했다. 운영 가이드 UUID는 `4e4c12e7-6357-4803-95de-e2d603bbda3e`, 로컬은 기존 `b338f03e-9d7f-4367-be1e-96eb1d5473be`다. 공통 migration의 과거 UUID를 수정하지 않는다.
+
+운영 전용 `supabase/snippets/set-production-guide-consultant.sql`을 운영 프로젝트 `epwlcallocdjkmgdmtlv` SQL Editor에서 실행한다. 이 SQL은 계정의 리드/관리자 역할을 검사한 후 운영의 `private.guide_consultant_id()` 반환값만 교체한다. 반복 실행 가능하며 기존 응답 데이터는 변경하지 않는다. 로컬에서는 실행하지 않는다. 함수 정의의 환경별 차이는 의도된 설정이며 향후 db diff/db pull 결과에서 로컬 UUID로 운영 함수를 덮어쓰지 않도록 검토한다. 이 스니펫 작성만으로 운영에 적용된 것은 아니다.
+
+순서: 프로젝트 경로 이동 → 연결 대상 및 `migration list --linked` 확인 → `db push --linked --dry-run`으로 대기 없음 확인 → 운영 SQL Editor에서 스니펫 실행 → 반환 UUID 확인 → 대기 없음 재확인 → 최신 앱 배포(이미 배포했다면 생략) → 운영 가이드 계정으로 저장/재조회 및 다른 리드의 미리보기 확인. 새로운 공통 migration은 없으며 기존 migration을 재실행하지 않는다.

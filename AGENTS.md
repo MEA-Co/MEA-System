@@ -8,6 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## 검증 방식
+
+- 사용자가 명시적으로 요청하지 않으면 실제 브라우저 테스트를 진행하지 않는다. 임시 검증 페이지나 예시 데이터로 수행하는 브라우저 테스트도 포함한다. 기본 검증은 타입 검사·린트 등으로 진행한다.
+
 ## 로컬 Supabase
 
 - 가이드 답변 표시 수정(2026-10-01): 로컬 `20261001060231_guide_answer_rich_rows.sql`. read_guide_answers는 요약 body 대신 활성 응답 행의 서식 원문과 표시용 label을 반환한다. 내부 음수 행 ID를 표시하지 않고 row_labels/순서 번호를 사용한다. QuestionBlockPreview는 서술형을 RichTextContent로 렌더링하여 하이라이트를 보존하며 척도/선택 추가 서술도 표시한다. 빈 행·조건상 비활성 행은 제외한다. 원본 저장 데이터 변경 없음, 운영 미적용.
@@ -169,3 +173,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 새 게시 표시는 `questionnaire_publication_reads`의 사용자·버전별 확인 기록으로 관리한다. 본인 게시·초안·배포본·보관본은 제외하고 미확인 게시본만 사이드바/게시 탭에 NEW 개수, 목록 항목에 NEW와 연한 파란 배경을 표시한다. `PublicationNotifications`가 상태를 공유하며 상세 화면의 `PublicationReadMarker`가 마운트된 뒤 REST API로 확인 처리한다. 프리패치·목록 방문은 확인 처리하지 않고 편집기를 새로고침하지 않는다. 수정/자동 저장은 확인 여부를 초기화하지 않는다. 기존 미확인 게시본도 새 게시로 표시하며 SWR로 열린 화면에서 60초마다 최신 목록을 조회한다. 컨설턴트 표시 역할에서는 게시 대신 새 배포 알림을 조회하고 응답 행 생성으로 확인 처리한다. 검증은 `supabase/tests/questionnaire_publication_reads.sql`.
 
 - 탐구활동 목록은 내 활동/다른 사람의 활동을 분리한다. 컨설턴트는 내 활동만 표시하며 리드·관리자는 다른 사람의 활동에서 전체 보기/작성자 선택 사람별 보기를 사용한다. API는 기존 profiles RLS를 따르는 작성자 이름만 함께 조회하고, 이름을 볼 수 없으면 비공개 표시한다. 추가 DB migration 없음.
+
+
+- 리치 텍스트 탐구활동 명령어(2026-10-01): 모든 QuestionRichTextEditor에서 권장 설정과 무관하게 `@` 메뉴 → 입력 위 본인 탐구활동 목록/검색/새 활동 작성 Drawer를 제공한다. 확정 활동은 `explorationReference` mark(UUID)+활동명 text로 기존 답변에 저장한다. 읽기 화면은 기존 권한으로 상세 조회하며 DB migration 없음. 질문지 RichText/editor/renderer는 질문 공통 구현을 재수출한다. 회귀 `scripts/verify-questionnaire-rich-text.mjs`, `verify-questionnaire-storage.mjs` 22개와 예시 UI 검증 완료. 실제 계정 저장/재조회는 미검증. 새 배치형 배포는 미구현 유지.
+
+- 탐구활동 첨부 UI(2026-10-01): 목록은 입력 위 Portal 팝업으로 배치해 레이아웃을 밀지 않는다. 주제/학년/학기/기재 영역만 있는 카드 전체를 클릭해 첨부하고 hover/focus 시 첨부하기를 표시한다. 새 활동 추가는 목록 마지막 항목이다. 명령어는 아이콘과 설명을 표시하고 목록·권장 말풍선은 X로 닫는다. 이번 UI 수정은 브라우저 테스트 없이 검증한다.

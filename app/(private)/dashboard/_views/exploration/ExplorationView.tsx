@@ -9,7 +9,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,9 +49,13 @@ import { hasInput, missingFields } from './lib/storage-model';
 export function ExplorationView({
   userId,
   canViewOthers = false,
+  onSelect,
+  onEditorOpenChange,
 }: {
   userId: string;
   canViewOthers?: boolean;
+  onSelect?: (activity: Activity) => void;
+  onEditorOpenChange?: (open: boolean) => void;
 }) {
   const opener = useRef<HTMLElement | null>(null);
   const {
@@ -71,13 +75,18 @@ export function ExplorationView({
     confirm,
     remove,
   } = useExplorationStorage(userId);
+  useEffect(() => {
+    onEditorOpenChange?.(!!draft);
+  }, [draft, onEditorOpenChange]);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'mine' | 'others'>('mine');
   const [otherMode, setOtherMode] = useState<'all' | 'person'>('all');
   const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const readOnly = !!draft?.ownerId && draft.ownerId !== userId;
+  const readOnly =
+    (!!draft?.ownerId && draft.ownerId !== userId) ||
+    (!!onSelect && draft?.status === 'confirmed');
   const canEdit = (activity: Activity) =>
     !activity.ownerId || activity.ownerId === userId;
   const existing = draft && draft.revision > 0;
@@ -139,30 +148,38 @@ export function ExplorationView({
 
   return (
     <section
-      aria-labelledby="exploration-management-title"
-      className="space-y-6"
+      aria-labelledby={onSelect ? undefined : 'exploration-management-title'}
+      aria-label={onSelect ? '탐구활동 목록' : undefined}
+      className={onSelect ? 'space-y-2' : 'space-y-6'}
     >
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <DashboardPageCategory view="exploration" />
-          <h1
-            id="exploration-management-title"
-            className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl"
+      {!onSelect && (
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            {!onSelect && <DashboardPageCategory view="exploration" />}
+            <h1
+              id="exploration-management-title"
+              className={
+                onSelect
+                  ? 'mt-1 text-lg font-semibold'
+                  : 'mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl'
+              }
+            >
+              {onSelect ? '첨부할 탐구활동 선택' : '탐구활동 관리'}
+            </h1>
+          </div>
+          <Button
+            type="button"
+            disabled={!ready || busy}
+            onClick={(event) => (
+              (opener.current = event.currentTarget),
+              create()
+            )}
           >
-            탐구활동 관리
-          </h1>
+            <Plus aria-hidden="true" />
+            탐구활동 추가
+          </Button>
         </div>
-        <Button
-          disabled={!ready || busy}
-          onClick={(event) => (
-            (opener.current = event.currentTarget),
-            create()
-          )}
-        >
-          <Plus aria-hidden="true" />
-          탐구활동 추가
-        </Button>
-      </div>
+      )}
       {localError && (
         <p role="alert" className="text-sm text-destructive">
           {localError}
@@ -212,12 +229,14 @@ export function ExplorationView({
               </p>
               <div className="flex gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setConfirmDiscard(false)}
                 >
                   계속 작성
                 </Button>
                 <Button
+                  type="button"
                   variant="destructive"
                   onClick={() => {
                     setConfirmDiscard(false);
@@ -232,6 +251,11 @@ export function ExplorationView({
           {draft && readOnly && (
             <ExplorationActivityDetails
               activity={draft}
+              notice={
+                draft.ownerId && draft.ownerId !== userId
+                  ? '다른 작성자의 탐구활동입니다. 읽기 전용으로 표시됩니다.'
+                  : '첨부할 탐구활동을 미리 보고 있습니다. 읽기 전용으로 표시됩니다.'
+              }
               onClose={returnToList}
             />
           )}
@@ -453,244 +477,358 @@ export function ExplorationView({
           )}
         </DrawerContent>
       </Drawer>
-      <div className="space-y-4">
-        {canViewOthers && (
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="탐구활동 구분"
-          >
-            <Button
-              variant={scope === 'mine' ? 'secondary' : 'ghost'}
-              aria-pressed={scope === 'mine'}
-              onClick={() => {
-                setScope('mine');
-                setQuery('');
-              }}
-            >
-              내 탐구활동 <Badge variant="outline">{mine.length}</Badge>
-            </Button>
-            <Button
-              variant={scope === 'others' ? 'secondary' : 'ghost'}
-              aria-pressed={scope === 'others'}
-              onClick={() => {
-                setScope('others');
-                setQuery('');
-              }}
-            >
-              다른 사람의 탐구활동{' '}
-              <Badge variant="outline">{others.length}</Badge>
-            </Button>
-          </div>
-        )}
-        {showOthers && (
-          <div className="flex flex-wrap items-center gap-3">
-            <div
-              className="flex gap-1 rounded-xl bg-muted/50 p-1"
-              role="group"
-              aria-label="다른 사람의 탐구활동 보기 방식"
-            >
-              <Button
-                size="sm"
-                variant={otherMode === 'all' ? 'secondary' : 'ghost'}
-                aria-pressed={otherMode === 'all'}
-                onClick={() => setOtherMode('all')}
-              >
-                전체 보기
-              </Button>
-              <Button
-                size="sm"
-                variant={otherMode === 'person' ? 'secondary' : 'ghost'}
-                aria-pressed={otherMode === 'person'}
-                onClick={() => setOtherMode('person')}
-              >
-                사람별 보기
-              </Button>
-            </div>
-            {otherMode === 'person' && (
-              <Select
-                value={owner || null}
-                onValueChange={(value) => setOwner(value ?? '')}
-              >
-                <SelectTrigger
-                  className="min-w-48"
-                  aria-label="탐구활동 작성자 선택"
-                >
-                  <SelectValue placeholder="작성자를 선택해 주세요">
-                    {owner ? ownerLabel(owner) : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {people.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.label} (
-                      {
-                        others.filter(
-                          (activity) => activity.ownerId === person.id,
-                        ).length
-                      }
-                      개)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 font-semibold">
-            {showOthers
-              ? otherMode === 'person' && owner
-                ? `${ownerLabel(owner)}님의 탐구활동`
-                : '다른 사람의 탐구활동'
-              : '내 탐구활동'}{' '}
-            <Badge variant="secondary">{filtered.length}</Badge>
-          </h2>
-          <div className="relative w-full sm:w-72">
+      {onSelect ? (
+        <div className="space-y-2">
+          <div className="relative">
             <Search
               aria-hidden="true"
-              className="absolute top-2.5 left-3 size-4 text-muted-foreground"
+              className="absolute left-3 top-2.5 size-4 text-muted-foreground"
             />
             <Input
               aria-label="탐구활동 검색"
-              placeholder="주제, 교과명, 활동 내용 검색"
+              placeholder="탐구활동 검색"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="rounded-xl pl-9"
+              className="pl-9"
             />
           </div>
-        </div>
-        {filtered.length ? (
-          <ul className="divide-y rounded-2xl border">
-            {filtered.map((activity) => (
-              <li
-                key={activity.clientKey}
-                className="flex flex-wrap items-center gap-4 p-5"
-              >
-                <div className="min-w-0 flex-1 basis-60">
+          <ul className="divide-y">
+            {filtered
+              .filter((activity) => activity.status === 'confirmed')
+              .map((activity) => (
+                <li
+                  key={activity.clientKey}
+                  className="flex items-center gap-1"
+                >
                   <button
+                    type="button"
                     disabled={busy || !ready}
-                    className="rounded-sm text-left font-semibold wrap-break-word hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                    onClick={(event) => (
-                      (opener.current = event.currentTarget),
-                      open(activity)
-                    )}
+                    onClick={() => onSelect(activity)}
+                    aria-label={`${activity.values.topic || '탐구활동'} 첨부하기`}
+                    className="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50"
                   >
-                    {activity.values.topic.trim() ||
-                      activity.values.recordArea.trim() ||
-                      '탐구활동'}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {activity.values.topic || '탐구활동'}
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-muted-foreground">
+                        {[
+                          activity.values.grade &&
+                            `${activity.values.grade}학년`,
+                          activity.values.semester &&
+                            `${activity.values.semester}학기`,
+                          [
+                            activity.values.recordType,
+                            activity.values.recordArea,
+                          ]
+                            .filter(Boolean)
+                            .join(' · '),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                    >
+                      첨부하기
+                    </span>
                   </button>
-                  <Badge
-                    variant={
-                      activity.status === 'draft' ? 'secondary' : 'outline'
-                    }
-                    className="ml-2"
-                  >
-                    {activity.status === 'draft'
-                      ? activity.revision > 0
-                        ? '수정 중 · 임시저장'
-                        : '임시저장'
-                      : '확정'}
-                  </Badge>
-                  {showOthers && (
-                    <p className="mt-2 text-sm font-medium">
-                      작성자: {ownerLabel(activity.ownerId)}
-                    </p>
-                  )}
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {[
-                      [
-                        activity.values.grade && `${activity.values.grade}학년`,
-                        activity.values.semester &&
-                          `${activity.values.semester}학기`,
-                      ]
-                        .filter(Boolean)
-                        .join(' '),
-                      [activity.values.recordType, activity.values.recordArea]
-                        .filter(Boolean)
-                        .join(' 영역 '),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '기재 영역 미입력'}
-                  </p>
-                  {activity.values.record && (
-                    <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                      {activity.values.record}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon-sm"
+                    className="mr-2 shrink-0 cursor-pointer disabled:cursor-default"
                     disabled={busy || !ready}
-                    title={canEdit(activity) ? '상세 · 수정' : '상세 보기'}
-                    aria-label={`${activity.values.topic.trim() || '탐구활동'} ${canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
-                    onClick={(event) => (
-                      (opener.current = event.currentTarget),
-                      open(activity)
-                    )}
+                    title="상세 보기"
+                    aria-label={`${activity.values.topic || '탐구활동'} 상세 보기`}
+                    onClick={(event) => {
+                      opener.current = event.currentTarget;
+                      open(activity);
+                    }}
                   >
-                    {canEdit(activity) ? (
-                      <Pencil aria-hidden="true" />
-                    ) : (
-                      <Eye aria-hidden="true" />
-                    )}
+                    <Eye className="size-4" aria-hidden="true" />
                   </Button>
-                  {canEdit(activity) && (
+                </li>
+              ))}
+            {!isLoading &&
+              !filtered.some((activity) => activity.status === 'confirmed') && (
+                <li className="px-3 py-4 text-sm text-muted-foreground">
+                  {query.trim()
+                    ? '검색 결과가 없어요.'
+                    : '첨부할 확정 활동이 없어요.'}
+                </li>
+              )}
+            <li>
+              <button
+                type="button"
+                disabled={!ready || busy}
+                onClick={(event) => {
+                  opener.current = event.currentTarget;
+                  create();
+                }}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-3 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                탐구활동 추가
+              </button>
+            </li>
+          </ul>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {canViewOthers && (
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="탐구활동 구분"
+            >
+              <Button
+                type="button"
+                variant={scope === 'mine' ? 'secondary' : 'ghost'}
+                aria-pressed={scope === 'mine'}
+                onClick={() => {
+                  setScope('mine');
+                  setQuery('');
+                }}
+              >
+                내 탐구활동 <Badge variant="outline">{mine.length}</Badge>
+              </Button>
+              <Button
+                type="button"
+                variant={scope === 'others' ? 'secondary' : 'ghost'}
+                aria-pressed={scope === 'others'}
+                onClick={() => {
+                  setScope('others');
+                  setQuery('');
+                }}
+              >
+                다른 사람의 탐구활동{' '}
+                <Badge variant="outline">{others.length}</Badge>
+              </Button>
+            </div>
+          )}
+          {showOthers && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                className="flex gap-1 rounded-xl bg-muted/50 p-1"
+                role="group"
+                aria-label="다른 사람의 탐구활동 보기 방식"
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={otherMode === 'all' ? 'secondary' : 'ghost'}
+                  aria-pressed={otherMode === 'all'}
+                  onClick={() => setOtherMode('all')}
+                >
+                  전체 보기
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={otherMode === 'person' ? 'secondary' : 'ghost'}
+                  aria-pressed={otherMode === 'person'}
+                  onClick={() => setOtherMode('person')}
+                >
+                  사람별 보기
+                </Button>
+              </div>
+              {otherMode === 'person' && (
+                <Select
+                  value={owner || null}
+                  onValueChange={(value) => setOwner(value ?? '')}
+                >
+                  <SelectTrigger
+                    className="min-w-48"
+                    aria-label="탐구활동 작성자 선택"
+                  >
+                    <SelectValue placeholder="작성자를 선택해 주세요">
+                      {owner ? ownerLabel(owner) : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {people.map((person) => (
+                      <SelectItem key={person.id} value={person.id}>
+                        {person.label} (
+                        {
+                          others.filter(
+                            (activity) => activity.ownerId === person.id,
+                          ).length
+                        }
+                        개)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 font-semibold">
+              {showOthers
+                ? otherMode === 'person' && owner
+                  ? `${ownerLabel(owner)}님의 탐구활동`
+                  : '다른 사람의 탐구활동'
+                : '내 탐구활동'}{' '}
+              <Badge variant="secondary">{filtered.length}</Badge>
+            </h2>
+            <div className="relative w-full sm:w-72">
+              <Search
+                aria-hidden="true"
+                className="absolute top-2.5 left-3 size-4 text-muted-foreground"
+              />
+              <Input
+                aria-label="탐구활동 검색"
+                placeholder="주제, 교과명, 활동 내용 검색"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="rounded-xl pl-9"
+              />
+            </div>
+          </div>
+          {filtered.length ? (
+            <ul className="divide-y rounded-2xl border">
+              {filtered.map((activity) => (
+                <li
+                  key={activity.clientKey}
+                  className="flex flex-wrap items-center gap-4 p-5"
+                >
+                  <div className="min-w-0 flex-1 basis-60">
+                    <button
+                      type="button"
+                      disabled={busy || !ready}
+                      className="rounded-sm text-left font-semibold wrap-break-word hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                      onClick={(event) => {
+                        opener.current = event.currentTarget;
+                        open(activity);
+                      }}
+                    >
+                      {activity.values.topic.trim() ||
+                        activity.values.recordArea.trim() ||
+                        '탐구활동'}
+                    </button>
+                    <Badge
+                      variant={
+                        activity.status === 'draft' ? 'secondary' : 'outline'
+                      }
+                      className="ml-2"
+                    >
+                      {activity.status === 'draft'
+                        ? activity.revision > 0
+                          ? '수정 중 · 임시저장'
+                          : '임시저장'
+                        : '확정'}
+                    </Badge>
+                    {showOthers && (
+                      <p className="mt-2 text-sm font-medium">
+                        작성자: {ownerLabel(activity.ownerId)}
+                      </p>
+                    )}
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {[
+                        [
+                          activity.values.grade &&
+                            `${activity.values.grade}학년`,
+                          activity.values.semester &&
+                            `${activity.values.semester}학기`,
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
+                        [activity.values.recordType, activity.values.recordArea]
+                          .filter(Boolean)
+                          .join(' 영역 '),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '기재 영역 미입력'}
+                    </p>
+                    {activity.values.record && (
+                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                        {activity.values.record}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon-sm"
-                      disabled={busy}
-                      title="삭제"
-                      aria-label={`${activity.values.topic.trim() || activity.values.recordArea.trim() || '탐구활동'} 삭제`}
-                      onClick={() => setPendingDelete(activity)}
+                      disabled={busy || !ready}
+                      title={
+                        !onSelect && canEdit(activity)
+                          ? '상세 · 수정'
+                          : '상세 보기'
+                      }
+                      aria-label={`${activity.values.topic.trim() || '탐구활동'} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
+                      onClick={(event) => (
+                        (opener.current = event.currentTarget),
+                        open(activity)
+                      )}
                     >
-                      <Trash2 aria-hidden="true" />
+                      {!onSelect && canEdit(activity) ? (
+                        <Pencil aria-hidden="true" />
+                      ) : (
+                        <Eye aria-hidden="true" />
+                      )}
                     </Button>
+                    {!onSelect && canEdit(activity) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={busy}
+                        title="삭제"
+                        aria-label={`${activity.values.topic.trim() || activity.values.recordArea.trim() || '탐구활동'} 삭제`}
+                        onClick={() => setPendingDelete(activity)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center">
+              <NotebookPen
+                aria-hidden="true"
+                className="mb-4 size-8 text-muted-foreground"
+              />
+              <h3 className="font-medium">
+                {showOthers && otherMode === 'person' && !owner
+                  ? '작성자를 선택해 주세요'
+                  : query.trim()
+                    ? '검색 결과가 없습니다'
+                    : '등록된 탐구활동이 없습니다'}
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {showOthers && otherMode === 'person' && !owner
+                  ? '작성자를 선택하면 해당 사람의 탐구활동을 볼 수 있습니다.'
+                  : query.trim()
+                    ? '다른 검색어로 찾아보세요.'
+                    : showOthers
+                      ? '다른 사람이 확정한 탐구활동이 여기에 표시됩니다.'
+                      : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
+              </p>
+              {!showOthers && !mine.length && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-5"
+                  onClick={(event) => (
+                    (opener.current = event.currentTarget),
+                    create()
                   )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center">
-            <NotebookPen
-              aria-hidden="true"
-              className="mb-4 size-8 text-muted-foreground"
-            />
-            <h3 className="font-medium">
-              {showOthers && otherMode === 'person' && !owner
-                ? '작성자를 선택해 주세요'
-                : query.trim()
-                  ? '검색 결과가 없습니다'
-                  : '등록된 탐구활동이 없습니다'}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {showOthers && otherMode === 'person' && !owner
-                ? '작성자를 선택하면 해당 사람의 탐구활동을 볼 수 있습니다.'
-                : query.trim()
-                  ? '다른 검색어로 찾아보세요.'
-                  : showOthers
-                    ? '다른 사람이 확정한 탐구활동이 여기에 표시됩니다.'
-                    : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
-            </p>
-            {!showOthers && !mine.length && (
-              <Button
-                variant="outline"
-                className="mt-5"
-                onClick={(event) => (
-                  (opener.current = event.currentTarget),
-                  create()
-                )}
-              >
-                <Plus aria-hidden="true" />
-                탐구활동 추가
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+                >
+                  <Plus aria-hidden="true" />
+                  탐구활동 추가
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <Dialog
         open={!!pendingDelete}
         onOpenChange={(open) => {
@@ -718,6 +856,7 @@ export function ExplorationView({
               취소
             </Button>
             <Button
+              type="button"
               variant="destructive"
               disabled={busy}
               onClick={async () => {

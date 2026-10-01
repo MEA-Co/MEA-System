@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 
 import { type RichTextNode, toEditorDocument } from '../../lib/rich-text';
 
+import { ExplorationReferenceContent } from './ExplorationCommands';
+
 import styles from './RichTextContent.module.css';
 
 export const richTextClasses = `${styles.content} whitespace-pre-wrap break-words [&_p]:min-h-[1.5em] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:pl-1 [&_mark]:rounded-sm [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:text-inherit dark:[&_mark]:bg-yellow-400/35`;
@@ -11,12 +13,23 @@ export const richTextClasses = `${styles.content} whitespace-pre-wrap break-word
 function renderNode(node: RichTextNode, key: number): ReactNode {
   const content = node.content?.map(renderNode);
   switch (node.type) {
-    case 'text':
-      return node.marks?.length ? (
-        <mark key={key}>{node.text}</mark>
+    case 'text': {
+      const reference = node.marks?.find(
+        (mark) => mark.type === 'explorationReference',
+      );
+      const text = node.marks?.some((mark) => mark.type === 'highlight') ? (
+        <mark>{node.text}</mark>
       ) : (
         node.text
       );
+      return reference?.type === 'explorationReference' ? (
+        <ExplorationReferenceContent key={key} id={reference.attrs.id}>
+          {text}
+        </ExplorationReferenceContent>
+      ) : (
+        <span key={key}>{text}</span>
+      );
+    }
     case 'hardBreak':
       return <br key={key} />;
     case 'paragraph':

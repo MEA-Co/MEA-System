@@ -7,7 +7,7 @@ import * as tiptapCore from '@tiptap/core';
 import { getSchema } from '@tiptap/core';
 import Highlight from '@tiptap/extension-highlight';
 import { splitListItem, wrapInList } from '@tiptap/pm/schema-list';
-import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { EditorState, Plugin, TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import ts from 'typescript';
 
@@ -15,7 +15,7 @@ const exports = {};
 vm.runInNewContext(
   ts.transpileModule(
     readFileSync(
-      'app/(private)/dashboard/_views/questions/lib/questionnaire/rich-text.ts',
+      'app/(private)/dashboard/_views/questions/lib/rich-text.ts',
       'utf8',
     ),
     {
@@ -256,5 +256,226 @@ test('ordered list start attributes are bounded and arbitrary attributes removed
     });
     assert.equal(parseRichText(saved).content[0].attrs.start, 1);
     assert.equal(saved.includes('onclick'), false);
+  }
+});
+
+const referenceExports = {};
+vm.runInNewContext(
+  ts.transpileModule(
+    readFileSync(
+      'app/(private)/dashboard/_views/questions/lib/exploration-reference.ts',
+      'utf8',
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    },
+  ).outputText,
+  {
+    exports: referenceExports,
+    require: (name) =>
+      name === '@tiptap/core'
+        ? tiptapCore
+        : name === '@tiptap/pm/state'
+          ? { Plugin }
+          : exports,
+  },
+);
+const referenceSchema = getSchema([
+  StarterKit,
+  Highlight,
+  referenceExports.ExplorationReference,
+]);
+const activityId = '11111111-1111-4111-8111-111111111111';
+
+test('activity references survive rich text, editor schema and plain text extraction', () => {
+  const doc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: '참고한 활동: ' },
+          {
+            type: 'text',
+            text: '@물리 탐구',
+            marks: [
+              { type: 'explorationReference', attrs: { id: activityId } },
+              { type: 'highlight' },
+            ],
+          },
+          { type: 'text', text: '을 분석했다.' },
+        ],
+      },
+    ],
+  };
+  const saved = serializeRichText(doc);
+  assert.ok(saved.startsWith(RICH_TEXT_PREFIX));
+  assert.equal(richTextPlainText(saved), '참고한 활동: @물리 탐구을 분석했다.');
+  const restored = referenceSchema.nodeFromJSON(toEditorDocument(saved));
+  const savedAgain = serializeRichText(restored.toJSON());
+  assert.equal(
+    parseRichText(savedAgain).content[0].content[1].marks.find(
+      (m) => m.type === 'explorationReference',
+    ).attrs.id,
+    activityId,
+  );
+  assert.equal(
+    parseRichText(savedAgain).content[0].content[1].marks.some(
+      (m) => m.type === 'highlight',
+    ),
+    true,
+  );
+});
+
+test('activity reference IDs reject unsafe values and extra attributes are discarded', () => {
+  for (const id of ['javascript:alert(1)', '', null, '../secret']) {
+    assert.equal(
+      exports.normalizeRichText({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: 'activity',
+                marks: [{ type: 'explorationReference', attrs: { id } }],
+              },
+            ],
+          },
+        ],
+      }),
+      null,
+    );
+  }
+  const doc = exports.normalizeRichText({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: 'activity',
+            marks: [
+              {
+                type: 'explorationReference',
+                attrs: { id: activityId, secret: 'discard' },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(JSON.stringify(doc).includes('secret'), false);
+});
+
+test('@ commands work at the caret, filter Korean input and ignore email addresses', () => {
+  for (const [text, match, matched] of [
+    ['@', true, true],
+    ['답변 @탐', true, true],
+    ['@탐구활동', true, true],
+    ['name@example.com', false, undefined],
+    ['@다른명령', true, false],
+    ['@탐구활동 ', false, undefined],
+  ]) {
+    const doc = referenceSchema.nodeFromJSON(toEditorDocument(text));
+    const state = EditorState.create({
+      schema: referenceSchema,
+      doc,
+      selection: TextSelection.create(doc, text.length + 1),
+    });
+    const command = referenceExports.explorationCommand({ state });
+    assert.equal(!!command, match, text);
+    assert.equal(command?.matched, matched, text);
+    if (command)
+      assert.equal(
+        doc.textBetween(command.from, command.to).startsWith('@'),
+        true,
+      );
+  }
+});
+
+test('reference deletion is atomic from either edge, inside text and partial selections', () => {
+  const doc = referenceSchema.nodeFromJSON({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: '앞 ' },
+          {
+            type: 'text',
+            text: '@물리',
+            marks: [
+              { type: 'explorationReference', attrs: { id: activityId } },
+            ],
+          },
+          {
+            type: 'text',
+            text: ' 탐구',
+            marks: [
+              { type: 'explorationReference', attrs: { id: activityId } },
+              { type: 'highlight' },
+            ],
+          },
+          { type: 'text', text: ' 뒤' },
+        ],
+      },
+    ],
+  });
+  for (const [from, to, direction] of [
+    [9, 9, 'backward'],
+    [3, 3, 'forward'],
+    [5, 5, 'backward'],
+    [5, 7, 'forward'],
+    [2, 5, 'backward'],
+  ]) {
+    let state = EditorState.create({
+      schema: referenceSchema,
+      doc,
+      selection: TextSelection.create(doc, from, to),
+    });
+    assert.equal(
+      referenceExports.deleteExplorationReference(
+        state,
+        (tr) => {
+          state = state.apply(tr);
+        },
+        direction,
+      ),
+      true,
+    );
+    assert.equal(state.doc.textContent, from === 2 ? '앞 뒤' : '앞  뒤');
+    state = state.apply(state.tr.insertText('새 글'));
+    state.doc.descendants((node) =>
+      assert.equal(
+        node.marks.some((mark) => mark.type.name === 'explorationReference'),
+        false,
+      ),
+    );
+  }
+  for (const [position, direction] of [
+    [3, 'backward'],
+    [9, 'forward'],
+    [1, 'backward'],
+  ]) {
+    const state = EditorState.create({
+      schema: referenceSchema,
+      doc,
+      selection: TextSelection.create(doc, position),
+    });
+    assert.equal(
+      referenceExports.deleteExplorationReference(
+        state,
+        () => assert.fail('ordinary text should use default deletion'),
+        direction,
+      ),
+      false,
+    );
   }
 });
