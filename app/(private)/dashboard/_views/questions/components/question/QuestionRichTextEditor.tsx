@@ -359,7 +359,7 @@ export function QuestionRichTextEditor({
             <div className="grid">
               {state?.empty && (
                 <span
-                  className="pointer-events-none col-start-1 row-start-1 px-3 py-2 text-sm whitespace-pre-wrap text-blue-400 [overflow-wrap:anywhere] dark:text-blue-300"
+                  className="pointer-events-none col-start-1 row-start-1 px-3 py-2 text-sm whitespace-pre-wrap text-blue-400 wrap-anywhere dark:text-blue-300"
                   aria-hidden="true"
                 >
                   {placeholder}
