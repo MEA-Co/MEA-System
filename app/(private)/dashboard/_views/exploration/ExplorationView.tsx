@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -43,6 +44,7 @@ import { ExplorationReportInput } from './components/ExplorationReportInput';
 import { ExplorationRequiredMark } from './components/ExplorationRequiredMark';
 import { ExplorationWritingGuide } from './components/ExplorationWritingGuide';
 import { useExplorationStorage } from './hooks/useExplorationStorage';
+import { exampleActivityValues } from './lib/example-activity';
 import { type Activity, groups } from './lib/fields';
 import { hasInput, missingFields } from './lib/storage-model';
 
@@ -272,6 +274,31 @@ export function ExplorationView({
                 disabled={busy || confirmDiscard}
                 className="min-w-0 space-y-6"
               >
+                {!existing && (
+                  <div className="flex justify-start">
+                    <button
+                      type="button"
+                      title="입력 항목을 예시 탐구 내용으로 채웁니다."
+                      className="group rounded-full bg-linear-to-r from-purple-500 to-blue-500 p-0.5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          values: { ...draft.values, ...exampleActivityValues },
+                        })
+                      }
+                    >
+                      <span className="flex items-center gap-2 rounded-full bg-background px-4 py-2 group-hover:bg-background/95">
+                        <Sparkles
+                          className="size-4 text-violet-500"
+                          aria-hidden="true"
+                        />
+                        <span className="bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-sm font-semibold text-transparent dark:from-purple-400 dark:to-blue-400">
+                          예시 탐구 채우기
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                )}
                 {groups.map((group, index) => (
                   <section
                     key={group.title}
