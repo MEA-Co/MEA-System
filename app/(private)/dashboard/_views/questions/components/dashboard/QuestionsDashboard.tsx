@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, Blocks, FilePenLine, Globe } from 'lucide-react';
+import { ArrowUpRight, Blocks, FilePenLine, Globe, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
@@ -44,6 +44,8 @@ export function QuestionsDashboard() {
   const { unreadIds } = usePublicationNotifications();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [distributedSearch, setDistributedSearch] = useState('');
+  const [distributedPage, setDistributedPage] = useState(1);
   const mine = data
     ? [...data.drafts, ...data.published, ...data.distributed]
         .filter((item) => item.isOwner)
@@ -58,6 +60,21 @@ export function QuestionsDashboard() {
           .includes(search.trim().toLocaleLowerCase()),
     )
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const distributed = (data?.distributed ?? [])
+    .filter(
+      (item) =>
+        !item.archivedAt &&
+        item.title
+          .toLocaleLowerCase()
+          .includes(distributedSearch.trim().toLocaleLowerCase()),
+    )
+    .sort((a, b) =>
+      (b.distributedAt ?? b.updatedAt).localeCompare(
+        a.distributedAt ?? a.updatedAt,
+      ),
+    );
+  const distributedPages = Math.max(1, Math.ceil(distributed.length / 10));
+  const distributedCurrent = Math.min(distributedPage, distributedPages);
   const pages = Math.max(1, Math.ceil(published.length / 10));
   const current = Math.min(page, pages);
   return (
@@ -308,6 +325,119 @@ export function QuestionsDashboard() {
                   size="sm"
                   disabled={current === pages}
                   onClick={() => setPage(current + 1)}
+                >
+                  다음
+                </Button>
+              </div>
+            </nav>
+          </>
+        )}
+      </section>
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Send className="size-5" aria-hidden="true" />
+              배포된 질문지
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              질문지를 열어 컨설턴트가 제출한 답변을 확인하세요.
+            </p>
+          </div>
+          <Input
+            aria-label="배포된 질문지 검색"
+            placeholder="질문지 제목으로 검색"
+            className="max-w-sm"
+            value={distributedSearch}
+            onChange={(event) => {
+              setDistributedSearch(event.target.value);
+              setDistributedPage(1);
+            }}
+          />
+        </div>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            배포된 질문지를 불러오지 못했어요.
+          </p>
+        ) : !data ? (
+          <p className="text-sm text-muted-foreground">
+            배포된 질문지를 불러오고 있어요.
+          </p>
+        ) : !distributed.length ? (
+          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+            {distributedSearch
+              ? '검색 결과가 없어요.'
+              : '배포된 질문지가 아직 없어요.'}
+          </p>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-xl border bg-background">
+              <Table className="min-w-160">
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-[60%] pl-5">질문지</TableHead>
+                    <TableHead>배포일</TableHead>
+                    <TableHead className="pr-5 text-right">
+                      제출된 응답
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {distributed
+                    .slice(
+                      (distributedCurrent - 1) * 10,
+                      distributedCurrent * 10,
+                    )
+                    .map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="pl-5">
+                          <Link
+                            href={`${base}&tab=questionnaires&draft=${item.id}&return=dashboard`}
+                            prefetch={false}
+                            className="block py-2 font-medium hover:underline focus-visible:outline-ring"
+                          >
+                            <span className="line-clamp-2 whitespace-normal">
+                              {item.title || '제목 없는 질문지'}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {date.format(
+                            new Date(item.distributedAt ?? item.updatedAt),
+                          )}
+                        </TableCell>
+                        <TableCell className="pr-5 text-right tabular-nums">
+                          {item.submittedResponseCount ?? 0}개
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+            <nav
+              aria-label="배포된 질문지 페이지"
+              className="flex items-center justify-between gap-3"
+            >
+              <span className="text-sm text-muted-foreground">
+                {distributed.length}개
+              </span>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={distributedCurrent === 1}
+                  onClick={() => setDistributedPage(distributedCurrent - 1)}
+                >
+                  이전
+                </Button>
+                <span className="text-sm">
+                  {distributedCurrent} / {distributedPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={distributedCurrent === distributedPages}
+                  onClick={() => setDistributedPage(distributedCurrent + 1)}
                 >
                   다음
                 </Button>

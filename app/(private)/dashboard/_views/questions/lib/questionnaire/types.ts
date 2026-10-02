@@ -65,6 +65,7 @@ export type SaveQuestionnaireResult =
 export type QuestionnaireStatus = 'draft' | 'published' | 'distributed';
 export type QuestionnaireListItem = {
   creatorName?: string | null;
+  submittedResponseCount?: number;
   id: string;
   title: string;
   status: QuestionnaireStatus;

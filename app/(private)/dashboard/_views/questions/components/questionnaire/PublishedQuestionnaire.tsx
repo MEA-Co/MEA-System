@@ -1,7 +1,7 @@
 'use client';
 
 import { Tabs } from '@base-ui/react/tabs';
-import { Eye, FileText } from 'lucide-react';
+import { Eye, FileText, MessageSquare } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 
@@ -20,7 +20,9 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
+import { QuestionResponseForm } from './QuestionResponseForm';
 import { RichTextContent } from './RichTextContent';
+import { SubmittedQuestionnaireResponses } from './SubmittedQuestionnaireResponses';
 export function PublishedQuestionnaire({
   document,
   sources = [],
@@ -47,6 +49,15 @@ export function PublishedQuestionnaire({
         onEditorState={onEditorState}
       />
     );
+  if (!staff && distributed && placements)
+    return (
+      <QuestionResponseForm
+        key={`distributed:${document.questionnaireId}`}
+        questionnaireId={document.questionnaireId}
+        distributed
+        onEditorState={onEditorState}
+      />
+    );
   const content = (
     <article className="mx-auto w-full min-w-0 max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
@@ -59,7 +70,6 @@ export function PublishedQuestionnaire({
         {distributed && placements && (
           <p className="mt-3 text-sm text-muted-foreground">
             배포된 질문지와 질문 내용은 수정할 수 없습니다.
-            {!staff && ' 현재는 열람만 가능하며 답변 작성은 준비 중입니다.'}
           </p>
         )}
       </header>
@@ -140,6 +150,15 @@ export function PublishedQuestionnaire({
         {[
           { value: 'detail', label: '질문지 상세', icon: FileText },
           { value: 'preview', label: '미리보기', icon: Eye },
+          ...(distributed && placements
+            ? [
+                {
+                  value: 'responses',
+                  label: '제출된 답변',
+                  icon: MessageSquare,
+                },
+              ]
+            : []),
         ].map(({ value, label, icon: Icon }) => (
           <Tabs.Tab
             key={value}
@@ -154,6 +173,14 @@ export function PublishedQuestionnaire({
       <Tabs.Panel value="detail" keepMounted className="data-hidden:hidden">
         {content}
       </Tabs.Panel>
+      {distributed && placements && (
+        <Tabs.Panel value="responses">
+          <SubmittedQuestionnaireResponses
+            key={document.questionnaireId}
+            questionnaireId={document.questionnaireId}
+          />
+        </Tabs.Panel>
+      )}
       <Tabs.Panel value="preview" className="rounded-xl border bg-background">
         <QuestionnairePreview
           title={document.title}

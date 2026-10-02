@@ -7,7 +7,10 @@ export type QuestionResponseSnapshot = {
   definitionToken: string;
   sourceDeleted: boolean;
   revision: number;
-  status: 'in_progress' | 'submitted';
+  status: 'assigned' | 'in_progress' | 'submitted';
+  stage?: 'published' | 'distributed';
+  submittedAt?: string | null;
+  hasUnsubmittedChanges?: boolean;
   savedAt: string | null;
   title: string;
   sections: QuestionnaireSection[];

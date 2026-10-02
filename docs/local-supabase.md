@@ -1,33 +1,10 @@
 # 로컬 Supabase
 
-개발 앱은 로컬 Supabase, 배포 앱은 기존 운영 Supabase를 사용한다. CLI의 `link`는 배포 대상을 지정할 뿐 앱의 연결 주소를 바꾸지 않는다.
+개발 앱은 로컬 Supabase, 운영 앱은 운영 Supabase를 사용한다. CLI의 link는 배포 대상을 지정할 뿐 앱의 연결 주소를 바꾸지 않는다.
 
-## 현재 운영 동기화 상태 (2026-09-23)
+2026-10-02 사용자가 `20261002071428_direct_question_responses.sql`까지 운영 적용 완료를 알렸다. 이번 문서 정리에서 운영 DB를 재조회하지 않았다. 실제 적용 상태는 migration 이력으로 확인한다. 운영 절차는 [운영 안내](questions-operations.md)를 따른다.
 
-프로덕션 `epwlcallocdjkmgdmtlv`에 `20260923085519`까지 적용 완료했다. 로컬·운영 migration 이력은 모두 47건이며 적용 대기는 없다. 아래의 운영 미적용·이력 정리 안내는 작업 당시의 기록이다. 전공 검색 3건과 가치관 복구 1건은 현재 운영 정의·권한의 동등성을 재확인한 뒤 이력만 보완했으며 SQL을 재실행하지 않았다.
-
-척도 설정부터 질문 관리·설명·조건 참조까지 새 migration 13건을 적용했다. 사용자/인증 데이터를 로컬로 덤프하지 않았으며, 변경 전후 스키마 백업·별도 검증 DB 재현·운영 트랜잭션 적용 후 롤백 검증을 거쳤다. 기존 앱 테이블 32개의 행 수 및 기존 열 내용 해시가 일치한다. 로컬 질문 데이터와 seed는 운영으로 옮기지 않았다. 자세한 결과와 기존 문제는 [운영 반영 기록](production-db-rollout-20260923.md)을 참고한다.
-
-## 초기 구조 복구 (2026-09-18)
-
-운영 `db dump`와 `migration list --linked`를 비교했다. 전공 기준 테이블 7개와 가치관 메타데이터 테이블 11개, 뷰 3개, 관련 함수·인덱스·트리거·RLS·권한이 저장소에서 누락되어 있었다.
-
-- `20260915042403_create_major_search.sql`에 전공 기준 구조를 선행 생성하도록 복구했다. 이 파일이 `majors`를 참조하므로 최신 migration에 기준 테이블만 추가하면 빈 DB 재생이 먼저 실패한다. 기존 검색 테이블·함수 본문은 유지했다.
-- `restore_major_value_metadata` migration에는 운영에서 추출한 가치관 구조를 보관했다. 데이터 행은 포함하지 않는다.
-- 기본 권한의 차이로 쓰기 권한이 생기지 않도록 복원 테이블·뷰의 anon/authenticated 권한을 회수한 후 운영의 명시적 권한을 적용한다.
-- 비교용 `supabase/remote-schema.sql`은 Git에서 제외한다. 원본 dump를 migration으로 실행하지 않는다.
-
-### 운영 배포 전 이력 정리 필요
-
-다음 세 파일은 운영에 객체가 존재하지만 운영 migration 이력에는 없다.
-
-```text
-20260915042403_create_major_search.sql
-20260915053905_confirm_major_search_only.sql
-20260915062408_record_major_no_match.sql
-```
-
-새 가치관 복구 migration의 객체도 이미 운영에 있다. 따라서 현재 상태에서 `db push`, `db push --include-all`, 원격 reset을 실행하지 않는다. 로컬 복구 작업은 운영 이력을 수정하지 않았다. 배포 전 운영 객체와 파일의 동등성을 확인하고 기존 적용분을 이력에 반영하는 별도 검토가 필요하다. 다른 개발 DB에서 위 파일이 이미 적용되어 있었다면 파일 수정만으로 기준 구조가 복구되지는 않는다.
+이전 전공 검색·가치관 구조의 운영 이력 보완은 완료된 작업이다. 이후 예상 밖 이력 차이가 생기면 객체 정의와 이력의 동등성을 먼저 확인하며 원격 reset이나 migration repair로 임의 해결하지 않는다.
 
 ## 시작과 재검증
 
@@ -71,96 +48,6 @@ Google OAuth는 `config.toml`에 provider, site URL, 앱 callback 허용 목록�
 
 2026-09-18 기준 `supabase/seed.sql`에는 기준 테이블 18개의 데이터만 포함한다. 로컬에서 전공 75개·키워드 755개·전공별 가치관 관점 75개를 확인했다. CLI 2.117.0에서 `--exclude`의 `public.major_search_*`, `public.questionnaire*` 패턴은 기대한 제외를 수행하지 않았다. 다시 내보낼 때는 제외할 테이블명을 모두 명시하고, 생성 파일의 COPY 대상이 기준 테이블 허용 목록 18개와 정확히 일치하는지 반드시 검증한다. 잘못 포함됐던 검색 기록·피드백 각 18건은 seed에서 제외하고 로컬에서도 원본과 일치하는 행만 제거했다. 로컬 회원·프로필은 유지했다.
 
-## SQL 회귀 검증
+## 검증
 
-현재 기본 `project_id = "system"`일 때 로컬 DB 컨테이너는 `supabase_db_system`이다. 각 SQL 테스트는 자체 트랜잭션을 롤백한다.
-
-```bash
-for file in supabase/tests/*.sql; do
-  docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$file" || break
-done
-```
-
-브라우저 테스트와 실제 로그인 검증은 별도다.
-
-## 복구 검증 결과 (2026-09-18)
-
-- `supabase start` 성공, 전체 32개 migration 적용 성공.
-- `supabase db reset --local --no-seed`로 빈 DB 재생 성공.
-- `supabase db lint --local --schema public,private --level error --fail-on error`: 오류 없음.
-- `supabase db advisors --local --type security --level warn --fail-on error`: 경고·오류 없음.
-- 로컬 dump와 운영 dump 비교: 앱 테이블·뷰·함수·제약·권한 정의 일치. 운영의 플랫폼 보조 함수 `public.rls_auto_enable`만 로컬에 없다. 이 함수는 이번 복구에서 옮기지 않았으며 앱 테이블의 RLS는 migration에서 명시적으로 활성화한다. Auth/Storage/Realtime 관리 스키마와 외부 인증 설정 전체의 동일성을 검증한 것은 아니다.
-- SQL 테스트 14개 중 13개 통과. 새 `major_catalog_local.sql`은 실제 RPC의 키워드·예시·계열 사고 조회, 키워드 제외, 다른 계열 연결 차단, 일반 사용자 쓰기 차단, anon 메타데이터 접근 차단을 검증하고 롤백한다.
-- `questionnaire_published_deletion.sql` 실패는 운영 dump에도 존재하는 기존 문제다. `private.guard_submitted_answers`가 DELETE에도 `NEW`(NULL)를 반환해 미완료 답변 삭제를 건너뛰며, 이어지는 응답 삭제가 외래 키에 막힌다. 로컬 구조 재현 작업에서는 운영과 다른 동작을 추가하지 않았다. 별도 수정 migration과 회귀 검증이 필요하다.
-
-## 질문 유형 추가 (2026-09-21)
-
-`20260921083603_questionnaire_question_types.sql`을 롤백 테스트 후 `migration up --local`로 적용했다. 새 질문 유형·선택지, 선택 값과 읽을 수 있는 답변 텍스트 저장을 추가한다. 운영에는 적용하지 않았다. 로컬 적용 대기 파일이 이 파일 하나뿐임을 확인했으며 기존 운영 이력은 변경하지 않았다. 관련 SQL 회귀와 로컬 보안 advisor는 통과했다.
-
-## 직접 입력 선택지 (2026-09-22)
-
-`20260922044351_questionnaire_other_choices.sql`은 `isOther` 선택지 설정 검증과 답변 텍스트 변환을 확장한다. 로컬에만 적용하며 운영 DB는 변경하지 않았다. 관련 SQL은 `supabase/tests/questionnaire_other_choices.sql`이다.
-
-## 척도 설정 (2026-09-23)
-
-`20260923042351_questionnaire_scale_settings.sql`은 척도 2~9점, 양끝·홀수 가운데 라벨, 선택적 서술 답변을 저장한다. 로컬에만 적용했으며 운영 DB는 변경하지 않았다. `supabase/tests/questionnaire_scale_settings.sql`과 기존 질문 유형·답변 SQL 회귀 테스트, 로컬 DB lint·보안 advisor가 통과했다.
-
-## 선택형 칩 스타일 (2026-09-23)
-
-`20260923044758_questionnaire_choice_style.sql`은 선택형 질문의 `list`(기본)·`chip` 표시 방식을 저장한다. 두 방식 모두 `isOther` 직접 입력 답변 형식을 사용한다. 로컬에만 적용하며 운영 DB는 변경하지 않는다. 관련 SQL 회귀는 `supabase/tests/questionnaire_other_choices.sql`이다.
-
-`20260923045543_questionnaire_direct_input_label.sql`은 기존 `isOther` 선택지 이름과 무관하게 새 답변의 body를 `직접 입력: 내용`으로 기록한다. 화면에서도 두 표시 방식 모두 `+ 직접 입력`을 사용한다. 로컬에 적용하고 관련 SQL 회귀·DB lint·보안 advisor를 통과했으며 운영 DB는 변경하지 않았다.
-
-`20260923051135_questionnaire_choice_written_answer.sql`은 단일·다수선택형의 선택적 추가 서술 설정과 답변 저장을 추가한다. 기존 선택형 답변 형식을 허용하며 `직접 입력`과 별도 추가 서술을 함께 보존한다. 로컬에만 적용했고 관련 SQL 회귀·DB lint·보안 advisor가 통과했으며 운영 DB는 변경하지 않았다. 관련 회귀는 `supabase/tests/questionnaire_other_choices.sql`이다.
-
-`20260923052741_questionnaire_multiple_direct_input.sql`은 다수선택형에 여러 `isOther` 항목을 허용하고, 단일선택형은 하나로 제한한다. 선택된 직접 입력 답변이 여러 개면 본문에 번호를 매기고 일반 선택지 뒤에 둔다. 로컬에만 적용했고 관련 SQL 회귀·DB lint·보안 advisor를 통과했으며 운영 DB는 변경하지 않았다. 관련 회귀는 `supabase/tests/questionnaire_other_choices.sql`이다.
-
-
-## 저장된 질문 배치 (2026-09-28)
-
-`20260928034945_questionnaire_question_placements.sql`을 로컬에 적용했다. 배치의 원본 질문 FK·중복 방지·참조 선행 순서 검사·원본 보관 보호를 추가했다. 새 방식의 배포는 버전 고정과 열/행 응답 저장 연결 전까지 차단한다. 기존 질문지·답변 경로는 유지한다. 상세 구조와 삭제 후보는 `questions.md`에 있다.
-
-직접 SQL 적용으로 검증한 뒤 `db diff --local --schema public,private`의 차이가 없음을 확인했고, 해당 migration 하나만 `migration repair --local --status applied 20260928034945`로 로컬 이력에 등록했다. 이는 새 로컬 변경의 동등성 확인 후 수행했으며 기존 이력과 운영 DB는 변경하지 않았다. 로컬 보안 advisor 통과, 관련 SQL 20개 중 19개 통과, 실패 1개는 위에 기록된 기존 `questionnaire_published_deletion.sql` 오류다.
-
-
-## 기존 서술형 질문지 이전 도구 (2026-09-28)
-
-`20260928042153_import_legacy_text_questionnaire.sql`은 운영자 전용 이전 함수와 private 대응 기록 테이블을 설치한다. migration 자체는 실제 운영 질문을 복사하지 않는다. `docs/legacy-questionnaire-import.md`와 `supabase/snippets/legacy-questionnaire-import-{check,dry-run,apply,verify}.sql`을 순서대로 사용한다.
-
-로컬에는 함수·이력 테이블만 적용했다. 가상 질문 16개·설명 32개·섹션 3개(빈 섹션 포함)를 사용한 `supabase/tests/import_legacy_text_questionnaire.sql`, 실제 전달할 검사/실행/비교 SQL의 롤백 테스트, 보안 advisor를 통과했다. 전체 migration 재생과 로컬 public/private 스키마 차이 없음 확인 후 이 migration 하나의 로컬 이력을 등록했다. 운영 데이터는 읽거나 변경하지 않았으며 운영 실행은 사용자가 수행한다.
-
-## 질문지 상태 관리 (2026-09-28)
-
-`20260928050243_questionnaire_status_management.sql`은 상태 변경 RPC와 private 재시도 기록을 추가한다. 수정 중·게시·배포·보관/복원 및 배포본을 보존하는 수정용 초안 복사를 제공한다. 기존 배치 질문지의 배포 차단은 유지한다. 실제 역할·작성자·revision·이전 상태·보관 시각을 검증하며 데이터 직접 쓰기 권한은 추가하지 않는다.
-
-로컬 SQL 적용 후 `supabase/tests/questionnaire_status.sql`로 상태 전환, 권한 거절, 충돌, 완료 답변 보존, 중복 복사 방지, 독립 보관, 배치 배포 실패의 원자적 롤백, 원본 보관 후 복원 차단을 검증했다. 보안 advisor 통과 후 `db pull questionnaire_status_management --local --schema public,private --yes`로 migration과 로컬 이력을 생성했다. CLI 출력의 remoteHistoryUpdated는 이 명령에서 선택한 **로컬 DB** 이력을 뜻하며 운영 DB에 적용한 것이 아니다.
-
-## 질문 서버 검색·페이지네이션 (2026-09-28)
-
-`20260928052431_question_server_pagination.sql`은 질문 표시 텍스트를 추출하는 함수·저장 생성 열, pg_trgm 검색 인덱스, 20개 단위 security invoker 조회 RPC를 추가한다. 기존 원문과 권한은 유지한다. 로컬 DB에 먼저 적용해 45개 가상 질문으로 SQL 검증과 보안 advisor를 통과했다. 기본 pg-delta 생성기가 pg_trgm 의존성에서 실패해 `db pull --local --schema public,private --diff-engine migra`로 생성하고, 빠진 확장/권한과 함수→생성 열 순서를 보완했다. 로컬 이력만 등록했으며 운영 DB에는 적용하지 않았다. 사용 방법은 `questions-operations.md`를 참고한다.
-
-
-## 탐구활동 확정 저장 (2026-09-28)
-
-`20260928100109_exploration_activity_storage.sql`을 로컬에 적용했다. 본인 확정본·권한·revision 충돌/재시도 RPC, 비공개 보고서 버킷과 Storage 정책을 추가한다. 임시저장은 서버에 전송하지 않고 브라우저에 보관한다. 운영에는 적용하지 않았다.
-
-로컬 SQL 회귀와 실제 파일 업로드·다운로드·권한·용량 제한 검사, 보안 advisor를 통과했다. 전체 migration shadow 재생 후 public/private/storage 스키마 차이 없음을 확인했다. 기존 `20260928055251`의 로컬 이력 누락으로 db pull이 중단되어 CLI migration new로 이번 파일을 만들었고, 동등성 확인 후 이번 migration만 로컬 이력에 등록했다. 기존 누락 이력은 수정하지 않았다. 상세 운영 명령·파일 설정은 [탐구활동 저장 안내](exploration-activity-storage.md)를 참고한다.
-
-
-## 탐구활동 API·DB 이름 정리 (2026-09-28)
-
-기존 AI 코치의 `/api/exploration`은 `/api/exploration-coach`로 이동했다. 새 탐구활동 API는 `/api/exploration`이다. `20260928101208_rename_exploration_activity_storage.sql`은 `public.exploration_activities` → `public.exploration`, 저장·삭제 RPC → `save_exploration` / `delete_exploration`으로 이름을 변경한다. 행 데이터·RLS·보고서 객체 경로는 유지한다. 기존 코치는 별도 exploration 테이블을 사용하지 않는다. 로컬 적용·회귀 검증 완료이며 운영에는 미적용이다. 운영의 최초 저장 migration 적용 여부에 따라 최초 저장 → 이름 변경 두 개 또는 이름 변경 하나를 검토 후 적용한다.
-
-
-## 탐구활동 리드·관리자 조회 (2026-09-29)
-
-`20260929050548_exploration_staff_read.sql`을 로컬에 적용했다. 전체 확정 활동과 연결된 보고서에 한해 리드·관리자의 SELECT를 허용하며 타인 쓰기는 허용하지 않는다. SQL 회귀·실제 Storage 통합·보안 advisor 검증과 전체 migration 재생 후 public/private/storage 차이 없음을 확인하고 이 migration만 로컬 이력에 등록했다. 운영 미적용이며 적용 순서는 `docs/exploration-activity-storage.md`에 기록했다.
-
-## 탐구활동 참조형 질문 (2026-09-29)
-
-`20260929053605_question_exploration_type.sql`을 로컬에 적용했다. 독립 질문 열의 `exploration` 유형 저장을 허용한다. 제작·저장·미리보기만 연결하며 배치형 배포 차단은 유지한다. SQL 회귀 4개와 보안 advisor 통과 후 로컬 db pull로 migration 및 로컬 이력을 생성했다. 운영 미적용. 절차는 `docs/questions-operations.md`를 참고한다.
-
-
-## 게시본 최신 구성 동기화 (2026-10-01)
-
-로컬 `20261001075311_live_published_response_layout.sql`을 적용했다. 게시본 최신 구성 조회와 기존 답변 보존을 검증한 뒤 보안 advisor를 통과하고 `db pull live_published_response_layout --local --schema public,private --yes`로 migration 및 로컬 이력을 생성했다. CLI의 remoteHistoryUpdated는 여기서는 로컬 DB 이력이다. 운영은 변경하지 않았다. 현재 가이드 UUID 설정 함수는 변경하지 않는다. 자세한 검증과 운영 순서는 `questions-operations.md` 최신 절을 따른다.
+현재 스키마용 SQL 회귀 목록은 [운영 안내](questions-operations.md)를 따른다. 과거 테스트에는 이미 제거된 테이블을 사용하는 파일이 있으므로 `supabase/tests/*.sql` 전체를 무조건 실행하지 않는다. 각 현행 SQL 테스트는 트랜잭션을 롤백한다. 브라우저 검증은 사용자 요청이 있을 때만 수행한다.

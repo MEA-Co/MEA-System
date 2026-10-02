@@ -36,6 +36,7 @@ function route({
     'questionResponseCommand',
     'listMyPublishedResponses',
     'loadGuideAnswers',
+    'loadSubmittedResponses',
   ]) {
     functions[name] = async (...args) => {
       calls.push([name, ...args]);
@@ -329,4 +330,64 @@ test('status changes use the URL identity and deny consultant/cross-origin mutat
     (await conflict.request('PATCH', [id, 'status'], {})).status,
     409,
   );
+});
+
+test('consultants can open, read, save and submit canonical distribution responses only', async () => {
+  const id = randomUUID();
+  const client = route({ role: 'consultant' });
+  for (const [method, body] of [
+    ['POST', {}],
+    ['GET', undefined],
+    ['PUT', { complete: false }],
+    ['PUT', { complete: true }],
+  ]) {
+    assert.equal(
+      (await client.request(method, [id, 'distributed-responses'], body))
+        .status,
+      200,
+    );
+    const call = client.calls.at(-1);
+    assert.equal(call[0], 'questionResponseCommand');
+    assert.equal(call[1], id);
+    assert.equal(call[4], true);
+  }
+  assert.equal(
+    (await client.request('POST', [id, 'question-responses'], {})).status,
+    403,
+  );
+  assert.equal(
+    (await client.request('GET', [id, 'submitted-responses'])).status,
+    404,
+  );
+  const calls = client.calls.length;
+  assert.equal(
+    (
+      await client.request(
+        'PUT',
+        [id, 'distributed-responses'],
+        {},
+        { origin: 'https://foreign.test' },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(client.calls.length, calls);
+});
+
+test('only staff views can request submitted responses, not consultant previews', async () => {
+  const id = randomUUID();
+  for (const role of ['admin', 'consultant_lead']) {
+    const client = route({ role });
+    assert.equal(
+      (await client.request('GET', [id, 'submitted-responses'])).status,
+      200,
+    );
+    assert.deepEqual(client.calls.at(-1), ['loadSubmittedResponses', id]);
+  }
+  const preview = route({ role: 'admin', visibleRole: 'consultant' });
+  assert.equal(
+    (await preview.request('GET', [id, 'submitted-responses'])).status,
+    404,
+  );
+  assert.equal(preview.calls.length, 0);
 });

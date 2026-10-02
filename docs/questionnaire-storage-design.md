@@ -1,236 +1,49 @@
 # 질문·질문지 저장 구조
 
-## 질문 버전 제거·원본 직접 응답 (2026-10-02, 최신 계약)
+로컬 기준: `20261002074415_distributed_response_submissions.sql`. 운영은 사용자가 `20261002071428_direct_question_responses.sql`까지 적용 완료를 알렸으며 새 제출 기능은 적용 대기다. 기능은 [질문·질문지 관리](questions.md), 적용 절차는 [운영 안내](questions-operations.md)를 따른다.
 
-`20261002071428_direct_question_responses.sql` 로컬 적용. `question_versions` 테이블과 `question_responses.question_version_id`, 불변 버전 트리거, 버전 비교 함수를 제거했다. 응답은 `question_responses.question_id` → `questions.id`로 직접 연결하고 질문지·작성자는 기존 `response_sessions.origin_questionnaire_id`·`respondent_id`로 구분한다. 응답 JSON은 `questionId`를 반환하며 `revision`·`definitionToken` 충돌 방지는 유지한다.
+## 식별자와 테이블
 
-가이드 답변은 질문 변경 시 `OLD.fields`와 최신 필드의 ID·유형을 비교해 호환되는 답변만 유지한다. 질문 저장 API의 삭제/유형 변경 동의 검사는 그대로 유지하고, DB 변경 트리거가 해당 질문의 가이드 응답을 정리한다. 질문지에서 질문을 빼는 경우에는 해당 질문지의 가이드 응답만 삭제한다. 이전 정의를 복사하거나 버전을 추가하지 않는다.
+| 테이블 | 역할 |
+| --- | --- |
+| `questions` | 원본 질문의 본문·답변 필드·조건·행 설정·revision |
+| `question_details` | 원본 질문의 설명과 컨설턴트 공개 여부 |
+| `questionnaires` | 질문지 제목·작성자·상태·revision |
+| `questionnaire_sections` | 질문지의 섹션과 순서 |
+| `questionnaire_questions` | 원본 질문을 배치한 위치·섹션·순서 |
+| `response_sessions` | 응답 작성자·출처 질문지·상태·구성·revision |
+| `response_submissions` | 세션별 마지막 제출 답변·제출 시각·제출 revision |
+| `question_responses` | 세션 안 원본 질문별 응답 ID·행·활성 행·본문 |
+| `question_review_requests` | 원본 질문별 검토 요청 |
+| `question_review_reads` | 요청별 제작자 읽음 기록 |
+| `questionnaire_publication_reads` | 게시본 확인 기록 |
 
-원본 없는 구형 배포 응답만 `legacy_question_id`·`legacy_definition`에 기존 정의를 보존한다. 이는 구형 저장 경로의 데이터 보존용이며 새 원본 질문 응답에는 두 열 모두 NULL이다. 운영 읽기 전용 확인 당시 구형 배치·응답은 모두 0개다. 기존 구형 경로 호환을 위한 코드까지 없앤 변경은 아니다.
+질문지 버전 테이블과 질문 버전 테이블은 제거했다. 질문지는 `questionnaireId`/`questionnaire_id`, 원본 질문은 `questions.id`로 식별한다. `questionnaire_questions.id`는 배치 ID이므로 원본 질문 ID와 다르다. `legacy_parent_id`는 과거 ID 추적용이며 현재 식별자로 사용하지 않는다.
 
-운영에는 아직 적용하지 않았다. 최신 운영 상태와 실행 순서는 `questions-operations.md` 마지막 절을 따른다. 아래의 질문 버전 관련 설명은 이전 구현 기록이며 이 절이 우선한다.
+`question_responses.question_id`는 원본을 직접 참조한다. `session_id` → `response_sessions.origin_questionnaire_id`로 출처 질문지를, `respondent_id`로 작성자를 구분한다. 같은 원본이라도 질문지가 다르면 응답 세션과 응답이 다르다. 동일 세션·원본 질문의 중복 응답은 금지한다. 응답 JSON은 `questionId`를 반환한다.
 
+## 저장과 권한
 
-## 질문지 ID 이름 통일 (2026-10-02, 최신 계약)
+질문은 `save_question`, 질문지는 `save_questionnaire_draft`로 저장한다. `revision`과 요청 ID로 충돌·중복 재시도를 보호하고, DB가 실제 역할·작성자·배치 소속·선행 관계를 검사한다. 표시 역할 전환은 실제 권한을 바꾸지 않는다. 질문과 설명은 원자적으로 저장하며 details 생략은 보존, 빈 배열은 삭제다.
 
-`20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱 타입·컴포넌트·URL 요청 본문·RPC에서 질문지는 `questionnaireId`/`questionnaire_id` 하나로 식별한다. `p_questionnaire_id`, `origin_questionnaire_id`, `p_origin_questionnaire_id`로 인자와 연결 열도 통일했다. 기존 UUID 값과 URL 경로는 유지한다. 문서의 중복 부모 ID와 내부 `questionnaire_owners` 호환 뷰는 제거했다. 배포 취소 시 초안을 복제하던 UI 분기도 제거했다.
+독립 질문은 작성자·관리자가 조회한다. 게시본 공유 조회는 해당 질문지의 원본만 허용하는 별도 경로다. 작업 중 응답은 본인만 읽고 저장하며 게시 단계 실제 저장은 지정 가이드 계정에 제한한다. 다른 리드는 저장 없는 미리보기다.
 
-`legacy_parent_id`와 `owner_created_at`은 기존 데이터 추적을 위한 보존 열이며 앱/RPC는 조회·식별에 사용하지 않는다. 과거 이전 장부의 부모 ID도 `legacy_target_parent_id`로 보존했다. 과거 migration 파일은 이력 재현용으로 유지한다. `question_versions` 및 `question_version_id`는 질문 응답 정의를 보존하며, 응답 JSON에서는 `questionVersionId`로 명확히 구분한다. `revision`은 동시 수정 충돌 방지에 계속 사용한다.
+가이드 응답은 최신 질문과 질문지 구성을 읽는다. 질문 변경 시 `OLD.fields`와 새 필드의 ID·유형을 비교해 호환 답변은 유지하고 삭제되거나 유형이 바뀐 필드의 답변만 지운다. 가이드 답변이 있으면 저장 API가 확인 동의를 검사한다. 이전 답변 보관·구조 변경 재작성 안내는 제공하지 않는다. `definitionToken`으로 오래된 구조의 저장을 거절한다.
 
-이 변경은 이전 앱과의 이름 호환을 의도적으로 종료한다. 배포 시 저장을 마친 뒤 DB migration → 새 앱 배포 → 기존 탭 새로고침 순서를 따른다. 운영 적용은 `questions-operations.md` 마지막 절을 참고한다.
+질문지에서 질문·섹션을 제거할 때 가이드 응답이 있으면 확인한다. 저장 시 해당 질문지 세션의 응답만 삭제하고 다른 질문지의 응답·원본은 유지한다. 재배치는 빈 응답으로 시작한다.
 
+배포 응답은 `question_responses`에 본인 작업 내용을 저장하고 제출 시 `response_submissions`에 활성 답변만 갱신한다. 제출 후 저장은 공개본을 바꾸지 않는다. 리드·관리자는 제출본만 조회할 수 있으며 원본 작업 응답 RLS는 본인 전용이다. 질문 정의는 잠긴 원본을 읽고 복제하지 않는다. 세션 유일성은 작성자·질문지·시작 단계 조합이며 가이드 게시 응답과 개인 배포 응답을 분리한다. 가이드 예시는 게시 단계 응답만 읽는다.
 
-## 질문지 본체·버전 통합 (2026-10-02, 아래 과거 구조 설명보다 우선)
+## 배포와 삭제
 
-`20261002055633_merge_questionnaire_tables.sql`을 로컬 적용했다. 질문지는 `public.questionnaires` 한 행에 제목·상태·제작자·구성의 기준 ID·revision·게시/배포/보관 시각을 저장한다. `questionnaire_versions` 테이블과 `version_number`는 제거했다. `revision`은 저장 충돌 방지 번호이며 별도 질문지 버전을 만들지 않는다. 질문 응답 정의 보존용 `question_versions`는 이번 통합 대상이 아니다.
+배포는 원본 질문별 미처리 검토 요청이 없어야 가능하다. 배포된 질문지와 포함된 원본·설명은 수정/삭제가 차단된다. 같은 원본을 사용하는 다른 질문지에서도 원본을 바꿀 수 없다.
 
-기존 버전 행의 ID를 새 `questionnaires.id`로 그대로 사용하여 섹션·질문 배치·응답·검토·읽음 연결을 보존한다. 과거 부모 ID는 `legacy_parent_id`, 과거 부모 생성 시각은 `owner_created_at`으로 보존한다. 기존 API의 `versionId`/`questionnaireId`, 하위 테이블의 `version_id`/`origin_version_id` 이름은 호환용으로 유지한다. 이 명칭이 질문지 버전 분리를 의미하지 않는다. `private.questionnaire_owners`는 한 테이블을 읽는 내부 호환 뷰이며 추가 데이터를 저장하지 않는다.
+저장된 배포 응답이 없으면 같은 질문지 ID로 게시/수정 중으로 돌아갈 수 있다. 빈 열람 세션과 게시 가이드 응답은 이 판정에서 제외한다. 다른 배포본이 사용하는 원본은 잠금을 유지한다.
 
-migration은 부모별 정확히 1개·번호 1인 경우에만 진행하고, 잠금 및 전체 원본 필드 비교 후 중복 부모 테이블을 제거한다. 예상치 못한 다중 버전·의존성·데이터 차이가 있으면 트랜잭션 전체가 중단된다. 운영 적용은 `questions-operations.md` 마지막 절을 따른다.
+질문 제거는 원본 삭제가 아니다. 원본 삭제 API는 archive 방식이며 배치·참조·배포 잠금 검사를 따른다. 질문지 삭제는 기존 응답 세션을 보존한다. 검토 요청은 원본에 귀속되며 출처 질문지 삭제로 사라지지 않는다.
 
+## 구형 호환과 이력
 
-## 질문 중심 응답 — 2026-10-01
+원본 없는 구형 배포 응답만 `legacy_question_id`와 `legacy_definition`으로 기존 정의를 보존한다. 새 원본 응답에는 두 열이 NULL이다. 구형 응답 테이블은 제거했지만 기존 공개 저장 RPC와 호환 경로는 유지한다. 새 배치형 배포본은 별도 distributed-responses API로 저장·제출한다.
 
-게시본 리드 응답은 `question_versions` → `question_responses`로 저장한다. `response_sessions`는 응답자·진행/완료 상태·revision·동일 요청 재시도와 표시 순서만 관리한다. 세션의 `origin_version_id`는 nullable이며 질문지 삭제 시 NULL이 된다. 질문지 제목과 섹션/배치 ID·순서만 세션에 남고 질문 정의는 질문 버전이 소유한다. 질문지를 삭제해도 질문 버전·응답은 삭제하지 않는다.
-
-질문 버전은 `(question_id, source_revision)`으로 재사용하며 응답 시작 시 서버가 원본에서 만든다. 본문·열·행·조건·설명을 포함하고 UPDATE/DELETE를 차단한다. 원본 질문을 수정한 뒤 새로 시작하는 응답에는 새 버전을 사용하며 이미 시작한 응답의 정의를 바꾸지 않는다. 현재 구현은 내용 해시가 아닌 원본 revision 단위 버전이다.
-
-`question_responses`는 세션/질문 버전당 하나다. `rows` JSONB에 행 ID와 열 ID별 값을 저장하고, `active_row_ids`와 `body`는 서버가 조건을 평가해 만든 현재 유효한 응답만 포함한다. 닫힌 조건의 입력은 rows에 보존한다. 참조형은 `referenced_response_id`와 원본 행 ID를 함께 사용한다. 행 ID는 응답 안에서 안정적으로 유지하는 정수이며 화면 번호/행 이름과 다르다. 서로 다른 응답의 같은 숫자는 같은 행을 뜻하지 않는다.
-
-질문 버전·응답·세션은 RLS로 본인 응답만 읽으며 클라이언트 직접 쓰기는 차단한다. 게시본의 실제 리드·관리자 여부와 공개 상태를 DB RPC에서 확인한다. 현재 쓰기 RPC는 게시 단계만 지원하며 일반 컨설턴트/배포 경로는 후속 전환 대상이다. `/api/questionnaires/:id/question-responses`의 POST는 멱등 시작, GET은 읽기, PUT은 저장/완료다. 10초 자동 저장, 수동 저장, 불확실한 요청 동일 ID 재시도, revision 충돌 시 입력 보존, 완료 잠금을 제공한다.
-
-기존 `questionnaire_responses`·`questionnaire_answers`는 이전 배포본 호환 경로가 사용하므로 이번 단계에서 삭제하지 않는다. 자유 응답 이전을 위한 `response_sessions.free_response`는 예약되어 있으며 게시본 UI에는 전체 자유 응답을 추가하지 않았다. 전체 이전/삭제 순서는 `questions-operations.md`의 2026-10-01 질문 중심 응답 절을 따른다.
-
-
-로컬 최신 상태: `20260929080341_questionnaire_source_details_only.sql`에서 질문지 전용 설명 테이블·RPC를 제거했다. 아래 운영 점검/복원 기록은 과거 시점의 운영 구조이며 현재 로컬과 다르다. 원본 `question_details`와 검토 요청은 유지한다. 적용 범위·순서는 [로컬 정리 절차](questions-operations.md)를 따른다.
-
-현재 기능 범위는 [질문·질문지 관리](questions.md), 적용 명령과 검증은 [운영 안내](questions-operations.md)를 따른다. 이 문서는 현재 코드의 데이터 계약이며 새 배치형 배포/응답이 구현됐다는 뜻은 아니다.
-
-## ID와 테이블
-
-| 테이블                            | 역할과 식별                                                                    |
-| --------------------------------- | ------------------------------------------------------------------------------ |
-| `questions`                       | 독립 원본 질문. ID, 작성자, 본문, fields JSONB, 조건·참조, 행 설정, revision   |
-| `question_details`                | 원본 질문의 보조 설명·공개 여부. 질문–답변 원문과 분리                         |
-| `questionnaires`                  | 질문지의 ID·최초 작성자·보관 시각                                              |
-| `questionnaire_versions`          | 질문지 버전 ID·제목·상태·revision·게시/배포 시각                               |
-| `questionnaire_sections`          | 버전 안 섹션과 순서                                                            |
-| `questionnaire_questions`         | 배치 ID·섹션·순서·logical_key·source_question_id. 기존 질문은 원문을 직접 보유 |
-| `questionnaire_question_details`  | 기존 질문지 질문의 설명. 작성자 이력과 공개 여부                               |
-| `questionnaire_review_requests`   | 질문별 요청·요청자·내용·resolved_at. 구형 질문지 단위 요청도 유지              |
-| `questionnaire_publication_reads` | 사용자/게시 버전별 확인 기록                                                   |
-| `questionnaire_responses`         | 기존 배포본의 사용자/버전별 응답 세션·제출 상태·free_response                  |
-| `questionnaire_answers`           | 기존 응답 세션 내 질문별 답변 ID·body·selection                                |
-
-UUID와 답변 ID를 식별자로 사용하며 화면 번호·행 이름·배열 인덱스를 식별자로 쓰지 않는다. `questions.id`는 독립 원본 ID이고 `questionnaire_questions.id`는 특정 버전의 배치/기존 질문 ID다. `source_question_id`가 있는 배치의 fields·조건·행·설명은 원본에서 읽는다. 배치의 body는 기존 검사 호환용이며 고정 질문 버전이 아니다.
-
-질문지 내 원본 중복 배치를 금지하고 선행 관계와 순서를 검증한다. 원본 수정·배치 순서 변경에도 해당 배치 ID를 유지한다. 사용 중인 질문지나 다른 질문이 참조하는 원본의 삭제/보관은 차단한다. 사용 현황은 `lib/question-usage.ts`와 관련 서버 조회에서 제공한다.
-
-## 저장과 갱신
-
-독립 질문은 `save_question`, 질문지는 `save_questionnaire_draft`로 저장한다. 실제 역할·작성자·소속·UUID·본문 길이·순환·참조 정의를 검증하고 부모와 자식을 트랜잭션으로 저장한다. revision과 saveId/내용 해시로 오래된 저장과 중복 재시도를 보호한다. 설명 details 생략은 보존, 빈 배열은 삭제다.
-
-클라이언트는 10초 자동 저장과 수동 저장을 제공한다. 저장 중 추가 입력은 다음 저장 대상으로 남고, 응답이 불분명하면 같은 요청 ID·revision·내용으로 재시도한다. 충돌/삭제/권한 오류는 입력을 보존하고 저장을 차단한다. 질문의 미완성 로컬 초안은 사용자·질문별로 구분한다. 새 질문지 첫 저장은 `history.replaceState(null, ...)`로 URL만 바꾸어 편집기를 유지한다.
-
-질문지 SWR 캐시는 사용자·표시 역할별로 분리한다. private Broadcast 알림을 250ms 단위로 모아 재조회하고 포커스·재연결·60초 예비 조회로 누락을 보완한다. 알림 payload에는 질문 본문 등 업무 데이터를 넣지 않는다. 깨끗한 편집기에만 원격 revision을 반영하며 미저장·저장 중·불확실한 요청을 덮어쓰지 않는다.
-
-질문 페이지 검색은 DB의 `search_text` 생성 열·trigram GIN·수정시각/ID 정렬 인덱스와 RLS를 사용한다. 페이지당 10개, 유효 페이지로 보정한다. 관계/배치용 전체 조회는 500개 단위로 읽으며 상세 설명은 개별 조회로 분리한다.
-
-## 권한과 게시
-
-표시 역할은 UI/서버 조회 범위를 좁히는 용도다. RPC와 RLS는 실제 계정 권한을 검증한다. 독립 질문은 리드 본인 및 실제 관리자 접근이 기본이고 관리자 리드 화면에서는 추가로 본인만 조회한다. 질문지 목록의 내 질문지는 작성자로 제한한다.
-
-`read_published_question_sources`는 실제 리드·관리자와 게시·미보관 상태를 검증하고 해당 질문지 원본만 제공한다. `published_questionnaire_authors`는 게시본 제작자 이름만 제공한다. 게시 취소 후 전용 원본 조회도 차단한다. profiles 전체 권한을 넓히지 않는다.
-
-로컬의 질문지 설명 RPC는 제거했다. 설명은 원본 질문의 save_question 권한을 따른다. 질문별 검토 요청은 다른 리드·관리자가 등록하고 작성자가 확인한다. 배포 후 새 검토 요청은 차단한다. 요청 UUID 재시도로 완료된 요청을 재생성하지 않으며 질문 삭제 시 연결 설명·요청도 삭제한다. 게시 확인 기록은 검토 확인 및 응답 세션과 별개다.
-
-## API
-
-두 도메인은 하나의 화면에서 관리하지만 HTTP 계약은 분리한다.
-
-| 경로                                                       | 계약                                                |
-| ---------------------------------------------------------- | --------------------------------------------------- |
-| `/api/questions`                                           | 목록/페이지 검색/관계 조회·질문 생성                |
-| `/api/questions/:id`                                       | 상세·수정·삭제(현재 archive_question 호출)          |
-| `/api/questionnaires`                                      | 목록·첫 저장                                        |
-| `/api/questionnaires/new`                                  | DB 쓰기 없는 새 문서 준비                           |
-| `/api/questionnaires/:versionId`                           | 상세·저장·삭제                                      |
-| `/:versionId/status`                                       | 상태 변경·revision/이전 상태/보관 시각/요청 ID 검증 |
-| `/:versionId/publication`, `/:versionId/distribution`      | 기존 게시·배포 API. 배치형 배포는 차단              |
-| `/:versionId/reviews`, `/:versionId/reviews/:reviewId`     | 요청 등록·확인 완료                                 |
-| `/:versionId/explanations`, `/:versionId/explanations/:id` | 설명 추가·수정·삭제                                 |
-| `/unread`, `/:versionId/read`                              | 게시 확인 조회·기록(컨설턴트 배포본은 응답 시작)    |
-| `/responses`, `/:versionId/answers`                        | 기존 배포본 본인 응답 목록·조회·저장·완료           |
-
-위 표에서 축약 경로는 `/api/questionnaires` 기준이다. REST는 인증·온보딩·요청 크기·ID·동일 출처를 검사하고 JSON 오류와 private/no-store를 반환한다. DB에서도 다시 권한을 검증한다.
-
-## 삭제·기존 배포본 호환
-
-배포 이력이 없는 질문지는 `delete_questionnaire`가 질문지·버전·자식 데이터를 물리 삭제한다. 배포 이력이 있으면 보관해 내용과 답변을 보존한다. 늦은 최초 저장 재시도로 삭제한 문서가 재생성되지 않도록 private에 버전 UUID·삭제 시각만 남긴다. 원본 질문은 질문지 삭제와 별개다.
-
-기존 배포본은 본문·질문·설명 변경을 DB에서 막는다. 서버의 배포→수정 중 계약은 기존 배포본을 유지하고 별도 초안을 만든다. 현재 UI에서 배포·보관 전환은 비활성이다. 새 배치형은 원본 버전 고정과 열/행 응답 모델을 연결하기 전까지 배포하지 않는다.
-
-기존 응답은 사용자/버전당 하나이며 assigned → in_progress → submitted 상태다. 첫 답변 저장 이후 `questionnaire_answers.id`를 유지한다. body에는 읽을 수 있는 텍스트, selection에는 척도 점수·선택 ID/직접 입력 구조를 저장한다. 단일 직접 입력은 `{id,text}`, 다수는 일반 ID와 직접 입력 객체 배열, 추가 서술은 `{choices,text}`를 호환한다. 척도는 숫자 또는 `{score,text}`다. AI에 넘길 때 body와 `richTextPlainText`를 사용한다. 독립 질문 미리보기의 entryId별 다중 직접 입력과 기존 응답 저장 계약을 혼동하지 않는다.
-
-자유 응답은 `responses.free_response`에 별도 저장하며 생략은 보존, 빈 문자열은 삭제다. 완료는 전체 답변 검증·저장·잠금을 원자적으로 수행한다. 제출 후 RPC/트리거로 변경을 차단한다. 답변 쓰기는 본인만 가능하며 관리자 컨설턴트 표시 모드도 관리자 자신의 응답을 사용한다. 공개 설명만 컨설턴트에게 전달하고 별도 배정 UI는 아직 없다.
-
-본문은 일반 텍스트 또는 `::mea-rich-text:v1::` 접두사의 제한된 JSON으로 보관한다. 글머리·플러스 목록·번호 목록·하이라이트를 지원하며 임의 HTML을 삽입하지 않는다. 검색·AI 추출에는 표시 텍스트 변환 함수를 사용한다. 원문/선택 데이터와 설명을 섞지 않는다.
-
-## 운영 테이블 점검 (2026-09-29)
-
-연결된 운영 프로젝트 `epwlcallocdjkmgdmtlv`에서 읽기 전용으로 테이블·실제 행 수·외래 키·함수 본문 참조·트리거와 앱 호출을 대조했다. 아래 수치는 점검 시점의 값이며 이후 변경될 수 있다. 테이블/데이터 삭제나 migration 적용은 하지 않았다.
-
-| 테이블 | 행 수 | 판단 |
-| --- | ---: | --- |
-| `questions` | 20 | 현행 독립 질문, 유지 |
-| `question_details` | 22 | 현행 원본 설명, 유지 |
-| `questionnaires` / `questionnaire_versions` | 각 2 | 기존 게시본과 전환 초안, 유지 |
-| `questionnaire_sections` | 14 | 기존/현행 섹션 공통, 유지 |
-| `questionnaire_questions` | 32 | 기존 일반 질문 16 + 새 배치 16, 유지 |
-| `questionnaire_question_details` | 19 | 전부 기존 일반 질문에 연결. 기존 데이터 및 설명 RPC 의존성으로 유지 |
-| `questionnaire_publication_reads` | 2 | 게시 확인/NEW 표시, 유지 |
-| `questionnaire_review_requests` | 0 | 게시 검토 요청 기능. 사용자 점검 전이며 미사용 폐기 대상 아님 |
-| `questionnaire_responses` / `questionnaire_answers` | 각 0 | 기존 응답 API·삭제·이전 함수 의존. 응답 모델 전환 전까지 유지 |
-| `private.deleted_questionnaire_versions` | 1 | 늦은 저장 요청의 삭제 문서 재생성 차단, 유지 |
-| `private.questionnaire_status_requests` | 0 | 현행 상태 변경 RPC의 동일 요청 재시도 기록, 유지 |
-| `private.legacy_questionnaire_imports` | 1 | 일회성 이전 대응 이력·중복 이전 방지, 유지 |
-
-즉시 삭제 가능한 미사용 테이블은 확인하지 못했다. `question_blocks`는 이미 `questions`로 이름이 바뀌었으며 운영에 별도 테이블로 남아 있지 않다. 프런트엔드의 이전 폴더 제거와 DB 테이블 제거는 같은 작업이 아니다.
-
-기존 게시본은 일반 질문 16개, 전환 초안은 원본 참조 배치 16개를 사용한다. 기존 방식 제거를 진행하려면 먼저 전환본 확인과 기존 게시본의 처리 방침을 결정해야 한다. 그 이후 `questionnaire_question_details`와 기존 질문 열·읽기/저장/설명 함수의 정리를 함께 검토할 수 있다. `questionnaire_questions` 자체는 현행 배치 테이블이므로 제거하지 않는다.
-
-비어 있는 응답 테이블도 현재 함수에서 참조되므로 단독 DROP 대상이 아니다. 미래의 배포·열/행 응답 모델 설계에서 기존 테이블을 확장할지 대체할지 결정한다. 이전 이력·삭제 방지·상태 재시도 기록은 사용자 화면에 표시되지 않아도 실제 역할이 있으므로 임의로 비우지 않는다.
-
-### 오삭제 복원 완료 (2026-09-29)
-
-사용자의 의도는 미사용 **테이블 구조 점검**이었으나, 에이전트가 이를 기존 게시본 삭제 요청으로 오해해 기존 버전 `dbc59647-e728-4d17-b312-b12fd2c8cd82`와 하위 데이터를 삭제했다. 사용자 정정 후 삭제 전 백업으로 즉시 복원했다. 게시 상태, 원래 ID·revision·시각·본문 등 모든 열, 섹션 7개·질문 16개·설명 19개·게시 확인 기록 2개가 백업과 정확히 일치함을 트랜잭션 내 비교로 검증했다. 오삭제로 추가된 해당 버전의 삭제 방지 기록만 제거했고 기존 다른 삭제 기록은 유지한다. 트리거를 끄거나 테이블 구조를 변경하지 않았다.
-
-전환본 `00a6a406-4086-4125-8222-0e1dc3533711`은 draft·배치 16개를 그대로 유지한다. 복원 전후 기존 행 전체와 복원 백업의 합집합을 비교하여 전환본·독립 질문 전체 20개·설명 전체 22개 등 기존 데이터가 변경되지 않았음을 확인했다.
-
-기존 게시본은 유지 대상이다. 앞으로 이 점검에서 데이터 삭제·보관·게시 상태 변경을 추론하지 않는다. 현재 미사용 테이블은 확인되지 않았으며 `questionnaire_question_details`는 기존 게시본 및 설명 RPC의 의존성이 남은 구조 정리 후보일 뿐 즉시 제거 대상이 아니다.
-
-
-### 로컬 배치 정의 정리 (2026-09-29)
-
-원본 참조 배치는 중복 본문·유형·선택지·척도·선택 UI 설정을 NULL로 저장한다. DB 제약으로 다시 복사하는 것을 차단한다. 원본 없는 이전 행은 기존 정의를 유지하며, 이전 답변 검증 RPC가 사용하므로 열은 유지한다. migration 및 적용 범위는 `questions-operations.md`의 배치 중복 정의 정리 절을 따른다.
-
-## 기존 배포본 저장 경로 전환 — 2단계 (2026-10-01)
-
-`read_distributed_response`, `open_distributed_response`, `save_distributed_response`가 기존 단일 답변 화면을 새 `response_sessions`/`question_responses`에 연결한다. 기존 REST의 답변 맵은 유지하고 DB에서는 불변 질문 버전과 `rows[0].answers[질문ID]`로 저장한다. `body`에는 읽을 수 있는 답변 텍스트, `free_response`에는 전체 자유 응답을 별도로 저장한다. 답변 ID와 동일 요청 재시도/완료 잠금을 유지한다. 구형 공개 open/save 함수는 새 함수를 호출한다.
-
-구형 독립 원본 없는 질문은 `question_versions.legacy_question_id`로 식별하며 일반 원본의 `question_id`와 상호 배타적이다. 이 ID는 이전 배치의 역사적 식별자이며 삭제 연쇄 FK가 아니다. 새 정의·답변은 질문지 삭제와 독립적으로 보존된다. 배포본 정의 자체의 읽기 경로는 기존 호환 구현을 유지한다.
-
-이전 데이터의 일괄 이전은 다음 단계다. 기존 세션이 존재하면 동일 ID 새 세션으로 이전됐는지 검사하고, 미이전 데이터는 빈 응답으로 대체하지 않는다. 상태/NEW는 미이전 세션도 읽어서 표시한다. 따라서 이전 테이블 2개를 아직 DROP하면 안 된다. 현재 쓰기 경로는 새 테이블로 전환됐고 데이터 이전·읽기 의존성/구형 열 제거는 남아 있다.
-
-
-## 데이터 이전 확인 — 3단계 (2026-10-01)
-
-로컬과 운영의 구형 응답 세션/답변은 모두 0건이다. 운영은 읽기 전용으로 확인했으며 게시본 2개와 원본 참조 배치는 유지 대상이다. 따라서 수동 데이터 이전 절차 없이 구형 의존성 제거 단계로 넘어간다. 삭제 migration은 적용 시 빈 테이블을 재확인해야 한다.
-
-로컬 `20261001045140_migrate_legacy_question_responses.sql`은 운영자 전용 이전/검증 함수를 추가한다. `response_sessions.legacy_response`와 `question_responses.legacy_answer`는 원래 행을 보존하는 변경 불가 JSONB이며 새 응답에서는 NULL이다. 가상 세션 3개·답변 8개로 보관된 질문지 포함 이전, ID·시각·선택 값·자유 응답·상태 보존, 완료 잠금, 중복 실행 및 후속 수정 보존을 검증했다. 운영자 수동 실행은 필요하지 않다. 구형 테이블 제거 및 두 응답 UI/호환 경로의 정리는 4단계에 남아 있다.
-
-
-## 구형 응답 테이블 제거 — 4단계 (2026-10-01)
-
-로컬 `20261001050017_remove_legacy_response_tables.sql` 적용 완료. `questionnaire_answers`, `questionnaire_responses` 두 테이블과 구형 이전·검증·미이전 보호·완료 잠금 함수를 제거했다. 상태/NEW 조회는 새 응답 세션만 읽는다. 질문지 삭제는 원본 질문과 질문별 응답·불변 질문 버전을 보존하고 세션의 질문지 연결만 NULL로 만든다. 게시된 기존 질문지 데이터는 삭제하지 않았다.
-
-migration 첫 부분에서 두 테이블을 잠그고 0건인지 확인한다. 데이터가 있으면 전체 적용을 중단한다. CASCADE로 다른 객체를 무작정 제거하지 않는다. 기존 공개 open/save 응답 RPC는 새 저장 함수로 연결하는 호환 진입점으로 유지한다. 구형 배포 질문의 정의 열과 화면 호환은 이번 정리에서 제거하지 않았으며 새 배치형 배포도 활성화하지 않았다. 저장 테이블 통합과 모든 응답 UI/검증 함수의 완전한 통합을 구분한다.
-
-검증: 게시본 저장·조건·유형 SQL, 구형 배포 경로/호환 SQL, 삭제 후 답변 보존, 남은 함수 참조 부재 검사. 구형 테이블을 직접 사용하는 과거 테스트는 해당 migration 시점 전용이다. `migrate_legacy_question_responses.sql` 및 이전 dry-run/verify snippet은 3단계까지만 실행 가능하다. 현재 회귀는 `question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`, `distributed_response_path.sql`, `questionnaire_legacy_response_compatibility.sql`, `legacy_response_cleanup.sql`이다.
-
-
-## 게시 단계의 수정 가능한 응답 (2026-10-01, 최신 정책)
-
-`20261001052151_published_live_editable_responses.sql`은 게시 단계에 대한 이전의 질문 고정/완료 잠금 정책을 대체한다. 배포 단계의 기존 동작은 변경하지 않는다.
-
-- 게시본을 연 리드·관리자는 본인 응답을 저장하고 다시 수정한다. 게시 응답 UI에서 완료 잠금 버튼을 제거했고 이미 완료했던 게시 응답도 수정할 수 있다.
-- `question_versions`는 마지막 저장 당시 정의 및 과거 답변 해석용으로 유지하지만, 게시 응답 화면과 검증은 원본 `questions`의 최신 정의를 사용한다. 질문 본문 수정은 기존 입력을 보존하고 반영한다. 5초 주기와 화면 포커스 복귀 시 최신 내용을 조회한다.
-- 응답 시작 당시 제목·섹션·배치 구성을 개인 세션에 유지한다. 이후 원본 질문지의 배치를 복사본에 다시 덮어쓰지는 않는다. 원본 질문지가 삭제돼도 대시보드 `내 응답` 목록과 `response=<세션 ID>`로 본인 응답을 조회·수정한다. 원본이 다시 draft가 되어도 이미 연결된 본인 응답은 유지한다. 신규 응답 시작은 활성 게시본에만 허용한다.
-- 유형/열/선택지/행/조건 등 답변 구조 변경 시 재작성 안내와 이전 답변을 표시한다. 사용자가 확인하기 전 자동 저장을 막는다. 저장된 이전 정의·행·본문은 `question_responses.previous_responses`에 보관하며 화면에서 다시 볼 수 있다. 작성 중 구조가 바뀐 미저장 입력도 현재 화면에 따로 남긴다.
-- `definitionToken`과 세션 revision을 저장 시 검증하여 오래된 질문 구조로 저장하거나 원격 응답을 덮어쓰지 않는다. 질문/설명 정보는 연결된 본인 게시 응답에 대해서만 서버에서 읽으며 독립 질문 RLS는 넓히지 않는다.
-- 원본 질문을 삭제하는 기존 archive 작업은 연결된 게시 응답과 그 이전 답변 기록도 제거한다. 다른 질문지/질문이 사용 중인 질문의 삭제 제한은 그대로다. 기존 배포 응답은 이 삭제 대상에서 제외한다.
-
-테스트는 게시 응답 수정, 원본 본문 반영, 질문지 삭제 후 응답 조회/수정, 구조 변경 감지와 과거 답변 보존, 오래된 토큰 거부, 타인 세션 접근 거부, 원본 질문 삭제 후 응답 제거를 포함한다. 일반 컨설턴트의 게시본 접근 차단과 기존 배포 완료 잠금도 유지한다. 브라우저 실사용 테스트는 별도다.
-
-
-## 가이드 계정의 게시 응답 (2026-10-01, 최신 정책)
-
-`20261001055107_guide_consultant_published_answers.sql`은 게시 단계의 실제 응답 작성을 지정 계정으로 제한한다. 계정 UUID는 사용자 지정값 `b338f03e-9d7f-4367-be1e-96eb1d5473be`이며 `private.guide_consultant_id()` 한 곳에서 관리한다. 로컬 프로필의 consultant_lead 역할을 확인했다. 계정 ID와 리드/관리자 역할이 모두 맞아야 하며 다른 관리자도 실제 게시 응답을 저장할 수 없다.
-
-- 대시보드 `내 응답` 영역 제거. 게시된 질문지를 열어 작성·수정한다.
-- `PublishedResponse`가 실제 작성과 저장 없는 미리보기를 분기한다. 질문지 작성자는 편집 화면에서 가이드일 때 `내 답변 작성`, 그 외에는 `질문지 미리보기`로 전환한다.
-- 일반 리드는 미리보기 입력만 가능하며 응답 저장 API/RPC는 차단한다. 일반 컨설턴트의 게시본 접근 제한은 그대로다.
-- 가이드 답변을 별도 종류나 테이블로 복제하지 않는다. 기존 개인 응답 중 지정 계정의 질문별 최신 저장 본문을 예시로 조회한다. 원래 응답자 소유 정보와 일반 질문–응답 데이터의 의미를 유지한다.
-- 질문지 제작 미리보기와 게시본 미리보기에서 각 질문 설명 아래에 같은 배경/테두리 스타일의 `가이드 답변` 접힘 영역을 표시한다. 답변이 없거나 최신 질문 구조에 재작성이 필요하면 예시를 표시하지 않는다. 작성 중인 미저장 입력과 구조 변경 이전 답변 기록은 타인에게 공유하지 않는다.
-- 조회 요청은 최대 500개 질문 ID로 제한하고 작성자/관리자 또는 활성 게시본에 포함된 질문만 반환한다. 독립 질문 RLS와 개인 응답 테이블 RLS는 넓히지 않는다.
-- 기존에 저장한 비가이드 리드의 응답은 삭제하지 않았다. 기존 배포 응답 로직도 변경하지 않았다.
-
-검증: 가이드 저장/수정, 일반 리드 저장 거부, 미리보기용 가이드 조회, 일반 컨설턴트 조회 거부, 배포 응답 호환 SQL 회귀·타입 검사·린트. 브라우저 실사용 검증은 별도다.
-
-
-## 가이드 답변 서식·행 이름 수정 (2026-10-01)
-
-`20261001060231_guide_answer_rich_rows.sql`은 가이드 조회 결과를 요약 문자열에서 `{ rows: [{ id, label, answers }] }`로 바꾼다. 저장된 rows의 RichText 원문에는 하이라이트가 유지되고 있었으나 이전 화면이 AI/검색용 plain-text body를 보여주면서 서식이 사라지고 내부 행 ID가 노출됐다. 표시에는 RichTextContent와 현재 질문의 열 이름을 사용하며, 행 이름은 row_labels 또는 원래 행 순서(1부터)를 사용한다. ID는 React 식별에만 쓰고 화면에 출력하지 않는다. 활성·비어 있지 않은 행만 공유하며 과거/비활성 응답은 노출하지 않는다. 기존 데이터 재저장이나 변환은 필요 없다.
-
-로컬 회귀는 하이라이트 원문 유지, 음수 ID와 표시 이름 분리, 조건상 숨겨진 행 미노출을 검증한다. 운영 적용은 아직 하지 않았다.
-
-
-## 게시본 최신 구성 동기화 (2026-10-01)
-
-가이드 지정 계정과 나머지 컨설턴트 리드 모두 최신 게시본의 제목·섹션·질문 목록·순서를 표시한다. 이전의 응답 시작 당시 구성 고정 정책을 대체한다. 일반 consultant 역할의 기존 배포본 정책은 이 변경의 범위가 아니다.
-
-가이드 세션의 `sync_published_response_layout`은 본인 세션에만 실행된다. 활성 게시본을 기준으로 신규 질문의 빈 응답을 만들고 현재 배치 ID에 연결하며 제목과 layout을 갱신한다. 기존 답변 rows/body/previous_responses 및 응답 ID는 유지한다. 배치에서 제외된 답변은 삭제하지 않고 활성 조회/저장 대상에서만 제외하며 같은 원본 질문을 재배치하면 기존 응답을 복원한다. 원본 질문 자체의 archive에 대한 기존 삭제 정책은 별도다. 게시 취소·보관·질문지 삭제 후에는 마지막으로 동기화한 구성을 유지한다.
-
-질문지 단위 잠금 → 원본 질문 잠금 → 세션 잠금 순서를 적용하며 layout 갱신은 답변 revision을 증가시키지 않는다. 대신 definitionToken에 제목과 섹션/배치를 포함해 오래된 저장을 차단한다. 내부 동기화 함수는 공개 실행 권한이 없으며 기존 본인 세션 RPC에서만 호출한다. 실제 저장 권한은 가이드 지정 계정으로 유지한다. 환경별 guide_consultant_id 함수는 이 migration에서 변경하지 않는다.
-
-상세 조회는 5초 및 포커스 복귀 시 갱신한다. 가이드 응답 UI는 추가된 질문만 원격 응답으로 초기화하고 기존 작성 중 입력을 유지한다. 제외된 질문의 작성 중 입력은 복사용 접힘 영역에 남긴다. 재추가한 질문은 기존 저장 답변으로 복원한다. 미리보기 입력은 계속 저장하지 않는다.
-
-검증: `supabase/tests/published_live_layout.sql`, `question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`, `distributed_response_path.sql`; `scripts/verify-published-live-layout.mjs`의 입력 병합 3개; 타입 검사·변경 파일 린트·로컬 보안 advisor. 실제 로컬 테스트 질문지에서 진로 흐름 노출과 기존 답변 동일성을 트랜잭션 롤백으로 확인했다. 브라우저 검증과 운영 적용은 진행하지 않았다.
-
-## 2026-10-02 검토 요청의 원본 질문 귀속
-
-`question_review_requests`는 기존 빈 `questionnaire_review_requests`를 rename한 테이블이다. `question_id`는 원본 questions FK(필수), `origin_version_id`는 작성 경로 기록용 nullable FK(질문지 삭제 시 NULL)다. 요청자/서식 내용/시각을 유지하고 `question_revision`, `resolved_by`를 추가한다. 같은 질문의 요청은 여러 배치에서 공유한다. 원본 soft archive는 요청 기록을 유지하며 실제 질문 행 삭제는 cascade한다. 질문지 삭제는 요청을 보존한다.
-
-RLS는 리드/관리자 중 원본 작성자·관리자·요청자·활성 게시 질문 접근자에게 읽기를 허용한다. 직접 쓰기 권한은 없고 private definer/public invoker RPC에서 실제 역할·게시 여부·원본 소유권을 검사한다. 요청 ID로 중복 재시도를 보호하고 처리 완료는 반복해도 처리자/시각을 바꾸지 않는다. 독립 질문 조회 RLS는 넓히지 않는다. 가이드 계정 설정 함수는 이번 migration에 포함하지 않는다.
-
-2026-10-02 최종 정책: 검토 요청 읽음/새 알림은 questions.created_by를 기준으로 집계한다. 원본 제작자의 자기 검토 요청은 관리자여도 차단하며, 질문지 제작자 여부는 작성 제한과 알림 대상을 결정하지 않는다.
+과거 migration·이전 장부·SQL 스니펫은 현재 기능과 구분한다. 폐기된 import 함수를 재실행하지 않는다. 미사용 구조 점검을 실제 질문지·응답 데이터 삭제 요청으로 해석하지 않는다. 과거 데이터 복원 기록은 Git 이력에서 확인할 수 있다.

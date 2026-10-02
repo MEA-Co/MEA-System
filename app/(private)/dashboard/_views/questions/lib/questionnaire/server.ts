@@ -128,6 +128,22 @@ export async function loadQuestionnaireView(
       unreadReviewCounts.set(item.questionnaire_id, item.unread_count);
     }
   }
+  const submissionCounts = new Map<string, number>();
+  if (
+    staff &&
+    rows.some((row) => row.status === 'distributed' && !row.archived_at)
+  ) {
+    const counts = await client.rpc('distributed_submission_counts');
+    if (counts.error)
+      throw new Error('제출 응답 개수를 불러오지 못했어요.', {
+        cause: counts.error,
+      });
+    for (const item of (counts.data ?? []) as {
+      questionnaire_id: string;
+      count: number;
+    }[])
+      submissionCounts.set(item.questionnaire_id, Number(item.count));
+  }
   const authors = new Map<string, string>();
   if (staff && rows.some((row) => row.status === 'published')) {
     const result = await client.rpc('published_questionnaire_authors');
@@ -151,6 +167,9 @@ export async function loadQuestionnaireView(
       id: item.id,
       title: item.title,
       creatorName: authors.get(item.id) ?? null,
+      submittedResponseCount: staff
+        ? (submissionCounts.get(item.id) ?? 0)
+        : undefined,
       status: item.status,
       archivedAt: item.archived_at,
       publishedAt: item.published_at,

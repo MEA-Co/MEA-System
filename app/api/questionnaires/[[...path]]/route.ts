@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   listMyPublishedResponses,
   loadGuideAnswers,
+  loadSubmittedResponses,
   questionResponseCommand,
 } from '@/app/(private)/dashboard/_views/questions/lib/question-response-server';
 import {
@@ -50,6 +51,13 @@ async function handle(request: Request, context: Context) {
     const [id, resource] = path;
     const method = request.method;
     if (method === 'GET') {
+      if (
+        path.length === 2 &&
+        resource === 'submitted-responses' &&
+        staff &&
+        z.uuid().safeParse(id).success
+      )
+        return json(await loadSubmittedResponses(id));
       if (
         path.length === 2 &&
         resource === 'guide-question-ids' &&
@@ -114,11 +122,18 @@ async function handle(request: Request, context: Context) {
         return json(await loadAnswers(id));
       if (
         path.length === 2 &&
-        resource === 'question-responses' &&
+        ['question-responses', 'distributed-responses'].includes(resource) &&
         z.uuid().safeParse(id).success &&
-        staff
+        (staff || resource === 'distributed-responses')
       )
-        return json(await questionResponseCommand(id, 'read'));
+        return json(
+          await questionResponseCommand(
+            id,
+            'read',
+            undefined,
+            resource === 'distributed-responses',
+          ),
+        );
       if (path.length > 1)
         return json({ error: '경로를 찾을 수 없어요.' }, 404);
       if (id && id !== 'new' && !z.uuid().safeParse(id).success)
@@ -138,8 +153,9 @@ async function handle(request: Request, context: Context) {
     const memberCommand =
       path.length === 2 &&
       z.uuid().safeParse(id).success &&
-      method === 'PUT' &&
-      ['answers', 'read'].includes(resource);
+      ((method === 'PUT' && ['answers', 'read'].includes(resource)) ||
+        (['POST', 'PUT'].includes(method) &&
+          resource === 'distributed-responses'));
     if (!staff && !memberCommand)
       return json({ error: '수정 권한이 없어요.' }, 403);
     if (!request.headers.get('content-type')?.startsWith('application/json'))
@@ -157,9 +173,9 @@ async function handle(request: Request, context: Context) {
       return json({ error: '요청을 확인해 주세요.' }, 400);
     if (
       path.length === 2 &&
-      resource === 'question-responses' &&
+      ['question-responses', 'distributed-responses'].includes(resource) &&
       z.uuid().safeParse(id).success &&
-      staff &&
+      (staff || resource === 'distributed-responses') &&
       ['POST', 'PUT'].includes(method)
     )
       return json(
@@ -167,6 +183,7 @@ async function handle(request: Request, context: Context) {
           id,
           method === 'POST' ? 'open' : 'save',
           body,
+          resource === 'distributed-responses',
         ),
       );
     if (memberCommand && resource === 'answers')

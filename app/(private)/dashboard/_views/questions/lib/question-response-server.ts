@@ -13,12 +13,19 @@ export async function questionResponseCommand(
   questionnaireId: string,
   mode: 'read' | 'open' | 'save',
   input?: unknown,
+  distributed = false,
 ) {
   const access = await requireUserAccess({
-    allowedRoles: ['admin', 'consultant_lead'],
+    allowedRoles: distributed
+      ? ['admin', 'consultant_lead', 'consultant']
+      : ['admin', 'consultant_lead'],
   });
   const role = await getViewRole(access.role);
-  if (role !== 'admin' && role !== 'consultant_lead')
+  if (
+    role !== 'admin' &&
+    role !== 'consultant_lead' &&
+    !(distributed && role === 'consultant')
+  )
     throw new QuestionnaireHttpError(403, '게시본 답변 권한이 없어요.');
   const client = createClient(await cookies());
   const args: Record<string, unknown> = { p_questionnaire_id: questionnaireId };
@@ -56,7 +63,7 @@ export async function questionResponseCommand(
     });
   }
   const { data, error } = await client.rpc(
-    `${mode}_question_response_session`,
+    `${mode}_${distributed ? 'distributed_' : ''}question_response_session`,
     args,
   );
   if (error) {
@@ -71,7 +78,7 @@ export async function questionResponseCommand(
     throw new QuestionnaireHttpError(
       status,
       status === 403
-        ? '게시가 취소되었거나 답변 권한이 없어요.'
+        ? '질문지가 공개되지 않았거나 답변 권한이 없어요.'
         : status === 409
           ? '질문 또는 답변이 변경됐어요. 최신 내용을 확인한 뒤 다시 저장해 주세요.'
           : status === 400
@@ -110,4 +117,24 @@ export async function loadGuideAnswers(questionIds?: string[]) {
   if (error)
     throw new QuestionnaireHttpError(503, '가이드 답변을 확인하지 못했어요.');
   return questionIds ? data : { canWrite: data === true };
+}
+
+export async function loadSubmittedResponses(questionnaireId: string) {
+  const access = await requireUserAccess({
+    allowedRoles: ['admin', 'consultant_lead'],
+  });
+  const role = await getViewRole(access.role);
+  if (role !== 'admin' && role !== 'consultant_lead')
+    throw new QuestionnaireHttpError(403, '제출된 답변 조회 권한이 없어요.');
+  const client = createClient(await cookies());
+  const { data, error } = await client.rpc(
+    'list_submitted_questionnaire_responses',
+    { qid: questionnaireId },
+  );
+  if (error)
+    throw new QuestionnaireHttpError(
+      error.code === '42501' ? 403 : 503,
+      '제출된 답변을 불러오지 못했어요.',
+    );
+  return data;
 }

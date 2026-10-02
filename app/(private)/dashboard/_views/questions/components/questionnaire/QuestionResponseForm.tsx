@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useSWRConfig } from 'swr';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
@@ -22,6 +23,7 @@ import {
   QuestionnaireApiError,
 } from '../../lib/questionnaire/api-client';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
+import { richTextPlainText } from '../../lib/rich-text';
 
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnairePreview } from './QuestionnairePreview';
@@ -31,9 +33,10 @@ async function request(
   questionnaireId: string,
   method: string,
   body?: unknown,
+  distributed = false,
 ): Promise<QuestionResponseSnapshot> {
   const response = await fetch(
-    `${QUESTIONNAIRE_API}/${questionnaireId}/question-responses`,
+    `${QUESTIONNAIRE_API}/${questionnaireId}/${distributed ? 'distributed-responses' : 'question-responses'}`,
     {
       method,
       cache: 'no-store',
@@ -52,19 +55,23 @@ async function request(
 export function QuestionResponseForm({
   questionnaireId,
   onEditorState,
+  distributed = false,
 }: {
   questionnaireId: string;
+  distributed?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
+  const { mutate } = useSWRConfig();
   const [remote, setRemote] = useState<QuestionResponseSnapshot | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void request(questionnaireId, 'POST', {})
+    void request(questionnaireId, 'POST', {}, distributed)
       .then((data) => {
         if (!cancelled) {
           setRemote(data);
+          if (distributed) void mutate(`${QUESTIONNAIRE_API}/unread`);
           setError('');
         }
       })
@@ -74,7 +81,7 @@ export function QuestionResponseForm({
     return () => {
       cancelled = true;
     };
-  }, [questionnaireId, attempt]);
+  }, [questionnaireId, attempt, distributed, mutate]);
   if (!remote)
     return error ? (
       <div role="alert" className="space-y-3">
@@ -89,6 +96,7 @@ export function QuestionResponseForm({
       key={remote.id}
       questionnaireId={questionnaireId}
       initial={remote}
+      distributed={distributed}
       onEditorState={onEditorState}
     />
   );
@@ -97,11 +105,14 @@ function ResponseEditor({
   questionnaireId,
   initial,
   onEditorState,
+  distributed = false,
 }: {
   questionnaireId: string;
+  distributed?: boolean;
   initial: QuestionResponseSnapshot;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
+  const { mutate } = useSWRConfig();
   const [rows, setRows] = useState(() => snapshotRows(initial));
   const [snapshot, setSnapshot] = useState(initial);
   const [remoteAnswerVersion, setRemoteAnswerVersion] = useState(0);
@@ -123,7 +134,19 @@ function ResponseEditor({
   const latestRemoteHandler = useRef<
     ((next: QuestionResponseSnapshot) => void) | null
   >(null);
-  const dirty = JSON.stringify(rows) !== saved || !!pendingSave;
+  const hasContent = (answers: Record<string, PreviewAnswerRow[]>) =>
+    Object.values(answers).some((items) =>
+      items.some((row) =>
+        Object.values(row.answers).some((value) =>
+          richTextPlainText(value).trim(),
+        ),
+      ),
+    );
+  // Empty editor initialization is not an answer or a reason to autosave.
+  const dirty =
+    (JSON.stringify(rows) !== saved &&
+      (hasContent(rows) || hasContent(JSON.parse(saved)))) ||
+    !!pendingSave;
   const locked = blocked;
   const change = useCallback(
     (id: string, value: PreviewAnswerRow[]) => {
@@ -185,7 +208,12 @@ function ResponseEditor({
     setPendingSave(pending);
     setSaving(true);
     try {
-      const result = await request(questionnaireId, 'PUT', pending);
+      const result = await request(
+        questionnaireId,
+        'PUT',
+        pending,
+        distributed,
+      );
       session.current.revision = result.revision;
       setSnapshot(result);
       setSavedAt(result.savedAt);
@@ -193,12 +221,16 @@ function ResponseEditor({
       session.current.retry = null;
       setPendingSave(null);
       setError('');
+      if (distributed) {
+        void mutate(`${QUESTIONNAIRE_API}/responses`);
+        void mutate(`${QUESTIONNAIRE_API}/unread`);
+      }
       if (complete || pending.complete)
         toast.add({
           type: 'success',
           title: pending.complete
-            ? '답변을 완료했어요.'
-            : '이전 저장을 확인했어요. 답변 완료를 다시 눌러 주세요.',
+            ? '답변을 제출했어요. 리드가 제출 내용을 확인할 수 있어요.'
+            : '이전 저장을 확인했어요. 제출을 다시 눌러 주세요.',
         });
     } catch (error) {
       if (error instanceof QuestionnaireApiError && error.status < 500) {
@@ -207,7 +239,12 @@ function ResponseEditor({
         if ([401, 403, 404].includes(error.status)) setBlocked(true);
         if (error.status === 409) {
           try {
-            const latest = await request(questionnaireId, 'GET');
+            const latest = await request(
+              questionnaireId,
+              'GET',
+              undefined,
+              distributed,
+            );
             latestRemoteHandler.current?.(latest);
             if (latest.definitionToken !== snapshot.definitionToken) {
               setError('');
@@ -269,7 +306,12 @@ function ResponseEditor({
   const refresh = useEffectEvent(async () => {
     if (session.current.busy || locked || session.current.retry) return;
     try {
-      const next = await request(questionnaireId, 'GET');
+      const next = await request(
+        questionnaireId,
+        'GET',
+        undefined,
+        distributed,
+      );
       if (
         session.current.busy ||
         session.current.retry ||
@@ -310,14 +352,38 @@ function ResponseEditor({
                 ? '저장 완료 · 언제든 수정할 수 있어요.'
                 : '답변을 작성해 주세요.'}
         </p>
-        <Button
-          variant="outline"
-          disabled={locked || saving || !dirty}
-          onClick={() => void save()}
-        >
-          저장
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={locked || saving || !dirty}
+            onClick={() => void save()}
+          >
+            저장
+          </Button>
+          {distributed && (
+            <Button
+              disabled={locked || saving || !!pendingSave}
+              onClick={() => void save(true)}
+            >
+              제출
+            </Button>
+          )}
+        </div>
       </div>
+      {distributed && (
+        <p className="text-sm text-muted-foreground">
+          저장한 답변은 본인만 볼 수 있습니다. 제출하면 리드에게 공개되며, 제출
+          후에도 수정할 수 있습니다.
+          {snapshot.submittedAt && (
+            <span className="block mt-1">
+              마지막 제출:{' '}
+              {new Date(snapshot.submittedAt).toLocaleString('ko-KR')}
+              {(dirty || snapshot.hasUnsubmittedChanges) &&
+                ' · 수정 내용은 다시 제출해야 공개됩니다.'}
+            </span>
+          )}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -331,13 +397,13 @@ function ResponseEditor({
       )}
       <QuestionnairePreview
         reviewQuestionnaireId={
-          snapshot.sourceDeleted ? undefined : questionnaireId
+          distributed || snapshot.sourceDeleted ? undefined : questionnaireId
         }
         key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}
         library={snapshot.questions.map((q) => q.definition)}
-        showPrivateDetails
+        showPrivateDetails={!distributed}
         response={{
           rows,
           onChange: change,

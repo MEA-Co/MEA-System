@@ -33,12 +33,12 @@ export function ConsultantQuestionnaireList({
   const groups = [
     {
       id: 'pending',
-      label: '답변 전',
+      label: '제출 전',
       items: items.filter((i) => !complete.has(i.id)),
     },
     {
       id: 'complete',
-      label: '답변 완료',
+      label: '제출 완료',
       items: items.filter((i) => complete.has(i.id)),
     },
   ];
@@ -94,7 +94,7 @@ export function ConsultantQuestionnaireList({
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {complete.has(item.id)
-                          ? '완료한 답변 보기'
+                          ? '제출한 답변 보기 · 수정 가능'
                           : data.some(
                                 (r) =>
                                   r.questionnaire_id === item.id &&
@@ -113,7 +113,7 @@ export function ConsultantQuestionnaireList({
             <p className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
               {group.id === 'pending'
                 ? '답변할 질문지가 없어요.'
-                : '아직 답변을 완료한 질문지가 없어요.'}
+                : '아직 제출한 질문지가 없어요.'}
             </p>
           )}
         </Tabs.Panel>

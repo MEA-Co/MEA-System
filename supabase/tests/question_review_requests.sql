@@ -56,11 +56,12 @@ set local role authenticated;
 do $$ declare qid uuid; vid uuid; begin
  select source_id into qid from publish_docs;
  select (doc->>'questionnaireId')::uuid into vid from second_review_doc;
- if not public.can_request_question_review(qid,vid) then raise exception 'Non-source questionnaire owner blocked'; end if;
+ if public.can_request_question_review(qid,vid) then raise exception 'Questionnaire owner request enabled'; end if;
  begin
  perform public.request_question_review(gen_random_uuid(),qid,vid,'관리자 질문지에서 타인 원본 검토');
- raise exception 'rollback test insert' using errcode='P0002';
- exception when no_data_found then null; end;
+ raise exception 'Questionnaire owner wrote review';
+ exception when insufficient_privilege then null; end;
+ if not public.can_request_question_review(qid,(select (doc->>'questionnaireId')::uuid from publish_docs)) then raise exception 'Non-owner administrator blocked'; end if;
  if jsonb_array_length(public.unread_question_review_ids(qid))<>0 then raise exception 'Questionnaire owner received source notification'; end if;
 end $$;
 reset role;

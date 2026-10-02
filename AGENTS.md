@@ -14,6 +14,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 검토 요청 소유자 정책(2026-10-02, 원본 작성자만 차단하던 정책보다 우선): 원본 질문 작성자와 요청 출처 질문지 작성자는 모두 요청 불가(관리자도 동일). 그 외 리드·관리자는 게시 질문에 요청 가능하며 일반 컨설턴트는 불가. can_request_question_review와 요청 저장 함수의 잠금 조회에 동일 조건 적용. UI 선 색은 canRequest 기준이며 canResolve와 분리한다. `20261002082355_question_and_questionnaire_review_owners.sql` 로컬 적용, 검토 요청 SQL 회귀·타입·린트 통과. 운영 사용자 적용 대기.
+
+- 배포 목록 테이블(2026-10-02): 게시된 질문지 아래에 Send 아이콘·검색·10개 페이지 테이블을 표시한다. 배포일과 제출 응답 수(임시 저장 제외, 재제출 중복 제외)를 표시하며 staff 전용 distributed_submission_counts RPC를 사용한다. `20261002081911_distributed_submission_counts.sql` 로컬 적용·SQL 권한/집계 회귀·타입·린트 검증. 운영 사용자 적용 대기.
+
+- 배포 응답 저장·제출(2026-10-02): `20261002074415_distributed_response_submissions.sql` 로컬 적용. 새 원본 배포본은 컨설턴트 입력과 저장·제출을 제공한다. 작업 응답은 본인만 읽으며 마지막 제출 답변은 `response_submissions`에 저장하고 리드·관리자에게 공개한다. 제출 후에도 수정 가능하며 저장만 하면 마지막 제출본 유지, 재제출 시 갱신한다. 세션은 작성자·질문지·시작 단계별로 분리하고 가이드 예시는 게시 세션만 읽는다. 단순 열람의 빈 편집기 초기화는 자동 저장하지 않는다. SQL 회귀 10개와 API/폼·타입·린트·빌드 검증, 요청받은 로컬 컨설턴트 입력 화면 확인. 운영은 사용자 적용 대기이며 순서는 docs/questions-operations.md를 따른다.
+
+- 운영 상태(2026-10-02): 사용자가 `20261002071428_direct_question_responses.sql`까지 운영 적용 완료를 알렸다. 아래 과거 작업의 “운영 미적용”은 현재 상태가 아니다. 이번 문서 정리에서는 운영 재조회나 앱 실사용 검증을 하지 않았다. 현행 계약은 docs/questions.md·docs/questionnaire-storage-design.md, 적용 절차는 docs/questions-operations.md를 우선한다. 폐기된 설계안·일회성 이전 안내·과거 운영 반영 문서는 삭제했으며 과거 기록은 Git 이력으로 확인한다.
+
+
 - 질문 버전 제거(2026-10-02, 이전 질문 snapshot 정책보다 우선): `20261002071428_direct_question_responses.sql` 로컬 적용. `question_responses.question_id`가 원본을 직접 참조하며 `question_versions`·`question_version_id`·불변 버전/구조 비교 함수를 제거했다. 응답 JSON은 `questionId`; 기존 응답 ID·본문·행·세션 보존. 질문 UPDATE 트리거가 OLD.fields와 새 필드 ID/유형으로 가이드 응답을 정리하고 기존 저장 확인·revision/definitionToken·질문지별 제거 범위를 유지한다. 구형 원본 없는 배포 응답만 legacy_question_id/legacy_definition으로 호환하며 새 원본 응답에는 NULL. 원본 응답 4개·구형 2개의 이전 전후 데이터 동일성, SQL 회귀 9개, DB lint/security advisor 검증. 운영 읽기 전용 확인: questions=30, question_versions=0, responses=0, sessions=0, 원본 없는 배치=0; 최신 운영 이력 20261002061031, 63932·70012·71428 대기. 운영 쓰기 미수행, 사용자가 docs/questions-operations.md 최신 순서로 적용한다.
 
 
@@ -112,7 +121,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 질문·질문지 통합 진입점은 `questions/QuestionsView.tsx`와 `view=questions` 하나다. 리드·관리자는 대시보드에서 질문/내 질문지/게시본으로 이동하고 컨설턴트는 기존 배포본을 본다. 이전 questionnaire 접근 키·렌더러·아이콘·URL 호환 분기는 제거했다. 미지원 view는 역할별 기본 화면으로 처리한다. 현재 구조·권한은 `docs/questions.md`, 데이터 계약은 `docs/questionnaire-storage-design.md`, 운영 적용 순서는 `docs/questions-operations.md`를 먼저 읽는다.
 
-- 기존 서술형 질문지의 원본을 보존하고 독립 질문·배치형 새 초안을 생성하는 운영자 도구는 `private.import_legacy_text_questionnaire(uuid,integer)`다. `private.legacy_questionnaire_imports`에 대응 ID를 보존하며 앱 역할 실행은 차단한다. migration 설치만으로 실제 데이터를 이전하지 않는다. 응답 없는 활성 게시본만 지원하고 재실행 시 기존 결과를 반환한다. 절차 `docs/legacy-questionnaire-import.md`, 검사·예행연습·실행·비교는 `supabase/snippets/legacy-questionnaire-import-*.sql`, 로컬 회귀 `supabase/tests/import_legacy_text_questionnaire.sql`, migration `20260928042153_import_legacy_text_questionnaire.sql`.
+- 기존 서술형 질문지의 원본을 보존하고 독립 질문·배치형 새 초안을 생성하는 운영자 도구는 `private.import_legacy_text_questionnaire(uuid,integer)`다. `private.legacy_questionnaire_imports`에 대응 ID를 보존하며 앱 역할 실행은 차단한다. migration 설치만으로 실제 데이터를 이전하지 않는다. 응답 없는 활성 게시본만 지원하고 재실행 시 기존 결과를 반환한다. 이 도구는 이후 원본 참조 통일 단계에서 폐기됐다. 아래 파일은 과거 스키마 전용 기록이며 현재 실행하지 않는다. 검사·예행연습·실행·비교는 `supabase/snippets/legacy-questionnaire-import-*.sql`, 로컬 회귀 `supabase/tests/import_legacy_text_questionnaire.sql`, migration `20260928042153_import_legacy_text_questionnaire.sql`.
 
 - 질문지 제작은 `QuestionnaireComposer`에서 질문 관리의 저장된 질문을 검색·배치한다. `questionnaire_questions.source_question_id`로 원본 ID를 참조하고 배치 ID는 독립적으로 유지한다. 제작·게시 중에는 원본의 최신 질문·열·조건·설명을 읽으며 섹션/질문 이동, 참조 선행 순서 검증, 공유 응답 미리보기를 제공한다. 새 배치를 포함한 배포는 질문 버전 고정·열/행 응답 저장 구현 전까지 DB에서 차단한다. 기존 배포본은 유지한다. 기존 편집 파일은 삭제하지 않았고 삭제 후보 3개 및 데이터 계약은 `docs/questions.md`에 기록했다. 로컬 migration `20260928034945_questionnaire_question_placements.sql`, 검증 `scripts/verify-questionnaire-placements.mjs`, `supabase/tests/questionnaire_question_placements.sql`. 운영에는 미적용이다.
 

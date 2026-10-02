@@ -1,0 +1,224 @@
+begin;
+create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant','admin']) role;
+insert into auth.users(id) select id from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
+create temporary table publish_docs(doc jsonb, source_id uuid);
+grant all on publish_docs to authenticated;
+grant select on publish_users to authenticated;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+do $$
+declare q jsonb; d jsonb; r jsonb;
+begin
+ q:=jsonb_build_object('id',gen_random_uuid(),'title','공유 질문','prompt','내용','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','repeatable','maxRows',3,'minRows',2,'rowLabels',jsonb_build_array('첫째','둘째'),'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
+ q:=q||jsonb_build_object('details',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','원본 설명','text','설명 본문','visibleToConsultants',true),jsonb_build_object('id',gen_random_uuid(),'title','비공개','text','비공개 비밀','visibleToConsultants',false)));
+ perform public.save_question(q,0,gen_random_uuid());
+ d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','공유 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','내용','details','[]'::jsonb)))));
+ begin
+  perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,sourceQuestionId}','null'::jsonb),0,gen_random_uuid());
+  raise exception 'Legacy inline save accepted';
+ exception when invalid_parameter_value then null; end;
+ if exists(select 1 from public.questionnaires where id=(d->>'questionnaireId')::uuid) then raise exception 'Failed save left a partial document'; end if;
+ begin
+  perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,details}',q->'details'),0,gen_random_uuid());
+  raise exception 'Placement explanation accepted';
+ exception when invalid_parameter_value then null; end;
+ perform public.save_questionnaire_draft(d,0,gen_random_uuid());
+ q:=jsonb_set(q,'{prompt}','"최신 원본 내용"'::jsonb);
+ perform public.save_question(q,1,gen_random_uuid());
+ r:=public.read_questionnaire_draft((d->>'questionnaireId')::uuid);
+ if r#>>'{sections,0,questions,0,text}'<>'최신 원본 내용' then raise exception 'Draft read stale placement body'; end if;
+
+ insert into publish_docs values(d,(q->>'id')::uuid);
+ begin
+  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  raise exception 'Draft source leaked';
+ exception when insufficient_privilege then null; end;
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+end $$;
+
+
+-- A guide can keep a published example and a separate private distribution draft.
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
+set local role authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs); x jsonb; payload jsonb; begin
+ x:=public.open_question_response_session(qid);
+ payload:=jsonb_build_object(x#>>'{questions,0,questionId}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','공개 가이드'))));
+ perform public.save_question_response_session(qid,payload,0,gen_random_uuid(),false,x->>'definitionToken');
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+
+-- A second questionnaire places the same source question.
+create temporary table second_review_doc(doc jsonb);
+grant all on second_review_doc to authenticated;
+do $$ declare d jsonb; begin
+ d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','두 번째 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'text','내용','details','[]'::jsonb,'sourceQuestionId',(select source_id from publish_docs))))));
+ perform public.save_questionnaire_draft(d,0,gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ insert into second_review_doc values(d);
+end $$;
+
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
+set local role authenticated;
+select public.request_question_review('10000000-0000-4000-8000-000000000099',(select source_id from publish_docs),(select (doc->>'questionnaireId')::uuid from second_review_doc),'다른 질문지에서 들어온 검토');
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+do $$ declare vid uuid; qid uuid; retry uuid:=gen_random_uuid(); result jsonb; begin
+ select (doc->>'questionnaireId')::uuid,source_id into vid,qid from publish_docs;
+ perform public.mark_question_reviews_read(qid,array['10000000-0000-4000-8000-000000000099'::uuid]);
+ begin
+  perform public.change_questionnaire_status(vid,2,'published',null,'distributed',retry);
+  raise exception 'Unresolved review accepted';
+ exception when object_not_in_prerequisite_state then
+  if sqlerrm not like '%Unresolved question reviews%' then raise; end if;
+ end;
+ if (select status from public.questionnaires where id=vid)<>'published' or (select revision from public.questionnaires where id=vid)<>2 or (select distribution_locked_at from public.questions where id=qid) is not null then raise exception 'Failed distribution left changes'; end if;
+ perform public.resolve_question_review('10000000-0000-4000-8000-000000000099',qid);
+ result:=public.change_questionnaire_status(vid,2,'published',null,'distributed',retry);
+ if public.change_questionnaire_status(vid,2,'published',null,'distributed',retry)<>result then raise exception 'Retry failed'; end if;
+ if (select distribution_locked_at from public.questions where id=qid) is null then raise exception 'Question not locked'; end if;
+ if (select status from public.questionnaires where id=vid)<>'distributed' then raise exception 'Not distributed'; end if;
+ -- A second questionnaire can reuse an already locked original.
+ perform public.change_questionnaire_status((select (doc->>'questionnaireId')::uuid from second_review_doc),2,'published',null,'distributed',gen_random_uuid());
+end $$;
+reset role;
+-- Trigger enforcement also protects privileged writers and descriptions.
+do $$ declare qid uuid; vid uuid; begin
+ select source_id,(doc->>'questionnaireId')::uuid into qid,vid from publish_docs;
+ begin update public.questions set prompt='changed' where id=qid; raise exception 'Question mutated'; exception when object_not_in_prerequisite_state then null; end;
+ begin update public.questions set distribution_locked_at=null where id=qid; raise exception 'Question unlocked'; exception when object_not_in_prerequisite_state then null; end;
+ begin delete from public.questions where id=qid; raise exception 'Question deleted'; exception when object_not_in_prerequisite_state then null; end;
+ begin update public.question_details set body='changed' where question_id=qid; raise exception 'Detail mutated'; exception when object_not_in_prerequisite_state then null; end;
+ begin delete from public.question_details where question_id=qid; raise exception 'Detail deleted'; exception when object_not_in_prerequisite_state then null; end;
+ begin update public.questionnaires set title='changed' where id=vid; raise exception 'Version mutated'; exception when object_not_in_prerequisite_state then null; end;
+end $$;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ declare vid uuid; sources jsonb; begin
+ select (doc->>'questionnaireId')::uuid into vid from publish_docs;
+ if not exists(select 1 from public.questionnaires where id=vid and status='distributed') then raise exception 'Consultant cannot see distribution'; end if;
+ if public.read_published_questionnaire(vid)#>>'{sections,0,questions,0,text}'<>'최신 원본 내용' then raise exception 'Missing question content'; end if;
+ sources:=public.read_published_question_sources(vid);
+ if jsonb_array_length(sources->0->'details')<>1 then raise exception 'Private details leaked'; end if;
+ if jsonb_array_length(sources)<>1 or sources#>>'{0,details,0,text}'<>'설명 본문' then raise exception 'Missing public source detail'; end if;
+ if exists(select 1 from public.questions where id=(select source_id from publish_docs)) then raise exception 'Independent question access widened'; end if;
+ begin perform public.distribute_questionnaire(vid,3); raise exception 'Consultant can distribute'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+
+-- A consultant draft is private, submission publishes a separate copy, editing stays enabled.
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+create temp table submitted_fixture(sid uuid, payload jsonb, submission_id uuid, token text);
+grant all on submitted_fixture to authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs); x jsonb; payload jsonb; fid text; source text; rid uuid; begin
+ x:=public.open_distributed_question_response_session(qid);
+ if x->>'stage'<>'distributed' or x::text like '%비공개 비밀%' then raise exception 'Invalid source definition or private explanation exposed'; end if;
+ if exists(select 1 from public.unread_distributed_questionnaires() where questionnaire_id=qid) then raise exception 'NEW not cleared'; end if;
+ source:=x#>>'{questions,0,questionId}';fid:=x#>>'{questions,0,definition,fields,0,id}';
+ payload:=jsonb_build_object(source,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(fid,'최초 제출 답변')),jsonb_build_object('id',2,'answers',jsonb_build_object(fid,'둘째 답변'))));
+ x:=public.save_distributed_question_response_session(qid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
+ if x->>'status'<>'in_progress' or x->>'submittedAt' is not null then raise exception 'Draft marked submitted'; end if;
+ if exists(select 1 from public.response_submissions where session_id=(x->>'id')::uuid) then raise exception 'Draft published'; end if;
+ insert into submitted_fixture values((x->>'id')::uuid,payload,gen_random_uuid(),x->>'definitionToken');
+ begin perform public.list_submitted_questionnaire_responses(qid);raise exception 'Consultant read staff submissions';exception when insufficient_privilege then null;end;
+ begin perform public.save_distributed_question_response_session(qid,payload,0,gen_random_uuid(),true,x->>'definitionToken');raise exception 'Stale save accepted';exception when serialization_failure then null;end;
+ begin perform public.save_distributed_question_response_session(qid,'{}',(x->>'revision')::int,gen_random_uuid(),true,x->>'definitionToken');raise exception 'Incomplete submission accepted';exception when invalid_parameter_value then null;end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
+set local role authenticated;
+do $$ begin
+ if public.list_submitted_questionnaire_responses((select (doc->>'questionnaireId')::uuid from publish_docs))<>'[]' then raise exception 'Unsubmitted response leaked';end if;
+ if exists(select 1 from public.question_responses where session_id=(select sid from submitted_fixture)) or exists(select 1 from public.response_sessions where id=(select sid from submitted_fixture)) then raise exception 'Draft RLS leaked to lead';end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb; again jsonb; f record; begin
+ select * into f from submitted_fixture;
+ x:=public.read_distributed_question_response_session(qid);
+ x:=public.save_distributed_question_response_session(qid,f.payload,(x->>'revision')::int,f.submission_id,true,f.token);
+ again:=public.save_distributed_question_response_session(qid,f.payload,1,f.submission_id,true,f.token);
+ if x<>again or x->>'status'<>'submitted' or x->>'submittedAt' is null then raise exception 'Submission retry failed';end if;
+ update submitted_fixture set payload=replace(payload::text,'최초 제출 답변','비공개 수정 답변')::jsonb;
+ x:=public.save_distributed_question_response_session(qid,(select payload from submitted_fixture),(x->>'revision')::int,gen_random_uuid(),false,f.token);
+ if x->>'status'<>'submitted' or not (x->>'hasUnsubmittedChanges')::boolean or x::text not like '%비공개 수정 답변%' then raise exception 'Submitted answer not editable';end if;
+ if (select answers::text from public.response_submissions where session_id=f.sid) like '%비공개 수정 답변%' then raise exception 'Private edit published';end if;
+ begin update public.response_submissions set answers='{}' where session_id=f.sid;raise exception 'Direct submission write allowed';exception when insufficient_privilege then null;end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
+set local role authenticated;
+do $$ declare x jsonb; qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs); begin
+ x:=public.list_submitted_questionnaire_responses(qid);
+ if jsonb_array_length(x)<>1 or x::text not like '%최초 제출 답변%' or x::text like '%비공개 수정 답변%' or x::text like '%비공개 비밀%' then raise exception 'Last submission isolation failed';end if;
+ begin perform public.read_distributed_question_response_session(qid);raise exception 'Foreign draft read';exception when insufficient_privilege then null;end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb; begin
+ x:=public.read_distributed_question_response_session(qid);
+ perform public.save_distributed_question_response_session(qid,(select payload from submitted_fixture),(x->>'revision')::int,gen_random_uuid(),true,x->>'definitionToken');
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb; begin
+ x:=public.list_submitted_questionnaire_responses(qid);
+ if x::text not like '%비공개 수정 답변%' or x::text like '%최초 제출 답변%' then raise exception 'Resubmission failed';end if;
+ begin perform public.change_questionnaire_status(qid,3,'distributed',null,'published',gen_random_uuid());raise exception 'Answered distribution withdrawn';exception when object_not_in_prerequisite_state then null;end;
+end $$;
+reset role;
+set local role anon;
+do $$ begin
+ begin perform public.list_submitted_questionnaire_responses(gen_random_uuid());raise exception 'Anon submissions read';exception when insufficient_privilege then null;end;
+end $$;
+reset role;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
+set local role authenticated;
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb;payload jsonb;begin
+ if not exists(select 1 from public.unread_distributed_questionnaires() where questionnaire_id=qid) then raise exception 'Guide session cleared distribution NEW';end if;
+ x:=public.open_distributed_question_response_session(qid);
+ payload:=jsonb_build_object(x#>>'{questions,0,questionId}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','가이드 계정 비공개 초안'))));
+ perform public.save_distributed_question_response_session(qid,payload,0,gen_random_uuid(),false,x->>'definitionToken');
+ if (select count(*) from public.response_sessions where origin_questionnaire_id=qid)<>2 then raise exception 'Guide and distribution sessions mixed';end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+do $$ declare x jsonb;begin
+ x:=public.read_guide_answers(array[(select source_id from publish_docs)]);
+ if x::text not like '%공개 가이드%' or x::text like '%가이드 계정 비공개 초안%' then raise exception 'Private distribution draft leaked as guide';end if;
+end $$;
+reset role;
+-- Unrelated consultants cannot read another consultant's private or submitted rows.
+create temp table outside_user as select gen_random_uuid() id;
+insert into auth.users(id) select id from outside_user;
+insert into public.profiles(id,role,name) select id,'consultant','다른 컨설턴트' from outside_user;
+select set_config('request.jwt.claim.sub',(select id::text from outside_user),true);
+set local role authenticated;
+do $$ begin
+ begin
+  perform public.distributed_submission_counts();
+  raise exception 'Consultant accessed staff counts';
+ exception when insufficient_privilege then null; end;
+ if exists(select 1 from public.response_submissions) or exists(select 1 from public.question_responses) or exists(select 1 from public.response_sessions) then raise exception 'Other consultant response leaked';end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='admin'),true);
+set local role authenticated;
+do $$ begin
+ if (select count from public.distributed_submission_counts() where questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs)) is distinct from 1::bigint then
+   raise exception 'Submission count must exclude drafts and count resubmission once';
+ end if;
+end $$;
+reset role;
+rollback;
