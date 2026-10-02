@@ -30,6 +30,11 @@ export function ConsultantQuestionnaireList({
   const complete = new Set(
     data.filter((r) => r.status === 'submitted').map((r) => r.questionnaire_id),
   );
+  const saved = new Set(
+    data
+      .filter((r) => r.status === 'in_progress')
+      .map((r) => r.questionnaire_id),
+  );
   const groups = [
     {
       id: 'pending',
@@ -86,21 +91,22 @@ export function ConsultantQuestionnaireList({
                   >
                     <FileText className="size-5 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="truncate font-medium">
                           {item.title}
                         </span>
                         {unreadIds.includes(item.id) && <NewPublicationBadge />}
+                        {saved.has(item.id) && (
+                          <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                            저장된 답변 있음
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {complete.has(item.id)
                           ? '제출한 답변 보기 · 수정 가능'
-                          : data.some(
-                                (r) =>
-                                  r.questionnaire_id === item.id &&
-                                  r.status === 'in_progress',
-                              )
-                            ? '이어서 답변하기'
+                          : saved.has(item.id)
+                            ? '아직 제출하지 않았어요 · 이어서 답변하기'
                             : '답변하기'}
                       </p>
                     </div>

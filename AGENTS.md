@@ -223,3 +223,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 탐구활동 첨부 UI(2026-10-01): 목록은 입력 위 Portal 팝업으로 배치해 레이아웃을 밀지 않는다. 주제/학년/학기/기재 영역만 있는 카드 전체를 클릭해 첨부하고 hover/focus 시 첨부하기를 표시한다. 새 활동 추가는 목록 마지막 항목이다. 명령어는 아이콘과 설명을 표시하고 목록·권장 말풍선은 X로 닫는다. 이번 UI 수정은 브라우저 테스트 없이 검증한다.
 
 - 탐구활동 목록 캐시 수정(2026-10-01): QuestionExplorationInput과 @ 메뉴가 같은 URL 키에 각각 배열/객체를 저장하던 SWR 충돌을 제거했다. `useExplorationList`가 `{userId, activities}` 계약과 `exploration-list-v1`+URL 키를 공유하며 잘못된 응답 형식을 거부한다. 배열로 변환한 결과를 같은 키에 저장하지 않는다. 회귀 `scripts/verify-exploration-list-cache.mjs`는 빈 목록/활동 있는 목록/재검증/범위 분리/잘못된 응답을 검증한다. DB migration 없음, 앱 재배포 필요.
+
+- 진로 흐름 부분 제출(2026-10-02): 원본 `5f6064ad-1dd6-4e0d-95dd-611ccacbce92`는 활성 칸 하나의 유효 응답만으로 배포 답변 제출을 허용한다. 전체 공백은 거절하며 다른 질문의 모든 필드/최소 행 검사는 유지한다. `20261002083415_career_flow_partial_submission.sql` 로컬 적용·한 칸/빈 답변 롤백 검증·기존 배포 응답 회귀·보안 검사 통과. 운영은 사용자 적용 대기. 실제 브라우저 제출은 수행하지 않았다.
