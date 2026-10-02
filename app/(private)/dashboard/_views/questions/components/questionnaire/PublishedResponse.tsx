@@ -36,6 +36,7 @@ export function PublishedResponse({
     </>
   ) : (
     <QuestionnairePreview
+      reviewVersionId={document.versionId}
       title={document.title}
       sections={document.sections}
       library={sources}

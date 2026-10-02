@@ -268,7 +268,7 @@ function QuestionnaireContent({
             role="status"
             className="mx-auto mb-4 max-w-4xl rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-200"
           >
-            확인하지 않은 검토 요청이 {pendingReviewCount}개 있어요. 각 질문
+            처리하지 않은 검토 요청이 {pendingReviewCount}개 있어요. 각 질문
             아래에서 확인해 주세요.
           </div>
         )}

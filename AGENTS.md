@@ -14,6 +14,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 검토 요청 권한 최종 정책(2026-10-02): 20261002032804_source_owner_question_reviews.sql 로컬 적용. 요청 작성 차단·새 요청 수신은 원본 questions.created_by 기준이며 질문지 제작자 기준을 대체한다. 관리자가 타인의 질문을 배치한 질문지에서는 그 관리자가 요청 가능하고 알림은 원본 제작자에게 간다. 질문 관리에도 파란 새 요청 표시를 제공한다. 기존 거절로 남은 로컬 권한 차이는 이번 정책으로 해소했다. 독립 질문 조회/참조/배치는 비관리자 본인 원본만 허용하며 게시본 공유 조회는 별도 예외다. 운영 미적용.
+
+
+- 검토 요청 새 알림(2026-10-02): 로컬 20261002032203_question_review_read_notifications.sql. question_review_reads에 요청별/제작자별 읽음 기록, 화면에 보이는 카드의 ID만 확인 처리한다. 대시보드·질문지 목록의 파란 새 요청 표시는 읽으면 해제되고 미처리 개수는 유지한다. 운영 미적용. 이전 단계에서 거절된 로컬 원본 작성자 추가 차단 제거는 아직 미완료이며 새 migration에 해당 드리프트를 포함하지 않는다.
+
+
+- 질문 검토 요청(2026-10-02): 로컬 `20261002030732_question_review_requests.sql` 적용. 기존 빈 questionnaire_review_requests를 question_review_requests로 rename하며 question_id는 원본 questions.id다. origin_version_id는 nullable SET NULL이고 질문지 삭제가 검토 요청을 지우지 않는다. 게시 질문의 요청을 리드/관리자에게 공유하며 작성은 게시 중만, 처리는 원본 질문 작성자/관리자만 가능하다. 가이드 권한과 무관하다. 공통 QuestionReviews와 /api/question-reviews에서 처리하고 질문 목록에 미처리 개수를 표시한다. 기존 질문지 검토 RPC/API는 제거했다. 로컬 SQL 권한·중복·다중 질문지 공유·삭제 보존 및 응답 회귀, 타입/린트, schema diff 검증. 운영 미적용, 브라우저 실사용 미검증. 운영 순서는 docs/questions-operations.md 최신 절을 따른다.
+
+
 - 게시본 최신 구성 동기화(2026-10-01, 응답 시작 당시 구성 고정 정책보다 우선): 로컬 `20261001075311_live_published_response_layout.sql`. 가이드 지정 계정과 나머지 컨설턴트 리드 모두 최신 게시본 제목/섹션/질문 추가·제외·순서를 본다. 가이드 세션은 조회/저장 시 본인 세션만 동기화하며 기존 응답 ID·본문·행·이전 답변을 보존한다. 제외한 질문 응답은 삭제하지 않고 재배치 시 원본 질문 ID로 재연결한다. 현재 질문 구성만 조회·저장하며 definitionToken은 제목/구성도 포함해 오래된 저장을 차단한다. 작성 중 입력은 보존하며 제외된 질문의 로컬 입력은 복사용 영역에 남긴다. 상세 화면은 5초/포커스 복귀 조회를 사용한다. 실제 저장 권한은 가이드 지정 계정으로 유지하고, 일반 consultant 역할의 배포본 정책은 이번 범위가 아니다. 질문지 삭제 뒤에는 마지막 동기화 구성을 사용한다. 로컬 SQL 회귀 5개·입력 병합 3개·타입/린트·보안 advisor 통과, 운영 미적용. 운영 절차는 `docs/questions-operations.md` 최신 절 참고.
 
 - 가이드 답변 표시 수정(2026-10-01): 로컬 `20261001060231_guide_answer_rich_rows.sql`. read_guide_answers는 요약 body 대신 활성 응답 행의 서식 원문과 표시용 label을 반환한다. 내부 음수 행 ID를 표시하지 않고 row_labels/순서 번호를 사용한다. QuestionBlockPreview는 서술형을 RichTextContent로 렌더링하여 하이라이트를 보존하며 척도/선택 추가 서술도 표시한다. 빈 행·조건상 비활성 행은 제외한다. 원본 저장 데이터 변경 없음, 운영 미적용.

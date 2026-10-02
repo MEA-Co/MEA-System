@@ -357,6 +357,7 @@ export function QuestionnaireComposer({
               />
             ) : (
               <QuestionnairePreview
+                reviewVersionId={published ? initialDraft.versionId : undefined}
                 title={title}
                 sections={sections}
                 library={questions}
@@ -557,7 +558,7 @@ export function QuestionnaireComposer({
                       {reviewContext && (
                         <QuestionnaireReviews
                           {...reviewContext}
-                          questionId={question.id}
+                          questionId={question.sourceQuestionId ?? undefined}
                           initialReviews={reviewContext.initialReviews.filter(
                             (review) => review.question_id === question.id,
                           )}

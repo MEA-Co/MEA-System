@@ -1,3 +1,5 @@
+-- Historical import: production owner was subsequently transferred to b72dcd2d-e3b4-408a-aa09-87c1063731f8.
+-- Do not re-run this original import after transfer; its owner check will intentionally stop.
 -- Target: epwlcallocdjkmgdmtlv (production), SQL Editor as postgres.
 -- One-question data import; no schema migration, questionnaire placement, or answers.
 -- Exported from local DB on 2026-10-01. Keep question/field IDs and row labels.

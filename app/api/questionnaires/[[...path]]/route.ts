@@ -17,7 +17,6 @@ import {
   changeQuestionnaireStatus,
   deleteQuestionnaireDraft,
   loadQuestionnaireView,
-  manageQuestionnaireReview,
   publishQuestionnaireDraft,
   saveQuestionnaireDraft,
 } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/server';
@@ -48,7 +47,7 @@ async function handle(request: Request, context: Context) {
     if (viewRole === 'student')
       return json({ error: '질문지 접근 권한이 없어요.' }, 403);
     const path = (await context.params).path ?? [];
-    const [id, resource, childId] = path;
+    const [id, resource] = path;
     const method = request.method;
     if (method === 'GET') {
       if (path.length === 1 && id === 'guide-access' && staff)
@@ -69,6 +68,23 @@ async function handle(request: Request, context: Context) {
 
       if (path.length === 1 && id === 'my-responses' && staff)
         return json(await listMyPublishedResponses());
+      if (path.length === 1 && id === 'unread-reviews') {
+        if (!staff) return json({ hasUnread: false });
+        const client = createClient(await cookies());
+        const { data, error } = await client
+          .from('question_review_requests')
+          .select(
+            'id, questions!inner(created_by), question_review_reads!left(review_id)',
+          )
+          .eq('questions.created_by', access.user.id)
+          .neq('requested_by', access.user.id)
+          .is('resolved_at', null)
+          .is('question_review_reads', null)
+          .limit(1);
+        if (error)
+          return json({ error: '새 검토 요청을 확인하지 못했어요.' }, 503);
+        return json({ hasUnread: !!data?.length });
+      }
       if (path.length === 1 && id === 'unread')
         return json(await loadUnreadQuestionnairePublications(!staff));
       if (path.length === 1 && id === 'responses')
@@ -177,31 +193,7 @@ async function handle(request: Request, context: Context) {
         { ...body, versionId: id },
         resource === 'publication' ? 'publish' : 'distribute',
       );
-    else if (method === 'POST' && path.length === 2 && resource === 'reviews')
-      result = await manageQuestionnaireReview(
-        { ...body, versionId: id },
-        'request',
-      );
-    else if (
-      method === 'PATCH' &&
-      path.length === 3 &&
-      resource === 'reviews' &&
-      z.uuid().safeParse(childId).success &&
-      body.resolved === true
-    ) {
-      const client = createClient(await cookies());
-      const review = await client
-        .from('questionnaire_review_requests')
-        .select('id')
-        .eq('id', childId)
-        .eq('version_id', id)
-        .maybeSingle();
-      if (review.error)
-        return json({ error: '검토 요청을 확인하지 못했어요.' }, 503);
-      if (!review.data)
-        return json({ error: '검토 요청을 찾을 수 없어요.' }, 404);
-      result = await manageQuestionnaireReview({ id: childId }, 'resolve');
-    } else if (method === 'PUT' && path.length === 2 && resource === 'read') {
+    else if (method === 'PUT' && path.length === 2 && resource === 'read') {
       const client = createClient(await cookies());
       const { error } = await client.rpc(
         staff

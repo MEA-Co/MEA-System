@@ -92,7 +92,7 @@ export function PublishedQuestionnaire({
                   canRequest={
                     !distributed && reviewContext.canRequest !== false
                   }
-                  questionId={question.id}
+                  questionId={question.sourceQuestionId ?? undefined}
                   initialReviews={reviewContext.initialReviews.filter(
                     (review) => review.question_id === question.id,
                   )}

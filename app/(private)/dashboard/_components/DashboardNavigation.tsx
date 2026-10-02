@@ -56,7 +56,7 @@ export function DashboardNavigation({
 }: DashboardNavigationProps) {
   const { setOpenMobile } = useSidebar();
   const pages = getDashboardNavigation(role);
-  const { unreadIds } = usePublicationNotifications();
+  const { unreadIds, hasUnreadReviews } = usePublicationNotifications();
   return (
     <>
       {DASHBOARD_GROUPS.map((group) => {
@@ -90,6 +90,14 @@ export function DashboardNavigation({
                       >
                         <Icon />
                         <span>{page.label}</span>
+                        {page.view === 'questions' && hasUnreadReviews && (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-300"
+                            aria-label="새 검토 요청"
+                          >
+                            검토 요청
+                          </span>
+                        )}
                         {page.view === 'questions' && unreadIds.length > 0 && (
                           <NewPublicationBadge count={unreadIds.length} />
                         )}

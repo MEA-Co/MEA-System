@@ -22,8 +22,9 @@ import {
 
 const PublicationContext = createContext<{
   unreadIds: string[];
+  hasUnreadReviews: boolean;
   markRead: (id: string) => Promise<void>;
-}>({ unreadIds: [], markRead: async () => {} });
+}>({ unreadIds: [], hasUnreadReviews: false, markRead: async () => {} });
 
 export function PublicationNotifications({
   enabled,
@@ -65,6 +66,9 @@ function PublicationState({
   const { data, mutate } = useQuestionnaireResource<string[]>(
     enabled ? '/unread' : null,
   );
+  const { data: reviewNotifications } = useQuestionnaireResource<{
+    hasUnread: boolean;
+  }>(enabled && realtimeAudience === 'staff' ? '/unread-reviews' : null);
   const { command } = useQuestionnaireApi();
   const markRead = useCallback(
     async (id: string) => {
@@ -81,8 +85,15 @@ function PublicationState({
     [command, mutate],
   );
   const value = useMemo(
-    () => ({ unreadIds: data ?? [], markRead }),
-    [data, markRead],
+    () => ({
+      unreadIds: data ?? [],
+      hasUnreadReviews:
+        enabled &&
+        realtimeAudience === 'staff' &&
+        reviewNotifications?.hasUnread === true,
+      markRead,
+    }),
+    [data, markRead, enabled, realtimeAudience, reviewNotifications],
   );
   return (
     <PublicationContext.Provider value={value}>

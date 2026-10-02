@@ -428,6 +428,7 @@ function ResponseEditor({
           </details>
         ))}
       <QuestionnairePreview
+        reviewVersionId={snapshot.sourceDeleted ? undefined : versionId}
         key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}

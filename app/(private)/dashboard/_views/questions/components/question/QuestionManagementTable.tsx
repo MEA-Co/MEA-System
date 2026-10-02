@@ -1,4 +1,7 @@
+'use client';
+
 import { Files, Link2, Trash2 } from 'lucide-react';
+import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +20,7 @@ import {
 } from '@/components/ui/tooltip';
 
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
+import { questionnaireFetcher } from '../../lib/questionnaire/api-client';
 import { richTextPlainText } from '../../lib/rich-text';
 
 const usageStatusLabels = {
@@ -173,6 +177,16 @@ export function QuestionManagementTable({
   onOpen: (q: QuestionBlockRow) => void;
   onArchive: (q: QuestionBlockRow) => void;
 }) {
+  const { data: reviewCounts, error: reviewError } = useSWR<{
+    counts: Record<string, number>;
+    unreadCounts: Record<string, number>;
+  }>(
+    questions.length
+      ? `/api/question-reviews?questions=${questions.map((q) => q.id).join(',')}`
+      : null,
+    questionnaireFetcher,
+    { refreshInterval: 10000 },
+  );
   return (
     <div className="overflow-hidden rounded-xl border bg-background">
       <Table className="min-w-[940px] table-fixed">
@@ -195,7 +209,7 @@ export function QuestionManagementTable({
           {questions.map((q) => (
             <TableRow
               key={q.id}
-              className={canManage(q) ? 'cursor-pointer' : ''}
+              className={`${canManage(q) ? 'cursor-pointer' : ''} ${reviewCounts?.unreadCounts[q.id] ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30' : ''}`}
               onClick={() => {
                 if (canManage(q)) onOpen(q);
               }}
@@ -226,6 +240,21 @@ export function QuestionManagementTable({
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
                   {richTextPlainText(q.prompt)}
                 </p>
+                {(reviewCounts?.unreadCounts[q.id] ?? 0) > 0 && (
+                  <span className="mt-2 mr-2 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
+                    <span className="size-2 rounded-full bg-blue-500" />새 검토
+                    요청 {reviewCounts?.unreadCounts[q.id]}
+                  </span>
+                )}
+                {reviewCounts?.counts[q.id] ? (
+                  <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
+                    검토 요청 {reviewCounts.counts[q.id]}
+                  </span>
+                ) : reviewError ? (
+                  <span className="text-xs text-muted-foreground">
+                    검토 요청 확인 불가
+                  </span>
+                ) : null}
               </TableCell>
               <TableCell className="whitespace-normal py-4 align-top">
                 <QuestionReferenceList question={q} />

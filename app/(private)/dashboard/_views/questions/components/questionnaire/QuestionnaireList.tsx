@@ -28,7 +28,7 @@ import {
   questionnaireStatusLabels,
   QuestionnaireStatusSelect,
 } from './QuestionnaireStatusSelect';
-import { ReviewRequestBadge } from './ReviewRequestBadge';
+import { NewReviewBadge, ReviewRequestBadge } from './ReviewRequestBadge';
 
 const date = new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -135,8 +135,8 @@ export function QuestionnaireList({
                 className={
                   QUESTIONNAIRE_REVIEWS_VISIBLE &&
                   item.isOwner &&
-                  item.pendingReviewCount > 0
-                    ? 'bg-green-50/50 dark:bg-green-950/20'
+                  (item.unreadReviewCount ?? 0) > 0
+                    ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30 dark:hover:bg-blue-950/50'
                     : undefined
                 }
               >
@@ -160,7 +160,10 @@ export function QuestionnaireList({
                       <NewPublicationBadge />
                     )}
                     {item.isOwner && (
-                      <ReviewRequestBadge count={item.pendingReviewCount} />
+                      <>
+                        <NewReviewBadge count={item.unreadReviewCount ?? 0} />
+                        <ReviewRequestBadge count={item.pendingReviewCount} />
+                      </>
                     )}
                   </div>
                   {item.archivedAt && (

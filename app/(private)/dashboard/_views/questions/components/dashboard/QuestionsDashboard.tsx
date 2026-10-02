@@ -26,6 +26,7 @@ import {
   NewPublicationBadge,
   usePublicationNotifications,
 } from '../questionnaire/PublicationNotifications';
+import { NewReviewBadge } from '../questionnaire/ReviewRequestBadge';
 
 const base = '/dashboard?view=questions';
 const date = new Intl.DateTimeFormat('ko-KR', {
@@ -76,6 +77,7 @@ export function QuestionsDashboard() {
                 id: question.id,
                 title: questionName(question),
                 updatedAt: question.updated_at,
+                unreadReviewCount: 0,
               })),
             empty: '아직 만든 질문이 없어요.',
           },
@@ -90,6 +92,7 @@ export function QuestionsDashboard() {
               id: item.id,
               title: item.title || '제목 없는 질문지',
               updatedAt: item.updatedAt,
+              unreadReviewCount: item.unreadReviewCount ?? 0,
             })),
             empty: '아직 만든 질문지가 없어요.',
           },
@@ -146,11 +149,14 @@ export function QuestionsDashboard() {
                     {items.map((item) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between gap-4 py-3"
+                        className={`grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-lg px-2 py-3 ${(item.unreadReviewCount ?? 0) > 0 ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}
                       >
-                        <span className="min-w-0 truncate text-sm font-medium">
-                          {item.title}
-                        </span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="min-w-0 truncate text-sm font-medium">
+                            {item.title}
+                          </span>
+                          <NewReviewBadge count={item.unreadReviewCount ?? 0} />
+                        </div>
                         <span className="shrink-0 text-xs text-muted-foreground">
                           {date.format(new Date(item.updatedAt))}
                         </span>
@@ -217,7 +223,8 @@ export function QuestionsDashboard() {
                     .slice((current - 1) * 10, current * 10)
                     .map((item) => {
                       const unread =
-                        !item.isOwner && unreadIds.includes(item.id);
+                        (!item.isOwner && unreadIds.includes(item.id)) ||
+                        (item.unreadReviewCount ?? 0) > 0;
                       return (
                         <TableRow
                           key={item.id}
@@ -242,7 +249,13 @@ export function QuestionsDashboard() {
                               <span className="line-clamp-2 whitespace-normal">
                                 {item.title || '제목 없는 질문지'}
                               </span>
-                              {unread && <NewPublicationBadge />}
+                              {(item.unreadReviewCount ?? 0) > 0 ? (
+                                <NewReviewBadge
+                                  count={item.unreadReviewCount ?? 0}
+                                />
+                              ) : (
+                                unread && <NewPublicationBadge />
+                              )}
                             </Link>
                           </TableCell>
                           <TableCell className="text-sm">

@@ -409,3 +409,51 @@ npx supabase db push --linked --dry-run
 
 4. 최신 앱을 배포한다.
 5. 테스트용 게시본에서 질문 추가·순서 이동·제외·재추가를 수행하고 가이드 계정과 다른 리드 화면이 최신 구성으로 갱신되는지 확인한다. 기존 답변 보존, 추가 질문 저장, 작성 중 다른 질문이 추가되어도 입력 유지, 오래된 구성 저장 차단을 확인한다. 실제 질문·답변을 검증 목적으로 삭제하지 않는다.
+
+
+## 운영 진로 흐름 제작자 변경 (2026-10-01)
+
+사용자 요청으로 운영 질문 `5f6064ad-1dd6-4e0d-95dd-611ccacbce92`의 제작자를 `38b5ef9f-cf72-4263-9465-126c20ad0260`에서 컨설턴트 리드 `b72dcd2d-e3b4-408a-aa09-87c1063731f8`로 변경했다. `transfer-production-career-flow-owner.sql`을 운영에 실행했으며 전체 질문 잠금과 단일 트랜잭션 안에서 validate_question 트리거를 일시 해제 후 즉시 복구했다. 기존 편집 충돌 방지를 위해 revision과 updated_at도 갱신했다. 나머지 질문 열은 변경 전후 동일함을 검사했다. 질문·열 ID/본문/구성은 유지하며 새 migration과 앱 재배포는 필요 없다. 최초 이전 스니펫은 이전 제작자를 기록하므로 재실행하지 않는다. 로컬 제작자는 변경하지 않았다.
+
+## 질문 귀속 검토 요청 (2026-10-02)
+
+로컬 `20261002030732_question_review_requests.sql`은 빈 `questionnaire_review_requests`를 `question_review_requests`로 이름 변경한다. 배치 ID 대신 원본 questions.id에 귀속하며 질문지 출처는 nullable FK/ON DELETE SET NULL이다. 질문지 삭제 RPC는 요청을 삭제하지 않는다. 요청 당시 question_revision과 처리자 resolved_by를 기록한다. 데이터가 있으면 잠금 후 중단하며 자동 삭제하지 않는다. 가이드 계정 함수는 변경하지 않는다.
+
+게시 질문에 접근하는 리드/관리자가 요청하고 원본 질문 작성자/관리자가 처리한다. 게시 질문의 요청은 리드에게 공유하며 게시 해제/질문지 삭제 후 작성자·관리자·요청자 접근은 유지한다. 일반 컨설턴트 접근과 직접 테이블 쓰기는 차단한다. 질문 자체의 실제 삭제는 FK cascade, soft archive는 기록을 보존한다. 질문 수정만으로 요청을 완료하지 않는다.
+
+화면은 공통 QuestionReviews와 `/api/question-reviews`를 사용한다. 게시본·제작 편집기·질문 Drawer에서 조회/작성/완료가 가능하고 질문 목록에 미처리 개수를 표시한다. 원본 질문 ID별 캐시를 공유하고 10초/포커스 갱신한다. 구형 질문지 검토 작성 API/RPC는 제거했으므로 DB 적용 후 앱을 이어서 배포한다.
+
+운영 순서:
+1. `cd /Users/mealdm/Desktop/MEA/system`
+2. `cat supabase/.temp/project-ref`와 `npx supabase migration list --linked`로 운영 epwlcallocdjkmgdmtlv 및 이력을 확인한다.
+3. `npx supabase db push --linked --dry-run`. 신규 파일은 `20261002030732_question_review_requests.sql`이다. 선행 `20261001075311_live_published_response_layout.sql`이 미적용이면 함께 표시될 수 있으므로 별도 변경 내용과 적용 이력을 확인한다. 예상 밖 파일은 적용 전에 검토한다.
+4. `npx supabase db push --linked`
+5. `npx supabase migration list --linked` 및 `npx supabase db push --linked --dry-run`으로 대기 없음을 확인한다.
+6. 최신 앱 배포.
+7. 다른 리드의 게시 질문 요청 → 원본 작성자의 확인/처리 → 목록 뱃지 갱신을 확인한다. 실제 질문지를 삭제하는 테스트는 하지 않는다.
+
+운영에는 아직 적용하지 않았다. 로컬 회귀는 supabase/tests/question_review_requests.sql이다.
+
+### 질문지 제작자의 요청 작성 차단 (2026-10-02)
+
+신규 `20261002031738_prevent_owner_question_reviews.sql`은 해당 게시 질문지 제작자의 요청 작성을 차단한다. 읽기 권한 API는 originVersionId를 받아 화면별 작성 가능 여부를 반환한다. 출처 생략 시에도 본인 소유 질문지는 작성 가능 후보에서 제외한다. 처리 권한은 유지한다.
+
+로컬 제작자 요청 `19fb2819-726e-4915-90d1-5a0bf81c25f8` 한 건만 소유 관계를 재검사해 삭제했고 다른 두 요청은 유지했다. 이 데이터 삭제는 migration에 포함하지 않으며 운영에서는 실행하지 않는다.
+
+검증 상태: 최초 로컬 적용본은 원본 질문 작성자까지 차단했고 회귀/타입/린트가 통과했다. 최종 migration은 요청 범위대로 질문지 제작자만 차단하도록 좁혔다. 이 최종 함수를 로컬에 다시 적용하는 실행은 사용자 승인 거절로 수행되지 않았다. 따라서 로컬에는 추가로 원본 질문 작성자 차단이 남아 있으며 최종 schema diff/보안 재검증은 미완료다. 다음 작업 시 최종 함수를 로컬 반영하고 검증해야 한다. 운영 미적용.
+
+운영 절차는 위와 동일: 프로젝트 이동 → 대상/이력 및 dry-run 확인(이번 파일 20261002031738, 선행 20261002030732 미적용이면 함께 검토) → db push --linked → 이력/dry-run 대기 없음 → 앱 배포 → 제작자는 작성 불가·다른 리드는 작성 가능 확인. 최종 로컬 검증 후 진행한다.
+
+
+### 검토 요청 미확인 표시 (2026-10-02)
+
+로컬 `20261002032203_question_review_read_notifications.sql`은 question_review_reads(review_id,user_id,read_at)를 추가한다. 질문지 제작자별 읽음 기록이며 실제 요청 카드가 화면에 보일 때 전달한 ID만 기록한다. 읽음은 처리 완료와 별개이고 후속 요청은 새 표시가 다시 생긴다. 대시보드/질문지 목록/본인의 게시본에 파란 배경·점·새 검토 요청 뱃지를 표시한다. 미처리 개수는 유지한다. 새 알림 migration은 앞 단계의 로컬 권한 차이를 포함하지 않는다. 이전 거절로 남은 로컬 원본 작성자 추가 제한은 여전히 별도 미완료다.
+
+운영 순서: 프로젝트 이동 → 연결 대상·migration list --linked → db push --linked --dry-run → 예상 신규 20261002032203 확인(선행 20261002030732/20261002031738 미적용이면 순서대로 함께 검토) → db push --linked → migration list 및 dry-run 대기 없음 → 앱 배포 → 타 리드 요청 작성/제작자 파란 표시/요청 카드 확인 후 새 표시 해제/미처리 개수 유지 확인. 예상 밖 migration은 적용 전에 검토한다. 운영 직접 적용 없음.
+
+
+### 원본 질문 제작자 기준 통일 (2026-10-02, 이전 정책보다 우선)
+
+`20261002032804_source_owner_question_reviews.sql`: 원본 questions.created_by 본인은 검토 요청을 작성할 수 없으며 신규 요청 알림·읽음도 원본 제작자 기준이다. 질문지 제작자 기준은 제거했다. 관리자는 타인의 질문을 배치한 본인 질문지에서 검토 요청을 작성할 수 있다. 원본 제작자는 질문 목록에서도 새 요청을 확인한다. 기존 거절로 남은 로컬 함수 차이는 해소되었다. questions/question_details RLS와 배치·참조 트리거를 검사했고 question_creator_visibility.sql 및 question_review_requests.sql(관리자 타인 원본 배치 예외 포함) 회귀가 통과했다. 운영은 변경하지 않았다.
+
+운영: `cd /Users/mealdm/Desktop/MEA/system` → `cat supabase/.temp/project-ref` → `npx supabase migration list --linked` → `npx supabase db push --linked --dry-run`. 신규 파일은 20261002032804이며 선행 20261002030732,20261002031738,20261002032203이 미적용이면 순서대로 포함된다. 예상 밖 파일은 먼저 검토한다. `npx supabase db push --linked` → `npx supabase migration list --linked` → `npx supabase db push --linked --dry-run` 대기 없음 확인 → 앱 배포 → 원본 제작자 작성 차단/타 리드 요청/원본 제작자 새 알림 확인.

@@ -77,6 +77,7 @@ export type QuestionnaireListItem = {
   isOwner: boolean;
   canDelete: boolean;
   pendingReviewCount: number;
+  unreadReviewCount?: number;
 };
 export type QuestionnaireReview = {
   id: string;

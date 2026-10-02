@@ -68,6 +68,7 @@ import { QuestionConditionEditor } from './QuestionConditionEditor';
 import { QuestionDetailsEditor } from './QuestionDetailsEditor';
 import { QuestionManagementTable } from './QuestionManagementTable';
 import { QuestionRelationshipGraph } from './QuestionRelationshipGraph';
+import { QuestionReviews } from './QuestionReviews';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 
 function MaxItemsInput({
@@ -882,6 +883,7 @@ export function QuestionLibraryView({
           </div>
         ) : draft && draft.id === requestedId ? (
           <div className="space-y-6">
+            {revision > 0 && <QuestionReviews questionId={draft.id} />}
             <Tabs.Root defaultValue="edit">
               <Tabs.List
                 className="mb-5 inline-flex gap-1 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800"

@@ -14,7 +14,6 @@ import { createClient } from '@/lib/supabase/server';
 import type { QuestionBlockRow } from '../question-blocks';
 
 import { QuestionnaireHttpError } from './http-error';
-import { normalizeRichTextValue, richTextPlainText } from './rich-text';
 import { savedDraftSchema, saveQuestionnaireSchema } from './schema';
 import type {
   QuestionnaireDraft,
@@ -93,9 +92,8 @@ export async function loadQuestionnaireView(
   const { data, error } = await client
     .from('questionnaire_versions')
     .select(
-      'id, questionnaire_id, title, status, published_at, distributed_at, revision, updated_at, questionnaires!inner(archived_at, created_by), questionnaire_review_requests(count)',
+      'id, questionnaire_id, title, status, published_at, distributed_at, revision, updated_at, questionnaires!inner(archived_at, created_by)',
     )
-    .is('questionnaire_review_requests.resolved_at', null)
     .order('updated_at', { ascending: false });
   if (error)
     throw new Error('질문지 목록을 불러오지 못했어요.', { cause: error });
@@ -109,8 +107,24 @@ export async function loadQuestionnaireView(
     revision: number;
     updated_at: string;
     questionnaires: { archived_at: string | null; created_by: string };
-    questionnaire_review_requests: { count: number }[];
   }>;
+  const reviewCounts = new Map<string, number>();
+  const unreadReviewCounts = new Map<string, number>();
+  if (staff) {
+    const counts = await client.rpc('question_review_counts');
+    if (counts.error)
+      throw new Error('검토 요청 개수를 불러오지 못했어요.', {
+        cause: counts.error,
+      });
+    for (const item of (counts.data ?? []) as {
+      version_id: string;
+      count: number;
+      unread_count: number;
+    }[]) {
+      reviewCounts.set(item.version_id, item.count);
+      unreadReviewCounts.set(item.version_id, item.unread_count);
+    }
+  }
   const authors = new Map<string, string>();
   if (staff && rows.some((row) => row.status === 'published')) {
     const result = await client.rpc('published_questionnaire_authors');
@@ -148,9 +162,10 @@ export async function loadQuestionnaireView(
       revision: item.revision,
       hasDistributed: distributedIds.has(item.questionnaire_id),
       isOwner: staff && item.questionnaires.created_by === access.user.id,
+      unreadReviewCount: staff ? (unreadReviewCounts.get(item.id) ?? 0) : 0,
       pendingReviewCount:
         staff && item.questionnaires.created_by === access.user.id
-          ? (item.questionnaire_review_requests?.[0]?.count ?? 0)
+          ? (reviewCounts.get(item.id) ?? 0)
           : 0,
       canDelete:
         staff &&
@@ -248,11 +263,18 @@ export async function loadQuestionnaireView(
   else result.publishedDocument = document;
   if (staff && selected.status !== 'draft') {
     const reviews = await client
-      .from('questionnaire_review_requests')
+      .from('question_review_requests')
       .select(
         'id, question_id, title, requester_name, description, created_at, resolved_at',
       )
-      .eq('version_id', requestedId)
+      .in(
+        'question_id',
+        document.sections.flatMap((s) =>
+          s.questions.flatMap((q) =>
+            q.sourceQuestionId ? [q.sourceQuestionId] : [],
+          ),
+        ),
+      )
       .order('created_at', { ascending: false });
     if (reviews.error)
       throw new Error('검토 요청을 불러오지 못했어요.', {
@@ -427,57 +449,6 @@ export async function publishQuestionnaireDraft(
     return {
       status: mutationStatus(error.code),
       error: `${label} 결과를 확인하지 못했어요. 목록을 새로고침한 뒤 다시 확인해 주세요.`,
-    };
-  return {};
-}
-
-export async function manageQuestionnaireReview(
-  input: unknown,
-  mode: 'request' | 'resolve',
-): Promise<{ error?: string; status?: number }> {
-  const access = await getUserAccess();
-  if (
-    !access.user ||
-    !access.isOnboarded ||
-    (access.role !== 'admin' && access.role !== 'consultant_lead')
-  )
-    return { status: 403, error: '검토 요청을 처리할 권한이 없어요.' };
-  const schema =
-    mode === 'request'
-      ? z.object({
-          id: z.uuid(),
-          versionId: z.uuid(),
-          questionId: z.uuid(),
-          description: z
-            .string()
-            .trim()
-            .max(5000)
-            .transform(normalizeRichTextValue)
-            .refine((value) => richTextPlainText(value).trim().length > 0),
-        })
-      : z.object({ id: z.uuid() });
-  const parsed = schema.safeParse(input);
-  if (!parsed.success)
-    return {
-      status: 400,
-      error: '질문을 선택하고 검토 요청 내용(1~5,000자)을 입력해 주세요.',
-    };
-  const client = createClient(await cookies());
-  const data = parsed.data;
-  const result =
-    'description' in data && 'versionId' in data && 'questionId' in data
-      ? await client.rpc('request_questionnaire_review', {
-          p_id: data.id,
-          p_version_id: data.versionId,
-          p_question_id: data.questionId,
-          p_description: data.description,
-        })
-      : await client.rpc('resolve_questionnaire_review', { p_id: data.id });
-  if (result.error)
-    return {
-      status: mutationStatus(result.error.code),
-      error:
-        '검토 요청을 처리하지 못했어요. 권한과 질문지 상태를 확인해 주세요.',
     };
   return {};
 }

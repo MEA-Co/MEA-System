@@ -15,6 +15,7 @@ import { placementPreviewState } from '../../lib/questionnaire/placement-preview
 import type { QuestionnaireSection } from '../../lib/questionnaire/types';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
 import { QuestionBlockPreview } from '../question/QuestionBlockPreview';
+import { QuestionReviews } from '../question/QuestionReviews';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { questionnaireStyles } from './questionnaire-styles';
@@ -23,6 +24,7 @@ import { RichTextContent } from './RichTextContent';
 
 export function QuestionnairePreview({
   title,
+  reviewVersionId,
   sections,
   library = [],
   renderQuestionFooter,
@@ -31,6 +33,7 @@ export function QuestionnairePreview({
   showGuideAnswers = false,
   response,
 }: {
+  reviewVersionId?: string;
   title: string;
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
@@ -115,6 +118,12 @@ export function QuestionnairePreview({
                   showPrivateDetails={showPrivateDetails}
                   response={response}
                 />
+                {reviewVersionId && (
+                  <QuestionReviews
+                    questionId={question.sourceQuestionId}
+                    versionId={reviewVersionId}
+                  />
+                )}
                 {renderQuestionFooter?.(question.id)}
               </div>
             ) : legacyResponsePreview ? (

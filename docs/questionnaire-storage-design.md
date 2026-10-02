@@ -197,3 +197,11 @@ migration 첫 부분에서 두 테이블을 잠그고 0건인지 확인한다. �
 상세 조회는 5초 및 포커스 복귀 시 갱신한다. 가이드 응답 UI는 추가된 질문만 원격 응답으로 초기화하고 기존 작성 중 입력을 유지한다. 제외된 질문의 작성 중 입력은 복사용 접힘 영역에 남긴다. 재추가한 질문은 기존 저장 답변으로 복원한다. 미리보기 입력은 계속 저장하지 않는다.
 
 검증: `supabase/tests/published_live_layout.sql`, `question_responses.sql`, `question_response_conditions.sql`, `question_response_types.sql`, `distributed_response_path.sql`; `scripts/verify-published-live-layout.mjs`의 입력 병합 3개; 타입 검사·변경 파일 린트·로컬 보안 advisor. 실제 로컬 테스트 질문지에서 진로 흐름 노출과 기존 답변 동일성을 트랜잭션 롤백으로 확인했다. 브라우저 검증과 운영 적용은 진행하지 않았다.
+
+## 2026-10-02 검토 요청의 원본 질문 귀속
+
+`question_review_requests`는 기존 빈 `questionnaire_review_requests`를 rename한 테이블이다. `question_id`는 원본 questions FK(필수), `origin_version_id`는 작성 경로 기록용 nullable FK(질문지 삭제 시 NULL)다. 요청자/서식 내용/시각을 유지하고 `question_revision`, `resolved_by`를 추가한다. 같은 질문의 요청은 여러 배치에서 공유한다. 원본 soft archive는 요청 기록을 유지하며 실제 질문 행 삭제는 cascade한다. 질문지 삭제는 요청을 보존한다.
+
+RLS는 리드/관리자 중 원본 작성자·관리자·요청자·활성 게시 질문 접근자에게 읽기를 허용한다. 직접 쓰기 권한은 없고 private definer/public invoker RPC에서 실제 역할·게시 여부·원본 소유권을 검사한다. 요청 ID로 중복 재시도를 보호하고 처리 완료는 반복해도 처리자/시각을 바꾸지 않는다. 독립 질문 조회 RLS는 넓히지 않는다. 가이드 계정 설정 함수는 이번 migration에 포함하지 않는다.
+
+2026-10-02 최종 정책: 검토 요청 읽음/새 알림은 questions.created_by를 기준으로 집계한다. 원본 제작자의 자기 검토 요청은 관리자여도 차단하며, 질문지 제작자 여부는 작성 제한과 알림 대상을 결정하지 않는다.
