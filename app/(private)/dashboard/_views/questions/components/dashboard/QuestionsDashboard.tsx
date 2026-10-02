@@ -219,9 +219,12 @@ export function QuestionsDashboard() {
             게시된 질문지를 불러오고 있어요.
           </p>
         ) : !published.length ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {search ? '검색 결과가 없어요.' : '게시된 질문지가 아직 없어요.'}
-          </p>
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <FilePenLine className="size-8" aria-hidden="true" />
+            <p>
+              {search ? '검색 결과가 없어요.' : '게시된 질문지가 아직 없어요.'}
+            </p>
+          </div>
         ) : (
           <>
             <div className="overflow-hidden rounded-xl border bg-background">
@@ -364,11 +367,14 @@ export function QuestionsDashboard() {
             배포된 질문지를 불러오고 있어요.
           </p>
         ) : !distributed.length ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {distributedSearch
-              ? '검색 결과가 없어요.'
-              : '배포된 질문지가 아직 없어요.'}
-          </p>
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <FilePenLine className="size-8" aria-hidden="true" />
+            <p>
+              {distributedSearch
+                ? '검색 결과가 없어요.'
+                : '배포된 질문지가 아직 없어요.'}
+            </p>
+          </div>
         ) : (
           <>
             <div className="overflow-hidden rounded-xl border bg-background">

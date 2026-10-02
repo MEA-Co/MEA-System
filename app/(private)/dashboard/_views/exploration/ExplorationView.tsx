@@ -817,41 +817,18 @@ export function ExplorationView({
               ))}
             </ul>
           ) : (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center">
+            <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
               <NotebookPen
                 aria-hidden="true"
                 className="mb-4 size-8 text-muted-foreground"
               />
-              <h3 className="font-medium">
+              <h3 className="font-normal">
                 {showOthers && otherMode === 'person' && !owner
                   ? '작성자를 선택해 주세요'
                   : query.trim()
                     ? '검색 결과가 없습니다'
-                    : '등록된 탐구활동이 없습니다'}
+                    : '등록된 탐구활동이 없어요.'}
               </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {showOthers && otherMode === 'person' && !owner
-                  ? '작성자를 선택하면 해당 사람의 탐구활동을 볼 수 있습니다.'
-                  : query.trim()
-                    ? '다른 검색어로 찾아보세요.'
-                    : showOthers
-                      ? '다른 사람이 확정한 탐구활동이 여기에 표시됩니다.'
-                      : '첫 탐구활동을 추가하고 내용을 작성해 보세요.'}
-              </p>
-              {!showOthers && !mine.length && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-5"
-                  onClick={(event) => (
-                    (opener.current = event.currentTarget),
-                    create()
-                  )}
-                >
-                  <Plus aria-hidden="true" />
-                  탐구활동 추가
-                </Button>
-              )}
             </div>
           )}
         </div>

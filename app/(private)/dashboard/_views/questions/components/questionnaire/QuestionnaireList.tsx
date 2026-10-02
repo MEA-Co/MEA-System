@@ -1,5 +1,5 @@
 'use client';
-
+import { FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -203,11 +203,16 @@ export function QuestionnaireList({
                   colSpan={5}
                   className="h-32 text-center text-muted-foreground"
                 >
-                  {query ||
-                  statuses.length !== 3 ||
-                  statuses.includes('archived')
-                    ? '조건에 맞는 질문지가 없어요.'
-                    : '아직 만든 질문지가 없어요. 새 질문지를 제작해 보세요.'}
+                  <div className="flex flex-col items-center gap-4 py-10 text-sm text-muted-foreground">
+                    <FileText className="size-8" aria-hidden="true" />
+                    <p>
+                      {query ||
+                      statuses.length !== 3 ||
+                      statuses.includes('archived')
+                        ? '조건에 맞는 질문지가 없어요.'
+                        : '아직 만든 질문지가 없어요.'}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

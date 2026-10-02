@@ -116,11 +116,14 @@ export function ConsultantQuestionnaireList({
               ))}
             </ul>
           ) : (
-            <p className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
-              {group.id === 'pending'
-                ? '답변할 질문지가 없어요.'
-                : '아직 제출한 질문지가 없어요.'}
-            </p>
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
+              <FileText className="size-8" aria-hidden="true" />
+              <p>
+                {group.id === 'pending'
+                  ? '답변할 질문지가 없어요.'
+                  : '아직 제출한 질문지가 없어요.'}
+              </p>
+            </div>
           )}
         </Tabs.Panel>
       ))}

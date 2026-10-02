@@ -1360,7 +1360,7 @@ export function QuestionLibraryView({
                 ) ? (
                 <div className="flex flex-col items-center gap-4 rounded-2xl border bg-background p-10 text-center text-sm text-muted-foreground">
                   <Blocks
-                    className="size-10 text-neutral-400"
+                    className="size-8 text-muted-foreground"
                     aria-hidden="true"
                   />
                   {query ? '검색 결과가 없어요.' : '아직 만든 질문이 없어요.'}
