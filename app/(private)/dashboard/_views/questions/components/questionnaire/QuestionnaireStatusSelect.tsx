@@ -55,7 +55,10 @@ export function QuestionnaireStatusSelect({
     setPending(true);
     const id = toast.add({
       type: 'loading',
-      title: '상태를 변경하고 있어요.',
+      title:
+        change.status === 'distributed'
+          ? '배포 조건을 확인하고 있어요.'
+          : '상태를 변경하고 있어요.',
       timeout: 0,
     });
     try {
@@ -74,9 +77,11 @@ export function QuestionnaireStatusSelect({
       }
       toast.update(id, {
         type: 'success',
-        title: result.copied
-          ? '기존 배포본을 유지하고 수정용 초안을 만들었어요.'
-          : '질문지 상태를 변경했어요.',
+        title: result.distributionChecked
+          ? '미처리 검토 요청이 없어 배포 조건을 충족했어요. 게시 상태는 유지됩니다.'
+          : result.copied
+            ? '기존 배포본을 유지하고 수정용 초안을 만들었어요.'
+            : '질문지 상태를 변경했어요.',
         timeout: 3000,
       });
       setChange(null);
@@ -106,6 +111,9 @@ export function QuestionnaireStatusSelect({
             (value === 'draft' ||
               (value === 'published' &&
                 current === 'draft' &&
+                !item.archivedAt) ||
+              (value === 'distributed' &&
+                current === 'published' &&
                 !item.archivedAt)) &&
             item.isOwner &&
             value !== current
@@ -133,8 +141,8 @@ export function QuestionnaireStatusSelect({
                 !item.isOwner ||
                 (value !== 'draft' &&
                   !(
-                    value === 'published' &&
-                    current === 'draft' &&
+                    ((value === 'published' && current === 'draft') ||
+                      (value === 'distributed' && current === 'published')) &&
                     !item.archivedAt
                   ))
               }
@@ -153,10 +161,12 @@ export function QuestionnaireStatusSelect({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {change?.status === 'draft' &&
-              change.item.status === 'distributed'
-                ? '수정용 초안을 만들까요?'
-                : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
+              {change?.status === 'distributed'
+                ? '배포 조건을 확인할까요?'
+                : change?.status === 'draft' &&
+                    change.item.status === 'distributed'
+                  ? '수정용 초안을 만들까요?'
+                  : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
             </DialogTitle>
             <DialogDescription>
               {change?.status === 'archived'
@@ -165,7 +175,7 @@ export function QuestionnaireStatusSelect({
                     change.item.status === 'distributed'
                   ? '기존 배포본과 답변은 그대로 유지합니다. 같은 질문과 설명으로 새 초안을 만들고 편집 화면을 엽니다.'
                   : change?.status === 'distributed'
-                    ? '컨설턴트에게 질문지가 표시됩니다. 배포된 내용은 고정되며 이후 수정은 새 초안에서 진행합니다.'
+                    ? '질문지에 포함된 질문의 미처리 검토 요청을 확인합니다. 이번 단계에서는 조건만 검사하며 게시 상태를 유지합니다.'
                     : change?.status === 'published'
                       ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
                       : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
@@ -180,7 +190,13 @@ export function QuestionnaireStatusSelect({
               취소
             </Button>
             <Button disabled={pending} onClick={() => void apply()}>
-              {pending ? '변경 중…' : '변경'}
+              {change?.status === 'distributed'
+                ? pending
+                  ? '확인 중…'
+                  : '조건 확인'
+                : pending
+                  ? '변경 중…'
+                  : '변경'}
             </Button>
           </DialogFooter>
         </DialogContent>

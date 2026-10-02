@@ -59,6 +59,12 @@ Next.js 밖의 스크립트는 이 파일을 자동으로 읽는다고 가정하
 
 ## 인증과 데이터 (별도 설정)
 
+### 가상 컨설턴트 계정 (2026-10-02)
+
+`node scripts/create-local-consultant.mjs`로 일반 컨설턴트 `codex-consultant@example.test`를 생성하고 비밀번호 로그인·본인 프로필 조회를 검증한다. 이름은 `로컬 테스트 컨설턴트`다. 개발 환경 변수를 읽되 Supabase 주소가 정확히 `http://127.0.0.1:54321`인 경우에만 실행한다. 기존 계정은 다시 사용하며 다른 계정의 비밀번호나 역할은 변경하지 않는다.
+
+임의 생성 비밀번호는 Git에서 제외된 `.env.local-consultant.json`에 소유자 전용 파일 권한으로 저장한다. 로컬 앱 `/auth/login`의 `로컬 테스트 계정` 입력란에 이 파일의 이메일·비밀번호를 입력한다. 입력란은 development 모드와 위 로컬 DB 주소가 모두 일치할 때만 표시한다. 실제 Supabase 인증과 기존 회원 권한을 그대로 사용한다. 운영 계정·스키마·migration 변경은 없다. 일반 컨설턴트이므로 리드 전용 질문 제작·게시본 검토 권한은 없다.
+
 Google OAuth는 `config.toml`에 provider, site URL, 앱 callback 허용 목록을 설정해야 한다. Google 콘솔의 로컬 callback은 `http://127.0.0.1:54321/auth/v1/callback`, 앱 callback은 `http://localhost:3000/auth/callback`이다. 비밀 값은 환경 변수로 전달한다.
 
 기준 데이터는 구조와 별도로 선별해 가져온다. 회원·학생·질문지·답변을 통째로 복사하지 않는다. 새 로컬 계정은 운영 계정과 UUID·역할이 별개다.

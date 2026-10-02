@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserAccess } from '@/lib/auth';
 
 import { GoogleLoginButton } from './_components/GoogleLoginButton';
+import { LocalLoginForm } from './_components/LocalLoginForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,9 @@ export default async function LoginPage() {
           </CardHeader>
           <CardContent>
             <GoogleLoginButton />
+            {process.env.NODE_ENV === 'development' &&
+              process.env.NEXT_PUBLIC_SUPABASE_URL ===
+                'http://127.0.0.1:54321' && <LocalLoginForm />}
             <p className="mt-5 text-center text-xs text-neutral-500">
               로그인하면 서비스 이용약관에 동의하게 됩니다.
             </p>

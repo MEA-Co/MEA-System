@@ -14,6 +14,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 배포 조건 점검 단계(2026-10-02): 게시 중인 본인 질문지의 배포 Select를 활성화했다. 미처리 원본 질문 검토 요청이 있으면 거절하고, 없으면 조건 충족만 안내하며 게시 상태를 유지한다. 읽음 여부·요청 출처와 무관하고 완료 요청은 제외한다. POST distribution/PATCH status(distributed)는 서버의 checkQuestionnaireDistribution으로 검사만 하며 컨설턴트 노출·응답 생성은 하지 않는다. DB migration 없음. 검증 scripts/verify-questionnaire-distribution-check.mjs 6개, 타입·린트 통과. 이후 실제 배포 구현 시 조건 재검사와 DB 원자적 처리가 필요하다.
+
 - 검토 요청 권한 최종 정책(2026-10-02): 20261002032804_source_owner_question_reviews.sql 로컬 적용. 요청 작성 차단·새 요청 수신은 원본 questions.created_by 기준이며 질문지 제작자 기준을 대체한다. 관리자가 타인의 질문을 배치한 질문지에서는 그 관리자가 요청 가능하고 알림은 원본 제작자에게 간다. 질문 관리에도 파란 새 요청 표시를 제공한다. 기존 거절로 남은 로컬 권한 차이는 이번 정책으로 해소했다. 독립 질문 조회/참조/배치는 비관리자 본인 원본만 허용하며 게시본 공유 조회는 별도 예외다. 운영 미적용.
 
 

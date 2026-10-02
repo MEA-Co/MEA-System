@@ -84,6 +84,7 @@ export function useQuestionnaireApi() {
       mode?: 'deleted' | 'archived';
       versionId?: string;
       copied?: boolean;
+      distributionChecked?: boolean;
     }> => {
       const { response, data } = await send(path, method, body);
       if (!response.ok)

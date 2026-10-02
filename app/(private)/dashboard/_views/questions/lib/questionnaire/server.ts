@@ -388,10 +388,90 @@ export async function saveQuestionnaireDraft(
   return { ok: true, ...result.data };
 }
 
+// This stage checks readiness only. Never mutate status or create responses.
+export async function checkQuestionnaireDistribution(input: unknown): Promise<{
+  error?: string;
+  status?: number;
+  distributionChecked?: boolean;
+}> {
+  const access = await getUserAccess();
+  if (
+    !access.user ||
+    !access.isOnboarded ||
+    !['admin', 'consultant_lead'].includes(access.role ?? '')
+  )
+    return { status: 403, error: '배포 조건을 확인할 권한이 없어요.' };
+  const parsed = z
+    .object({
+      versionId: z.uuid(),
+      revision: z.number().int().positive(),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    return { status: 400, error: '확인할 질문지를 선택해 주세요.' };
+  const client = createClient(await cookies());
+  const version = await client
+    .from('questionnaire_versions')
+    .select('revision, status, questionnaires!inner(created_by, archived_at)')
+    .eq('id', parsed.data.versionId)
+    .maybeSingle();
+  if (version.error)
+    return {
+      status: 503,
+      error: '질문지 상태를 확인하지 못했어요. 다시 시도해 주세요.',
+    };
+  if (!version.data) return { status: 404, error: '질문지를 찾을 수 없어요.' };
+  const row = version.data as unknown as {
+    revision: number;
+    status: string;
+    questionnaires: { created_by: string; archived_at: string | null };
+  };
+  if (row.questionnaires.created_by !== access.user.id)
+    return {
+      status: 403,
+      error: '질문지 작성자만 배포 조건을 확인할 수 있어요.',
+    };
+  if (row.revision !== parsed.data.revision)
+    return {
+      status: 409,
+      error: '질문지가 변경됐어요. 목록을 새로고침한 뒤 다시 확인해 주세요.',
+    };
+  if (row.status !== 'published' || row.questionnaires.archived_at !== null)
+    return {
+      status: 409,
+      error: '게시 중인 질문지만 배포 조건을 확인할 수 있어요.',
+    };
+  // The existing RPC counts unresolved reviews by source question, across origins.
+  const counts = await client.rpc('question_review_counts');
+  const checked = z
+    .array(
+      z.object({
+        version_id: z.uuid(),
+        count: z.number().int().nonnegative(),
+      }),
+    )
+    .safeParse(counts.data);
+  if (counts.error || !checked.success)
+    return {
+      status: 503,
+      error: '검토 요청을 확인하지 못했어요. 다시 시도해 주세요.',
+    };
+  const remaining =
+    checked.data.find((entry) => entry.version_id === parsed.data.versionId)
+      ?.count ?? 0;
+  if (remaining > 0)
+    return {
+      status: 409,
+      error: `미처리 검토 요청이 ${remaining}건 남아 있어 배포할 수 없어요. 모두 처리한 뒤 다시 확인해 주세요.`,
+    };
+  return { distributionChecked: true };
+}
+
 export async function publishQuestionnaireDraft(
   input: unknown,
   mode: 'publish' | 'distribute' = 'publish',
-): Promise<{ error?: string; status?: number }> {
+): Promise<{ error?: string; status?: number; distributionChecked?: boolean }> {
+  if (mode === 'distribute') return checkQuestionnaireDistribution(input);
   const label = mode === 'publish' ? '게시' : '배포';
   const access = await getUserAccess();
   if (
@@ -458,6 +538,7 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
   status?: number;
   versionId?: string;
   copied?: boolean;
+  distributionChecked?: boolean;
 }> {
   const access = await getUserAccess();
   if (
@@ -479,6 +560,8 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
   if (!parsed.success)
     return { status: 400, error: '변경할 상태를 확인해 주세요.' };
   const data = parsed.data;
+  if (data.status === 'distributed')
+    return checkQuestionnaireDistribution(data);
   const client = createClient(await cookies());
   const result = await client.rpc('change_questionnaire_status', {
     p_version_id: data.versionId,
