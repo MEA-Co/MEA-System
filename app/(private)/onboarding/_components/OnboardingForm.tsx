@@ -24,9 +24,10 @@ import { completeOnboarding } from '../actions';
 
 type OnboardingFormProps = {
   defaultName: string;
+  next: string;
 };
 
-export function OnboardingForm({ defaultName }: OnboardingFormProps) {
+export function OnboardingForm({ defaultName, next }: OnboardingFormProps) {
   const [role, setRole] = useState<OnboardingRole>('student');
   const [selectedStudentPeriod, setSelectedStudentPeriod] =
     useState<StudentPeriod | null>(null);
@@ -34,6 +35,7 @@ export function OnboardingForm({ defaultName }: OnboardingFormProps) {
 
   return (
     <form action={formAction} className="space-y-6">
+      <input type="hidden" name="next" value={next} />
       <input type="hidden" name="role" value={role} />
       <input
         type="hidden"

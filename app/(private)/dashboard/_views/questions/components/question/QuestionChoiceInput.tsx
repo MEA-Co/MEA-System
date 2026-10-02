@@ -255,7 +255,7 @@ export function QuestionChoiceInput({
                         <Input
                           aria-label={`${directInputLabel} 답변 ${answers.slice(0, answerIndex + 1).filter((item) => choiceAnswerId(item) === choice.id).length}`}
                           placeholder="직접 입력"
-                          className={`h-8 min-w-0 border-0 bg-transparent px-0 text-sm text-inherit shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent ${chipStyle ? 'flex-none' : 'flex-1'}`}
+                          className={`h-8 min-w-0 border-0 bg-transparent px-0 text-base md:text-sm text-inherit shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent ${chipStyle ? 'flex-none' : 'flex-1'}`}
                           style={
                             chipStyle
                               ? {

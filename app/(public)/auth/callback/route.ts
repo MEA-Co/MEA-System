@@ -1,13 +1,13 @@
 import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
+import { safeReturnPath, withReturnPath } from '@/lib/auth-redirect';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const nextParam = request.nextUrl.searchParams.get('next');
-  const redirectPath =
-    nextParam?.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/';
+  const redirectPath = safeReturnPath(nextParam);
 
   if (code) {
     const supabase = createClient(await cookies());
@@ -18,5 +18,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL('/auth/login?error=oauth', request.url));
+  return NextResponse.redirect(
+    new URL(
+      `${withReturnPath('/auth/login', redirectPath)}&error=oauth`,
+      request.url,
+    ),
+  );
 }

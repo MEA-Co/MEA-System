@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 
-export function LocalLoginForm() {
+export function LocalLoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +25,7 @@ export function LocalLoginForm() {
             password: String(data.get('password')),
           });
           if (result.error) throw result.error;
-          router.push('/dashboard');
+          router.replace(next);
           router.refresh();
         } catch {
           setError('로컬 계정의 이메일과 비밀번호를 확인해 주세요.');

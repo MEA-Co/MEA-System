@@ -3,17 +3,23 @@ import { redirect } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserAccess } from '@/lib/auth';
+import { safeReturnPath, withReturnPath } from '@/lib/auth-redirect';
 
 import { GoogleLoginButton } from './_components/GoogleLoginButton';
 import { LocalLoginForm } from './_components/LocalLoginForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const next = safeReturnPath((await searchParams).next);
   const { user, isOnboarded } = await getUserAccess();
 
   if (user) {
-    redirect(isOnboarded ? '/dashboard' : '/onboarding');
+    redirect(isOnboarded ? next : withReturnPath('/onboarding', next));
   }
 
   return (
@@ -38,10 +44,10 @@ export default async function LoginPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <GoogleLoginButton />
+            <GoogleLoginButton next={next} />
             {process.env.NODE_ENV === 'development' &&
               process.env.NEXT_PUBLIC_SUPABASE_URL ===
-                'http://127.0.0.1:54321' && <LocalLoginForm />}
+                'http://127.0.0.1:54321' && <LocalLoginForm next={next} />}
             <p className="mt-5 text-center text-xs text-neutral-500">
               로그인하면 서비스 이용약관에 동의하게 됩니다.
             </p>

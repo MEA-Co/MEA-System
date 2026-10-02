@@ -9,16 +9,22 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { getUserAccess } from '@/lib/auth';
+import { safeReturnPath, withReturnPath } from '@/lib/auth-redirect';
 
 import { OnboardingForm } from './_components/OnboardingForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const next = safeReturnPath((await searchParams).next);
   const { user, isOnboarded } = await getUserAccess();
 
-  if (!user) redirect('/auth/login');
-  if (isOnboarded) redirect('/dashboard');
+  if (!user) redirect(withReturnPath('/auth/login', next));
+  if (isOnboarded) redirect(next);
 
   const googleName =
     typeof user.user_metadata?.full_name === 'string'
@@ -50,7 +56,7 @@ export default async function OnboardingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <OnboardingForm defaultName={googleName} />
+            <OnboardingForm defaultName={googleName} next={next} />
           </CardContent>
         </Card>
       </section>

@@ -157,7 +157,7 @@ export function QuestionRichTextEditor({
         ...(showHint ? { 'aria-describedby': hintId } : {}),
         class: cn(
           richTextClasses,
-          'px-3 py-2 text-sm outline-none',
+          'px-3 py-2 text-base md:text-sm outline-none',
           compact ? 'min-h-9' : 'min-h-24',
         ),
       },

@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { safeReturnPath } from '@/lib/auth-redirect';
 import {
   isOnboardingRole,
   STUDENT_PERIODS,
@@ -58,5 +59,5 @@ export async function completeOnboarding(
     };
   }
 
-  redirect('/dashboard');
+  redirect(safeReturnPath(formData.get('next')));
 }

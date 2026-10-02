@@ -1,7 +1,8 @@
 import type { User } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { withReturnPath } from '@/lib/auth-redirect';
 import {
   isProfileComplete,
   type MemberRole,
@@ -83,15 +84,17 @@ export function hasRole(
 
 export async function requireUserAccess({
   allowedRoles,
-  loginRedirectTo = '/auth/login',
-  onboardingRedirectTo = '/onboarding',
+  loginRedirectTo,
+  onboardingRedirectTo,
   unauthorizedRedirectTo = '/',
 }: RequireUserAccessOptions = {}): Promise<AuthorizedUserAccess> {
   const access = await getUserAccess();
 
-  if (!access.user) redirect(loginRedirectTo);
+  const returnPath = (await headers()).get('x-mea-return-path');
+  if (!access.user)
+    redirect(loginRedirectTo ?? withReturnPath('/auth/login', returnPath));
   if (!access.isOnboarded || !access.profile || !access.role) {
-    redirect(onboardingRedirectTo);
+    redirect(onboardingRedirectTo ?? withReturnPath('/onboarding', returnPath));
   }
   if (allowedRoles && !hasRole(access, allowedRoles)) {
     redirect(unauthorizedRedirectTo);
