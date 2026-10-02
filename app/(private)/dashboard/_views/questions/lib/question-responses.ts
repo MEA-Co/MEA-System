@@ -13,7 +13,7 @@ export type QuestionResponseSnapshot = {
   sections: QuestionnaireSection[];
   questions: {
     responseId: string;
-    versionId: string;
+    questionVersionId: string;
     definition: QuestionBlockRow;
     rows: PreviewAnswerRow[];
     activeRowIds: number[];

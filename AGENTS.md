@@ -14,6 +14,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 질문지 ID 이름 통일(2026-10-02): `20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱/API 문서는 questionnaireId 하나, DB 하위 연결은 questionnaire_id/origin_questionnaire_id, RPC는 p_questionnaire_id/p_origin_questionnaire_id. 기존 UUID 유지. private.questionnaire_owners 제거, legacy_parent_id는 보존용으로만 남고 런타임에서 사용하지 않는다. 질문 버전은 question_versions/question_version_id 및 응답 JSON questionVersionId로 유지. 과거 migration 기록 보존. 운영은 사용자 명령어 적용, 최신 순서는 docs/questions-operations.md 마지막 절.
+
+
+- 질문지 본체/버전 통합(2026-10-02): `20261002055633_merge_questionnaire_tables.sql` 로컬 적용. 물리 저장은 `questionnaires` 하나이며 기존 버전 ID를 id로 보존한다. 부모 ID는 legacy_parent_id, 생성 시각은 owner_created_at으로 보존하고 private.questionnaire_owners는 security_invoker 호환 뷰다. public.questionnaire_versions/version_number 제거. API versionId/questionnaireId 및 하위 version_id 명칭은 호환용 유지, question_versions는 별도 응답 정의로 유지. 운영은 사용자가 명령어로 적용하며 에이전트는 쓰지 않는다. 세부 적용/중단 절차는 docs/questions-operations.md 마지막 절.
+
+
+- 응답 없는 배포 취소(2026-10-02): 로컬 `20261002054322_withdraw_unanswered_distribution.sql`. 배포본 작성자는 저장 이력이 없는 경우 같은 질문지 ID로 게시/수정 중 복귀 가능하며 기존 복사 초안 생성 분기를 대체한다. 임시저장/revision/last_save_id/자유응답/답변 행/이전 답변/완료가 있으면 차단한다. 단순 열람으로 생긴 빈 배포 세션은 보존하되 origin_version_id 연결만 해제하여 재배포 때 새 구성으로 시작한다. 게시 단계 가이드 응답은 보존·판정 제외. 다른 배포본(보관 포함)에 쓰는 원본은 잠금 유지, 마지막 배포 취소 시 잠금 해제. 응답 저장과 동일한 질문지 advisory lock 아래 검사한다. 운영 미적용. SQL questionnaire_distribution_withdrawal, 서버 8개·타입·린트·보안 통과. 실제 데이터 상태 변경/브라우저 테스트 없음.
+
+
+- 실제 배포·원본 잠금(2026-10-02, 조건만 검사 정책보다 우선): 로컬 `20261002053153_locked_questionnaire_distribution.sql`. 배포 확인 창에서 질문지·원본 질문·설명 수정/삭제 불가와 다른 질문지의 공유 원본 잠금을 안내한다. 상태 RPC로 실제 배포하며 DB 트리거가 미처리 검토를 재검사하고 questions.distribution_locked_at을 설정한다. 원본/설명 잠금은 관리자에도 적용되고 재사용 질문의 재배포는 허용한다. 컨설턴트 목록과 상세에서 원본 질문·공개 설명을 열람한다. 새 배치형 배포본은 이번 단계에서 열람만 제공하고 답변 저장 경로/자동 응답 생성은 아직 연결하지 않았다. 기존 구형 배포 응답은 유지한다. 운영 미적용, 실제 질문지 배포 없음. 브라우저는 요청에 따라 로컬 테스트 컨설턴트 로그인만 확인했다. 검증/운영 절차는 docs/questions-operations.md 최신 절 참고.
+
+
 - 배포 조건 점검 단계(2026-10-02): 게시 중인 본인 질문지의 배포 Select를 활성화했다. 미처리 원본 질문 검토 요청이 있으면 거절하고, 없으면 조건 충족만 안내하며 게시 상태를 유지한다. 읽음 여부·요청 출처와 무관하고 완료 요청은 제외한다. POST distribution/PATCH status(distributed)는 서버의 checkQuestionnaireDistribution으로 검사만 하며 컨설턴트 노출·응답 생성은 하지 않는다. DB migration 없음. 검증 scripts/verify-questionnaire-distribution-check.mjs 6개, 타입·린트 통과. 이후 실제 배포 구현 시 조건 재검사와 DB 원자적 처리가 필요하다.
 
 - 검토 요청 권한 최종 정책(2026-10-02): 20261002032804_source_owner_question_reviews.sql 로컬 적용. 요청 작성 차단·새 요청 수신은 원본 questions.created_by 기준이며 질문지 제작자 기준을 대체한다. 관리자가 타인의 질문을 배치한 질문지에서는 그 관리자가 요청 가능하고 알림은 원본 제작자에게 간다. 질문 관리에도 파란 새 요청 표시를 제공한다. 기존 거절로 남은 로컬 권한 차이는 이번 정책으로 해소했다. 독립 질문 조회/참조/배치는 비관리자 본인 원본만 허용하며 게시본 공유 조회는 별도 예외다. 운영 미적용.

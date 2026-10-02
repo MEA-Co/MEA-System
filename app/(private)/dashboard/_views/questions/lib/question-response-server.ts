@@ -10,7 +10,7 @@ import { QuestionnaireHttpError } from './questionnaire/http-error';
 import 'server-only';
 
 export async function questionResponseCommand(
-  versionId: string,
+  questionnaireId: string,
   mode: 'read' | 'open' | 'save',
   input?: unknown,
 ) {
@@ -21,7 +21,7 @@ export async function questionResponseCommand(
   if (role !== 'admin' && role !== 'consultant_lead')
     throw new QuestionnaireHttpError(403, '게시본 답변 권한이 없어요.');
   const client = createClient(await cookies());
-  const args: Record<string, unknown> = { p_version_id: versionId };
+  const args: Record<string, unknown> = { p_questionnaire_id: questionnaireId };
   if (mode === 'save') {
     const parsed = z
       .object({

@@ -172,7 +172,7 @@ test('first autosave synchronizes the saved URL without refresh and retains late
   await new Promise(setImmediate);
   assert.equal(
     new URL(historyWrites[0]).searchParams.get('draft'),
-    blank.versionId,
+    blank.questionnaireId,
   );
   assert.equal(
     render(latest).dirty,
@@ -194,7 +194,6 @@ test('first autosave synchronizes the saved URL without refresh and retains late
 
 const document = () => ({
   questionnaireId: randomUUID(),
-  versionId: randomUUID(),
   title: '',
   sections: [
     {
@@ -410,15 +409,15 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
     const calls = [];
     const filters = [];
     const row = {
-      id: doc.versionId,
-      questionnaire_id: doc.questionnaireId,
+      id: doc.questionnaireId,
       title: doc.title,
       status: scenario.status,
       revision: 2,
       updated_at: '2026-09-18T00:00:00Z',
       published_at: '2026-09-18T00:00:00Z',
       distributed_at: null,
-      questionnaires: { created_by: ownerId, archived_at: null },
+      created_by: ownerId,
+      archived_at: null,
       questionnaire_review_requests: [{ count: 2 }],
     };
     const { loadQuestionnaireView } = load(
@@ -437,13 +436,14 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
             from: (table) => {
               const builder = {
                 select: () => builder,
+                in: () => builder,
                 is: (column) => {
                   filters.push([table, column]);
                   return builder;
                 },
                 eq: () => builder,
                 order: async () => ({
-                  data: table === 'questionnaire_versions' ? [row] : [],
+                  data: table === 'questionnaires' ? [row] : [],
                   error: null,
                 }),
               };
@@ -451,9 +451,18 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
             },
             rpc: async (name) => {
               calls.push(name);
+              if (name === 'read_published_question_sources')
+                return { data: [], error: null };
+              if (name === 'question_review_counts')
+                return {
+                  data: [
+                    { questionnaire_id: row.id, count: 2, unread_count: 0 },
+                  ],
+                  error: null,
+                };
               if (name === 'published_questionnaire_authors')
                 return {
-                  data: [{ versionId: row.id, name: '제작자' }],
+                  data: [{ questionnaireId: row.id, name: '제작자' }],
                   error: null,
                 };
               return {
@@ -469,7 +478,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
         },
       },
     );
-    const result = await loadQuestionnaireView(doc.versionId);
+    const result = await loadQuestionnaireView(doc.questionnaireId);
     assert.equal(!!result.initialDraft, scenario.editable);
     assert.equal(
       filters.some(
@@ -478,12 +487,9 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       ),
       false,
     );
-    assert.ok(
-      filters.some(
-        ([table, column]) =>
-          table === 'questionnaire_versions' &&
-          column === 'questionnaire_review_requests.resolved_at',
-      ),
+    assert.equal(
+      calls.includes('question_review_counts'),
+      ['admin', 'consultant_lead'].includes(scenario.visible),
     );
     assert.equal(
       result.selected.pendingReviewCount,
@@ -505,7 +511,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       loaded.sections[0].questions[0].details.length,
       scenario.details,
     );
-    row.questionnaires.archived_at = '2026-09-28T00:00:00Z';
+    row.archived_at = '2026-09-28T00:00:00Z';
     const archiveList = await loadQuestionnaireView();
     assert.equal(
       archiveList.distributed.length +
@@ -517,7 +523,7 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       archiveList.archived.length,
       scenario.visible === 'consultant' ? 0 : 1,
     );
-    await assert.rejects(loadQuestionnaireView(doc.versionId));
+    await assert.rejects(loadQuestionnaireView(doc.questionnaireId));
     if (scenario.visible === 'consultant') {
       assert.equal(result.staff, false);
       assert.equal(result.selected.isOwner, false);
@@ -526,67 +532,8 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
   }
 });
 
-test('review server actions reject consultants and incomplete descriptions before RPC', async () => {
-  for (const role of ['student', 'consultant', 'consultant_lead', 'admin']) {
-    const calls = [];
-    const { manageQuestionnaireReview } = load(
-      'app/(private)/dashboard/_views/questions/lib/questionnaire/server.ts',
-      {
-        'next/headers': { cookies: async () => ({}) },
-        '@/lib/admin': { getViewRole: async (value) => value },
-        '@/lib/auth': {
-          getUserAccess: async () => ({
-            user: { id: randomUUID() },
-            isOnboarded: true,
-            role,
-          }),
-        },
-        '@/lib/supabase/server': {
-          createClient: () => ({
-            rpc: async (...args) => {
-              calls.push(args);
-              return { error: null };
-            },
-          }),
-        },
-      },
-    );
-    const input = {
-      id: randomUUID(),
-      versionId: randomUUID(),
-      questionId: randomUUID(),
-      description: '검토해 주세요',
-    };
-    const result = await manageQuestionnaireReview(input, 'request');
-    const allowed = ['consultant_lead', 'admin'].includes(role);
-    assert.equal(!!result.error, !allowed);
-    assert.equal(calls.length, allowed ? 1 : 0);
-    assert.ok(
-      (
-        await manageQuestionnaireReview(
-          { ...input, description: ' ' },
-          'request',
-        )
-      ).error,
-    );
-    assert.equal(calls.length, allowed ? 1 : 0);
-    if (allowed) {
-      assert.equal(calls[0][1].p_question_id, input.questionId);
-      assert.equal(calls[0][1].p_title, undefined);
-      for (const patch of [
-        { questionId: undefined },
-        { description: ' ' },
-        { description: 'x'.repeat(5001) },
-      ]) {
-        assert.ok(
-          (await manageQuestionnaireReview({ ...input, ...patch }, 'request'))
-            .error,
-        );
-      }
-      assert.equal(calls.length, 1);
-    }
-  }
-});
+// Removed questionnaire-level review RPCs are covered by the current
+// question review permission regression in supabase/tests/question_review_requests.sql.
 
 test('remote snapshots update clean editors but never overwrite unsaved or uncertain saves', async () => {
   const original = document();

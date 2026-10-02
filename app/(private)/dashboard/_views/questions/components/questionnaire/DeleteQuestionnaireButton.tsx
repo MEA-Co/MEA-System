@@ -17,12 +17,12 @@ import { toast } from '@/components/ui/toast';
 import { useQuestionnaireApi } from '../../lib/questionnaire/api-client';
 
 export function DeleteQuestionnaireButton({
-  versionId,
+  questionnaireId,
   revision,
   title,
   hasDistributed,
 }: {
-  versionId: string;
+  questionnaireId: string;
   revision: number;
   title: string;
   hasDistributed: boolean;
@@ -43,7 +43,9 @@ export function DeleteQuestionnaireButton({
     });
     startTransition(async () => {
       try {
-        const result = await command(`/${versionId}`, 'DELETE', { revision });
+        const result = await command(`/${questionnaireId}`, 'DELETE', {
+          revision,
+        });
         if (result.error) {
           setError(result.error);
           toast.update(toastId, {

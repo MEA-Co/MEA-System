@@ -14,12 +14,12 @@ begin
  q:=jsonb_build_object('id',gen_random_uuid(),'title','공유 질문','prompt','내용','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','repeatable','maxRows',3,'minRows',2,'rowLabels',jsonb_build_array('첫째','둘째'),'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  q:=q||jsonb_build_object('details',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','원본 설명','text','설명 본문','visibleToConsultants',true)));
  perform public.save_question(q,0,gen_random_uuid());
- d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'versionId',gen_random_uuid(),'title','공유 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','내용','details','[]'::jsonb)))));
+ d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','공유 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','내용','details','[]'::jsonb)))));
  begin
   perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,sourceQuestionId}','null'::jsonb),0,gen_random_uuid());
   raise exception 'Legacy inline save accepted';
  exception when invalid_parameter_value then null; end;
- if exists(select 1 from public.questionnaire_versions where id=(d->>'versionId')::uuid) then raise exception 'Failed save left a partial document'; end if;
+ if exists(select 1 from public.questionnaires where id=(d->>'questionnaireId')::uuid) then raise exception 'Failed save left a partial document'; end if;
  begin
   perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,details}',q->'details'),0,gen_random_uuid());
   raise exception 'Placement explanation accepted';
@@ -27,15 +27,15 @@ begin
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
  q:=jsonb_set(q,'{prompt}','"최신 원본 내용"'::jsonb);
  perform public.save_question(q,1,gen_random_uuid());
- r:=public.read_questionnaire_draft((d->>'versionId')::uuid);
+ r:=public.read_questionnaire_draft((d->>'questionnaireId')::uuid);
  if r#>>'{sections,0,questions,0,text}'<>'최신 원본 내용' then raise exception 'Draft read stale placement body'; end if;
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'versionId')::uuid);
+  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'versionId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
 end $$;
 
 reset role;
@@ -44,7 +44,7 @@ grant all on layout_snapshots to authenticated;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare x jsonb; payload jsonb; begin
- x:=public.open_question_response_session((select (doc->>'versionId')::uuid from publish_docs));
+ x:=public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  payload:=jsonb_build_object(x#>>'{questions,0,definition,id}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','기존 답변 보존'))));
  payload:=jsonb_set(payload,array[x#>>'{questions,0,definition,id}'],(payload->(x#>>'{questions,0,definition,id}'))||jsonb_build_array(jsonb_build_object('id',2,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','두 번째 답변'))));
  x:=public.save_question_response_session((x->>'id')::uuid,payload,0,gen_random_uuid(),true,x->>'definitionToken');
@@ -55,7 +55,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; q jsonb; vid uuid; begin
- select doc into d from publish_docs; vid:=(d->>'versionId')::uuid;
+ select doc into d from publish_docs; vid:=(d->>'questionnaireId')::uuid;
  q:=jsonb_build_object('id',gen_random_uuid(),'title','새 질문','prompt','추가 질문','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','single','sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  perform public.save_question(q,0,gen_random_uuid());
  d:=jsonb_set(d,'{title}','"변경된 제목"');
@@ -68,7 +68,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; payload jsonb; vid uuid; begin
  select data into old from layout_snapshots where stage='initial';
- select (doc->>'versionId')::uuid into vid from publish_docs;
+ select (doc->>'questionnaireId')::uuid into vid from publish_docs;
  x:=public.read_question_response_session(vid);
  if x->>'title'<>'변경된 제목' or jsonb_array_length(x->'questions')<>2 or x#>>'{sections,0,title}'<>'추가 섹션' then raise exception 'Latest layout missing'; end if;
  if x->>'revision'<>old->>'revision' then raise exception 'Layout refresh changed answer revision'; end if;
@@ -85,7 +85,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; vid uuid; begin
- select doc into d from publish_docs; vid:=(d->>'versionId')::uuid;
+ select doc into d from publish_docs; vid:=(d->>'questionnaireId')::uuid;
  d:=jsonb_set(d,'{sections}',jsonb_build_array(d#>'{sections,0}'));
  perform public.save_questionnaire_draft(d,(public.read_questionnaire_draft(vid)->>'revision')::int,gen_random_uuid());
  update publish_docs set doc=d;
@@ -106,7 +106,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; vid uuid; begin
- select doc into d from publish_docs; vid:=(d->>'versionId')::uuid;
+ select doc into d from publish_docs; vid:=(d->>'questionnaireId')::uuid;
  d:=jsonb_set(d,'{sections,0,questions}',(d#>'{sections,0,questions}')||jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',(select source_id from publish_docs),'text','내용','details','[]'::jsonb)));
  perform public.save_questionnaire_draft(d,(public.read_questionnaire_draft(vid)->>'revision')::int,gen_random_uuid());
  update publish_docs set doc=d;
@@ -116,7 +116,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; begin
  select data into old from layout_snapshots where stage='initial';
- x:=public.open_question_response_session((select (doc->>'versionId')::uuid from publish_docs));
+ x:=public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  if jsonb_array_length(x->'questions')<>2 then raise exception 'Re-added question missing'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}' and q->'rows'=old#>'{questions,0,rows}') then raise exception 'Re-added answer lost'; end if;
  insert into layout_snapshots values('readded',x);
@@ -126,7 +126,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; vid uuid; begin
- select doc into d from publish_docs; vid:=(d->>'versionId')::uuid;
+ select doc into d from publish_docs; vid:=(d->>'questionnaireId')::uuid;
  d:=jsonb_set(d,'{sections,0,questions}',jsonb_build_array(d#>'{sections,0,questions,1}',d#>'{sections,0,questions,0}'));
  d:=jsonb_set(d,'{sections,0,title}','"순서 변경 섹션"');
  perform public.save_questionnaire_draft(d,(public.read_questionnaire_draft(vid)->>'revision')::int,gen_random_uuid());
@@ -149,7 +149,7 @@ insert into public.profiles(id,role,name) values('ca000000-0000-4000-8000-000000
 select set_config('request.jwt.claim.sub','ca000000-0000-4000-8000-000000000001',true);
 set local role authenticated;
 do $$ declare x jsonb; vid uuid; begin
- select (doc->>'versionId')::uuid into vid from publish_docs;
+ select (doc->>'questionnaireId')::uuid into vid from publish_docs;
  x:=public.read_published_questionnaire(vid);
  if x->>'title'<>'변경된 제목' or jsonb_array_length(x#>'{sections,0,questions}')<>2 then raise exception 'Ordinary lead saw stale layout'; end if;
  if jsonb_array_length(public.read_published_question_sources(vid))<>2 then raise exception 'Ordinary lead saw stale sources'; end if;

@@ -160,7 +160,8 @@ async function handle(request: Request, context: Context) {
     ) {
       if (
         path.length &&
-        (!z.uuid().safeParse(id).success || body.document?.versionId !== id)
+        (!z.uuid().safeParse(id).success ||
+          body.document?.questionnaireId !== id)
       )
         return json({ error: '질문지 ID가 일치하지 않아요.' }, 400);
       if (method === 'POST' && body.expectedRevision !== 0)
@@ -181,16 +182,19 @@ async function handle(request: Request, context: Context) {
       return json({ error: '잘못된 질문지 ID예요.' }, 400);
     let result: { error?: string; status?: number; mode?: string };
     if (method === 'DELETE' && path.length === 1)
-      result = await deleteQuestionnaireDraft({ ...body, versionId: id });
+      result = await deleteQuestionnaireDraft({ ...body, questionnaireId: id });
     else if (method === 'PATCH' && path.length === 2 && resource === 'status')
-      result = await changeQuestionnaireStatus({ ...body, versionId: id });
+      result = await changeQuestionnaireStatus({
+        ...body,
+        questionnaireId: id,
+      });
     else if (
       method === 'POST' &&
       path.length === 2 &&
       (resource === 'publication' || resource === 'distribution')
     )
       result = await publishQuestionnaireDraft(
-        { ...body, versionId: id },
+        { ...body, questionnaireId: id },
         resource === 'publication' ? 'publish' : 'distribute',
       );
     else if (method === 'PUT' && path.length === 2 && resource === 'read') {
@@ -199,7 +203,7 @@ async function handle(request: Request, context: Context) {
         staff
           ? 'mark_questionnaire_publication_read'
           : 'open_distributed_response',
-        { p_version_id: id },
+        { p_questionnaire_id: id },
       );
       if (error) return json({ error: '확인 상태를 저장하지 못했어요.' }, 503);
       result = {};

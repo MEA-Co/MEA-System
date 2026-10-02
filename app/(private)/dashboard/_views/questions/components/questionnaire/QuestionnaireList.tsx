@@ -188,7 +188,7 @@ export function QuestionnaireList({
                     !item.hasDistributed &&
                     !item.archivedAt && (
                       <DeleteQuestionnaireButton
-                        versionId={item.id}
+                        questionnaireId={item.id}
                         revision={item.revision}
                         hasDistributed={false}
                         title={item.title}

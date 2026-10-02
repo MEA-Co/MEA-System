@@ -31,10 +31,13 @@ async function handle(
     const { questionId } = await context.params;
     if (!z.uuid().safeParse(questionId).success)
       return json({ error: '질문 ID를 확인해 주세요.' }, 400);
-    const originVersionId = new URL(request.url).searchParams.get(
-      'originVersionId',
+    const originQuestionnaireId = new URL(request.url).searchParams.get(
+      'originQuestionnaireId',
     );
-    if (originVersionId && !z.uuid().safeParse(originVersionId).success)
+    if (
+      originQuestionnaireId &&
+      !z.uuid().safeParse(originQuestionnaireId).success
+    )
       return json({ error: '질문지 ID를 확인해 주세요.' }, 400);
     const client = createClient(await cookies());
     if (request.method !== 'GET') {
@@ -69,7 +72,7 @@ async function handle(
         const parsed = z
           .object({
             id: z.uuid(),
-            originVersionId: z.uuid().nullable().optional(),
+            originQuestionnaireId: z.uuid().nullable().optional(),
             description: z
               .string()
               .max(5000)
@@ -93,7 +96,7 @@ async function handle(
             ? await client.rpc('request_question_review', {
                 p_id: data.id,
                 p_question_id: questionId,
-                p_origin_version_id: data.originVersionId ?? null,
+                p_origin_questionnaire_id: data.originQuestionnaireId ?? null,
                 p_description: data.description,
               })
             : await client.rpc('resolve_question_review', {
@@ -124,7 +127,7 @@ async function handle(
       );
     const permission = await client.rpc('can_request_question_review', {
       qid: questionId,
-      origin_id: originVersionId,
+      origin_id: originQuestionnaireId,
     });
     if (permission.error)
       return json({ error: '검토 요청 권한을 확인하지 못했어요.' }, 503);

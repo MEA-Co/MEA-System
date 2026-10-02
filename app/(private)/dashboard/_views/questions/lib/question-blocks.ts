@@ -215,6 +215,7 @@ export type QuestionBlockClause = NonNullable<
 >['clauses'][number];
 
 export type QuestionBlockRow = {
+  distribution_locked_at?: string | null;
   id: string;
   created_by: string;
   creator_name?: string | null;

@@ -30,13 +30,13 @@ export function PublishedResponse({
         내 답변 · 다른 컨설턴트에게 가이드로 제공됩니다.
       </p>
       <QuestionResponseForm
-        versionId={document.versionId}
+        questionnaireId={document.questionnaireId}
         onEditorState={onEditorState}
       />
     </>
   ) : (
     <QuestionnairePreview
-      reviewVersionId={document.versionId}
+      reviewQuestionnaireId={document.questionnaireId}
       title={document.title}
       sections={document.sections}
       library={sources}

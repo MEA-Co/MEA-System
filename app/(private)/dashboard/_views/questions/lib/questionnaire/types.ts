@@ -38,7 +38,6 @@ export type QuestionnaireSection = {
 
 export type QuestionnaireDocument = {
   questionnaireId: string;
-  versionId: string;
   title: string;
   sections: QuestionnaireSection[];
 };
@@ -90,7 +89,7 @@ export type QuestionnaireReview = {
 };
 
 export type QuestionnaireReviewContext = {
-  versionId: string;
+  questionnaireId: string;
   isOwner: boolean;
   initialReviews: QuestionnaireReview[];
   disabled?: boolean;

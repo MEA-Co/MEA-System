@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,6 @@ export function QuestionnaireStatusSelect({
   item: QuestionnaireListItem;
 }) {
   const { command, refresh } = useQuestionnaireApi();
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
   const [change, setChange] = useState<{
@@ -57,7 +55,7 @@ export function QuestionnaireStatusSelect({
       type: 'loading',
       title:
         change.status === 'distributed'
-          ? '배포 조건을 확인하고 있어요.'
+          ? '질문지를 배포하고 있어요.'
           : '상태를 변경하고 있어요.',
       timeout: 0,
     });
@@ -77,18 +75,13 @@ export function QuestionnaireStatusSelect({
       }
       toast.update(id, {
         type: 'success',
-        title: result.distributionChecked
-          ? '미처리 검토 요청이 없어 배포 조건을 충족했어요. 게시 상태는 유지됩니다.'
-          : result.copied
-            ? '기존 배포본을 유지하고 수정용 초안을 만들었어요.'
+        title:
+          change.status === 'distributed'
+            ? '질문지를 배포했어요.'
             : '질문지 상태를 변경했어요.',
         timeout: 3000,
       });
       setChange(null);
-      if (result.copied && result.versionId)
-        router.push(
-          `/dashboard?view=questions&tab=questionnaires&draft=${result.versionId}`,
-        );
     } catch {
       // Keep the request ID for a retry after an uncertain network result.
       toast.update(id, {
@@ -110,7 +103,7 @@ export function QuestionnaireStatusSelect({
           if (
             (value === 'draft' ||
               (value === 'published' &&
-                current === 'draft' &&
+                (current === 'draft' || current === 'distributed') &&
                 !item.archivedAt) ||
               (value === 'distributed' &&
                 current === 'published' &&
@@ -141,7 +134,8 @@ export function QuestionnaireStatusSelect({
                 !item.isOwner ||
                 (value !== 'draft' &&
                   !(
-                    ((value === 'published' && current === 'draft') ||
+                    ((value === 'published' &&
+                      (current === 'draft' || current === 'distributed')) ||
                       (value === 'distributed' && current === 'published')) &&
                     !item.archivedAt
                   ))
@@ -162,20 +156,20 @@ export function QuestionnaireStatusSelect({
           <DialogHeader>
             <DialogTitle>
               {change?.status === 'distributed'
-                ? '배포 조건을 확인할까요?'
-                : change?.status === 'draft' &&
-                    change.item.status === 'distributed'
-                  ? '수정용 초안을 만들까요?'
+                ? '질문지를 배포할까요?'
+                : change?.item.status === 'distributed' &&
+                    (change.status === 'draft' || change.status === 'published')
+                  ? '배포를 취소하고 상태를 되돌릴까요?'
                   : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
             </DialogTitle>
             <DialogDescription>
               {change?.status === 'archived'
                 ? '내용과 기존 답변을 보존하고 컨설턴트 목록에서 숨깁니다. 보관 목록에서 다시 복원할 수 있어요.'
-                : change?.status === 'draft' &&
-                    change.item.status === 'distributed'
-                  ? '기존 배포본과 답변은 그대로 유지합니다. 같은 질문과 설명으로 새 초안을 만들고 편집 화면을 엽니다.'
+                : change?.item.status === 'distributed' &&
+                    (change.status === 'draft' || change.status === 'published')
+                  ? '저장된 응답이 없을 때만 되돌릴 수 있습니다. 컨설턴트 목록에서 숨겨지고 다시 수정할 수 있습니다. 다른 배포본에서 사용 중인 질문은 잠금이 유지됩니다.'
                   : change?.status === 'distributed'
-                    ? '질문지에 포함된 질문의 미처리 검토 요청을 확인합니다. 이번 단계에서는 조건만 검사하며 게시 상태를 유지합니다.'
+                    ? '배포하면 컨설턴트에게 질문지가 공개됩니다. 배포 이후에는 배포된 질문과 질문지를 수정하거나 삭제할 수 없습니다.'
                     : change?.status === 'published'
                       ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
                       : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
@@ -192,8 +186,8 @@ export function QuestionnaireStatusSelect({
             <Button disabled={pending} onClick={() => void apply()}>
               {change?.status === 'distributed'
                 ? pending
-                  ? '확인 중…'
-                  : '조건 확인'
+                  ? '배포 중…'
+                  : '배포'
                 : pending
                   ? '변경 중…'
                   : '변경'}

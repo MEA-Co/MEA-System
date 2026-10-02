@@ -22,17 +22,17 @@ type ReviewData = {
 };
 export function QuestionReviews({
   questionId,
-  versionId,
+  questionnaireId,
   disabled = false,
   allowRequest = true,
 }: {
   questionId: string;
-  versionId?: string;
+  questionnaireId?: string;
   disabled?: boolean;
   allowRequest?: boolean;
 }) {
   const { mutate: refresh } = useSWRConfig();
-  const url = `/api/question-reviews/${questionId}${versionId ? `?originVersionId=${versionId}` : ''}`;
+  const url = `/api/question-reviews/${questionId}${questionnaireId ? `?originQuestionnaireId=${questionnaireId}` : ''}`;
   const { data, error, mutate } = useSWR<ReviewData>(
     url,
     questionnaireFetcher,
@@ -42,7 +42,7 @@ export function QuestionReviews({
     <QuestionReviewsContent
       key={questionId}
       questionId={questionId}
-      versionId={versionId}
+      questionnaireId={questionnaireId}
       disabled={disabled}
       data={
         data
@@ -116,14 +116,14 @@ function ReviewReadMarker({
 }
 function QuestionReviewsContent({
   questionId,
-  versionId,
+  questionnaireId,
   disabled,
   data,
   error,
   reload,
 }: {
   questionId: string;
-  versionId?: string;
+  questionnaireId?: string;
   disabled: boolean;
   data?: ReviewData;
   error?: Error;
@@ -178,7 +178,10 @@ function QuestionReviewsContent({
         body: JSON.stringify(
           reviewId
             ? { id: reviewId }
-            : { ...request.current, originVersionId: versionId ?? null },
+            : {
+                ...request.current,
+                originQuestionnaireId: questionnaireId ?? null,
+              },
         ),
       });
       const result = await response.json();

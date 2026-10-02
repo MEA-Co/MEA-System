@@ -622,6 +622,7 @@ export function QuestionLibraryView({
   }
 
   async function save(manual = true) {
+    if (editorData.detail.data?.distribution_locked_at) return;
     if (
       !draft ||
       savingRef.current ||
@@ -831,7 +832,12 @@ export function QuestionLibraryView({
         <div className="flex flex-wrap justify-end gap-2 pr-2">
           <Button
             disabled={
-              !draft || draft.id !== requestedId || busy || conflicted || !dirty
+              !!editorData.detail.data?.distribution_locked_at ||
+              !draft ||
+              draft.id !== requestedId ||
+              busy ||
+              conflicted ||
+              !dirty
             }
             onClick={() => void save()}
           >
@@ -883,6 +889,15 @@ export function QuestionLibraryView({
           </div>
         ) : draft && draft.id === requestedId ? (
           <div className="space-y-6">
+            {editorData.detail.data?.distribution_locked_at && (
+              <p
+                role="status"
+                className="rounded-lg border bg-muted p-4 text-sm"
+              >
+                배포된 질문지에 사용된 질문입니다. 질문 내용·설명·답변 설정을
+                수정하거나 삭제할 수 없습니다.
+              </p>
+            )}
             {revision > 0 && <QuestionReviews questionId={draft.id} />}
             <Tabs.Root defaultValue="edit">
               <Tabs.List
@@ -921,6 +936,7 @@ export function QuestionLibraryView({
               </Tabs.Panel>
               <Tabs.Panel
                 value="edit"
+                inert={!!editorData.detail.data?.distribution_locked_at}
                 keepMounted
                 className="space-y-6 data-hidden:hidden"
               >

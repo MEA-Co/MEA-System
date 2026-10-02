@@ -82,8 +82,7 @@ export function useQuestionnaireApi() {
     ): Promise<{
       error?: string;
       mode?: 'deleted' | 'archived';
-      versionId?: string;
-      copied?: boolean;
+      questionnaireId?: string;
       distributionChecked?: boolean;
     }> => {
       const { response, data } = await send(path, method, body);
@@ -100,7 +99,9 @@ export function useQuestionnaireApi() {
       request: SaveQuestionnaireRequest,
     ): Promise<SaveQuestionnaireResult> => {
       const { response, data } = await send(
-        request.expectedRevision === 0 ? '' : `/${request.document.versionId}`,
+        request.expectedRevision === 0
+          ? ''
+          : `/${request.document.questionnaireId}`,
         request.expectedRevision === 0 ? 'POST' : 'PUT',
         request,
       );

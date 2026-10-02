@@ -187,7 +187,7 @@ function QuestionnairePanel({
     );
   }
   const document = data.initialDraft ?? data.publishedDocument;
-  if (id && id !== 'new' && document?.versionId !== id)
+  if (id && id !== 'new' && document?.questionnaireId !== id)
     return error ? (
       <p role="alert">{error.message}</p>
     ) : (
@@ -195,7 +195,7 @@ function QuestionnairePanel({
     );
   return (
     <QuestionnaireContent
-      key={document?.versionId ?? 'list'}
+      key={document?.questionnaireId ?? 'list'}
       data={data}
       error={error}
       onEditorState={onEditorState}
@@ -238,7 +238,7 @@ function QuestionnaireContent({
     selected.status !== 'draft' &&
     staff
       ? {
-          versionId: selected.id,
+          questionnaireId: selected.id,
           isOwner: selected.isOwner,
           initialReviews: reviews,
           disabled: !!error,
@@ -261,8 +261,12 @@ function QuestionnaireContent({
           </p>
         )}
         {((staff && selected?.status === 'published' && !selected.isOwner) ||
-          (!staff && selected?.status === 'distributed')) &&
-          selected && <PublicationReadMarker versionId={selected.id} />}
+          (!staff &&
+            selected?.status === 'distributed' &&
+            !data.publishedDocument?.sections.some((section) =>
+              section.questions.some((question) => question.sourceQuestionId),
+            ))) &&
+          selected && <PublicationReadMarker questionnaireId={selected.id} />}
         {reviewContext?.isOwner && pendingReviewCount > 0 && (
           <div
             role="status"
@@ -288,7 +292,7 @@ function QuestionnaireContent({
         )}
         {editorDraft ? (
           <QuestionnaireComposer
-            key={`editor:${editorDraft.versionId}`}
+            key={`editor:${editorDraft.questionnaireId}`}
             initialDraft={editorDraft}
             published={selected?.status === 'published'}
             onEditorState={reportEditor}

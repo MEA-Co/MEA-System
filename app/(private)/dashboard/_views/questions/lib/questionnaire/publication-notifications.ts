@@ -15,5 +15,7 @@ export async function loadUnreadQuestionnairePublications(
   );
   if (error)
     throw new Error('새 질문지 알림을 불러오지 못했어요.', { cause: error });
-  return (data ?? []).map((row: { version_id: string }) => row.version_id);
+  return (data ?? []).map(
+    (row: { questionnaire_id: string }) => row.questionnaire_id,
+  );
 }

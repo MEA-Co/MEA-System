@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
-import { randomUUID } from 'node:crypto';
+
 import ts from 'typescript';
 
 function mount({
@@ -242,7 +243,6 @@ function composer() {
   };
   const initialDraft = {
     questionnaireId: randomUUID(),
-    versionId: randomUUID(),
     title: '작성한 질문지',
     revision: 0,
     savedAt: null,
@@ -284,6 +284,9 @@ function composer() {
         },
       },
       '../../lib/questionnaire/question-placement': placements,
+      '../../lib/questionnaire/api-client': {
+        useQuestionnaireResource: () => ({ data: {}, error: null }),
+      },
       '@/components/ui/toast': { toast: { add() {} } },
       '@base-ui/react/tabs': {
         Tabs: {

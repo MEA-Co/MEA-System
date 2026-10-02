@@ -59,7 +59,7 @@ export function QuestionsView({
         </Link>
       )}
       {responseId ? (
-        <QuestionResponseForm key={responseId} versionId={responseId} />
+        <QuestionResponseForm key={responseId} questionnaireId={responseId} />
       ) : overview ? (
         <QuestionsDashboard />
       ) : questionnaire ? (

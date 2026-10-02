@@ -457,3 +457,152 @@ npx supabase db push --linked --dry-run
 `20261002032804_source_owner_question_reviews.sql`: 원본 questions.created_by 본인은 검토 요청을 작성할 수 없으며 신규 요청 알림·읽음도 원본 제작자 기준이다. 질문지 제작자 기준은 제거했다. 관리자는 타인의 질문을 배치한 본인 질문지에서 검토 요청을 작성할 수 있다. 원본 제작자는 질문 목록에서도 새 요청을 확인한다. 기존 거절로 남은 로컬 함수 차이는 해소되었다. questions/question_details RLS와 배치·참조 트리거를 검사했고 question_creator_visibility.sql 및 question_review_requests.sql(관리자 타인 원본 배치 예외 포함) 회귀가 통과했다. 운영은 변경하지 않았다.
 
 운영: `cd /Users/mealdm/Desktop/MEA/system` → `cat supabase/.temp/project-ref` → `npx supabase migration list --linked` → `npx supabase db push --linked --dry-run`. 신규 파일은 20261002032804이며 선행 20261002030732,20261002031738,20261002032203이 미적용이면 순서대로 포함된다. 예상 밖 파일은 먼저 검토한다. `npx supabase db push --linked` → `npx supabase migration list --linked` → `npx supabase db push --linked --dry-run` 대기 없음 확인 → 앱 배포 → 원본 제작자 작성 차단/타 리드 요청/원본 제작자 새 알림 확인.
+
+
+## 실제 배포와 원본 질문 잠금 (2026-10-02)
+
+로컬 `20261002053153_locked_questionnaire_distribution.sql` 적용. 조건 검사만 하던 배포 메뉴를 실제 상태 변경으로 연결했다. 작성자 확인 창에서 질문지/원본 질문/설명 잠금 및 다른 질문지의 공유 원본도 잠긴다는 점을 안내한다. 질문지 단위 잠금과 원본 행 잠금 아래 미처리 검토 요청을 검사하고 질문의 distribution_locked_at을 설정한다. 원본 질문과 설명의 변경·삭제는 DB 트리거로 막으며, 이미 잠긴 질문의 다른 질문지 배포는 가능하다. 기존 분리된 질문 버전/응답 데이터는 변경하지 않는다.
+
+컨설턴트의 배포본 전용 원본 조회를 허용하며 공개 설명만 반환한다. 관리자 컨설턴트 미리보기는 서버에서 공개 설명으로 다시 제한한다. 독립 questions RLS는 유지한다. 새 배치형 배포본은 열람 전용이며 답변 저장과 자동 응답 생성은 연결하지 않았다. 기존 구형 배포본의 답변 저장은 유지한다.
+
+검증: questionnaire_locked_distribution.sql(다른 질문지의 미처리·읽음 요청 차단, 완료 후 배포, 실패 원자성, 재시도, 공유 질문 재배포, 원본·설명·배포본 잠금, 컨설턴트 공개 설명 조회/비공개 차단/독립 질문 차단), question_review_requests.sql, distributed_response_path.sql. 검토 회귀는 기존 로컬 요청 개수의 영향을 받지 않도록 테스트 질문지 ID에 한정했다. 서버 테스트 7개, 타입·변경 파일 린트·보안 advisor 통과. 사용자 지시에 따라 브라우저에서는 로컬 테스트 컨설턴트 로그인만 확인했으며 실제 질문지를 배포하지 않았다. SQL fixture는 전부 롤백했다.
+
+운영에는 적용하지 않았다. 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+연결 대상이 epwlcallocdjkmgdmtlv인지 확인한다. 선행 이력 적용 완료 기준 신규 예상 파일은 `20261002053153_locked_questionnaire_distribution.sql`이다. 이전 검토 요청 migration이 미적용이면 함께 표시될 수 있다. 예상과 다른 migration이 나오면 적용 전에 이력과 파일을 검토한다. 확인 후:
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음 재확인 → 앱 배포 → 배포 안내/미처리 차단/컨설턴트 열람/원본 편집 차단 확인 순서다. 실제 배포할 질문지만 확인 후 배포하며 검증 목적으로 운영 질문을 배포하지 않는다.
+
+
+## 응답 없는 배포 취소 (2026-10-02)
+
+로컬 `20261002054322_withdraw_unanswered_distribution.sql` 적용. 작성자가 같은 질문지 ID로 distributed → published/draft를 요청할 수 있다. 기존 distributed → draft의 복사 생성은 제거했다. 질문지 revision을 증가시키고 distributed_at을 비우며, draft 복귀는 published_at도 비운다. 기존 상태 변경 요청 영수증으로 재시도·충돌 보호를 유지한다.
+
+응답 저장 RPC와 같은 질문지 advisory lock, 버전 행 잠금, 원본·세션 행 잠금 아래 배포 단계의 저장 이력을 검사한다. revision>0/last_save_id/완료/자유응답/답변 본문·행·이전 답변 중 하나라도 있으면 양쪽 복귀를 거절한다. 임시저장도 보호한다. 단순 열람으로 만들어진 빈 세션은 데이터 삭제 없이 origin_version_id만 해제하여 재배포 때 이전 구성을 재사용하지 않는다. 게시 단계 가이드 응답은 그대로 보존하고 배포 응답 판정에서 제외한다.
+
+복귀한 질문지의 원본 중 다른 distributed 버전에서 쓰지 않는 질문만 distribution_locked_at을 비운다. 보관된 다른 배포본도 잠금 유지 대상으로 본다. 원본 잠금 트리거는 잠금 해제만 허용하며, 질문 내용 변경과 해제를 한 번에 수행하거나 다른 배포본이 남은 상태의 해제는 거절한다. 질문지 잠금 트리거도 응답 없는 정확한 상태 복귀만 허용한다.
+
+검증: `supabase/tests/questionnaire_distribution_withdrawal.sql`에서 게시/수정 중 복귀, 같은 ID 유지, 재시도, 타인 차단, 빈 세션 연결 해제와 보존, 게시 가이드 보존, 공유 잠금 유지/최종 해제, 재편집/재배포, 저장 이력·본문·자유응답·완료 차단과 실패 원자성, 컨설턴트 노출 제거 확인. 서버 테스트 8개·타입·린트·보안 advisor 통과. SQL은 롤백했고 실제 질문지는 변경하지 않았다. 브라우저는 로그인 상태만 유지했다.
+
+운영 미적용. 적용 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대상이 epwlcallocdjkmgdmtlv인지 확인한다. 이전 배포 migration까지 적용했다면 예상 신규 파일은 `20261002054322_withdraw_unanswered_distribution.sql`이다. 이전 변경도 미적용이면 `20261002053153_locked_questionnaire_distribution.sql`이 먼저 포함된다. 예상 밖 migration은 적용 전에 이력과 변경 내용을 검토한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대기 없음 재확인 → 앱 배포 → 사용자가 실제로 되돌릴 질문지에서 상태 복귀/컨설턴트 목록 해제/질문 잠금 상태 확인 순서다. 운영 질문지를 테스트 목적으로 배포하거나 답변을 생성하지 않는다.
+
+## 질문지 본체·버전 통합 (2026-10-02, 최신 적용 절차)
+
+로컬 `20261002055633_merge_questionnaire_tables.sql` 적용 완료. 기존 질문지 3개와 대응 ID·메타데이터는 migration 안에서 전체 필드 비교 후 보존했다. `questionnaires` 한 테이블을 사용하고 `questionnaire_versions`는 제거한다. 응답용 `question_versions`는 유지한다. 상세 계약은 `questionnaire-storage-design.md` 첫 절 참고.
+
+검증: SQL 회귀 9개(table_merge, locked_distribution, distribution_withdrawal, question_review_requests, distributed_response_path, published_live_layout, question_responses, question_response_conditions, question_response_types), 서버/저장/사용처 테스트 24개, 타입/린트, 앱 프로덕션 빌드, 보안 advisor 통과. DB 함수 lint에는 기존 형변환·미사용 변수·불변성 경고가 남으며 이를 경고 없음으로 간주하지 않는다. 구형 질문지 검토 RPC 테스트는 폐기된 API를 호출하던 부분을 제거하고 현재 검토 SQL 회귀로 확인한다. 브라우저 실사용 검증은 수행하지 않았다. 로컬 적용 전 전체 DB 백업은 `/tmp/system-before-questionnaire-merge.dump`에 있으며 임시 경로이므로 영구 백업으로 간주하지 않는다.
+
+운영에는 읽기 전용 확인과 dry-run만 수행했다. 확인 시 운영은 부모 3개/버전 3개, 다중 버전 0개, 마지막 이력 20261002032804였다. 운영 적용은 사용자가 직접 수행한다.
+
+1. **배포 준비와 짧은 점검 시간 확보.** 변경된 앱을 빌드 가능한 상태로 준비하고, 운영 쓰기/접속을 잠시 중단한다. 이전 앱은 제거되는 테이블을 조회하므로 DB 적용과 새 앱 배포 사이를 정상 서비스 시간으로 두지 않는다. 로컬 `.env`를 운영 설정에 복사하지 않는다.
+2. **연결 대상·이력·예정 파일 확인.**
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대상은 `epwlcallocdjkmgdmtlv`여야 한다. 확인 당시 예상 신규 파일은 아래 3개이며 이미 적용한 파일은 목록에서 빠질 수 있다. 이외 파일이나 원격 이력 불일치가 나오면 적용 전에 검토한다. `--include-all`, `migration repair`, 원격 reset으로 우회하지 않는다.
+
+- `20261002053153_locked_questionnaire_distribution.sql`
+- `20261002054322_withdraw_unanswered_distribution.sql`
+- `20261002055633_merge_questionnaire_tables.sql`
+
+3. **복구 가능한 운영 백업 확인.** Supabase 운영 백업/복원 지점을 확보하고 다음 보조 덤프도 저장한다. `/tmp` 파일은 완료 후 접근 제한된 영구 백업 위치로 옮긴다. 덤프에는 개인정보가 포함되므로 Git에 넣지 않는다. 이 두 덤프만으로 인증/Storage를 포함한 전체 서비스 복구를 대체할 수는 없다.
+
+```bash
+npx supabase db dump --linked --file /tmp/mea-before-questionnaire-merge-schema.sql
+npx supabase db dump --linked --data-only --use-copy --file /tmp/mea-before-questionnaire-merge-data.sql
+```
+
+4. **확인한 migration 적용 후 대기 없음 확인.**
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+마지막 명령에서 적용 예정 없음이어야 한다. 통합은 질문지별 버전 1개/번호 1을 검사하고, 전체 부모·버전 필드 보존 비교를 통과해야 완료된다. 통합 파일이 실패하면 해당 파일은 롤백되지만 먼저 적용된 두 파일은 남을 수 있으므로 이력을 다시 확인한다. 예상치 못한 의존성을 CASCADE 삭제하거나 다중 버전을 임의 삭제하지 않는다.
+
+5. **새 앱 배포 후 기능 확인.** 기존 운영 배포 방식으로 이번 코드가 포함된 앱을 배포하고 질문지 목록/기존 질문지 열기, 제작자 편집 및 저장, 질문 관리의 사용 질문지 표시, 컨설턴트 공개 범위를 확인한다. 검토 미처리 배포 거절·배포 잠금·응답 없는 복귀·응답 있는 복귀 차단은 로컬 SQL에서 검증했다. 운영에는 테스트 목적의 배포나 가짜 응답을 만들지 않는다. 점검이 끝나면 서비스를 재개한다.
+
+실패 시 쓰기를 중단한 상태로 원인을 확인한다. 새 스키마에 쓰기가 발생한 뒤 예전 스키마 덤프만 덮어쓰면 신규 데이터를 잃을 수 있다. 앱만 예전 코드로 되돌리는 것도 이전 테이블이 없으므로 복구가 아니다. 백업 복원은 DB·앱을 같은 시점으로 복원하는 별도 작업으로 진행한다.
+
+## 질문지 버전 명칭 제거 — DB·API·앱 통일 (2026-10-02)
+
+로컬 `20261002061031_canonical_questionnaire_identifiers.sql` 적용 완료. 질문지 문서는 questionnaireId 하나만 사용하고 RPC 인자는 p_questionnaire_id, 배치/섹션/읽음 연결은 questionnaire_id, 검토/응답 연결은 origin_questionnaire_id다. 기존 UUID·응답·권한은 유지한다. 내부 부모 호환 뷰를 제거하고 원본 부모 ID는 추적용 열로만 보존한다. 상태 변경 재시도 영수증도 새 응답 키로 변환한다. 질문 응답 정의는 questionVersionId로 구분하며 question_versions 저장 구조는 유지한다.
+
+검증: 최신 SQL 회귀 9개와 앱/API/저장/배치/사용처 테스트 49개, 타입 검사·변경 코드 린트·앱 프로덕션 빌드 통과. 보안 advisor 오류 없음. 테스트 fixture는 롤백하며 실제 질문지 3개를 보존했다. 이전에 폐기된 검토 경로와 변경된 훅을 가리키던 테스트 모의 객체도 현재 API에 맞췄다. 과거 스키마 전용 SQL 테스트·migration은 역사적 검증 기록으로 유지한다. 로컬 적용 전 백업은 `/tmp/system-before-questionnaire-names.dump`이며 영구 백업으로 보관하지 않는다. 브라우저 실사용 테스트는 하지 않았다.
+
+운영은 사용자가 명령어로 적용한다. 에이전트는 dry-run만 확인했다. 순서:
+
+1. 새 앱 배포 준비 → 진행 중인 입력 저장 → 짧은 점검 시간 확보. 이전 JS와 새 RPC 인자 이름은 호환되지 않으므로 이용을 중단한 상태에서 이어서 적용한다.
+2. 연결 대상과 이력 확인:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대상은 `epwlcallocdjkmgdmtlv`. 확인 시 예상 목록은 다음 4개다. 이미 적용한 파일은 제외되며, 이외 파일 또는 이력 차이가 나오면 적용 전에 검토한다.
+
+```text
+20261002053153_locked_questionnaire_distribution.sql
+20261002054322_withdraw_unanswered_distribution.sql
+20261002055633_merge_questionnaire_tables.sql
+20261002061031_canonical_questionnaire_identifiers.sql
+```
+
+3. 운영 복원 지점 확인 후 보조 덤프 저장. 민감 데이터이므로 Git에 넣지 말고 접근 제한된 백업 위치에 보관한다. 아래 파일만으로 전체 서비스 복구를 대체하지 않는다.
+
+```bash
+npx supabase db dump --linked --file /tmp/mea-before-id-cleanup-schema.sql
+npx supabase db dump --linked --data-only --use-copy --file /tmp/mea-before-id-cleanup-data.sql
+```
+
+4. 적용 후 대기 없음 재확인:
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+5. 이번 코드의 앱을 기존 운영 방식으로 배포 → 기존 브라우저 탭 새로고침 → 목록/기존 질문지/저장/검토/컨설턴트 공개 범위 확인 → 서비스 재개. 기존 질문지 URL은 그대로 유지된다. 운영 테스트 목적으로 질문지를 배포하거나 답변을 만들지 않는다.
+
+중간 실패 시 해당 migration은 롤백되지만 앞서 적용된 파일은 남을 수 있으므로 이력을 확인한다. 앱만 이전 버전으로 되돌리지 않는다. 새 쓰기가 발생한 뒤 과거 백업을 덮어쓰지 말고 복구 범위를 먼저 확인한다.

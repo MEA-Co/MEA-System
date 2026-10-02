@@ -2,14 +2,14 @@ import type { QuestionnaireReviewContext } from '../../lib/questionnaire/types';
 import { QuestionReviews } from '../question/QuestionReviews';
 export function QuestionnaireReviews({
   questionId,
-  versionId,
+  questionnaireId,
   disabled,
   canRequest,
 }: QuestionnaireReviewContext & { questionId?: string }) {
   return questionId ? (
     <QuestionReviews
       questionId={questionId}
-      versionId={versionId}
+      questionnaireId={questionnaireId}
       disabled={disabled}
       allowRequest={canRequest}
     />

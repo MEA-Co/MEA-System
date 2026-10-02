@@ -114,7 +114,6 @@ export function QuestionnaireComposer({
   const saveState = useQuestionnaireSave(
     {
       questionnaireId: initialDraft.questionnaireId,
-      versionId: initialDraft.versionId,
       title,
       sections,
     },
@@ -352,12 +351,14 @@ export function QuestionnaireComposer({
           <Tabs.Panel value="preview" className="rounded-2xl border">
             {published && guideAccess?.canWrite ? (
               <QuestionResponseForm
-                versionId={initialDraft.versionId}
+                questionnaireId={initialDraft.questionnaireId}
                 onEditorState={reportResponse}
               />
             ) : (
               <QuestionnairePreview
-                reviewVersionId={published ? initialDraft.versionId : undefined}
+                reviewQuestionnaireId={
+                  published ? initialDraft.questionnaireId : undefined
+                }
                 title={title}
                 sections={sections}
                 library={questions}

@@ -119,7 +119,6 @@ test('schema keeps placement source identity and reads legacy nullable source me
   const s = section(a);
   const doc = {
     questionnaireId: randomUUID(),
-    versionId: randomUUID(),
     title: '질문지',
     sections: [s],
   };

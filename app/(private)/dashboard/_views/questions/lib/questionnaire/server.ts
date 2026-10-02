@@ -48,12 +48,15 @@ export async function deleteQuestionnaireDraft(
     return { status: 403, error: '질문지를 삭제할 권한이 없어요.' };
   }
   const parsed = z
-    .object({ versionId: z.uuid(), revision: z.number().int().nonnegative() })
+    .object({
+      questionnaireId: z.uuid(),
+      revision: z.number().int().nonnegative(),
+    })
     .safeParse(input);
   if (!parsed.success) return { error: '삭제할 질문지를 확인해 주세요.' };
   const client = createClient(await cookies());
   const { data, error } = await client.rpc('delete_questionnaire', {
-    p_version_id: parsed.data.versionId,
+    p_questionnaire_id: parsed.data.questionnaireId,
     p_expected_revision: parsed.data.revision,
   });
   if (error?.code === '40001')
@@ -90,23 +93,23 @@ export async function loadQuestionnaireView(
   const staff = viewRole === 'admin' || viewRole === 'consultant_lead';
   const client = createClient(await cookies());
   const { data, error } = await client
-    .from('questionnaire_versions')
+    .from('questionnaires')
     .select(
-      'id, questionnaire_id, title, status, published_at, distributed_at, revision, updated_at, questionnaires!inner(archived_at, created_by)',
+      'id, title, status, published_at, distributed_at, revision, updated_at, archived_at, created_by',
     )
     .order('updated_at', { ascending: false });
   if (error)
     throw new Error('질문지 목록을 불러오지 못했어요.', { cause: error });
   const rows = (data ?? []) as unknown as Array<{
     id: string;
-    questionnaire_id: string;
     title: string;
     status: QuestionnaireListItem['status'];
     published_at: string | null;
     distributed_at: string | null;
     revision: number;
     updated_at: string;
-    questionnaires: { archived_at: string | null; created_by: string };
+    archived_at: string | null;
+    created_by: string;
   }>;
   const reviewCounts = new Map<string, number>();
   const unreadReviewCounts = new Map<string, number>();
@@ -117,12 +120,12 @@ export async function loadQuestionnaireView(
         cause: counts.error,
       });
     for (const item of (counts.data ?? []) as {
-      version_id: string;
+      questionnaire_id: string;
       count: number;
       unread_count: number;
     }[]) {
-      reviewCounts.set(item.version_id, item.count);
-      unreadReviewCounts.set(item.version_id, item.unread_count);
+      reviewCounts.set(item.questionnaire_id, item.count);
+      unreadReviewCounts.set(item.questionnaire_id, item.unread_count);
     }
   }
   const authors = new Map<string, string>();
@@ -133,57 +136,49 @@ export async function loadQuestionnaireView(
         cause: result.error,
       });
     for (const author of (result.data ?? []) as {
-      versionId: string;
+      questionnaireId: string;
       name: string;
     }[])
-      authors.set(author.versionId, author.name);
+      authors.set(author.questionnaireId, author.name);
   }
-  const distributedIds = new Set(
-    rows
-      .filter((item) => item.status === 'distributed')
-      .map((item) => item.questionnaire_id),
-  );
-  const versions: QuestionnaireListItem[] = rows
+  const questionnaires: QuestionnaireListItem[] = rows
     .filter((item) =>
       staff
-        ? item.status !== 'draft' ||
-          item.questionnaires.created_by === access.user.id
-        : item.status === 'distributed' && !item.questionnaires.archived_at,
+        ? item.status !== 'draft' || item.created_by === access.user.id
+        : item.status === 'distributed' && !item.archived_at,
     )
     .map((item) => ({
       id: item.id,
       title: item.title,
       creatorName: authors.get(item.id) ?? null,
       status: item.status,
-      archivedAt: item.questionnaires.archived_at,
+      archivedAt: item.archived_at,
       publishedAt: item.published_at,
       distributedAt: item.distributed_at,
       updatedAt: item.updated_at,
       revision: item.revision,
-      hasDistributed: distributedIds.has(item.questionnaire_id),
-      isOwner: staff && item.questionnaires.created_by === access.user.id,
+      hasDistributed: item.status === 'distributed',
+      isOwner: staff && item.created_by === access.user.id,
       unreadReviewCount: staff ? (unreadReviewCounts.get(item.id) ?? 0) : 0,
       pendingReviewCount:
-        staff && item.questionnaires.created_by === access.user.id
+        staff && item.created_by === access.user.id
           ? (reviewCounts.get(item.id) ?? 0)
           : 0,
       canDelete:
-        staff &&
-        (viewRole === 'admin' ||
-          item.questionnaires.created_by === access.user.id),
+        staff && (viewRole === 'admin' || item.created_by === access.user.id),
     }));
   const result = {
     publishedSources: [] as QuestionBlockRow[],
-    drafts: versions.filter(
+    drafts: questionnaires.filter(
       (item) => !item.archivedAt && item.status === 'draft',
     ),
-    published: versions.filter(
+    published: questionnaires.filter(
       (item) => !item.archivedAt && item.status === 'published',
     ),
-    distributed: versions.filter(
+    distributed: questionnaires.filter(
       (item) => !item.archivedAt && item.status === 'distributed',
     ),
-    archived: versions.filter((item) => !!item.archivedAt),
+    archived: questionnaires.filter((item) => !!item.archivedAt),
     staff,
     selected: null as QuestionnaireListItem | null,
     reviews: [] as QuestionnaireReview[],
@@ -196,7 +191,6 @@ export async function loadQuestionnaireView(
       throw new QuestionnaireHttpError(403, '질문지를 작성할 권한이 없어요.');
     result.initialDraft = {
       questionnaireId: randomUUID(),
-      versionId: randomUUID(),
       title: '',
       revision: 0,
       savedAt: null,
@@ -210,7 +204,7 @@ export async function loadQuestionnaireView(
     };
     return result;
   }
-  const selected = versions.find((item) => item.id === requestedId);
+  const selected = questionnaires.find((item) => item.id === requestedId);
   if (!z.uuid().safeParse(requestedId).success || !selected)
     throw new QuestionnaireHttpError(
       404,
@@ -224,7 +218,7 @@ export async function loadQuestionnaireView(
   const editable = selected.isOwner && selected.status !== 'distributed';
   const documentResult = await client.rpc(
     editable ? 'read_questionnaire_draft' : 'read_published_questionnaire',
-    { p_version_id: requestedId },
+    { p_questionnaire_id: requestedId },
   );
   if (documentResult.error || !documentResult.data)
     throw new Error('질문지를 불러오지 못했어요.', {
@@ -243,20 +237,26 @@ export async function loadQuestionnaireView(
       }),
     );
   if (
-    staff &&
-    selected.status === 'published' &&
+    (selected.status === 'distributed' ||
+      (staff && selected.status === 'published')) &&
     document.sections.some((section) =>
       section.questions.some((question) => question.sourceQuestionId),
     )
   ) {
     const sources = await client.rpc('read_published_question_sources', {
-      p_version_id: requestedId,
+      p_questionnaire_id: requestedId,
     });
     if (sources.error)
       throw new Error('게시된 질문지의 질문을 불러오지 못했어요.', {
         cause: sources.error,
       });
     result.publishedSources = (sources.data ?? []) as QuestionBlockRow[];
+    if (!staff)
+      result.publishedSources.forEach((source) => {
+        source.details = source.details?.filter(
+          (detail) => detail.visibleToConsultants,
+        );
+      });
   }
   result.selected = selected;
   if (editable) result.initialDraft = document;
@@ -403,30 +403,32 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
     return { status: 403, error: '배포 조건을 확인할 권한이 없어요.' };
   const parsed = z
     .object({
-      versionId: z.uuid(),
+      questionnaireId: z.uuid(),
       revision: z.number().int().positive(),
     })
     .safeParse(input);
   if (!parsed.success)
     return { status: 400, error: '확인할 질문지를 선택해 주세요.' };
   const client = createClient(await cookies());
-  const version = await client
-    .from('questionnaire_versions')
-    .select('revision, status, questionnaires!inner(created_by, archived_at)')
-    .eq('id', parsed.data.versionId)
+  const questionnaire = await client
+    .from('questionnaires')
+    .select('revision, status, created_by, archived_at')
+    .eq('id', parsed.data.questionnaireId)
     .maybeSingle();
-  if (version.error)
+  if (questionnaire.error)
     return {
       status: 503,
       error: '질문지 상태를 확인하지 못했어요. 다시 시도해 주세요.',
     };
-  if (!version.data) return { status: 404, error: '질문지를 찾을 수 없어요.' };
-  const row = version.data as unknown as {
+  if (!questionnaire.data)
+    return { status: 404, error: '질문지를 찾을 수 없어요.' };
+  const row = questionnaire.data as unknown as {
     revision: number;
     status: string;
-    questionnaires: { created_by: string; archived_at: string | null };
+    created_by: string;
+    archived_at: string | null;
   };
-  if (row.questionnaires.created_by !== access.user.id)
+  if (row.created_by !== access.user.id)
     return {
       status: 403,
       error: '질문지 작성자만 배포 조건을 확인할 수 있어요.',
@@ -436,7 +438,7 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
       status: 409,
       error: '질문지가 변경됐어요. 목록을 새로고침한 뒤 다시 확인해 주세요.',
     };
-  if (row.status !== 'published' || row.questionnaires.archived_at !== null)
+  if (row.status !== 'published' || row.archived_at !== null)
     return {
       status: 409,
       error: '게시 중인 질문지만 배포 조건을 확인할 수 있어요.',
@@ -446,7 +448,7 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
   const checked = z
     .array(
       z.object({
-        version_id: z.uuid(),
+        questionnaire_id: z.uuid(),
         count: z.number().int().nonnegative(),
       }),
     )
@@ -457,8 +459,9 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
       error: '검토 요청을 확인하지 못했어요. 다시 시도해 주세요.',
     };
   const remaining =
-    checked.data.find((entry) => entry.version_id === parsed.data.versionId)
-      ?.count ?? 0;
+    checked.data.find(
+      (entry) => entry.questionnaire_id === parsed.data.questionnaireId,
+    )?.count ?? 0;
   if (remaining > 0)
     return {
       status: 409,
@@ -471,7 +474,10 @@ export async function publishQuestionnaireDraft(
   input: unknown,
   mode: 'publish' | 'distribute' = 'publish',
 ): Promise<{ error?: string; status?: number; distributionChecked?: boolean }> {
-  if (mode === 'distribute') return checkQuestionnaireDistribution(input);
+  if (mode === 'distribute') {
+    const check = await checkQuestionnaireDistribution(input);
+    if (check.error) return check;
+  }
   const label = mode === 'publish' ? '게시' : '배포';
   const access = await getUserAccess();
   if (
@@ -482,7 +488,10 @@ export async function publishQuestionnaireDraft(
     return { status: 403, error: `질문지를 ${label}할 권한이 없어요.` };
   }
   const parsed = z
-    .object({ versionId: z.uuid(), revision: z.number().int().positive() })
+    .object({
+      questionnaireId: z.uuid(),
+      revision: z.number().int().positive(),
+    })
     .safeParse(input);
   if (!parsed.success)
     return { error: `질문지를 확인한 뒤 ${label}해 주세요.` };
@@ -490,7 +499,7 @@ export async function publishQuestionnaireDraft(
   const { error } = await client.rpc(
     mode === 'publish' ? 'publish_questionnaire' : 'distribute_questionnaire',
     {
-      p_version_id: parsed.data.versionId,
+      p_questionnaire_id: parsed.data.questionnaireId,
       p_expected_revision: parsed.data.revision,
     },
   );
@@ -503,6 +512,12 @@ export async function publishQuestionnaireDraft(
     return {
       status: 403,
       error: '질문지를 처음 만든 사람만 게시하거나 배포할 수 있어요.',
+    };
+  if (error?.message?.includes('Unresolved question reviews'))
+    return {
+      status: 409,
+      error:
+        '미처리 검토 요청이 남아 있어 배포할 수 없어요. 모두 처리한 뒤 다시 시도해 주세요.',
     };
   if (error?.message?.includes('Question placement responses'))
     return {
@@ -536,8 +551,7 @@ export async function publishQuestionnaireDraft(
 export async function changeQuestionnaireStatus(input: unknown): Promise<{
   error?: string;
   status?: number;
-  versionId?: string;
-  copied?: boolean;
+  questionnaireId?: string;
   distributionChecked?: boolean;
 }> {
   const access = await getUserAccess();
@@ -549,7 +563,7 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
     return { status: 403, error: '질문지 상태를 변경할 권한이 없어요.' };
   const parsed = z
     .object({
-      versionId: z.uuid(),
+      questionnaireId: z.uuid(),
       revision: z.number().int().positive(),
       expectedStatus: z.enum(['draft', 'published', 'distributed']),
       archivedAt: z.string().nullable(),
@@ -560,11 +574,11 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
   if (!parsed.success)
     return { status: 400, error: '변경할 상태를 확인해 주세요.' };
   const data = parsed.data;
-  if (data.status === 'distributed')
-    return checkQuestionnaireDistribution(data);
+  // Existing request receipts make actual distribution retries idempotent.
+  // The database validates pending reviews in the same transaction as locking.
   const client = createClient(await cookies());
   const result = await client.rpc('change_questionnaire_status', {
-    p_version_id: data.versionId,
+    p_questionnaire_id: data.questionnaireId,
     p_expected_revision: data.revision,
     p_expected_status: data.expectedStatus,
     p_expected_archived_at: data.archivedAt,
@@ -573,6 +587,18 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
   });
   if (result.error) {
     const { code, message } = result.error;
+    if (message?.includes('Saved responses prevent distribution withdrawal'))
+      return {
+        status: 409,
+        error:
+          '저장된 응답이 있어 되돌릴 수 없어요. 작성 중인 답변도 보호됩니다.',
+      };
+    if (message?.includes('Unresolved question reviews'))
+      return {
+        status: 409,
+        error:
+          '미처리 검토 요청이 남아 있어 배포할 수 없어요. 모두 처리한 뒤 다시 시도해 주세요.',
+      };
     if (message?.includes('Question placement responses'))
       return {
         status: 409,
@@ -600,7 +626,7 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
       return {
         status: 409,
         error:
-          '현재 상태에서 변경할 수 없어요. 배포본을 수정하려면 수정 중을 선택해 초안을 만드세요.',
+          '현재 상태에서 변경할 수 없어요. 저장된 응답이 없는 배포본만 게시나 수정 중으로 되돌릴 수 있어요.',
       };
     return {
       status: mutationStatus(code),

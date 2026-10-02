@@ -33,7 +33,9 @@ function route({
     'deleteQuestionnaireDraft',
     'publishQuestionnaireDraft',
     'changeQuestionnaireStatus',
-    'manageQuestionnaireReview',
+    'questionResponseCommand',
+    'listMyPublishedResponses',
+    'loadGuideAnswers',
   ]) {
     functions[name] = async (...args) => {
       calls.push([name, ...args]);
@@ -45,6 +47,8 @@ function route({
     'next/headers': { cookies: async () => ({}) },
     [`${root}http-error`]: { QuestionnaireHttpError: HttpError },
     [`${root}server`]: functions,
+    '@/app/(private)/dashboard/_views/questions/lib/question-response-server':
+      functions,
     [`${root}answers-server`]: functions,
     [`${root}publication-notifications`]: {
       loadUnreadQuestionnairePublications: async (distributed) => [
@@ -159,7 +163,7 @@ test('creation/update keep stable identities and report revision conflicts as HT
   assert.equal(
     (
       await client.request('POST', [], {
-        document: { versionId: id },
+        document: { questionnaireId: id },
         expectedRevision: 0,
       })
     ).status,
@@ -168,7 +172,7 @@ test('creation/update keep stable identities and report revision conflicts as HT
   assert.equal(
     (
       await client.request('PUT', [id], {
-        document: { versionId: randomUUID() },
+        document: { questionnaireId: randomUUID() },
         expectedRevision: 1,
       })
     ).status,
@@ -187,7 +191,7 @@ test('creation/update keep stable identities and report revision conflicts as HT
   assert.equal(
     (
       await conflict.request('PUT', [id], {
-        document: { versionId: id },
+        document: { questionnaireId: id },
         expectedRevision: 1,
       })
     ).status,
@@ -209,16 +213,14 @@ test('every workflow command uses its REST resource and deletion/errors are not 
   }
   assert.equal(client.calls[0][2], 'publish');
   assert.equal(client.calls[1][2], 'distribute');
-  await client.request('POST', [id, 'reviews'], {
-    id: reviewId,
-    questionId: id,
-    description: '설명',
-  });
-  await client.request('PATCH', [id, 'reviews', reviewId], { resolved: true });
-  assert.equal(client.calls[2][2], 'request');
-  assert.equal(client.calls[2][1].questionId, id);
-  assert.equal(client.calls[2][1].title, undefined);
-  assert.equal(client.calls[3][2], 'resolve');
+  assert.equal(
+    (await client.request('POST', [id, 'reviews'], { id: reviewId })).status,
+    404,
+  );
+  assert.equal(
+    (await client.request('PATCH', [id, 'reviews', reviewId], {})).status,
+    404,
+  );
   assert.equal((await client.request('PUT', [id, 'read'], {})).status, 200);
   const removed = await client.request('DELETE', [id], { revision: 3 });
   assert.equal(removed.headers.get('cache-control'), 'private, no-store');
@@ -294,14 +296,14 @@ test('status changes use the URL identity and deny consultant/cross-origin mutat
   assert.equal(
     (
       await client.request('PATCH', [id, 'status'], {
-        versionId: randomUUID(),
+        questionnaireId: randomUUID(),
         status: 'archived',
       })
     ).status,
     200,
   );
   assert.equal(client.calls[0][0], 'changeQuestionnaireStatus');
-  assert.equal(client.calls[0][1].versionId, id);
+  assert.equal(client.calls[0][1].questionnaireId, id);
   assert.equal(
     (await route({ role: 'consultant' }).request('PATCH', [id, 'status'], {}))
       .status,

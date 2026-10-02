@@ -10,13 +10,13 @@ export type QuestionnaireUsage = {
 
 type Placement = {
   source_question_id: string;
-  version: {
+  questionnaire: {
     id: string;
-    questionnaire_id: string;
     title: string;
     status: 'draft' | 'published' | 'distributed';
     updated_at: string;
-    questionnaire: { created_by: string; archived_at: string | null };
+    created_by: string;
+    archived_at: string | null;
   };
 };
 
@@ -34,7 +34,7 @@ export async function withQuestionnaireUsage(
       const result = await client
         .from('questionnaire_questions')
         .select(
-          'source_question_id, version:questionnaire_versions!questionnaire_questions_version_id_fkey!inner(id,questionnaire_id,title,status,updated_at,questionnaire:questionnaires!inner(created_by,archived_at))',
+          'source_question_id, questionnaire:questionnaires!questionnaire_questions_questionnaire_id_fkey!inner(id,title,status,updated_at,created_by,archived_at)',
         )
         .in(
           'source_question_id',
@@ -49,26 +49,24 @@ export async function withQuestionnaireUsage(
     }
     const usages = new Map<string, Map<string, QuestionnaireUsage>>();
     placements.sort((a, b) =>
-      b.version.updated_at.localeCompare(a.version.updated_at),
+      b.questionnaire.updated_at.localeCompare(a.questionnaire.updated_at),
     );
     for (const placement of placements) {
-      const version = placement.version;
+      const questionnaire = placement.questionnaire;
       if (
         ownOnly &&
-        version.status === 'draft' &&
-        version.questionnaire.created_by !== userId
+        questionnaire.status === 'draft' &&
+        questionnaire.created_by !== userId
       )
         continue;
       const byQuestionnaire =
         usages.get(placement.source_question_id) ??
         new Map<string, QuestionnaireUsage>();
-      if (!byQuestionnaire.has(version.questionnaire_id)) {
-        byQuestionnaire.set(version.questionnaire_id, {
-          id: version.questionnaire_id,
-          title: version.title || '제목 없는 질문지',
-          status: version.questionnaire.archived_at
-            ? 'archived'
-            : version.status,
+      if (!byQuestionnaire.has(questionnaire.id)) {
+        byQuestionnaire.set(questionnaire.id, {
+          id: questionnaire.id,
+          title: questionnaire.title || '제목 없는 질문지',
+          status: questionnaire.archived_at ? 'archived' : questionnaire.status,
         });
       }
       usages.set(placement.source_question_id, byQuestionnaire);

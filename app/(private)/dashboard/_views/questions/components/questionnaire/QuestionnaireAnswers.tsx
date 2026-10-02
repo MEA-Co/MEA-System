@@ -48,16 +48,16 @@ export function useAnswers() {
   return value;
 }
 export function QuestionnaireAnswers({
-  versionId,
+  questionnaireId,
   questions,
   children,
 }: {
-  versionId: string;
+  questionnaireId: string;
   questions: Question[];
   children: ReactNode;
 }) {
   const { data, error } = useQuestionnaireResource<Snapshot>(
-    `/${versionId}/answers`,
+    `/${questionnaireId}/answers`,
   );
   if (!data)
     return error ? (
@@ -67,8 +67,8 @@ export function QuestionnaireAnswers({
     );
   return (
     <AnswerSession
-      key={versionId}
-      versionId={versionId}
+      key={questionnaireId}
+      questionnaireId={questionnaireId}
       questions={questions}
       remote={{
         ...data,
@@ -83,13 +83,13 @@ export function QuestionnaireAnswers({
   );
 }
 function AnswerSession({
-  versionId,
+  questionnaireId,
   remote,
   questions,
   unavailable,
   children,
 }: {
-  versionId: string;
+  questionnaireId: string;
   remote: Snapshot;
   questions: Question[];
   unavailable: boolean;
@@ -162,7 +162,7 @@ function AnswerSession({
     });
     try {
       const response = await fetch(
-        `${QUESTIONNAIRE_API}/${versionId}/answers`,
+        `${QUESTIONNAIRE_API}/${questionnaireId}/answers`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
+
 import ts from 'typescript';
 const exports = {};
 vm.runInNewContext(
@@ -28,13 +29,14 @@ const row = (
   updated = '2026-09-28',
 ) => ({
   source_question_id: 'q',
-  version: {
+  questionnaire: {
     id,
-    questionnaire_id: 'document',
+
     title: id,
     status,
     updated_at: updated,
-    questionnaire: { created_by: owner, archived_at: archived },
+    created_by: owner,
+    archived_at: archived,
   },
 });
 function client(rows, fail = false, references = []) {
@@ -76,10 +78,10 @@ function client(rows, fail = false, references = []) {
     },
   };
 }
-test('deduplicates versions using latest visible title and includes archived state', async () => {
+test('deduplicates repeated placements of one questionnaire and includes archived state', async () => {
   const result = await withQuestionnaireUsage(
     client([
-      row('old', 'published', 'me', null, '2026-09-01'),
+      row('new', 'draft', 'me', 'archived'),
       row('new', 'draft', 'me', 'archived'),
     ]),
     [{ id: 'q' }],
@@ -90,7 +92,7 @@ test('deduplicates versions using latest visible title and includes archived sta
   assert.equal(result[0].questionnaire_usage[0].title, 'new');
   assert.equal(result[0].questionnaire_usage[0].status, 'archived');
 });
-test('lead preview excludes another author draft but retains visible published version', async () => {
+test('lead preview excludes another author draft but retains visible published questionnaire', async () => {
   const result = await withQuestionnaireUsage(
     client([
       row('private', 'draft', 'other'),
@@ -119,7 +121,7 @@ test('distinguishes no usage from failed lookup', async () => {
 test('reads past per-response limits', async () => {
   const rows = Array.from({ length: 501 }, (_, i) => {
     const r = row(String(i));
-    r.version.questionnaire_id = String(i);
+    r.questionnaire.id = String(i);
     return r;
   });
   assert.equal(

@@ -44,9 +44,9 @@ export function useQuestionnaireSave(
       );
       return;
     }
-    const { questionnaireId, versionId, title, sections } = initialDraft;
+    const { questionnaireId, title, sections } = initialDraft;
     const result = session.reconcileRemote(
-      { questionnaireId, versionId, title, sections },
+      { questionnaireId, title, sections },
       initialDraft.revision,
       document,
     );
@@ -120,8 +120,8 @@ export function useQuestionnaireSave(
         timeout: 2000,
       });
       const url = new URL(window.location.href);
-      if (url.searchParams.get('draft') !== document.versionId) {
-        url.searchParams.set('draft', document.versionId);
+      if (url.searchParams.get('draft') !== document.questionnaireId) {
+        url.searchParams.set('draft', document.questionnaireId);
         // Passing Next's internal history state skips its URL synchronization.
         // Update the URL without refetching/remounting the actively edited draft.
         window.history.replaceState(null, '', url);

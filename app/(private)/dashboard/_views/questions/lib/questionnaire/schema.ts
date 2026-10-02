@@ -62,7 +62,6 @@ const sectionSchema = z.object({
 export const questionnaireDocumentSchema = z
   .object({
     questionnaireId: z.uuid(),
-    versionId: z.uuid(),
     title: z.string().max(500),
     sections: z.array(sectionSchema).max(50),
   })

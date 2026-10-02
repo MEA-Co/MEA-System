@@ -24,7 +24,7 @@ import { RichTextContent } from './RichTextContent';
 
 export function QuestionnairePreview({
   title,
-  reviewVersionId,
+  reviewQuestionnaireId,
   sections,
   library = [],
   renderQuestionFooter,
@@ -33,7 +33,7 @@ export function QuestionnairePreview({
   showGuideAnswers = false,
   response,
 }: {
-  reviewVersionId?: string;
+  reviewQuestionnaireId?: string;
   title: string;
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
@@ -118,10 +118,10 @@ export function QuestionnairePreview({
                   showPrivateDetails={showPrivateDetails}
                   response={response}
                 />
-                {reviewVersionId && (
+                {reviewQuestionnaireId && (
                   <QuestionReviews
                     questionId={question.sourceQuestionId}
-                    versionId={reviewVersionId}
+                    questionnaireId={reviewQuestionnaireId}
                   />
                 )}
                 {renderQuestionFooter?.(question.id)}

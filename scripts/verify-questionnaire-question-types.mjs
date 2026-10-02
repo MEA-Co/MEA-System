@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
@@ -9,9 +10,10 @@ import ts from 'typescript';
 const require = createRequire(import.meta.url);
 const root = 'app/(private)/dashboard/_views/questions/lib/questionnaire/';
 function load(name) {
+  const filename = resolve(root, name + '.ts');
   const exports = {};
   vm.runInNewContext(
-    ts.transpileModule(readFileSync(root + name + '.ts', 'utf8'), {
+    ts.transpileModule(readFileSync(filename, 'utf8'), {
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
         target: ts.ScriptTarget.ES2022,
@@ -21,7 +23,9 @@ function load(name) {
       exports,
       TextEncoder,
       require: (path) =>
-        path === 'zod' ? require('zod') : load(path.replace('./', '')),
+        path === 'zod'
+          ? require('zod')
+          : load(resolve(dirname(filename), path)),
     },
   );
   return exports;
@@ -132,7 +136,6 @@ test('question schema preserves option identity, permits draft labels and suppor
   };
   const doc = {
     questionnaireId: randomUUID(),
-    versionId: randomUUID(),
     title: '제목',
     sections: [{ id: randomUUID(), title: '섹션', questions: [q] }],
   };
@@ -331,7 +334,6 @@ test('multiple choice accepts independent direct inputs while single choice allo
   };
   const document = {
     questionnaireId: randomUUID(),
-    versionId: randomUUID(),
     title: '제목',
     sections: [{ id: randomUUID(), title: '섹션', questions: [question] }],
   };

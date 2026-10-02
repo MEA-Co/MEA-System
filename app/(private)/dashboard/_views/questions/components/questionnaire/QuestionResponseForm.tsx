@@ -30,12 +30,12 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 
 async function request(
-  versionId: string,
+  questionnaireId: string,
   method: string,
   body?: unknown,
 ): Promise<QuestionResponseSnapshot> {
   const response = await fetch(
-    `${QUESTIONNAIRE_API}/${versionId}/question-responses`,
+    `${QUESTIONNAIRE_API}/${questionnaireId}/question-responses`,
     {
       method,
       cache: 'no-store',
@@ -52,10 +52,10 @@ async function request(
   return result;
 }
 export function QuestionResponseForm({
-  versionId,
+  questionnaireId,
   onEditorState,
 }: {
-  versionId: string;
+  questionnaireId: string;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
   const [remote, setRemote] = useState<QuestionResponseSnapshot | null>(null);
@@ -63,7 +63,7 @@ export function QuestionResponseForm({
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void request(versionId, 'POST', {})
+    void request(questionnaireId, 'POST', {})
       .then((data) => {
         if (!cancelled) {
           setRemote(data);
@@ -76,7 +76,7 @@ export function QuestionResponseForm({
     return () => {
       cancelled = true;
     };
-  }, [versionId, attempt]);
+  }, [questionnaireId, attempt]);
   if (!remote)
     return error ? (
       <div role="alert" className="space-y-3">
@@ -89,18 +89,18 @@ export function QuestionResponseForm({
   return (
     <ResponseEditor
       key={remote.id}
-      versionId={versionId}
+      questionnaireId={questionnaireId}
       initial={remote}
       onEditorState={onEditorState}
     />
   );
 }
 function ResponseEditor({
-  versionId,
+  questionnaireId,
   initial,
   onEditorState,
 }: {
-  versionId: string;
+  questionnaireId: string;
   initial: QuestionResponseSnapshot;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
@@ -197,7 +197,7 @@ function ResponseEditor({
     setPendingSave(pending);
     setSaving(true);
     try {
-      const result = await request(versionId, 'PUT', pending);
+      const result = await request(questionnaireId, 'PUT', pending);
       session.current.revision = result.revision;
       setSnapshot(result);
       setSavedAt(result.savedAt);
@@ -219,7 +219,9 @@ function ResponseEditor({
         if ([401, 403, 404].includes(error.status)) setBlocked(true);
         if (error.status === 409) {
           try {
-            latestRemoteHandler.current?.(await request(versionId, 'GET'));
+            latestRemoteHandler.current?.(
+              await request(questionnaireId, 'GET'),
+            );
           } catch {
             setBlocked(true);
           }
@@ -309,7 +311,7 @@ function ResponseEditor({
   const refresh = useEffectEvent(async () => {
     if (session.current.busy || locked || session.current.retry) return;
     try {
-      const next = await request(versionId, 'GET');
+      const next = await request(questionnaireId, 'GET');
       if (
         session.current.busy ||
         session.current.retry ||
@@ -428,7 +430,9 @@ function ResponseEditor({
           </details>
         ))}
       <QuestionnairePreview
-        reviewVersionId={snapshot.sourceDeleted ? undefined : versionId}
+        reviewQuestionnaireId={
+          snapshot.sourceDeleted ? undefined : questionnaireId
+        }
         key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}

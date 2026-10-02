@@ -14,12 +14,12 @@ begin
  q:=jsonb_build_object('id',gen_random_uuid(),'title','공유 질문','prompt','내용','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','repeatable','maxRows',3,'minRows',2,'rowLabels',jsonb_build_array('첫째','둘째'),'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  q:=q||jsonb_build_object('details',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','원본 설명','text','설명 본문','visibleToConsultants',true)));
  perform public.save_question(q,0,gen_random_uuid());
- d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'versionId',gen_random_uuid(),'title','공유 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','내용','details','[]'::jsonb)))));
+ d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','공유 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','내용','details','[]'::jsonb)))));
  begin
   perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,sourceQuestionId}','null'::jsonb),0,gen_random_uuid());
   raise exception 'Legacy inline save accepted';
  exception when invalid_parameter_value then null; end;
- if exists(select 1 from public.questionnaire_versions where id=(d->>'versionId')::uuid) then raise exception 'Failed save left a partial document'; end if;
+ if exists(select 1 from public.questionnaires where id=(d->>'questionnaireId')::uuid) then raise exception 'Failed save left a partial document'; end if;
  begin
   perform public.save_questionnaire_draft(jsonb_set(d,'{sections,0,questions,0,details}',q->'details'),0,gen_random_uuid());
   raise exception 'Placement explanation accepted';
@@ -27,15 +27,16 @@ begin
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
  q:=jsonb_set(q,'{prompt}','"최신 원본 내용"'::jsonb);
  perform public.save_question(q,1,gen_random_uuid());
- r:=public.read_questionnaire_draft((d->>'versionId')::uuid);
+ r:=public.read_questionnaire_draft((d->>'questionnaireId')::uuid);
+ if r->>'questionnaireId' is distinct from d->>'questionnaireId' or r ? 'versionId' then raise exception 'Noncanonical document identifier'; end if;
  if r#>>'{sections,0,questions,0,text}'<>'최신 원본 내용' then raise exception 'Draft read stale placement body'; end if;
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'versionId')::uuid);
+  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'versionId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
 end $$;
 
 reset role;
@@ -44,7 +45,7 @@ set local role authenticated;
 do $$
 declare vid uuid; initial jsonb; result jsonb; again jsonb; qid text; fid text; payload jsonb; saveid uuid:=gen_random_uuid();
 begin
- select (doc->>'versionId')::uuid into vid from publish_docs;
+ select (doc->>'questionnaireId')::uuid into vid from publish_docs;
  initial:=public.open_question_response_session(vid);
  again:=public.open_question_response_session(vid);
  if initial->>'id'<>again->>'id' then raise exception 'Duplicate session'; end if;
@@ -64,7 +65,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare vid uuid; x jsonb; begin
- select (doc->>'versionId')::uuid into vid from publish_docs;
+ select (doc->>'questionnaireId')::uuid into vid from publish_docs;
  if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_responses) or exists(select 1 from public.question_versions) then raise exception 'Other user responses leaked'; end if;
  if public.can_write_guide_answers() then raise exception 'Ordinary lead marked guide'; end if;
  begin x:=public.open_question_response_session(vid); raise exception 'Non-guide persisted response'; exception when insufficient_privilege then null; end;
@@ -79,28 +80,29 @@ update public.questions set prompt='수정된 질문', revision=revision+1 where
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare x jsonb; begin
- x:=public.read_question_response_session((select (doc->>'versionId')::uuid from publish_docs));
+ x:=public.read_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ if exists(select 1 from jsonb_array_elements(x->'questions') q where not (q ? 'questionVersionId') or q ? 'questionnaireId' or q ? 'versionId') then raise exception 'Question snapshot identifier confused with questionnaire'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q#>>'{definition,prompt}'='수정된 질문') then raise exception 'Live source not reflected'; end if;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
 set local role authenticated;
 do $$ begin
- begin perform public.open_question_response_session((select (doc->>'versionId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
+ begin perform public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
  begin perform public.read_guide_answers(array[(select source_id from publish_docs)]); raise exception 'Consultant read guide before distribution'; exception when insufficient_privilege then null; end;
  if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_versions) then raise exception 'Consultant leaked'; end if;
 end $$;
 reset role;
 -- Removing a published container preserves both completed and unfinished answers.
-create temp table preserved_sessions as select to_jsonb(s)-'origin_version_id' data from public.response_sessions s where origin_version_id=(select (doc->>'versionId')::uuid from publish_docs);
-create temp table preserved_answers as select to_jsonb(r) data from public.question_responses r join public.response_sessions s on s.id=r.session_id where s.origin_version_id=(select (doc->>'versionId')::uuid from publish_docs);
+create temp table preserved_sessions as select to_jsonb(s)-'origin_questionnaire_id' data from public.response_sessions s where origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs);
+create temp table preserved_answers as select to_jsonb(r) data from public.question_responses r join public.response_sessions s on s.id=r.session_id where s.origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs);
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
-select public.delete_questionnaire((select (doc->>'versionId')::uuid from publish_docs),2);
+select public.delete_questionnaire((select (doc->>'questionnaireId')::uuid from publish_docs),2);
 reset role;
 do $$ begin
- if exists(select 1 from public.questionnaire_versions where id=(select (doc->>'versionId')::uuid from publish_docs)) then raise exception 'Questionnaire not deleted'; end if;
- if exists(select data from preserved_sessions except select to_jsonb(s)-'origin_version_id' from public.response_sessions s where origin_version_id is null) then raise exception 'Session history lost'; end if;
+ if exists(select 1 from public.questionnaires where id=(select (doc->>'questionnaireId')::uuid from publish_docs)) then raise exception 'Questionnaire not deleted'; end if;
+ if exists(select data from preserved_sessions except select to_jsonb(s)-'origin_questionnaire_id' from public.response_sessions s where origin_questionnaire_id is null) then raise exception 'Session history lost'; end if;
  if exists(select data from preserved_answers except select to_jsonb(r) from public.question_responses r) then raise exception 'Answers lost'; end if;
  if not exists(select 1 from public.questions where id=(select source_id from publish_docs)) then raise exception 'Source deleted'; end if;
 end $$;

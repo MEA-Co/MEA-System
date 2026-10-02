@@ -17,7 +17,7 @@ export function ConsultantQuestionnaireList({
   items: QuestionnaireListItem[];
 }) {
   const { data, error } =
-    useQuestionnaireResource<{ version_id: string; status: string }[]>(
+    useQuestionnaireResource<{ questionnaire_id: string; status: string }[]>(
       '/responses',
     );
   const { unreadIds } = usePublicationNotifications();
@@ -28,7 +28,7 @@ export function ConsultantQuestionnaireList({
       <QuestionnaireLoading />
     );
   const complete = new Set(
-    data.filter((r) => r.status === 'submitted').map((r) => r.version_id),
+    data.filter((r) => r.status === 'submitted').map((r) => r.questionnaire_id),
   );
   const groups = [
     {
@@ -97,7 +97,7 @@ export function ConsultantQuestionnaireList({
                           ? '완료한 답변 보기'
                           : data.some(
                                 (r) =>
-                                  r.version_id === item.id &&
+                                  r.questionnaire_id === item.id &&
                                   r.status === 'in_progress',
                               )
                             ? '이어서 답변하기'

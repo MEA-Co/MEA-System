@@ -36,6 +36,9 @@ export function PublishedQuestionnaire({
   reviewContext?: QuestionnaireReviewContext;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
+  const placements = document.sections.some((section) =>
+    section.questions.some((question) => question.sourceQuestionId),
+  );
   if (staff && !distributed)
     return (
       <PublishedResponse
@@ -53,6 +56,12 @@ export function PublishedQuestionnaire({
         <h1 className="mt-3 whitespace-pre-wrap wrap-break-word text-2xl font-semibold">
           {document.title}
         </h1>
+        {distributed && placements && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            배포된 질문지와 질문 내용은 수정할 수 없습니다.
+            {!staff && ' 현재는 열람만 가능하며 답변 작성은 준비 중입니다.'}
+          </p>
+        )}
       </header>
       {document.sections.map((section, index) => (
         <section key={section.id} className="space-y-5">
@@ -72,6 +81,7 @@ export function PublishedQuestionnaire({
                   return source ? (
                     <QuestionPlacementCard
                       question={source}
+                      showPrivate={staff}
                       showSourceLink={false}
                     />
                   ) : (
@@ -98,20 +108,21 @@ export function PublishedQuestionnaire({
                   )}
                 />
               )}
-              {distributed && !staff && (
+              {distributed && !staff && !placements && (
                 <QuestionAnswerEditor question={question} />
               )}
             </div>
           ))}
         </section>
       ))}
-      {distributed && !staff && <QuestionnaireFreeResponse />}
+      {distributed && !staff && !placements && <QuestionnaireFreeResponse />}
     </article>
   );
+  if (!staff && placements) return content;
   if (!staff)
     return (
       <QuestionnaireAnswers
-        versionId={document.versionId}
+        questionnaireId={document.questionnaireId}
         questions={document.sections.flatMap((section) => section.questions)}
       >
         {content}

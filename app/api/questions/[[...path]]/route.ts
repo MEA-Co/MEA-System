@@ -29,6 +29,8 @@ function errorStatus(code?: string) {
 }
 
 function errorMessage(message: string, status: number) {
+  if (message.includes('Distributed question is immutable'))
+    return '배포된 질문지에 사용된 질문은 수정하거나 삭제할 수 없어요.';
   if (message.includes('used by a questionnaire'))
     return '질문지에 배치된 질문이에요. 해당 질문지에서 제거한 뒤 삭제해 주세요.';
   if (message.includes('dependency cycle'))

@@ -22,10 +22,10 @@ export async function loadAnswerStatuses() {
     throw new QuestionnaireHttpError(503, '답변 상태를 불러오지 못했어요.');
   return data ?? [];
 }
-export async function loadAnswers(versionId: string) {
+export async function loadAnswers(questionnaireId: string) {
   const { client } = await answerClient();
   const { data, error } = await client.rpc('read_distributed_response', {
-    p_version_id: versionId,
+    p_questionnaire_id: questionnaireId,
   });
   if (error)
     throw new QuestionnaireHttpError(
@@ -36,7 +36,7 @@ export async function loadAnswers(versionId: string) {
     );
   return data;
 }
-export async function saveAnswers(versionId: string, input: unknown) {
+export async function saveAnswers(questionnaireId: string, input: unknown) {
   const schema = z.object({
     answers: z.record(
       z.uuid(),
@@ -62,7 +62,7 @@ export async function saveAnswers(versionId: string, input: unknown) {
     throw new QuestionnaireHttpError(400, '모든 질문에 답변을 입력해 주세요.');
   const { client } = await answerClient();
   const result = await client.rpc('save_distributed_response', {
-    p_version_id: versionId,
+    p_questionnaire_id: questionnaireId,
     p_answers: data.answers,
     p_revision: data.revision,
     p_save_id: data.saveId,

@@ -1,5 +1,23 @@
 # 질문·질문지 저장 구조
 
+## 질문지 ID 이름 통일 (2026-10-02, 최신 계약)
+
+`20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱 타입·컴포넌트·URL 요청 본문·RPC에서 질문지는 `questionnaireId`/`questionnaire_id` 하나로 식별한다. `p_questionnaire_id`, `origin_questionnaire_id`, `p_origin_questionnaire_id`로 인자와 연결 열도 통일했다. 기존 UUID 값과 URL 경로는 유지한다. 문서의 중복 부모 ID와 내부 `questionnaire_owners` 호환 뷰는 제거했다. 배포 취소 시 초안을 복제하던 UI 분기도 제거했다.
+
+`legacy_parent_id`와 `owner_created_at`은 기존 데이터 추적을 위한 보존 열이며 앱/RPC는 조회·식별에 사용하지 않는다. 과거 이전 장부의 부모 ID도 `legacy_target_parent_id`로 보존했다. 과거 migration 파일은 이력 재현용으로 유지한다. `question_versions` 및 `question_version_id`는 질문 응답 정의를 보존하며, 응답 JSON에서는 `questionVersionId`로 명확히 구분한다. `revision`은 동시 수정 충돌 방지에 계속 사용한다.
+
+이 변경은 이전 앱과의 이름 호환을 의도적으로 종료한다. 배포 시 저장을 마친 뒤 DB migration → 새 앱 배포 → 기존 탭 새로고침 순서를 따른다. 운영 적용은 `questions-operations.md` 마지막 절을 참고한다.
+
+
+## 질문지 본체·버전 통합 (2026-10-02, 아래 과거 구조 설명보다 우선)
+
+`20261002055633_merge_questionnaire_tables.sql`을 로컬 적용했다. 질문지는 `public.questionnaires` 한 행에 제목·상태·제작자·구성의 기준 ID·revision·게시/배포/보관 시각을 저장한다. `questionnaire_versions` 테이블과 `version_number`는 제거했다. `revision`은 저장 충돌 방지 번호이며 별도 질문지 버전을 만들지 않는다. 질문 응답 정의 보존용 `question_versions`는 이번 통합 대상이 아니다.
+
+기존 버전 행의 ID를 새 `questionnaires.id`로 그대로 사용하여 섹션·질문 배치·응답·검토·읽음 연결을 보존한다. 과거 부모 ID는 `legacy_parent_id`, 과거 부모 생성 시각은 `owner_created_at`으로 보존한다. 기존 API의 `versionId`/`questionnaireId`, 하위 테이블의 `version_id`/`origin_version_id` 이름은 호환용으로 유지한다. 이 명칭이 질문지 버전 분리를 의미하지 않는다. `private.questionnaire_owners`는 한 테이블을 읽는 내부 호환 뷰이며 추가 데이터를 저장하지 않는다.
+
+migration은 부모별 정확히 1개·번호 1인 경우에만 진행하고, 잠금 및 전체 원본 필드 비교 후 중복 부모 테이블을 제거한다. 예상치 못한 다중 버전·의존성·데이터 차이가 있으면 트랜잭션 전체가 중단된다. 운영 적용은 `questions-operations.md` 마지막 절을 따른다.
+
+
 ## 질문 중심 응답 — 2026-10-01
 
 게시본 리드 응답은 `question_versions` → `question_responses`로 저장한다. `response_sessions`는 응답자·진행/완료 상태·revision·동일 요청 재시도와 표시 순서만 관리한다. 세션의 `origin_version_id`는 nullable이며 질문지 삭제 시 NULL이 된다. 질문지 제목과 섹션/배치 ID·순서만 세션에 남고 질문 정의는 질문 버전이 소유한다. 질문지를 삭제해도 질문 버전·응답은 삭제하지 않는다.

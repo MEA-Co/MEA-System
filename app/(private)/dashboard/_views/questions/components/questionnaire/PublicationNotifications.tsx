@@ -106,12 +106,16 @@ export function usePublicationNotifications() {
   return useContext(PublicationContext);
 }
 
-export function PublicationReadMarker({ versionId }: { versionId: string }) {
+export function PublicationReadMarker({
+  questionnaireId,
+}: {
+  questionnaireId: string;
+}) {
   const { unreadIds, markRead } = usePublicationNotifications();
-  const unread = unreadIds.includes(versionId);
+  const unread = unreadIds.includes(questionnaireId);
   useEffect(() => {
-    if (unread) void markRead(versionId);
-  }, [unread, versionId, markRead]);
+    if (unread) void markRead(questionnaireId);
+  }, [unread, questionnaireId, markRead]);
   return null;
 }
 
