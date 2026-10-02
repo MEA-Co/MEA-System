@@ -81,12 +81,12 @@ do $$ declare x jsonb; old jsonb; payload jsonb; vid uuid; begin
  if public.read_question_response_session(vid)<>public.read_question_response_session(vid) then raise exception 'Read not idempotent'; end if;
 end $$;
 reset role;
--- Remove the original source placement, retaining its response record.
+-- Confirm removal of the original source placement and delete only its guide response.
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; vid uuid; begin
  select doc into d from publish_docs; vid:=(d->>'questionnaireId')::uuid;
- d:=jsonb_set(d,'{sections}',jsonb_build_array(d#>'{sections,0}'));
+ d:=jsonb_set(d,'{sections}',jsonb_build_array(d#>'{sections,0}'))||jsonb_build_object('confirmedRemovedGuideQuestions',jsonb_build_array((select source_id from publish_docs)));
  perform public.save_questionnaire_draft(d,(public.read_questionnaire_draft(vid)->>'revision')::int,gen_random_uuid());
  update publish_docs set doc=d;
 end $$;
@@ -97,12 +97,12 @@ do $$ declare x jsonb; old jsonb; payload jsonb; begin
  select data into old from layout_snapshots where stage='initial';
  x:=public.read_question_response_session((old->>'id')::uuid);
  if jsonb_array_length(x->'questions')<>1 then raise exception 'Removed question visible'; end if;
- if not exists(select 1 from public.question_responses where id=(old#>>'{questions,0,responseId}')::uuid and rows=old#>'{questions,0,rows}') then raise exception 'Removed answer deleted'; end if;
+ if exists(select 1 from public.question_responses where id=(old#>>'{questions,0,responseId}')::uuid) then raise exception 'Removed answer retained'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
  perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
 end $$;
 reset role;
--- Re-add using a new placement ID; restore the same response ID and rows.
+-- Re-add using a new placement ID; start without the removed answer.
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare d jsonb; vid uuid; begin
@@ -118,7 +118,8 @@ do $$ declare x jsonb; old jsonb; begin
  select data into old from layout_snapshots where stage='initial';
  x:=public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  if jsonb_array_length(x->'questions')<>2 then raise exception 'Re-added question missing'; end if;
- if not exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}' and q->'rows'=old#>'{questions,0,rows}') then raise exception 'Re-added answer lost'; end if;
+ if exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}') then raise exception 'Deleted answer identity restored'; end if;
+ if not exists(select 1 from jsonb_array_elements(x->'questions') q where q#>>'{definition,id}'=old#>>'{questions,0,definition,id}' and q->'rows'='[]') then raise exception 'Re-added answer not empty'; end if;
  insert into layout_snapshots values('readded',x);
 end $$;
 reset role;

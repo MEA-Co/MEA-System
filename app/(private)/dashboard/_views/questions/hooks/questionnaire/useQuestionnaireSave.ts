@@ -19,6 +19,7 @@ export function useQuestionnaireSave(
   validationError: string | null = null,
   paused = false,
   childEditorOpen = false,
+  confirmedRemovedGuideQuestions: string[] = [],
 ) {
   const { saveQuestionnaire, refresh } = useQuestionnaireApi();
   const [session] = useState(
@@ -85,12 +86,18 @@ export function useQuestionnaireSave(
       timeout: 0,
     });
     try {
-      let result = await session.save(document, saveQuestionnaire, () =>
-        crypto.randomUUID(),
+      let result = await session.save(
+        document,
+        (request) =>
+          saveQuestionnaire({ ...request, confirmedRemovedGuideQuestions }),
+        () => crypto.randomUUID(),
       );
       if (result?.ok && session.hasChanges(document) && mounted.current) {
-        result = await session.save(document, saveQuestionnaire, () =>
-          crypto.randomUUID(),
+        result = await session.save(
+          document,
+          (request) =>
+            saveQuestionnaire({ ...request, confirmedRemovedGuideQuestions }),
+          () => crypto.randomUUID(),
         );
       }
       if (!mounted.current) {

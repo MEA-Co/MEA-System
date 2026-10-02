@@ -1,5 +1,16 @@
 # 질문·질문지 관리
 
+## 질문 버전 제거·원본 직접 응답 (2026-10-02, 최신 계약)
+
+`20261002071428_direct_question_responses.sql` 로컬 적용. `question_versions` 테이블과 `question_responses.question_version_id`, 불변 버전 트리거, 버전 비교 함수를 제거했다. 응답은 `question_responses.question_id` → `questions.id`로 직접 연결하고 질문지·작성자는 기존 `response_sessions.origin_questionnaire_id`·`respondent_id`로 구분한다. 응답 JSON은 `questionId`를 반환하며 `revision`·`definitionToken` 충돌 방지는 유지한다.
+
+가이드 답변은 질문 변경 시 `OLD.fields`와 최신 필드의 ID·유형을 비교해 호환되는 답변만 유지한다. 질문 저장 API의 삭제/유형 변경 동의 검사는 그대로 유지하고, DB 변경 트리거가 해당 질문의 가이드 응답을 정리한다. 질문지에서 질문을 빼는 경우에는 해당 질문지의 가이드 응답만 삭제한다. 이전 정의를 복사하거나 버전을 추가하지 않는다.
+
+원본 없는 구형 배포 응답만 `legacy_question_id`·`legacy_definition`에 기존 정의를 보존한다. 이는 구형 저장 경로의 데이터 보존용이며 새 원본 질문 응답에는 두 열 모두 NULL이다. 운영 읽기 전용 확인 당시 구형 배치·응답은 모두 0개다. 기존 구형 경로 호환을 위한 코드까지 없앤 변경은 아니다.
+
+운영에는 아직 적용하지 않았다. 최신 운영 상태와 실행 순서는 `questions-operations.md` 마지막 절을 따른다. 아래의 질문 버전 관련 설명은 이전 구현 기록이며 이 절이 우선한다.
+
+
 ## 질문지 ID 이름 통일 (2026-10-02, 최신 계약)
 
 `20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱 타입·컴포넌트·URL 요청 본문·RPC에서 질문지는 `questionnaireId`/`questionnaire_id` 하나로 식별한다. `p_questionnaire_id`, `origin_questionnaire_id`, `p_origin_questionnaire_id`로 인자와 연결 열도 통일했다. 기존 UUID 값과 URL 경로는 유지한다. 문서의 중복 부모 ID와 내부 `questionnaire_owners` 호환 뷰는 제거했다. 배포 취소 시 초안을 복제하던 UI 분기도 제거했다.

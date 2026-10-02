@@ -48,6 +48,7 @@ export type QuestionnaireDraft = QuestionnaireDocument & {
 };
 
 export type SaveQuestionnaireRequest = {
+  confirmedRemovedGuideQuestions?: string[];
   document: QuestionnaireDocument;
   expectedRevision: number;
   saveId: string;

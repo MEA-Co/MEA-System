@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
+
 import ts from 'typescript';
 
 // Exercise state/history/requests without running a browser.
@@ -10,6 +11,7 @@ function mount({
   delayedBack = false,
   failSave = false,
   embedded = false,
+  guideFields = [],
 } = {}) {
   const placed = [];
   const saves = [];
@@ -190,6 +192,8 @@ function mount({
       Element: class {},
       fetch: async (url, options) => {
         calls.push(url);
+        if (url.endsWith('/guide-answer-fields'))
+          return { ok: true, json: async () => ({ fieldIds: guideFields }) };
         if (failSave && options?.method) throw new Error('offline');
         if (options?.method) {
           saves.push({
@@ -598,4 +602,83 @@ test('editing a loaded question saves to the original ID rather than creating a 
   assert.equal(app.saves[0].method, 'PUT');
   assert.equal(app.saves[0].url, '/api/questions/' + app.row.id);
   assert.equal(app.saves[0].body.document.id, app.row.id);
+});
+
+test('occupied guide field deletion asks once and cancellation preserves the field', async () => {
+  const fieldId = randomUUID();
+  const app = mount({ guideFields: [fieldId] });
+  app.row.fields = [
+    { id: fieldId, label: '첫째', kind: 'text' },
+    { id: randomUUID(), label: '둘째', kind: 'text' },
+  ];
+  let prompts = 0;
+  app.window.confirm = () => {
+    prompts++;
+    return false;
+  };
+  await app.flush();
+  app.find('QuestionManagementTable').props.onOpen(app.row);
+  await app.flush();
+  app
+    .find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId)
+    .props.onRemove();
+  await app.flush();
+  assert.equal(prompts, 1);
+  assert.ok(
+    app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId),
+  );
+  app.window.confirm = () => {
+    prompts++;
+    return true;
+  };
+  app
+    .find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId)
+    .props.onRemove();
+  await app.flush();
+  assert.equal(prompts, 2);
+  assert.equal(
+    app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId),
+    null,
+  );
+  app.tick();
+  await app.flush();
+  assert.deepEqual(app.saves[0].body.confirmedGuideAnswerFields, [fieldId]);
+});
+
+test('type changes ask only for occupied guide fields; labels do not ask', async () => {
+  const fieldId = randomUUID();
+  const app = mount({ guideFields: [fieldId] });
+  app.row.fields = [
+    { id: fieldId, label: '첫째', kind: 'text' },
+    { id: randomUUID(), label: '둘째', kind: 'text' },
+  ];
+  let prompts = 0;
+  app.window.confirm = () => {
+    prompts++;
+    return false;
+  };
+  await app.flush();
+  app.find('QuestionManagementTable').props.onOpen(app.row);
+  await app.flush();
+  let field = app.find(
+    'QuestionBlockFieldEditor',
+    (p) => p.field.id === fieldId,
+  );
+  field.props.onChange({ ...field.props.field, label: '새 이름' });
+  await app.flush();
+  assert.equal(prompts, 0);
+  field = app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId);
+  field.props.onChange({ ...field.props.field, kind: 'scale' });
+  await app.flush();
+  assert.equal(prompts, 1);
+  assert.equal(
+    app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId).props
+      .field.kind,
+    'text',
+  );
+  app
+    .find('QuestionBlockFieldEditor', (p) => p.field.id !== fieldId)
+    .props.onRemove();
+  await app.flush();
+  assert.equal(prompts, 1);
 });

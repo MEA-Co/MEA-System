@@ -13,19 +13,10 @@ export type QuestionResponseSnapshot = {
   sections: QuestionnaireSection[];
   questions: {
     responseId: string;
-    questionVersionId: string;
+    questionId: string;
     definition: QuestionBlockRow;
     rows: PreviewAnswerRow[];
     activeRowIds: number[];
-    needsReview: boolean;
-    previousBody: string;
-    previousDefinition: QuestionBlockRow;
-    previousResponses: {
-      definition: QuestionBlockRow;
-      body: string;
-      rows: PreviewAnswerRow[];
-      savedAt: string;
-    }[];
   }[];
 };
 export type QuestionResponseSave = {
@@ -37,25 +28,53 @@ export type QuestionResponseSave = {
 };
 export function snapshotRows(snapshot: QuestionResponseSnapshot) {
   return Object.fromEntries(
-    snapshot.questions.map((q) => [
-      q.definition.id,
-      q.needsReview ? [] : q.rows,
-    ]),
+    snapshot.questions.map((q) => [q.definition.id, q.rows]),
   );
 }
 
-// Keep local edits for surviving questions; only new/re-added questions hydrate
-// from the server. Removed questions are excluded from the next save payload.
-export function mergeLiveResponseRows(
+// Carry only still-existing fields with the same kind into the current guide layout.
+export function mergeGuideResponseRows(
   current: Record<string, PreviewAnswerRow[]>,
-  remote: Record<string, PreviewAnswerRow[]>,
-  resetIds: string[],
+  previous: QuestionResponseSnapshot,
+  next: QuestionResponseSnapshot,
 ) {
-  const reset = new Set(resetIds);
   return Object.fromEntries(
-    Object.entries(remote).map(([id, rows]) => [
-      id,
-      reset.has(id) ? [] : (current[id] ?? rows),
-    ]),
+    next.questions.map((question) => {
+      const old = previous.questions.find(
+        (item) => item.definition.id === question.definition.id,
+      );
+      if (
+        !old ||
+        old.responseId !== question.responseId ||
+        !current[question.definition.id]
+      )
+        return [question.definition.id, question.rows];
+      const retained = new Set(
+        question.definition.fields
+          .filter((field) =>
+            old.definition.fields.some(
+              (prior) => prior.id === field.id && prior.kind === field.kind,
+            ),
+          )
+          .map((field) => field.id),
+      );
+      const limit =
+        question.definition.row_mode === 'single'
+          ? 1
+          : question.definition.row_mode === 'repeatable'
+            ? (question.definition.max_rows ?? 20)
+            : 20;
+      return [
+        question.definition.id,
+        current[question.definition.id].slice(0, limit).map((row) => ({
+          ...row,
+          answers: Object.fromEntries(
+            Object.entries(row.answers).filter(([field]) =>
+              retained.has(field),
+            ),
+          ),
+        })),
+      ];
+    }),
   );
 }

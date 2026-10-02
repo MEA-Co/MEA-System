@@ -62,11 +62,23 @@ begin
  perform public.save_question_response_session(vid,payload,2,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
 end $$;
 reset role;
+-- Canonical responses must keep their identity without a version indirection.
+do $$ declare r public.question_responses%rowtype; begin
+ select * into strict r from public.question_responses where question_id=(select source_id from publish_docs);
+ begin
+  insert into public.question_responses(session_id,question_id) values(r.session_id,r.question_id);
+  raise exception 'Duplicate question response accepted';
+ exception when unique_violation then null; end;
+ begin
+  update public.question_responses set question_id=gen_random_uuid() where id=r.id;
+  raise exception 'Response source identity changed';
+ exception when object_not_in_prerequisite_state then null; end;
+end $$;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ declare vid uuid; x jsonb; begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_responses) or exists(select 1 from public.question_versions) then raise exception 'Other user responses leaked'; end if;
+ if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_responses) then raise exception 'Other user responses leaked'; end if;
  if public.can_write_guide_answers() then raise exception 'Ordinary lead marked guide'; end if;
  begin x:=public.open_question_response_session(vid); raise exception 'Non-guide persisted response'; exception when insufficient_privilege then null; end;
  x:=public.read_guide_answers(array[(select source_id from publish_docs)]);
@@ -81,7 +93,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; begin
  x:=public.read_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
- if exists(select 1 from jsonb_array_elements(x->'questions') q where not (q ? 'questionVersionId') or q ? 'questionnaireId' or q ? 'versionId') then raise exception 'Question snapshot identifier confused with questionnaire'; end if;
+ if exists(select 1 from jsonb_array_elements(x->'questions') q where not (q ? 'questionId') or q ? 'questionVersionId' or q ? 'versionId') then raise exception 'Direct question identifier missing'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q#>>'{definition,prompt}'='수정된 질문') then raise exception 'Live source not reflected'; end if;
 end $$;
 reset role;
@@ -90,7 +102,7 @@ set local role authenticated;
 do $$ begin
  begin perform public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
  begin perform public.read_guide_answers(array[(select source_id from publish_docs)]); raise exception 'Consultant read guide before distribution'; exception when insufficient_privilege then null; end;
- if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_versions) then raise exception 'Consultant leaked'; end if;
+ if exists(select 1 from public.response_sessions) then raise exception 'Consultant leaked'; end if;
 end $$;
 reset role;
 -- Removing a published container preserves both completed and unfinished answers.
@@ -127,11 +139,11 @@ do $$ declare x jsonb; old jsonb; payload jsonb; q jsonb; begin
  select value into old from stale_snapshot;
  x:=public.read_question_response_session((old->>'id')::uuid);
  q:=x#>'{questions,0}';
- if not (q->>'needsReview')::boolean or jsonb_array_length(q->'rows')<>2 then raise exception 'Old input was lost or review missing'; end if;
+ if q ? 'needsReview' or q ? 'previousResponses' or exists(select 1 from jsonb_array_elements(q->'rows') r where r->'answers'<>'{}') then raise exception 'Obsolete structure warning or answers returned'; end if;
  payload:=jsonb_build_object(q#>>'{definition,id}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(q#>>'{definition,fields,0,id}','새 응답'))));
  begin perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale definition accepted'; exception when serialization_failure then null; end;
  x:=public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
- if (x#>>'{questions,0,needsReview}')::boolean or jsonb_array_length(x#>'{questions,0,previousResponses}')<>1 or x#>>'{questions,0,previousResponses,0,body}' not like '%첫 답변%' then raise exception 'Previous answer not preserved'; end if;
+ if x#>'{questions,0}' ? 'previousResponses' or exists(select 1 from public.question_responses where session_id=(x->>'id')::uuid and previous_responses<>'[]') then raise exception 'Guide history retained'; end if;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
@@ -143,7 +155,7 @@ end $$;
 select public.archive_question(id,revision) from public.questions where id=(select source_id from publish_docs);
 reset role;
 do $$ begin
- if exists(select 1 from public.question_responses r join public.question_versions v on v.id=r.question_version_id where v.question_id=(select source_id from publish_docs)) then raise exception 'Published answers survived source deletion'; end if;
+ if exists(select 1 from public.question_responses r where r.question_id=(select source_id from publish_docs)) then raise exception 'Published answers survived source deletion'; end if;
  if exists(select 1 from public.response_sessions where id in (select (data->>'id')::uuid from preserved_sessions) and last_payload is not null) then raise exception 'Deleted answers retained in retry payload'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);

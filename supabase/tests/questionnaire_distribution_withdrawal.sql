@@ -102,10 +102,8 @@ create temporary table withdrawal_sessions(id uuid, questionnaire_id uuid);
 insert into withdrawal_sessions values(gen_random_uuid(),(select (doc->>'questionnaireId')::uuid from publish_docs));
 insert into public.response_sessions(id,respondent_id,origin_questionnaire_id,started_role,started_stage,status)
 select w.id,u.id,w.questionnaire_id,'consultant','distributed','assigned' from withdrawal_sessions w cross join publish_users u where u.role='consultant';
-insert into public.question_versions(question_id,source_revision,definition)
-select source_id,2,jsonb_build_object('id',source_id) from publish_docs;
-insert into public.question_responses(session_id,question_version_id)
-select w.id,q.id from withdrawal_sessions w cross join public.question_versions q where q.question_id=(select source_id from publish_docs);
+insert into public.question_responses(session_id,question_id)
+select w.id,p.source_id from withdrawal_sessions w cross join publish_docs p;
 -- A guide answer from the publication phase must be preserved, not treated as a distribution response.
 insert into public.response_sessions(respondent_id,origin_questionnaire_id,started_role,started_stage,status,revision,free_response)
 select u.id,w.questionnaire_id,'consultant_lead','published','in_progress',1,'게시 가이드' from withdrawal_sessions w cross join publish_users u where u.role='consultant_lead';

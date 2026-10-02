@@ -240,6 +240,7 @@ export function QuestionLibraryView({
         document: QuestionBlockDocument;
         expectedRevision: number;
         saveId: string;
+        confirmedGuideAnswerFields?: string[];
       }
     >(),
   );
@@ -539,11 +540,72 @@ export function QuestionLibraryView({
     editorData.detail.data,
   ]);
 
+  const guideConfirmations = useRef(new Map<string, Set<string>>());
+  const checkingGuide = useRef(false);
+  const guideSavePaused = useRef(false);
+
+  async function changeAnswerField(
+    field: QuestionBlockField,
+    updated?: QuestionBlockField,
+  ) {
+    if (!draft || checkingGuide.current || savingRef.current) return;
+    const questionId = draft.id;
+    checkingGuide.current = true;
+    try {
+      if (revision > 0) {
+        const response = await fetch(
+          `/api/questions/${questionId}/guide-answer-fields`,
+          { cache: 'no-store' },
+        );
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.fieldIds)) throw new Error();
+        if (activeId.current !== questionId) return;
+        if (data.fieldIds.includes(field.id)) {
+          if (
+            !window.confirm(
+              '이 답변 항목에 저장된 가이드 응답이 있습니다. 계속하면 해당 가이드 응답이 삭제됩니다. 계속하시겠습니까?',
+            )
+          )
+            return;
+          const confirmed =
+            guideConfirmations.current.get(questionId) ?? new Set<string>();
+          confirmed.add(field.id);
+          guideConfirmations.current.set(questionId, confirmed);
+        }
+      }
+      guideSavePaused.current = false;
+      setDraft((current) =>
+        current?.id === questionId
+          ? {
+              ...current,
+              fields: updated
+                ? current.fields.map((item) =>
+                    item.id === field.id ? updated : item,
+                  )
+                : current.fields.filter((item) => item.id !== field.id),
+            }
+          : current,
+      );
+    } catch {
+      toast.add({
+        title: '가이드 응답을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
+        type: 'error',
+      });
+    } finally {
+      checkingGuide.current = false;
+    }
+  }
+
   function updateDraft(changes: Partial<QuestionBlockDocument>) {
     setDraft((current) => (current ? { ...current, ...changes } : null));
   }
 
   function updateField(fieldId: string, updated: QuestionBlockField) {
+    const previous = draft?.fields.find((field) => field.id === fieldId);
+    if (previous && previous.kind !== updated.kind) {
+      void changeAnswerField(previous, updated);
+      return;
+    }
     setDraft((current) =>
       current
         ? {
@@ -625,6 +687,8 @@ export function QuestionLibraryView({
     if (editorData.detail.data?.distribution_locked_at) return;
     if (
       !draft ||
+      checkingGuide.current ||
+      (!manual && guideSavePaused.current) ||
       savingRef.current ||
       conflicted ||
       (!dirty && !pendingSaves.current.has(draft.id))
@@ -655,6 +719,9 @@ export function QuestionLibraryView({
         document: parsed.data,
         expectedRevision: revision,
         saveId: crypto.randomUUID(),
+        confirmedGuideAnswerFields: [
+          ...(guideConfirmations.current.get(draft.id) ?? []),
+        ],
       };
       pendingSaves.current.set(draft.id, attempt);
     }
@@ -692,11 +759,32 @@ export function QuestionLibraryView({
             document: attempt.document,
             expectedRevision: attempt.expectedRevision,
             saveId: attempt.saveId,
+            confirmedGuideAnswerFields: attempt.confirmedGuideAnswerFields,
           }),
         },
       );
       const data = await response.json();
       if (!response.ok) {
+        if (
+          data.code === 'guide_answer_confirmation_required' &&
+          Array.isArray(data.fieldIds)
+        ) {
+          if (
+            isCurrentQuestion() &&
+            window.confirm(
+              '새로 저장된 가이드 응답이 있습니다. 계속하면 변경한 항목의 가이드 응답이 삭제됩니다. 계속하시겠습니까?',
+            )
+          ) {
+            attempt.confirmedGuideAnswerFields = data.fieldIds;
+            window.setTimeout(() => void save(manual), 0);
+          } else {
+            guideSavePaused.current = true;
+            recordError(
+              '가이드 응답을 보호하기 위해 저장을 멈췄어요. 변경을 취소하거나 저장 버튼으로 다시 확인해 주세요.',
+            );
+          }
+          return;
+        }
         const message = readError(data);
         if (response.status < 500) pendingSaves.current.delete(attemptId);
         recordError(message, response.status === 409);
@@ -733,6 +821,8 @@ export function QuestionLibraryView({
         setSaveError(null);
       }
       pendingSaves.current.delete(attemptId);
+      guideConfirmations.current.delete(attemptId);
+      guideSavePaused.current = false;
       if (manual) toast.add({ title: '질문을 저장했어요.', type: 'success' });
     } catch {
       const message = '저장 결과를 확인하지 못했어요. 연결을 확인해 주세요.';
@@ -1013,13 +1103,7 @@ export function QuestionLibraryView({
                       index={index}
                       fieldCount={draft.fields.length}
                       onChange={(updated) => updateField(field.id, updated)}
-                      onRemove={() =>
-                        updateDraft({
-                          fields: draft.fields.filter(
-                            (item) => item.id !== field.id,
-                          ),
-                        })
-                      }
+                      onRemove={() => void changeAnswerField(field)}
                     />
                   ))}
                   <Button

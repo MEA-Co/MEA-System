@@ -50,6 +50,23 @@ async function handle(request: Request, context: Context) {
     const [id, resource] = path;
     const method = request.method;
     if (method === 'GET') {
+      if (
+        path.length === 2 &&
+        resource === 'guide-question-ids' &&
+        staff &&
+        z.uuid().safeParse(id).success
+      ) {
+        const client = createClient(await cookies());
+        const result = await client.rpc('questionnaire_guide_question_ids', {
+          qid: id,
+        });
+        if (result.error)
+          return json(
+            { error: '가이드 응답을 확인하지 못했어요.' },
+            result.error.code === '42501' ? 403 : 503,
+          );
+        return json({ questionIds: result.data ?? [] });
+      }
       if (path.length === 1 && id === 'guide-access' && staff)
         return json(await loadGuideAnswers());
       if (path.length === 1 && id === 'guide-answers' && staff) {

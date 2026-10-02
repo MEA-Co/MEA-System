@@ -10,6 +10,7 @@ function mount({
   component = 'QuestionnaireView',
   props = {},
   imports = {},
+  fetcher = async () => ({ ok: true, json: async () => ({ questionIds: [] }) }),
 } = {}) {
   const slots = [];
   let cursor = 0;
@@ -91,6 +92,7 @@ function mount({
       URL,
       crypto: { randomUUID },
       structuredClone,
+      fetch: fetcher,
       require: (name) => {
         if (imports[name]) return imports[name];
         if (name === 'react') return react;
@@ -132,6 +134,7 @@ function mount({
   }
   const find = (type, predicate = () => true) => walk(tree, type, predicate);
   return {
+    window,
     flush,
     find,
     route(id) {
@@ -231,7 +234,7 @@ test('first save URL replacement retains the active questionnaire panel', () => 
   assert.equal(app.find('Dialog').props.open, false);
 });
 
-function composer() {
+function composer({ existing = false, occupied = false } = {}) {
   const source = {
     id: randomUUID(),
     title: '저장된 질문',
@@ -244,10 +247,21 @@ function composer() {
   const initialDraft = {
     questionnaireId: randomUUID(),
     title: '작성한 질문지',
-    revision: 0,
+    revision: existing ? 1 : 0,
     savedAt: null,
     sections: [{ id: randomUUID(), title: '작성한 섹션', questions: [] }],
   };
+  if (existing)
+    initialDraft.sections[0].questions = [
+      {
+        id: randomUUID(),
+        logicalKey: randomUUID(),
+        sourceQuestionId: source.id,
+        text: '본문',
+        details: [],
+      },
+    ];
+  let confirmations = [];
   let current;
   const placements = {};
   vm.runInNewContext(
@@ -272,13 +286,18 @@ function composer() {
   };
   const app = mount({
     component: 'QuestionnaireComposer',
+    fetcher: async () => ({
+      ok: true,
+      json: async () => ({ questionIds: occupied ? [source.id] : [] }),
+    }),
     props: { initialDraft },
     imports: {
       '../../hooks/questionnaire/useQuestionLibrary': {
         useQuestionLibrary: () => library,
       },
       '../../hooks/questionnaire/useQuestionnaireSave': {
-        useQuestionnaireSave: (doc) => {
+        useQuestionnaireSave: (doc, ...args) => {
+          confirmations = args[6] ?? [];
           current = doc;
           return { save() {}, dirty: true, saving: false, blocked: false };
         },
@@ -298,7 +317,12 @@ function composer() {
       },
     },
   });
-  return { ...app, source, document: () => current };
+  return {
+    ...app,
+    source,
+    document: () => current,
+    confirmations: () => confirmations,
+  };
 }
 test('question addition defaults to shared inline creator and preserves questionnaire edits', async () => {
   const app = composer();
@@ -377,4 +401,50 @@ test('existing question loads into Drawer editor before placement and can reopen
   await app.find('QuestionLibraryView').props.embedded.onPlace(app.source);
   app.flush();
   assert.equal(app.document().sections[0].questions.length, 1);
+});
+
+test('question and section removal confirm occupied guide answers and cancel without editing', async () => {
+  for (const label of ['섹션 1 질문 1 배치 제거', '섹션 1 삭제']) {
+    const app = composer({ existing: true, occupied: true });
+    let prompts = 0;
+    app.window.confirm = () => {
+      prompts++;
+      return false;
+    };
+    app.flush();
+    app.find('Button', (p) => p['aria-label'] === label).props.onClick();
+    for (let i = 0; i < 8; i++) {
+      await Promise.resolve();
+      app.flush();
+    }
+    assert.equal(prompts, 1);
+    assert.equal(app.document().sections[0].questions.length, 1);
+    app.window.confirm = () => {
+      prompts++;
+      return true;
+    };
+    app.find('Button', (p) => p['aria-label'] === label).props.onClick();
+    for (let i = 0; i < 8; i++) {
+      await Promise.resolve();
+      app.flush();
+    }
+    assert.equal(prompts, 2);
+    assert.equal(app.document().sections.flatMap((s) => s.questions).length, 0);
+    assert.equal(app.confirmations()[0], app.source.id);
+  }
+});
+test('question without guide answers is removed without confirmation', async () => {
+  const app = composer({ existing: true });
+  app.window.confirm = () => {
+    throw new Error('Unexpected confirmation');
+  };
+  app.flush();
+  app
+    .find('Button', (p) => p['aria-label'] === '섹션 1 질문 1 배치 제거')
+    .props.onClick();
+  for (let i = 0; i < 8; i++) {
+    await Promise.resolve();
+    app.flush();
+  }
+  assert.equal(app.document().sections[0].questions.length, 0);
 });

@@ -50,6 +50,7 @@ const saveRequestSchema = z.object({
   document: questionBlockSchema,
   expectedRevision: z.number().int().min(0),
   saveId: z.uuid(),
+  confirmedGuideAnswerFields: z.array(z.uuid()).max(20).optional(),
 });
 
 const archiveRequestSchema = z.object({
@@ -70,6 +71,20 @@ async function handle(request: Request, context: Context) {
   const id = path[0];
   const client = createClient(await cookies());
 
+  if (
+    request.method === 'GET' &&
+    path.length === 2 &&
+    path[1] === 'guide-answer-fields' &&
+    z.uuid().safeParse(id).success
+  ) {
+    const result = await client.rpc('guide_answer_field_ids', { qid: id });
+    if (result.error)
+      return json(
+        { error: '가이드 응답을 확인하지 못했어요.' },
+        errorStatus(result.error.code),
+      );
+    return json({ fieldIds: result.data ?? [] });
+  }
   if (request.method === 'GET') {
     const viewRole = await getViewRole(access.role!);
     const ownOnly = viewRole !== 'admin';
@@ -256,12 +271,30 @@ async function handle(request: Request, context: Context) {
     }
     const result = await client
       .rpc('save_question', {
-        p_document: parsed.data.document,
+        p_document: {
+          ...parsed.data.document,
+          confirmedGuideAnswerFields:
+            parsed.data.confirmedGuideAnswerFields ?? [],
+        },
         p_expected_revision: parsed.data.expectedRevision,
         p_save_id: parsed.data.saveId,
       })
       .overrideTypes<QuestionBlockRow, { merge: false }>();
     if (result.error) {
+      if (result.error.code === 'PGA01') {
+        let fieldIds: unknown = [];
+        try {
+          fieldIds = JSON.parse(result.error.details ?? '[]');
+        } catch {}
+        return json(
+          {
+            error: '가이드 응답 삭제 확인이 필요해요.',
+            code: 'guide_answer_confirmation_required',
+            fieldIds,
+          },
+          409,
+        );
+      }
       const status = errorStatus(result.error.code);
       return json(
         { error: errorMessage(result.error.message, status) },

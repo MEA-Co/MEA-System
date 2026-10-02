@@ -94,6 +94,7 @@ export const questionnaireDocumentSchema = z
   });
 
 export const saveQuestionnaireSchema = z.object({
+  confirmedRemovedGuideQuestions: z.array(z.uuid()).max(5000).optional(),
   document: questionnaireDocumentSchema.superRefine((document, context) => {
     document.sections.forEach((section, si) =>
       section.questions.forEach((question, qi) => {

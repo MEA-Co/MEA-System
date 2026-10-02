@@ -79,6 +79,14 @@ export function QuestionnaireComposer({
   }, []);
   const [title, setTitle] = useState(initialDraft.title);
   const [sections, setSections] = useState(initialDraft.sections);
+  const [checkingRemoval, setCheckingRemoval] = useState(false);
+  const removalLock = useRef(false);
+  const sectionsRef = useRef(sections);
+  useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+  const [confirmedRemovedGuideQuestions, setConfirmedRemovedGuideQuestions] =
+    useState<string[]>([]);
   const [pickerSection, setPickerSection] = useState<string | null>(null);
   const [editingQuestionId, setEditingQuestionId] = useState<
     string | undefined
@@ -129,10 +137,72 @@ export function QuestionnaireComposer({
           (hasPlacements && (!library.data || library.error)
             ? '배치한 질문을 확인할 수 없어요. 질문 목록을 다시 불러와 주세요.'
             : null)),
-    paused || pickerSection !== null,
+    paused || pickerSection !== null || checkingRemoval,
     pickerSection !== null,
+    confirmedRemovedGuideQuestions,
   );
   const { save, saving, dirty, savedAt, blocked, error } = saveState;
+  async function removeQuestions(
+    next: QuestionnaireSection[],
+    removed: QuestionnaireSection['questions'],
+    sectionRemoval = false,
+  ) {
+    if (saving || blocked || removalLock.current) return;
+    removalLock.current = true;
+    setCheckingRemoval(true);
+    try {
+      let occupied: string[] = [];
+      if (initialDraft.revision > 0 && removed.length) {
+        const response = await fetch(
+          `/api/questionnaires/${initialDraft.questionnaireId}/guide-question-ids`,
+          { cache: 'no-store' },
+        );
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.questionIds)) throw new Error();
+        occupied = removed.flatMap((question) =>
+          question.sourceQuestionId &&
+          data.questionIds.includes(question.sourceQuestionId)
+            ? [question.sourceQuestionId]
+            : [],
+        );
+      }
+      if (occupied.length) {
+        if (
+          !window.confirm(
+            '제거할 질문에 저장된 가이드 응답이 있습니다. 계속하면 이 질문지의 해당 가이드 응답이 삭제됩니다. 다른 질문지의 응답과 원본 질문은 유지됩니다. 계속하시겠습니까?',
+          )
+        )
+          return;
+      } else if (
+        sectionRemoval &&
+        removed.length &&
+        !window.confirm(
+          '이 섹션과 배치된 질문을 질문지에서 제거할까요? 원본 질문은 유지됩니다.',
+        )
+      )
+        return;
+      if (sectionsRef.current !== sections) throw new Error();
+      const removedIds = new Set(
+        removed.map((question) => question.sourceQuestionId),
+      );
+      setConfirmedRemovedGuideQuestions((current) => [
+        ...new Set([
+          ...current.filter((id) => !removedIds.has(id)),
+          ...occupied,
+        ]),
+      ]);
+      commit(next);
+    } catch {
+      toast.add({
+        type: 'error',
+        title: '가이드 응답을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      });
+    } finally {
+      removalLock.current = false;
+      setCheckingRemoval(false);
+    }
+  }
+
   useEffect(() => {
     onEditorState?.({
       dirty: dirty || questionState.dirty || responseState.dirty,
@@ -381,7 +451,7 @@ export function QuestionnaireComposer({
               <Input
                 id="questionnaire-title"
                 value={title}
-                disabled={blocked}
+                disabled={blocked || checkingRemoval || saving}
                 maxLength={500}
                 placeholder="제목을 입력하세요"
                 onChange={(event) => setTitle(event.target.value)}
@@ -404,7 +474,7 @@ export function QuestionnaireComposer({
                   <Input
                     id={`section-${section.id}`}
                     value={section.title}
-                    disabled={blocked}
+                    disabled={blocked || checkingRemoval || saving}
                     maxLength={500}
                     placeholder="섹션 제목"
                     className="min-w-40 flex-1"
@@ -444,17 +514,15 @@ export function QuestionnaireComposer({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    disabled={blocked}
+                    disabled={blocked || checkingRemoval || saving}
                     aria-label={`섹션 ${si + 1} 삭제`}
-                    onClick={() => {
-                      if (
-                        !section.questions.length ||
-                        window.confirm(
-                          '이 섹션과 배치된 질문을 질문지에서 제거할까요? 원본 질문은 유지됩니다.',
-                        )
+                    onClick={() =>
+                      void removeQuestions(
+                        sections.filter((s) => s.id !== section.id),
+                        section.questions,
+                        true,
                       )
-                        commit(sections.filter((s) => s.id !== section.id));
-                    }}
+                    }
                   >
                     <Trash2 />
                   </Button>
@@ -502,7 +570,7 @@ export function QuestionnaireComposer({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              disabled={blocked}
+                              disabled={blocked || checkingRemoval || saving}
                               aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 수정`}
                               title="질문 수정"
                               onClick={(event) => {
@@ -518,10 +586,10 @@ export function QuestionnaireComposer({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            disabled={blocked}
+                            disabled={blocked || checkingRemoval || saving}
                             aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
-                            onClick={() => {
-                              commit(
+                            onClick={() =>
+                              void removeQuestions(
                                 sections.map((s) =>
                                   s.id === section.id
                                     ? {
@@ -532,8 +600,9 @@ export function QuestionnaireComposer({
                                       }
                                     : s,
                                 ),
-                              );
-                            }}
+                                [question],
+                              )
+                            }
                           >
                             <Trash2 />
                           </Button>

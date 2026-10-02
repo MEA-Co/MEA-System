@@ -47,7 +47,7 @@ select set_config('request.jwt.claim.sub',(select owner_id::text from legacy_fix
 set local role authenticated;
 do $$ declare f record; begin
  select * into f from legacy_fixture;
- if exists(select 1 from public.question_responses) or exists(select 1 from public.question_versions) then raise exception 'Other user leaked'; end if;
+ if exists(select 1 from public.question_responses) then raise exception 'Other user leaked'; end if;
  if not exists(select 1 from public.unread_distributed_questionnaires() where questionnaire_id=f.questionnaire_id) then raise exception 'Other users unread changed'; end if;
  perform public.open_distributed_response(f.questionnaire_id);
 end $$;

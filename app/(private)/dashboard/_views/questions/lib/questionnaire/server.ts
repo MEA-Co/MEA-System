@@ -334,11 +334,22 @@ export async function saveQuestionnaireDraft(
       };
   }
   const { data, error } = await client.rpc('save_questionnaire_draft', {
-    p_document: parsed.data.document,
+    p_document: {
+      ...parsed.data.document,
+      confirmedRemovedGuideQuestions:
+        parsed.data.confirmedRemovedGuideQuestions ?? [],
+    },
     p_expected_revision: parsed.data.expectedRevision,
     p_save_id: parsed.data.saveId,
   });
   if (error) {
+    if (error.code === 'PGA02')
+      return {
+        ok: false,
+        code: 'invalid',
+        error:
+          '제거할 질문에 가이드 응답이 있습니다. 질문을 다시 배치한 뒤 제거하여 삭제를 확인해 주세요.',
+      };
     if (error.message?.includes('Question placement'))
       return {
         ok: false,

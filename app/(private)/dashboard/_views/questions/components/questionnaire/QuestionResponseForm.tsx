@@ -12,18 +12,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 
 import {
-  mergeLiveResponseRows,
+  mergeGuideResponseRows,
   type QuestionResponseSave,
   type QuestionResponseSnapshot,
   snapshotRows,
 } from '../../lib/question-responses';
-import { choiceAnswerValue, scaleAnswer } from '../../lib/question-types';
 import {
   QUESTIONNAIRE_API,
   QuestionnaireApiError,
 } from '../../lib/questionnaire/api-client';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
-import { richTextPlainText } from '../../lib/rich-text';
 
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnairePreview } from './QuestionnairePreview';
@@ -107,10 +105,6 @@ function ResponseEditor({
   const [rows, setRows] = useState(() => snapshotRows(initial));
   const [snapshot, setSnapshot] = useState(initial);
   const [remoteAnswerVersion, setRemoteAnswerVersion] = useState(0);
-  const [reviewRequired, setReviewRequired] = useState(
-    initial.questions.some((q) => q.needsReview),
-  );
-  const [recovered, setRecovered] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState(initial.savedAt);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -178,13 +172,7 @@ function ResponseEditor({
     };
   }, [dirty, saving]);
   async function save(complete = false) {
-    if (
-      session.current.busy ||
-      locked ||
-      reviewRequired ||
-      (!dirty && !complete)
-    )
-      return;
+    if (session.current.busy || locked || (!dirty && !complete)) return;
     session.current.busy = true;
     session.current.retry ??= {
       answers: structuredClone(rows),
@@ -219,9 +207,12 @@ function ResponseEditor({
         if ([401, 403, 404].includes(error.status)) setBlocked(true);
         if (error.status === 409) {
           try {
-            latestRemoteHandler.current?.(
-              await request(questionnaireId, 'GET'),
-            );
+            const latest = await request(questionnaireId, 'GET');
+            latestRemoteHandler.current?.(latest);
+            if (latest.definitionToken !== snapshot.definitionToken) {
+              setError('');
+              return;
+            }
           } catch {
             setBlocked(true);
           }
@@ -242,6 +233,17 @@ function ResponseEditor({
     if (dirty && !error) void save();
   });
   function applyRemote(next: QuestionResponseSnapshot) {
+    if (next.definitionToken !== snapshot.definitionToken) {
+      session.current.revision = next.revision;
+      const remoteRows = snapshotRows(next);
+      setSaved(JSON.stringify(remoteRows));
+      setRows((current) => mergeGuideResponseRows(current, snapshot, next));
+      setRemoteAnswerVersion((version) => version + 1);
+      setSnapshot(next);
+      setSavedAt(next.savedAt);
+      setError('');
+      return;
+    }
     if (next.revision !== session.current.revision) {
       if (dirty) {
         setBlocked(true);
@@ -257,54 +259,10 @@ function ResponseEditor({
       setRows(snapshotRows(next));
       setSaved(JSON.stringify(snapshotRows(next)));
       setSavedAt(next.savedAt);
-    } else if (next.definitionToken !== snapshot.definitionToken) {
-      const changed = next.questions.filter((q) => {
-        const old = snapshot.questions.find(
-          (item) => item.definition.id === q.definition.id,
-        );
-        return (
-          old &&
-          responseStructure(old.definition) !== responseStructure(q.definition)
-        );
-      });
-      const removed = snapshot.questions.filter(
-        (old) =>
-          !next.questions.some((q) => q.definition.id === old.definition.id),
-      );
-      if (changed.length || removed.length) {
-        setRecovered((current) => ({
-          ...current,
-          ...Object.fromEntries(
-            [...changed, ...removed].map((q) => [
-              q.definition.id,
-              formatRows(
-                snapshot.questions.find(
-                  (item) => item.definition.id === q.definition.id,
-                )!.definition,
-                rows[q.definition.id] ?? [],
-              ),
-            ]),
-          ),
-        }));
-        if (changed.length) setReviewRequired(true);
-      }
-      const remoteRows = snapshotRows(next);
-      setSaved(JSON.stringify(remoteRows));
-      setRows((current) =>
-        mergeLiveResponseRows(
-          current,
-          remoteRows,
-          changed.map((q) => q.definition.id),
-        ),
-      );
     }
     setSnapshot(next);
-    if (
-      next.questions.some((q) => q.needsReview) &&
-      next.definitionToken !== snapshot.definitionToken
-    )
-      setReviewRequired(true);
   }
+
   useEffect(() => {
     latestRemoteHandler.current = applyRemote;
   });
@@ -354,7 +312,7 @@ function ResponseEditor({
         </p>
         <Button
           variant="outline"
-          disabled={locked || saving || reviewRequired || !dirty}
+          disabled={locked || saving || !dirty}
           onClick={() => void save()}
         >
           저장
@@ -371,64 +329,6 @@ function ResponseEditor({
           있어요.
         </p>
       )}
-      {reviewRequired && (
-        <div
-          role="alert"
-          className="space-y-2 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
-        >
-          <p>
-            질문의 답변 구조가 변경됐어요. 이전 답변을 확인한 뒤 새 구조로
-            작성해 주세요. 이전 답변은 보관됩니다.
-          </p>
-          <Button
-            onClick={() => {
-              setReviewRequired(false);
-              setError('');
-            }}
-          >
-            확인하고 새 구조로 작성
-          </Button>
-        </div>
-      )}
-      {snapshot.questions
-        .filter(
-          (q) =>
-            q.needsReview ||
-            q.previousResponses.length ||
-            recovered[q.definition.id],
-        )
-        .map((q) => (
-          <details key={q.responseId} className="rounded-xl border p-4 text-sm">
-            <summary>이전 답변 · {q.definition.title || '질문'}</summary>
-            <pre className="mt-2 whitespace-pre-wrap break-all">
-              {[
-                q.needsReview ? formatRows(q.previousDefinition, q.rows) : '',
-                ...q.previousResponses.map((item) =>
-                  formatRows(item.definition, item.rows),
-                ),
-                recovered[q.definition.id]
-                  ? `구조 변경 전 작성 중인 입력:\n${recovered[q.definition.id]}`
-                  : '',
-              ]
-                .filter(Boolean)
-                .join('\n\n')}
-            </pre>
-          </details>
-        ))}
-      {Object.entries(recovered)
-        .filter(
-          ([id, value]) =>
-            value && !snapshot.questions.some((q) => q.definition.id === id),
-        )
-        .map(([id, value]) => (
-          <details key={id} className="rounded-xl border p-4 text-sm">
-            <summary>질문지에서 제외된 질문의 작성 중인 답변</summary>
-            <p className="mt-2 text-muted-foreground">
-              필요한 내용을 복사할 수 있도록 이 화면에 보관했어요.
-            </p>
-            <pre className="mt-2 whitespace-pre-wrap break-all">{value}</pre>
-          </details>
-        ))}
       <QuestionnairePreview
         reviewQuestionnaireId={
           snapshot.sourceDeleted ? undefined : questionnaireId
@@ -441,76 +341,9 @@ function ResponseEditor({
         response={{
           rows,
           onChange: change,
-          disabled: locked || reviewRequired || !!pendingSave?.complete,
+          disabled: locked || !!pendingSave?.complete,
         }}
       />
     </div>
   );
-}
-
-function responseStructure(
-  definition: QuestionResponseSnapshot['questions'][number]['definition'],
-) {
-  const {
-    fields,
-    row_mode,
-    min_rows,
-    max_rows,
-    source_block_id,
-    source_field_id,
-    after_block_id,
-    condition,
-  } = definition;
-  return JSON.stringify({
-    fields: fields
-      .map(({ label, choiceStyle, explorationRecommended, ...schema }) => {
-        void label;
-        void choiceStyle;
-        void explorationRecommended;
-        return schema;
-      })
-      .sort((a, b) => a.id.localeCompare(b.id)),
-    row_mode,
-    min_rows,
-    max_rows,
-    source_block_id,
-    source_field_id,
-    after_block_id,
-    condition,
-  });
-}
-
-function formatRows(
-  definition: QuestionResponseSnapshot['questions'][number]['definition'],
-  rows: PreviewAnswerRow[],
-) {
-  return rows
-    .flatMap((row, index) =>
-      definition.fields.map((field) => {
-        const raw = row.answers[field.id] ?? '';
-        let value = raw;
-        if (field.kind === 'text') value = richTextPlainText(raw);
-        else if (field.kind === 'scale') {
-          const answer = scaleAnswer(raw);
-          value = [answer.score == null ? '' : `${answer.score}점`, answer.text]
-            .filter(Boolean)
-            .join(' · ');
-        } else if (field.kind === 'single' || field.kind === 'multiple') {
-          const answer = choiceAnswerValue(raw, field.kind === 'multiple');
-          value = [
-            ...answer.choices.map((choice) =>
-              typeof choice === 'string'
-                ? (field.options?.find((option) => option.id === choice)
-                    ?.label ?? '이전 선택지')
-                : choice.text,
-            ),
-            answer.text,
-          ]
-            .filter(Boolean)
-            .join(', ');
-        }
-        return `${index + 1} · ${field.label}: ${value || '미입력'}`;
-      }),
-    )
-    .join('\n');
 }

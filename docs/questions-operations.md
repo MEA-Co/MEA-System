@@ -606,3 +606,116 @@ npx supabase db push --linked --dry-run
 5. 이번 코드의 앱을 기존 운영 방식으로 배포 → 기존 브라우저 탭 새로고침 → 목록/기존 질문지/저장/검토/컨설턴트 공개 범위 확인 → 서비스 재개. 기존 질문지 URL은 그대로 유지된다. 운영 테스트 목적으로 질문지를 배포하거나 답변을 만들지 않는다.
 
 중간 실패 시 해당 migration은 롤백되지만 앞서 적용된 파일은 남을 수 있으므로 이력을 확인한다. 앱만 이전 버전으로 되돌리지 않는다. 새 쓰기가 발생한 뒤 과거 백업을 덮어쓰지 말고 복구 범위를 먼저 확인한다.
+
+## 가이드 응답 항목별 보존·삭제 확인 (2026-10-02)
+
+`20261002063932_guide_answer_field_confirmation.sql` 로컬 적용. 질문 본문·설명·열 제목 수정과 항목 추가는 기존 가이드 응답을 유지한다. 항목 삭제 또는 kind 변경은 해당 필드 ID의 응답만 제거한다. 질문 관리와 질문지 내 공통 편집기에서 변경 직전에 저장된 가이드 응답의 필드 ID만 조회해 브라우저 기본 확인창으로 묻는다. 취소하면 편집 상태를 바꾸지 않는다. 조회 실패는 변경을 중단하고, 조회/확인 중 자동 저장을 막는다. 실제 삭제는 질문 저장 트랜잭션에서 실행한다.
+
+API는 confirmedGuideAnswerFields 배열을 전달하고 DB save_question이 원본 잠금 아래 실제 가이드 응답과 삭제/유형 변경 대상을 재검사한다. 확인이 없으면 PGA01로 전체 저장을 거절한다. 편집 중 새로 생긴 응답 때문에 재확인이 필요하면 저장 시 다시 묻고, 취소하면 자동 저장을 멈추고 입력을 유지한다. 재시도는 같은 saveId·동일 확인 목록을 사용한다. 응답의 다른 필드·행 ID를 보존하며 body와 과거 답변 보관 데이터에서도 삭제한 필드의 응답을 제거한다. 가이드 게시 세션만 대상으로 하고 컨설턴트 배포 응답은 변경하지 않는다. 행/조건 및 같은 유형 내 선택지 설정 변경의 기존 검토 정책은 유지한다.
+
+기존 question_versions 기반 내부 응답 저장 구조는 이번 변경에서 제거하지 않았다. 이번 범위는 가이드 응답의 항목별 보존·삭제와 사용자 확인이다. 별도 테이블 제거를 완료한 것으로 간주하지 않는다.
+
+검증: guide_answer_field_changes.sql에서 실제 두 항목 응답을 저장한 뒤 본문 수정/추가 보존, 확인 없는 유형 변경·삭제 거절, 확인 후 대상만 제거, 다른 답변·행 유지 확인. 기존 배포 잠금/배포 취소/검토/설명 SQL 4개 회귀 통과. 편집기 확인·취소 포함 JS 테스트 22개, 타입/린트/빌드/보안 advisor 통과. 실제 브라우저 테스트는 수행하지 않았다. 로컬 적용 전 임시 백업은 /tmp/system-before-guide-field-confirmation.dump. 운영은 읽기 전용 dry-run만 수행했다.
+
+운영은 사용자 명령어로 적용한다. 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대상 epwlcallocdjkmgdmtlv, 예상 신규 migration은 20261002063932_guide_answer_field_confirmation.sql 하나다. 다른 파일이나 이력 차이가 나오면 적용 전에 검토한다. 운영 복구 지점을 확인한 뒤:
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대기 없음 확인 → 이번 앱 배포 → 기존 탭 새로고침 → 가이드 응답이 있는 항목의 변경 시 확인창/취소 보존 확인 순서다. 운영 가이드 응답은 테스트 목적으로 삭제하지 않는다. 실제 의도한 변경을 승인했을 때 해당 항목만 삭제되는지 확인한다.
+
+## 질문지에서 질문 제거 확인·가이드 이전 답변 기능 제거 (2026-10-02)
+
+`20261002070012_guide_question_removal_without_history.sql` 로컬 적용. 질문 배치 제거와 섹션 삭제에서 해당 질문지의 저장된 가이드 응답이 있으면 한 번 확인한다. 취소하면 구성을 유지하고 확인 후 질문지 저장과 해당 응답 삭제를 원자적으로 처리한다. 같은 원본 질문을 사용하는 다른 질문지의 응답과 원본 질문은 유지한다. 서버는 questionnaire_guide_question_ids로 질문 ID만 전달하며 원본/질문지 작성자 권한을 검사한다. save_questionnaire_draft는 원본·질문지 잠금 아래 confirmedRemovedGuideQuestions를 재검사하고 미확인 응답 제거는 PGA02로 거절한다. 조회 중 구성이 바뀌면 제거를 취소하여 다른 편집을 덮어쓰지 않는다.
+
+가이드 응답 화면의 구조 변경 안내·재작성 확인·이전 답변 표시·제외된 질문 입력 복구 영역을 제거했다. 서버 응답 계약에서 needsReview/previousDefinition/previousBody/previousResponses를 제거하고 가이드 저장에서 이전 답변을 새로 보관하지 않는다. migration은 기존 가이드 게시 세션의 previous_responses와 현재 질문지에서 이미 제외된 질문의 가이드 응답을 정리한다. 컨설턴트 배포 세션에는 적용하지 않는다. 유효한 최신 가이드 답변은 항목 ID/유형 기준으로 유지한다. 삭제 후 재배치한 질문의 새 responseId에는 이전 로컬 입력을 재사용하지 않는다. 저장 충돌·접근 권한 및 오래된 definitionToken 차단은 유지한다. question_versions 테이블 제거는 이번 범위가 아니다.
+
+검증: SQL guide_question_removal(같은 원본 질문을 두 질문지에서 응답한 뒤 한쪽만 삭제, 미확인 거절 원자성, 재배치 시 삭제 응답 미복원), guide_answer_field_changes, 게시 구성/질문 응답/응답 조건/유형, 배포 잠금/취소, 검토 회귀 통과. UI 확인·취소 및 입력 병합을 포함한 JS 테스트 42개, 타입·린트·앱 빌드·보안 advisor 통과. 브라우저 실사용 테스트는 수행하지 않았다.
+
+운영에는 적용하지 않았다. 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대상은 epwlcallocdjkmgdmtlv. 확인 시 예상 파일은 아래 두 개다. 첫 파일을 이미 적용했다면 두 번째만 나온다. 예상 밖 파일이나 이력 차이는 실제 적용 전에 검토한다.
+
+```text
+20261002063932_guide_answer_field_confirmation.sql
+20261002070012_guide_question_removal_without_history.sql
+```
+
+운영 복구 지점을 확보한 뒤 적용한다. 이번 migration은 가이드의 과거 보관 답변을 실제로 정리하므로 복구 지점을 먼저 확인한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+대기 없음 확인 → 이번 앱 배포 → 기존 탭 새로고침 → 질문/섹션 제거 확인창과 취소 시 유지, 가이드 화면의 이전 답변 영역 제거 확인. 운영에서는 실제로 삭제할 의도가 있는 질문만 제거 승인한다.
+
+
+## 질문 버전 제거·원본 질문 직접 연결 (2026-10-02)
+
+### 완료 범위와 데이터 보존
+
+- 로컬 `20261002071428_direct_question_responses.sql` 적용. 응답의 `question_id`가 `questions.id`를 직접 참조한다. `question_versions`, `question_version_id`, 버전 불변 트리거·구조 비교 함수 및 앱의 `questionVersionId`를 제거했다. 과거 migration 기록은 재현을 위해 보존한다.
+- 가이드 응답의 유형 변경/항목 삭제는 질문 UPDATE 시 OLD.fields와 새 fields를 비교한다. 질문 저장 API의 확인 동의, 질문지에서 질문 제거 시 해당 질문지에 한정한 삭제, 충돌 방지는 유지한다.
+- 원본 없는 구형 배포 응답은 기존 정의를 응답의 `legacy_definition`에 옮기고 `legacy_question_id`를 보존한다. 새 원본 응답은 이 두 열을 사용하지 않는다. 구형 배포 경로를 제거하거나 새 배포본의 컨설턴트 입력 기능을 추가하지 않았다.
+- 단일 트랜잭션과 잠금으로 이전 중 쓰기를 막으며, 외래 키·동일 세션/질문 중복·원본 누락 검증이 실패하면 전체 롤백한다. 응답 ID·세션·내용은 그대로 유지한다. 로컬 변경 전 백업: `/tmp/system-before-remove-question-versions.dump` (운영 백업이 아님).
+- 별도 백업 복원 DB에서 원본 응답 4개 + 구형 응답 2개를 이전했다. 이전 전후 모든 응답 값(기존 버전 연결을 새 원본/구형 연결로 치환한 부분 제외), 구형 정의, 세션 전체가 동일하다. 최종 public/private 구조는 복원 과정의 기존 CHECK 괄호 표현 차이 2개 외 동일하며 의미 변경 없음. 검증한 이번 migration 하나만 로컬 이력에 등록했다.
+- SQL 회귀 9개: guide_answer_field_changes, guide_question_removal, question_responses, published_live_layout, question_response_conditions, question_response_types, distributed_response_path, questionnaire_distribution_withdrawal, questionnaire_locked_distribution. 직접 원본 연결의 중복 응답·ID 변조 차단도 검증했다. UI/저장 자동 검증 42개, 타입 검사·린트·운영 빌드, DB lint·보안 advisor 통과. 로컬 적용 대기 없음 확인. 브라우저 테스트는 수행하지 않았다.
+
+### 운영 현재 상태 (읽기 전용 확인)
+
+대상 `epwlcallocdjkmgdmtlv`. 원본 질문 30개, 질문 버전 0개, 질문 응답 0개, 응답 세션 0개, 원본 없는 구형 배치 0개다. 따라서 확인 시점에는 옮겨야 할 운영 응답이 없으며, 적용 전에 생성된 응답은 migration이 연결을 이전한다. 운영 최신 이력은 `20261002061031`이고 dry-run에서 아래 3개만 대기로 확인했다. 운영 DB 쓰기는 수행하지 않았다.
+
+1. `20261002063932_guide_answer_field_confirmation.sql`
+2. `20261002070012_guide_question_removal_without_history.sql`
+3. `20261002071428_direct_question_responses.sql`
+
+### 운영 적용 순서
+
+1. 변경을 저장하고 운영 백업/복원 지점을 확인한다. 두 번째 migration은 기존 가이드 이전 답변 기록 및 이미 제외된 질문의 가이드 응답을 정리한다. 이번 세 번째 migration 자체는 현재 응답 본문을 삭제하지 않는다. 적용 중 질문/질문지/응답 편집을 잠시 멈춘다.
+2. 프로젝트로 이동하고 연결 대상·운영 이력을 확인한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+```
+
+3. 예행 실행에서 위 세 파일을 확인한다. 일부를 이미 적용했다면 남은 파일만 나와야 한다. 예상과 다른 migration이나 이력 차이가 나오면 적용 전에 이력을 검토한다. `--include-all`이나 운영 이력 repair로 우회하지 않는다.
+
+```bash
+npx supabase db push --linked --dry-run --skip-vault
+```
+
+4. 검토한 migration만 실제 적용한 뒤 대기 없음과 제거 상태를 재확인한다.
+
+```bash
+npx supabase db push --linked --skip-vault
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run --skip-vault
+npx supabase db query --linked "select to_regclass('public.question_versions') as removed_table, count(*) as responses, count(question_id) as direct_responses from public.question_responses;"
+```
+
+`removed_table`은 NULL이어야 한다. 응답 개수는 확인 당시 0개였으며, 이후 응답이 생겼다면 0일 필요는 없다. CLI 2.117의 `--skip-vault`는 이번 작업과 관계없는 Vault 설정 쓰기를 제외한다.
+
+5. 이번 변경이 포함된 앱을 기존 운영 배포 방식으로 배포하고 열린 탭을 새로고침한다. DB migration → 앱 배포 순서다. 질문 저장·가이드 응답 조회/저장·유형 변경과 질문 제거 확인의 취소 동작을 확인한다. 실제 운영 답변을 검증 목적으로 삭제하지 않는다. 배포 질문 수정 잠금과 미처리 검토 요청의 배포 차단도 유지된다.

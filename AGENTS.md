@@ -14,6 +14,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 질문 버전 제거(2026-10-02, 이전 질문 snapshot 정책보다 우선): `20261002071428_direct_question_responses.sql` 로컬 적용. `question_responses.question_id`가 원본을 직접 참조하며 `question_versions`·`question_version_id`·불변 버전/구조 비교 함수를 제거했다. 응답 JSON은 `questionId`; 기존 응답 ID·본문·행·세션 보존. 질문 UPDATE 트리거가 OLD.fields와 새 필드 ID/유형으로 가이드 응답을 정리하고 기존 저장 확인·revision/definitionToken·질문지별 제거 범위를 유지한다. 구형 원본 없는 배포 응답만 legacy_question_id/legacy_definition으로 호환하며 새 원본 응답에는 NULL. 원본 응답 4개·구형 2개의 이전 전후 데이터 동일성, SQL 회귀 9개, DB lint/security advisor 검증. 운영 읽기 전용 확인: questions=30, question_versions=0, responses=0, sessions=0, 원본 없는 배치=0; 최신 운영 이력 20261002061031, 63932·70012·71428 대기. 운영 쓰기 미수행, 사용자가 docs/questions-operations.md 최신 순서로 적용한다.
+
+
+- 질문 제거 가이드 정책(2026-10-02): 20261002070012_guide_question_removal_without_history.sql 로컬 적용. 질문/섹션 제거는 해당 질문지 가이드 응답 존재 시 확인하며 그 질문지의 응답만 삭제, 다른 질문지·원본 유지. DB confirmedRemovedGuideQuestions/PGA02로 우회 차단. 가이드 구조 변경 안내·이전 답변 보관/복구 UI 및 RPC 이전 답변 필드를 제거, 기존 가이드 previous_responses/이미 제외된 질문 응답 정리. 최신 유효 응답은 유지. 재배치 새 responseId에 과거 로컬 입력 복원 금지. question_versions 자체는 유지. 운영 사용자 적용 절차는 docs/questions-operations.md 마지막 절.
+
+
+- 가이드 응답 항목 보존(2026-10-02): 20261002063932_guide_answer_field_confirmation.sql 로컬 적용. 질문 내용 수정/항목 추가는 응답 유지, 항목 삭제/kind 변경은 대상 필드 응답만 삭제한다. 공통 질문 편집기는 실제 가이드 응답이 있는 필드만 변경 전 확인하며 취소는 원상 유지. save_question은 confirmedGuideAnswerFields를 잠금 아래 재검사하고 미확인 시 PGA01로 거절한다. guide_answer_field_ids는 작성자/관리자에게 필드 ID만 반환. 기존 question_versions 테이블은 유지하며 테이블 제거 완료로 간주하지 않는다. 운영 사용자 적용 순서는 docs/questions-operations.md 마지막 절.
+
+
 - 질문지 ID 이름 통일(2026-10-02): `20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱/API 문서는 questionnaireId 하나, DB 하위 연결은 questionnaire_id/origin_questionnaire_id, RPC는 p_questionnaire_id/p_origin_questionnaire_id. 기존 UUID 유지. private.questionnaire_owners 제거, legacy_parent_id는 보존용으로만 남고 런타임에서 사용하지 않는다. 질문 버전은 question_versions/question_version_id 및 응답 JSON questionVersionId로 유지. 과거 migration 기록 보존. 운영은 사용자 명령어 적용, 최신 순서는 docs/questions-operations.md 마지막 절.
 
 
