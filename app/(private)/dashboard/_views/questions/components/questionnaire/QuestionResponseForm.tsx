@@ -12,6 +12,7 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 
+import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import {
   mergeGuideResponseRows,
   type QuestionResponseSave,
@@ -196,6 +197,29 @@ function ResponseEditor({
   }, [dirty, saving]);
   async function save(complete = false) {
     if (session.current.busy || locked || (!dirty && !complete)) return;
+    if (complete && !session.current.retry) {
+      const career = snapshot.questions.find(
+        (question) => question.questionId === CAREER_FLOW_QUESTION_ID,
+      );
+      if (career) {
+        const answers = rows[career.definition.id] ?? [];
+        const answered = (id: string) =>
+          answers.some((row) =>
+            richTextPlainText(row.answers[id] ?? '').trim(),
+          );
+        const hasStart =
+          answered('f4689fea-ba91-400f-82be-f0b1dbf185db') ||
+          answered('720f88bd-1ace-4b86-828f-5df7abbe0a10');
+        const hasAdmission = answered('e75649e4-82f5-4175-8c14-2298c522a45d');
+        if (!hasStart || !hasAdmission) {
+          const message =
+            '진로 흐름의 고교 입학 전(중등 또는 예비 고1)과 고3 수시 원서 접수 시기에 각각 한 항목 이상 작성해 주세요.';
+          setError(message);
+          toast.add({ type: 'error', title: message });
+          return;
+        }
+      }
+    }
     session.current.busy = true;
     session.current.retry ??= {
       answers: structuredClone(rows),

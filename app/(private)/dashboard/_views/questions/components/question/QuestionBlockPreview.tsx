@@ -56,7 +56,7 @@ function answerSummary(field: QuestionBlockField, value: string): string {
     .join(', ');
 }
 
-import { QuestionAnswerTable } from './QuestionAnswerTable';
+import { CareerFlowThread } from './CareerFlowThread';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
@@ -370,7 +370,7 @@ export function QuestionBlockPreview({
           </p>
         )}
         {document.id === CAREER_FLOW_QUESTION_ID ? (
-          <QuestionAnswerTable
+          <CareerFlowThread
             document={document}
             rows={visibleRows}
             waiting={waiting}
