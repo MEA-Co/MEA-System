@@ -105,10 +105,16 @@ export async function listMyPublishedResponses() {
 
 export async function loadGuideAnswers(questionIds?: string[]) {
   const access = await requireUserAccess({
-    allowedRoles: ['admin', 'consultant_lead'],
+    allowedRoles: questionIds
+      ? ['admin', 'consultant_lead', 'consultant']
+      : ['admin', 'consultant_lead'],
   });
   const role = await getViewRole(access.role);
-  if (role !== 'admin' && role !== 'consultant_lead')
+  if (
+    role !== 'admin' &&
+    role !== 'consultant_lead' &&
+    !(questionIds && role === 'consultant')
+  )
     throw new QuestionnaireHttpError(403, '조회 권한이 없어요.');
   const client = createClient(await cookies());
   const { data, error } = questionIds

@@ -428,6 +428,7 @@ function ResponseEditor({
         sections={snapshot.sections}
         library={snapshot.questions.map((q) => q.definition)}
         showPrivateDetails={!distributed}
+        showGuideAnswers={distributed}
         response={{
           rows,
           onChange: change,

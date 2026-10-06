@@ -52,6 +52,17 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 
+-- A published-only guide is not available to ordinary consultants.
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ begin
+ if public.read_guide_answers(array[(select source_id from publish_docs)]) <> '{}'::jsonb then raise exception 'Published-only guide leaked'; end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+
 -- A second questionnaire places the same source question.
 create temporary table second_review_doc(doc jsonb);
 grant all on second_review_doc to authenticated;
@@ -219,6 +230,29 @@ do $$ begin
  if (select count from public.distributed_submission_counts() where questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs)) is distinct from 1::bigint then
    raise exception 'Submission count must exclude drafts and count resubmission once';
  end if;
+end $$;
+reset role;
+-- Consultants see only published guide work on active distributions.
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ declare x jsonb; begin
+ x:=public.read_guide_answers(array[(select source_id from publish_docs)]);
+ if x::text not like '%공개 가이드%' or x::text like '%가이드 계정 비공개 초안%' then raise exception 'Consultant guide visibility incorrect'; end if;
+end $$;
+reset role;
+update public.questionnaires set archived_at=now() where id in (select (doc->>'questionnaireId')::uuid from publish_docs union all select (doc->>'questionnaireId')::uuid from second_review_doc);
+set local role authenticated;
+do $$ begin
+ if public.read_guide_answers(array[(select source_id from publish_docs)]) <> '{}'::jsonb then raise exception 'Archived guide leaked'; end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+set local role authenticated;
+do $$ begin
+ begin
+  perform public.read_guide_answers(array[(select source_id from publish_docs)]);
+  raise exception 'Unauthenticated guide read accepted';
+ exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 rollback;

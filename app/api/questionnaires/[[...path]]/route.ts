@@ -77,7 +77,7 @@ async function handle(request: Request, context: Context) {
       }
       if (path.length === 1 && id === 'guide-access' && staff)
         return json(await loadGuideAnswers());
-      if (path.length === 1 && id === 'guide-answers' && staff) {
+      if (path.length === 1 && id === 'guide-answers') {
         const ids = z
           .array(z.uuid())
           .max(500)
