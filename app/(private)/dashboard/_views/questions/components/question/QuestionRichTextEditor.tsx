@@ -332,7 +332,7 @@ export function QuestionRichTextEditor({
                   ref={menuButton}
                   role="menuitem"
                   variant="ghost"
-                  className="h-auto w-full justify-start gap-3 px-3 py-2 text-left"
+                  className="h-auto w-full items-start justify-start gap-3 px-3 py-2 text-left whitespace-normal"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={openPicker}
                 >
@@ -340,9 +340,11 @@ export function QuestionRichTextEditor({
                     className="size-5 shrink-0 text-muted-foreground"
                     aria-hidden="true"
                   />
-                  <span className="shrink-0 font-medium">탐구활동</span>
-                  <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-                    신규 탐구활동을 추가하거나, 작성한 탐구활동을 첨부해요
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">탐구활동</span>
+                    <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
+                      신규 탐구활동을 추가하거나, 작성한 탐구활동을 첨부해요
+                    </span>
                   </span>
                 </Button>
               ) : (
