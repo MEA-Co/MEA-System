@@ -187,6 +187,7 @@ export function PublishedQuestionnaire({
           sections={document.sections}
           library={sources}
           legacyResponsePreview={distributed}
+          showGuideAnswers={distributed}
         />
       </Tabs.Panel>
     </Tabs.Root>
