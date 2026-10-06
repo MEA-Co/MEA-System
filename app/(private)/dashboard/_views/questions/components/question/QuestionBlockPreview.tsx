@@ -264,11 +264,11 @@ export function QuestionBlockPreview({
           {document.fields.some(
             (field) => field.kind === 'text' && field.explorationRecommended,
           ) && (
-            <aside className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm leading-6 text-white lg:ml-auto lg:w-auto lg:max-w-sm">
-              <p className="font-semibold">
+            <aside className="ml-auto max-w-full shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+              <p className="text-sm font-semibold">
                 탐구활동 참조가 필요한 질문입니다.
               </p>
-              <p>
+              <p className="mt-0.5 text-xs font-normal">
                 &apos;@탐구활동&apos;을 입력하여 탐구활동을 언급하며
                 답변해주세요!
               </p>
@@ -283,7 +283,7 @@ export function QuestionBlockPreview({
               className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4"
             >
               <div className="mb-2 flex items-start justify-between gap-3">
-                <h3 className="min-w-0 flex-1 text-sm font-semibold [overflow-wrap:anywhere]">
+                <h3 className="min-w-0 flex-1 text-sm font-semibold wrap-anywhere">
                   {detail.title}
                 </h3>
                 {showPrivateDetails && (
@@ -456,13 +456,13 @@ export function QuestionBlockPreview({
                               aria-hidden="true"
                               className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
                             />
-                            <span className="min-w-0 break-keep text-left [overflow-wrap:anywhere]">
+                            <span className="min-w-0 break-keep text-left wrap-anywhere">
                               {document.rowLabels?.[index]?.trim() || index + 1}
                             </span>
                           </Button>
                         </th>
                         <td className="px-4 py-3">
-                          <dl className="grid min-w-0 gap-3 [overflow-wrap:anywhere]">
+                          <dl className="grid min-w-0 gap-3 wrap-anywhere">
                             {document.fields.map((field, fieldIndex) => {
                               const summary = answerSummary(
                                 field,

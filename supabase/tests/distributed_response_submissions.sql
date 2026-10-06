@@ -281,6 +281,49 @@ do $$ begin
  if exists(select 1 from storage.objects where name=(select owner_id||'/'||id||'/report.pdf' from guide_activity_fixture)) then raise exception 'Removed reference report remained readable'; end if;
 end $$;
 reset role;
+-- Exercise archive/restore through the same RPC as the status menu.
+create temporary table archive_snapshot as
+ select id, to_jsonb(s) value from public.response_sessions s
+ where origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs);
+create temporary table archive_answers as
+ select r.id,to_jsonb(r) value from public.question_responses r
+ where session_id in(select id from archive_snapshot);
+create temporary table archive_submissions as
+ select session_id,to_jsonb(r) value from public.response_submissions r
+ where session_id in(select id from archive_snapshot);
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+set local role authenticated;
+do $$ declare q public.questionnaires%rowtype; begin
+ select * into q from public.questionnaires where id=(select (doc->>'questionnaireId')::uuid from publish_docs);
+ perform public.change_questionnaire_status(q.id,q.revision,q.status,null,'archived',gen_random_uuid());
+ if not exists(select 1 from public.questionnaires where id=q.id and archived_at is not null and status='distributed') then raise exception 'Archive failed'; end if;
+end $$;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs); begin
+ if exists(select 1 from public.questionnaires where id=qid) then raise exception 'Archived questionnaire visible'; end if;
+ begin perform public.read_published_question_sources(qid); raise exception 'Archived sources readable'; exception when insufficient_privilege then null; end;
+ begin perform public.open_distributed_question_response_session(qid); raise exception 'Archived session opened'; exception when insufficient_privilege then null; end;
+ begin perform public.read_distributed_question_response_session(qid); raise exception 'Archived session readable'; exception when insufficient_privilege then null; end;
+ begin perform public.save_distributed_question_response_session(qid,'{}',0,gen_random_uuid(),false,null); raise exception 'Archived save accepted'; exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
+do $$ declare q public.questionnaires%rowtype; begin
+ select * into q from public.questionnaires where id=(select (doc->>'questionnaireId')::uuid from publish_docs);
+ perform public.change_questionnaire_status(q.id,q.revision,q.status,q.archived_at,q.status,gen_random_uuid());
+ if not exists(select 1 from public.questions where id=(select source_id from publish_docs) and distribution_locked_at is not null) then raise exception 'Archive removed source lock'; end if;
+end $$;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+do $$ begin
+ perform public.read_distributed_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ if not exists(select 1 from public.questionnaires where id=(select (doc->>'questionnaireId')::uuid from publish_docs)) then raise exception 'Restored questionnaire hidden'; end if;
+end $$;
+reset role;
+do $$ begin
+ if exists(select 1 from archive_snapshot a left join public.response_sessions s on s.id=a.id where to_jsonb(s) is distinct from a.value)
+ or exists(select 1 from archive_answers a left join public.question_responses r on r.id=a.id where to_jsonb(r) is distinct from a.value)
+ or exists(select 1 from archive_submissions a left join public.response_submissions r on r.session_id=a.session_id where to_jsonb(r) is distinct from a.value)
+ then raise exception 'Archive/restore changed responses'; end if;
+end $$;
 update public.questionnaires set archived_at=now() where id in (select (doc->>'questionnaireId')::uuid from publish_docs union all select (doc->>'questionnaireId')::uuid from second_review_doc);
 set local role authenticated;
 do $$ begin

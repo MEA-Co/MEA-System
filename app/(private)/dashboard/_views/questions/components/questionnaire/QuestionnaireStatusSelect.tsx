@@ -47,6 +47,19 @@ export function QuestionnaireStatusSelect({
   } | null>(null);
   const current = item.archivedAt ? 'archived' : item.status;
   const canChange = item.isOwner || (item.canDelete && !item.archivedAt);
+  const restoring = !!change?.item.archivedAt;
+  function canSelect(value: string) {
+    if (value === current) return false;
+    if (value === 'archived') return canChange && !item.archivedAt;
+    if (!item.isOwner) return false;
+    if (item.archivedAt) return value === item.status;
+    return (
+      value === 'draft' ||
+      (value === 'published' &&
+        (current === 'draft' || current === 'distributed')) ||
+      (value === 'distributed' && current === 'published')
+    );
+  }
   async function apply() {
     if (!change || inFlight.current) return;
     inFlight.current = true;
@@ -54,7 +67,7 @@ export function QuestionnaireStatusSelect({
     const id = toast.add({
       type: 'loading',
       title:
-        change.status === 'distributed'
+        !restoring && change.status === 'distributed'
           ? '질문지를 배포하고 있어요.'
           : '상태를 변경하고 있어요.',
       timeout: 0,
@@ -76,7 +89,7 @@ export function QuestionnaireStatusSelect({
       toast.update(id, {
         type: 'success',
         title:
-          change.status === 'distributed'
+          !restoring && change.status === 'distributed'
             ? '질문지를 배포했어요.'
             : '질문지 상태를 변경했어요.',
         timeout: 3000,
@@ -100,17 +113,7 @@ export function QuestionnaireStatusSelect({
         value={current}
         disabled={!canChange || pending}
         onValueChange={(value) => {
-          if (
-            (value === 'draft' ||
-              (value === 'published' &&
-                (current === 'draft' || current === 'distributed') &&
-                !item.archivedAt) ||
-              (value === 'distributed' &&
-                current === 'published' &&
-                !item.archivedAt)) &&
-            item.isOwner &&
-            value !== current
-          )
+          if (value && canSelect(value))
             setChange({
               status: value as Status,
               requestId: crypto.randomUUID(),
@@ -127,20 +130,7 @@ export function QuestionnaireStatusSelect({
         </SelectTrigger>
         <SelectContent>
           {Object.entries(questionnaireStatusLabels).map(([value, label]) => (
-            <SelectItem
-              key={value}
-              value={value}
-              disabled={
-                !item.isOwner ||
-                (value !== 'draft' &&
-                  !(
-                    ((value === 'published' &&
-                      (current === 'draft' || current === 'distributed')) ||
-                      (value === 'distributed' && current === 'published')) &&
-                    !item.archivedAt
-                  ))
-              }
-            >
+            <SelectItem key={value} value={value} disabled={!canSelect(value)}>
               {label}
             </SelectItem>
           ))}
@@ -155,24 +145,30 @@ export function QuestionnaireStatusSelect({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {change?.status === 'distributed'
-                ? '질문지를 배포할까요?'
-                : change?.item.status === 'distributed' &&
-                    (change.status === 'draft' || change.status === 'published')
-                  ? '배포를 취소하고 상태를 되돌릴까요?'
-                  : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
+              {restoring
+                ? '질문지 보관을 해제할까요?'
+                : change?.status === 'distributed'
+                  ? '질문지를 배포할까요?'
+                  : change?.item.status === 'distributed' &&
+                      (change.status === 'draft' ||
+                        change.status === 'published')
+                    ? '배포를 취소하고 상태를 되돌릴까요?'
+                    : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
             </DialogTitle>
             <DialogDescription>
-              {change?.status === 'archived'
-                ? '내용과 기존 답변을 보존하고 컨설턴트 목록에서 숨깁니다. 보관 목록에서 다시 복원할 수 있어요.'
-                : change?.item.status === 'distributed' &&
-                    (change.status === 'draft' || change.status === 'published')
-                  ? '저장된 응답이 없을 때만 되돌릴 수 있습니다. 컨설턴트 목록에서 숨겨지고 다시 수정할 수 있습니다. 다른 배포본에서 사용 중인 질문은 잠금이 유지됩니다.'
-                  : change?.status === 'distributed'
-                    ? '배포하면 컨설턴트에게 질문지가 공개됩니다. 배포 이후에는 배포된 질문과 질문지를 수정하거나 삭제할 수 없습니다.'
-                    : change?.status === 'published'
-                      ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
-                      : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
+              {restoring
+                ? `보관 전 ‘${change ? questionnaireStatusLabels[change.item.status] : ''}’ 상태로 복원합니다.${change?.item.status === 'distributed' ? ' 컨설턴트에게 다시 표시되며 기존 답변을 이어서 작성할 수 있어요.' : ''}`
+                : change?.status === 'archived'
+                  ? '내용과 기존 답변을 보존하고 컨설턴트에게 숨깁니다. 컨설턴트는 열람하거나 답변을 저장할 수 없으며, 보관 목록에서 다시 복원할 수 있어요.'
+                  : change?.item.status === 'distributed' &&
+                      (change.status === 'draft' ||
+                        change.status === 'published')
+                    ? '저장된 응답이 없을 때만 되돌릴 수 있습니다. 컨설턴트 목록에서 숨겨지고 다시 수정할 수 있습니다. 다른 배포본에서 사용 중인 질문은 잠금이 유지됩니다.'
+                    : change?.status === 'distributed'
+                      ? '배포하면 컨설턴트에게 질문지가 공개됩니다. 배포 이후에는 배포된 질문과 질문지를 수정하거나 삭제할 수 없습니다.'
+                      : change?.status === 'published'
+                        ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
+                        : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -184,13 +180,17 @@ export function QuestionnaireStatusSelect({
               취소
             </Button>
             <Button disabled={pending} onClick={() => void apply()}>
-              {change?.status === 'distributed'
+              {restoring
                 ? pending
-                  ? '배포 중…'
-                  : '배포'
-                : pending
-                  ? '변경 중…'
-                  : '변경'}
+                  ? '복원 중…'
+                  : '복원'
+                : change?.status === 'distributed'
+                  ? pending
+                    ? '배포 중…'
+                    : '배포'
+                  : pending
+                    ? '변경 중…'
+                    : '변경'}
             </Button>
           </DialogFooter>
         </DialogContent>
