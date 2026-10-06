@@ -76,7 +76,7 @@ export function CareerFlowExampleTable({
                       key={field.id}
                       className="border-r border-b p-4 align-top whitespace-pre-wrap [overflow-wrap:anywhere]"
                     >
-                      <div className="min-h-28">
+                      <div className="min-h-28 text-blue-600 dark:text-blue-300">
                         {careerFlowPlaceholder(
                           document.id,
                           label,
