@@ -56,7 +56,7 @@ function answerSummary(field: QuestionBlockField, value: string): string {
     .join(', ');
 }
 
-import { CareerFlowThread } from './CareerFlowThread';
+import { QuestionAnswerTable } from './QuestionAnswerTable';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
@@ -204,9 +204,7 @@ export function QuestionBlockPreview({
         value={row.answers[field.id] ?? ''}
         onChange={(value) => updateAnswer(row.id, field.id, value)}
         placeholder={placeholder}
-        placeholderTone={
-          document.id === CAREER_FLOW_QUESTION_ID ? 'example' : 'default'
-        }
+        placeholderTone="default"
         ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || '항목'} · ${field.label || `답변 ${fieldIndex + 1}`}`}
       />
     ) : (
@@ -370,7 +368,7 @@ export function QuestionBlockPreview({
           </p>
         )}
         {document.id === CAREER_FLOW_QUESTION_ID ? (
-          <CareerFlowThread
+          <QuestionAnswerTable
             document={document}
             rows={visibleRows}
             waiting={waiting}

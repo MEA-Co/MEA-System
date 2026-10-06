@@ -15,13 +15,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-import { careerFlowPlaceholder } from '../../lib/career-flow-placeholders';
 import type {
   QuestionBlockDocument,
   QuestionBlockField,
 } from '../../lib/question-blocks';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
 
+import { CareerFlowExampleTable } from './CareerFlowExampleTable';
 import { RichTextContent } from './RichTextContent';
 
 export type QuestionAnswerTableProps = {
@@ -60,7 +60,6 @@ export function QuestionAnswerTable({
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string[]>([]);
   const [addingGroup, setAddingGroup] = useState<string | null>(null);
-  const [showExamples, setShowExamples] = useState(false);
   const startIds = [
     'f4689fea-ba91-400f-82be-f0b1dbf185db',
     '720f88bd-1ace-4b86-828f-5df7abbe0a10',
@@ -123,7 +122,7 @@ export function QuestionAnswerTable({
           render={<Button type="button" variant="outline" disabled={waiting} />}
         >
           <Table2 aria-hidden="true" />
-          {triggerLabel ?? (disabled ? '답변 보기' : '답변하기')}
+          {triggerLabel ?? (disabled ? '답변 보기' : '응답하기')}
         </DialogTrigger>
       </div>
       <DialogContent className="flex h-[94dvh] w-[96vw] max-w-none flex-col gap-4 rounded-2xl bg-neutral-100 p-4 sm:max-w-none sm:p-6 dark:bg-neutral-950">
@@ -147,10 +146,6 @@ export function QuestionAnswerTable({
             <p>
               <strong>3　비워둔 칸은 ‘이전과 동일’</strong>로 봐요.
             </p>
-            <p>
-              <strong>4　‘해당 시’ 시기</strong>는 해당하는 경우에만
-              추가해주세요.
-            </p>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -163,14 +158,7 @@ export function QuestionAnswerTable({
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showExamples}
-              onClick={() => setShowExamples(!showExamples)}
-            >
-              {showExamples ? '작성 예시 숨기기' : '작성 예시 보기'}
-            </Button>
+            <CareerFlowExampleTable document={document} />
             <Button
               type="button"
               variant="outline"
@@ -431,17 +419,6 @@ export function QuestionAnswerTable({
                       const key = `${row.id}:${field.id}`;
                       const value = row.answers[field.id] ?? '';
                       const text = summary(field, value);
-                      const placeholder =
-                        showExamples && !disabled && field.kind === 'text'
-                          ? careerFlowPlaceholder(document.id, label, field.id)
-                          : '';
-                      const hint =
-                        placeholder && !text ? (
-                          <span className="block whitespace-pre-wrap text-blue-400 [overflow-wrap:anywhere] dark:text-blue-300">
-                            <span className="sr-only">답변 예시: </span>
-                            {placeholder}
-                          </span>
-                        ) : null;
                       return (
                         <td
                           key={field.id}
@@ -452,7 +429,7 @@ export function QuestionAnswerTable({
                               row,
                               field,
                               fieldIndex,
-                              placeholder || undefined,
+                              '답변을 입력해주세요',
                             )
                           ) : (
                             <button
@@ -470,11 +447,9 @@ export function QuestionAnswerTable({
                                     {text}
                                   </span>
                                 )
-                              ) : hint ? (
-                                hint
                               ) : (
                                 <span className="text-muted-foreground">
-                                  {disabled ? '미입력' : '눌러서 입력'}
+                                  {disabled ? '미입력' : '답변을 입력해주세요'}
                                 </span>
                               )}
                             </button>
@@ -489,9 +464,11 @@ export function QuestionAnswerTable({
           </table>
         </div>
         <div className="flex shrink-0 items-center justify-between gap-3">
-          <span className="text-xs text-muted-foreground">
-            @탐구활동을 입력해 탐구활동을 언급할 수 있어요. 닫아도 입력 내용은
-            유지됩니다.
+          <span className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            <strong>@탐구활동</strong>을 입력해 탐구활동을 언급할 수 있어요.
+            <span className="mt-1 block text-xs">
+              닫아도 입력 내용은 유지됩니다.
+            </span>
           </span>
           <div className="flex gap-2">
             {canAdd && (
