@@ -27,9 +27,14 @@ export async function fetchExplorationList(
 export function useExplorationList(
   scope: 'own' | 'accessible',
   enabled = true,
+  referenceId?: string,
 ) {
   const url =
-    scope === 'own' ? '/api/exploration?scope=own' : '/api/exploration';
+    scope === 'own'
+      ? '/api/exploration?scope=own'
+      : referenceId
+        ? `/api/exploration?reference=${encodeURIComponent(referenceId)}`
+        : '/api/exploration';
   // Version the response contract so old array-shaped URL caches cannot be reused.
   return useSWR(
     enabled ? ['exploration-list-v1', url] : null,

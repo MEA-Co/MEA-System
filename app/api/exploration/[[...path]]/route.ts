@@ -34,6 +34,15 @@ async function handle(request: Request, context: Context) {
   const ownOnly =
     new URL(request.url).searchParams.get('scope') === 'own' ||
     (viewRole !== 'admin' && viewRole !== 'consultant_lead');
+  const referenceId = new URL(request.url).searchParams.get('reference');
+  if (referenceId && !z.uuid().safeParse(referenceId).success)
+    return json({ error: '잘못된 탐구활동 참조입니다.' }, 400);
+  // Only explicit reference reads bypass the consultant's own-list filter.
+  // Database RLS checks that this activity is linked by a visible guide answer.
+  const referenceRead =
+    !!referenceId &&
+    access.role === 'consultant' &&
+    new URL(request.url).searchParams.get('scope') !== 'own';
   const client = createClient(await cookies());
   const path = (await context.params).path ?? [];
   const id = path[0];
@@ -49,7 +58,9 @@ async function handle(request: Request, context: Context) {
         .order('updated_at', { ascending: false })
         .order('id')
         .range(offset, offset + 499);
-      if (ownOnly) query = query.eq('owner_id', access.user.id);
+      if (referenceId) query = query.eq('id', referenceId);
+      if (ownOnly && !referenceRead)
+        query = query.eq('owner_id', access.user.id);
       const { data, error } = await query;
       if (error)
         return json(
@@ -70,7 +81,8 @@ async function handle(request: Request, context: Context) {
       .select('reports')
       .eq('id', id)
       .is('deleted_at', null);
-    if (ownOnly) query = query.eq('owner_id', access.user.id);
+    if (ownOnly && access.role !== 'consultant')
+      query = query.eq('owner_id', access.user.id);
     const { data, error } = await query.maybeSingle();
     if (error) return json({ error: '파일을 불러오지 못했습니다.' }, 503);
     const report = (data?.reports as ActivityRow['reports'] | undefined)?.find(

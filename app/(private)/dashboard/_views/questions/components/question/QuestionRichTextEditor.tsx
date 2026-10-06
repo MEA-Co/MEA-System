@@ -342,7 +342,7 @@ export function QuestionRichTextEditor({
                   />
                   <span className="shrink-0 font-medium">탐구활동</span>
                   <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-                    작성한 탐구활동을 첨부해요
+                    신규 탐구활동을 추가하거나, 작성한 탐구활동을 첨부해요
                   </span>
                 </Button>
               ) : (

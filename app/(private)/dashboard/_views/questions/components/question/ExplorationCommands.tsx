@@ -46,7 +46,7 @@ export function ExplorationReferenceContent({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { data, error, mutate } = useExplorationList('accessible', open);
+  const { data, error, mutate } = useExplorationList('accessible', open, id);
   const activity = data?.activities.find((item) => item.id === id);
   return (
     <>

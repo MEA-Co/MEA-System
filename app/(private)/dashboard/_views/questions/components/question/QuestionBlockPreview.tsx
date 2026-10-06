@@ -253,7 +253,7 @@ export function QuestionBlockPreview({
         </div>
       )}
       <div className="min-w-0 max-w-full space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
-        <div className="flex items-start gap-3 font-medium">
+        <div className="flex flex-wrap items-start gap-3 font-medium">
           <span className="w-6 shrink-0 text-sm font-semibold">
             {questionNumber}
           </span>
@@ -261,6 +261,19 @@ export function QuestionBlockPreview({
             value={document.prompt || '질문을 입력하세요'}
             className="min-w-0 flex-1"
           />
+          {document.fields.some(
+            (field) => field.kind === 'text' && field.explorationRecommended,
+          ) && (
+            <aside className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm leading-6 text-white lg:ml-auto lg:w-auto lg:max-w-sm">
+              <p className="font-semibold">
+                탐구활동 참조가 필요한 질문입니다.
+              </p>
+              <p>
+                &apos;@탐구활동&apos;을 입력하여 탐구활동을 언급하며
+                답변해주세요!
+              </p>
+            </aside>
+          )}
         </div>
         {(document.details ?? [])
           .filter((detail) => showPrivateDetails || detail.visibleToConsultants)

@@ -240,6 +240,47 @@ do $$ declare x jsonb; begin
  if x::text not like '%공개 가이드%' or x::text like '%가이드 계정 비공개 초안%' then raise exception 'Consultant guide visibility incorrect'; end if;
 end $$;
 reset role;
+-- Guide-linked activity and report reads must not expose unrelated activities.
+reset role;
+create temp table guide_activity_fixture as
+select gen_random_uuid() id, (select id from publish_users where role='other_lead') owner_id;
+grant select on guide_activity_fixture to authenticated;
+insert into public.exploration(id,owner_id,values,save_id,reports)
+select id,owner_id,'{"topic":"공개 첨부 활동"}',gen_random_uuid(),jsonb_build_array(jsonb_build_object('path',owner_id||'/'||id||'/report.pdf')) from guide_activity_fixture;
+insert into public.exploration(id,owner_id,values,save_id)
+select gen_random_uuid(),owner_id,'{"topic":"참조 없는 활동"}',gen_random_uuid() from guide_activity_fixture;
+insert into storage.objects(bucket_id,name,owner_id)
+select 'exploration-reports',owner_id||'/'||id||'/report.pdf',owner_id::text from guide_activity_fixture;
+insert into storage.objects(bucket_id,name,owner_id)
+select 'exploration-reports',owner_id||'/'||id||'/unattached.pdf',owner_id::text from guide_activity_fixture;
+create temp table original_guide_rows as
+select r.id,r.rows from public.question_responses r join public.response_sessions s on s.id=r.session_id
+where s.respondent_id=(select owner_id from guide_activity_fixture) and s.started_stage='published' and r.question_id=(select source_id from publish_docs);
+update public.question_responses r set rows=jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(
+ (select fields->0->>'id' from public.questions where id=r.question_id),
+ '::mea-rich-text:v1::'||jsonb_build_object('type','doc','content',jsonb_build_array(jsonb_build_object('type','paragraph','content',jsonb_build_array(jsonb_build_object('type','text','text','@공개 첨부 활동','marks',jsonb_build_array(jsonb_build_object('type','explorationReference','attrs',jsonb_build_object('id',(select id from guide_activity_fixture)))))))))::text
+))) where r.id in (select id from original_guide_rows);
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ begin
+ if not exists(select 1 from public.exploration where id=(select id from guide_activity_fixture)) then raise exception 'Guide attachment not readable'; end if;
+ if exists(select 1 from public.exploration where owner_id=(select owner_id from guide_activity_fixture) and id<>(select id from guide_activity_fixture)) then raise exception 'Unrelated activity leaked'; end if;
+ if not exists(select 1 from storage.objects where bucket_id='exploration-reports' and name=(select owner_id||'/'||id||'/report.pdf' from guide_activity_fixture)) then raise exception 'Guide report not readable'; end if;
+ if exists(select 1 from storage.objects where bucket_id='exploration-reports' and name=(select owner_id||'/'||id||'/unattached.pdf' from guide_activity_fixture)) then raise exception 'Unattached report leaked'; end if;
+ begin
+  perform public.delete_exploration((select id from guide_activity_fixture),1);
+  raise exception 'Guide activity deletion allowed';
+ exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+-- Removing the link immediately revokes reads without modifying the activity.
+update public.question_responses r set rows=o.rows from original_guide_rows o where r.id=o.id;
+set local role authenticated;
+do $$ begin
+ if exists(select 1 from public.exploration where id=(select id from guide_activity_fixture)) then raise exception 'Removed reference remained readable'; end if;
+ if exists(select 1 from storage.objects where name=(select owner_id||'/'||id||'/report.pdf' from guide_activity_fixture)) then raise exception 'Removed reference report remained readable'; end if;
+end $$;
+reset role;
 update public.questionnaires set archived_at=now() where id in (select (doc->>'questionnaireId')::uuid from publish_docs union all select (doc->>'questionnaireId')::uuid from second_review_doc);
 set local role authenticated;
 do $$ begin
