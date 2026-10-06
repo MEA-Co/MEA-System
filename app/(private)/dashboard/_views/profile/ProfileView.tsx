@@ -8,6 +8,8 @@ import {
   type StudentPeriod,
 } from '@/lib/profile';
 
+import { ProfileNameForm } from './ProfileNameForm';
+
 export function ProfileView({
   name,
   role,
@@ -38,7 +40,13 @@ export function ProfileView({
       <dl className="mt-6 max-w-xl divide-y rounded-xl border px-5">
         <div className="grid grid-cols-[6rem_1fr] gap-4 py-4">
           <dt className="text-sm text-muted-foreground">이름</dt>
-          <dd className="break-words text-sm font-medium">{name}</dd>
+          <dd className="min-w-0 break-words text-sm font-medium">
+            {role !== 'student' ? (
+              <ProfileNameForm key={name} name={name} />
+            ) : (
+              name
+            )}
+          </dd>
         </div>
         <div className="grid grid-cols-[6rem_1fr] gap-4 py-4">
           <dt className="text-sm text-muted-foreground">회원 유형</dt>
