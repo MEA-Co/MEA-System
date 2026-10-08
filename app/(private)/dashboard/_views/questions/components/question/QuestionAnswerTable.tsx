@@ -424,7 +424,23 @@ export function QuestionAnswerTable({
                           key={field.id}
                           className={`border-r border-b p-3 align-top ${startIds.includes(field.id) || field.id === admissionId ? 'bg-amber-50/60 dark:bg-amber-950/20' : 'bg-background'}`}
                         >
-                          {activeCell === key && !disabled ? (
+                          {disabled ? (
+                            <div className="min-h-32 w-full p-2 text-left">
+                              {text ? (
+                                field.kind === 'text' ? (
+                                  <RichTextContent value={value} />
+                                ) : (
+                                  <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                                    {text}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  미입력
+                                </span>
+                              )}
+                            </div>
+                          ) : activeCell === key ? (
                             renderField(
                               row,
                               field,

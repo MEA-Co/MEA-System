@@ -32,7 +32,7 @@ import {
 } from '../../lib/rich-text';
 
 import { ExplorationPicker } from './ExplorationCommands';
-import { richTextClasses } from './RichTextContent';
+import { richTextClasses, RichTextContent } from './RichTextContent';
 
 function bubbleMenuContainer() {
   return document.body;
@@ -201,6 +201,24 @@ export function QuestionRichTextEditor({
     setHintOpen(false);
     setPickerOpen(true);
   }
+
+  if (disabled)
+    return (
+      <div
+        id={id}
+        aria-label={ariaLabel}
+        className={cn(
+          'min-w-0 rounded-lg bg-neutral-100 px-3 py-2 dark:bg-neutral-800',
+          className,
+        )}
+      >
+        {richTextPlainText(value).trim() ? (
+          <RichTextContent value={value} />
+        ) : (
+          <span className="text-sm text-muted-foreground">미입력</span>
+        )}
+      </div>
+    );
 
   return (
     <div
