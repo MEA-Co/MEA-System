@@ -49,10 +49,10 @@ export function ReferenceRecommendations({
         >
           <p className="flex items-center gap-1.5 text-xs font-semibold">
             <BookOpen className="size-4 shrink-0" aria-hidden="true" />
-            공부법 참조 권장
+            학습법 참조 권장
           </p>
           <p className="mt-1 text-xs font-normal">
-            ‘@공부법’을 입력하여 관련 학습 전략을 답변에 연결해 주세요.
+            ‘@학습법’을 입력하여 관련 학습 전략을 답변에 연결해 주세요.
           </p>
         </div>
       )}

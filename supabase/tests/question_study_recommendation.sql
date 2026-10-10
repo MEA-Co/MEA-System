@@ -7,7 +7,7 @@ set local role authenticated;
 do $$
 declare d jsonb; r jsonb; save_id uuid:=gen_random_uuid(); revision integer;
 begin
- d:=jsonb_build_object('id',gen_random_uuid(),'title','','prompt','공부법을 참고해 작성해 주세요',
+ d:=jsonb_build_object('id',gen_random_uuid(),'title','','prompt','학습법을 참고해 작성해 주세요',
    'fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text','studyRecommended',true)),
    'rowMode','single','maxRows',null,'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  r:=public.save_question(d,0,save_id);

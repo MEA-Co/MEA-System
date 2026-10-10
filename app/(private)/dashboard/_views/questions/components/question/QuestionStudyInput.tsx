@@ -38,31 +38,31 @@ export function QuestionStudyInput({
   if (disabled && value)
     return (
       <StudyReferenceContent id={value}>
-        첨부한 공부법 보기
+        첨부한 학습법 보기
       </StudyReferenceContent>
     );
   if (disabled)
     return (
       <Button variant="outline" disabled>
-        공부법 첨부
+        학습법 첨부
       </Button>
     );
   return (
     <div className="space-y-3">
       {error ? (
         <div role="alert" className="text-sm text-destructive">
-          공부법을 불러오지 못했어요.
+          학습법을 불러오지 못했어요.
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             다시 시도
           </Button>
         </div>
       ) : isLoading ? (
         <p role="status" className="text-sm text-muted-foreground">
-          공부법을 불러오는 중이에요.
+          학습법을 불러오는 중이에요.
         </p>
       ) : !activities?.length ? (
         <p className="text-sm text-muted-foreground">
-          첨부할 공부법이 없어요. 공부법 관리에서 먼저 확정해 주세요.
+          첨부할 학습법이 없어요. 학습법 관리에서 먼저 확정해 주세요.
         </p>
       ) : (
         // Keep the trigger's conditional focus guards outside the parent spacing layout.
@@ -70,7 +70,7 @@ export function QuestionStudyInput({
           <Menu.Root>
             <Menu.Trigger render={<Button variant="outline" />}>
               <Paperclip aria-hidden="true" />
-              {selected ? '공부법 변경' : '공부법 첨부'}
+              {selected ? '학습법 변경' : '학습법 첨부'}
             </Menu.Trigger>
             <Menu.Portal>
               <Menu.Positioner align="start" sideOffset={6} className="z-50">
@@ -78,7 +78,7 @@ export function QuestionStudyInput({
                   <Menu.RadioGroup
                     value={selected?.id ?? ''}
                     onValueChange={(id) => onChange?.(id)}
-                    aria-label="첨부할 공부법"
+                    aria-label="첨부할 학습법"
                   >
                     {activities.map((activity) => (
                       <Menu.RadioItem
@@ -128,7 +128,7 @@ export function QuestionStudyInput({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="공부법 자세히 보기"
+                    aria-label="학습법 자세히 보기"
                     title="자세히 보기"
                   />
                 }
@@ -137,11 +137,11 @@ export function QuestionStudyInput({
               </DrawerTrigger>
               <DrawerContent className="h-dvh max-h-dvh rounded-none md:w-[min(1200px,94vw)] md:max-w-none">
                 <DrawerHeader>
-                  <DrawerTitle>공부법 자세히 보기</DrawerTitle>
+                  <DrawerTitle>학습법 자세히 보기</DrawerTitle>
                 </DrawerHeader>
                 <StudyActivityDetails
                   activity={fromRow(selected)}
-                  notice="첨부한 공부법입니다. 읽기 전용으로 표시됩니다."
+                  notice="첨부한 학습법입니다. 읽기 전용으로 표시됩니다."
                   onClose={() => setDetailsOpen(false)}
                 />
               </DrawerContent>
@@ -150,7 +150,7 @@ export function QuestionStudyInput({
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="공부법 첨부 해제"
+              aria-label="학습법 첨부 해제"
               title="첨부 해제"
               onClick={() => {
                 setDetailsOpen(false);
@@ -173,7 +173,7 @@ export function QuestionStudyInput({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="공부법 첨부 해제"
+            aria-label="학습법 첨부 해제"
             title="첨부 해제"
             onClick={() => onChange?.('')}
           >

@@ -493,8 +493,8 @@ const combinedSchema = getSchema([
 test('study commands match Korean prefixes, ignore other commands and preserve both reference kinds', () => {
   for (const [text, matched] of [
     ['@', true],
-    ['답변 @공', true],
-    ['@공부법', true],
+    ['답변 @학', true],
+    ['@학습법', true],
     ['@탐구활동', false],
     ['a@b.com', undefined],
   ]) {
@@ -505,7 +505,7 @@ test('study commands match Korean prefixes, ignore other commands and preserve b
       selection: TextSelection.create(doc, text.length + 1),
     });
     assert.equal(
-      referenceExports.referenceCommand({ state }, '공부법')?.matched,
+      referenceExports.referenceCommand({ state }, '학습법')?.matched,
       matched,
     );
   }
@@ -525,7 +525,7 @@ test('study commands match Korean prefixes, ignore other commands and preserve b
           { type: 'text', text: ' ' },
           {
             type: 'text',
-            text: '@공부법',
+            text: '@학습법',
             marks: [
               { type: 'studyReference', attrs: { id: activityId } },
               { type: 'highlight' },
@@ -548,7 +548,7 @@ test('study commands match Korean prefixes, ignore other commands and preserve b
     ).attrs.id,
     activityId,
   );
-  assert.equal(richTextPlainText(roundtrip), '@활동 @공부법');
+  assert.equal(richTextPlainText(roundtrip), '@활동 @학습법');
   doc.content[0].content[2].marks[0].attrs.id = 'javascript:alert(1)';
   assert.equal(exports.normalizeRichText(doc), null);
 });
@@ -570,7 +570,7 @@ test('mixed references are deleted as whole references, including a partial sele
           { type: 'text', text: ' ' },
           {
             type: 'text',
-            text: '@공부법',
+            text: '@학습법',
             marks: [{ type: 'studyReference', attrs: { id: activityId } }],
           },
           { type: 'text', text: ' 뒤' },

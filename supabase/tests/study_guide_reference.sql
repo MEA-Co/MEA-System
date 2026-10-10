@@ -1,7 +1,7 @@
 begin;
 create temporary table study_guide_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','consultant']) role;
 insert into auth.users(id) select id from study_guide_users;
-insert into public.profiles(id,role,name) select id,role,'공부법 가이드 검사' from study_guide_users;
+insert into public.profiles(id,role,name) select id,role,'학습법 가이드 검사' from study_guide_users;
 grant select on study_guide_users to authenticated;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.study_guide_users where role='consultant_lead'; $$;
 create temporary table study_guide_doc(qid uuid, sid uuid, study_id uuid);
@@ -10,9 +10,9 @@ select set_config('request.jwt.claim.sub',(select id::text from study_guide_user
 set local role authenticated;
 do $$ declare q jsonb; d jsonb; x jsonb; payload jsonb; sid uuid:=gen_random_uuid(); begin
  perform public.save_study(sid,jsonb_build_object('category','내신','problemSource','self','subject','수학','customSubject','','problem','시간 부족','strategy','오답 분석','practiceGuide','다시 풀이','practicePeriod','2주','checklist','오답률 확인','followup','추가 연습','resultDiagnosis','','references','[]'::jsonb),'[]',0,gen_random_uuid());
- q:=jsonb_build_object('id',gen_random_uuid(),'title','공부법 참조','prompt','공부법을 첨부하세요','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','공부법','kind','study')),'rowMode','single','sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
+ q:=jsonb_build_object('id',gen_random_uuid(),'title','학습법 참조','prompt','학습법을 첨부하세요','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','학습법','kind','study')),'rowMode','single','sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  perform public.save_question(q,0,gen_random_uuid());
- d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','공부법 가이드','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','공부법','details','[]'::jsonb)))));
+ d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','학습법 가이드','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','학습법','details','[]'::jsonb)))));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
  x:=public.open_question_response_session((d->>'questionnaireId')::uuid);

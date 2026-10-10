@@ -482,7 +482,7 @@ test('질문 첨부용 own scope는 리드·관리자도 본인만 조회', asyn
 });
 
 if (studyMode) {
-  test('공부법의 과목명은 모든 과목에 선택 입력하고 문제 출처는 필수', () => {
+  test('학습법의 과목명은 모든 과목에 선택 입력하고 문제 출처는 필수', () => {
     const values = emptyValues();
     for (const key of Object.keys(model.requiredFields)) values[key] = '작성';
     Object.assign(values, {

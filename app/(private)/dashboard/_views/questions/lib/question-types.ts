@@ -6,7 +6,7 @@ export const QUESTION_TYPES = [
   { value: 'single', label: '단일선택형' },
   { value: 'multiple', label: '다수선택형' },
   { value: 'exploration', label: '탐구활동 참조형' },
-  { value: 'study', label: '공부법 참조형' },
+  { value: 'study', label: '학습법 참조형' },
 ] as const;
 export type QuestionKind = (typeof QUESTION_TYPES)[number]['value'];
 export function orderedChoiceOptions<T extends { isOther?: boolean }>(

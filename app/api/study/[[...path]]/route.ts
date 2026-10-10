@@ -24,7 +24,7 @@ async function handle(request: Request, context: Context) {
     !access.isOnboarded ||
     !['consultant', 'consultant_lead', 'admin'].includes(access.role ?? '')
   )
-    return json({ error: '공부법 관리 권한이 없습니다.' }, 403);
+    return json({ error: '학습법 관리 권한이 없습니다.' }, 403);
   if (request.method !== 'GET') {
     const origin = request.headers.get('origin');
     if (origin && origin !== new URL(request.url).origin)
@@ -36,7 +36,7 @@ async function handle(request: Request, context: Context) {
     (viewRole !== 'admin' && viewRole !== 'consultant_lead');
   const referenceId = new URL(request.url).searchParams.get('reference');
   if (referenceId && !z.uuid().safeParse(referenceId).success)
-    return json({ error: '잘못된 공부법 참조입니다.' }, 400);
+    return json({ error: '잘못된 학습법 참조입니다.' }, 400);
   // Only explicit reference reads bypass the consultant's own-list filter.
   // Database RLS checks that this activity is linked by a visible guide answer.
   const referenceRead =
@@ -66,7 +66,7 @@ async function handle(request: Request, context: Context) {
         return json(
           {
             error:
-              '확정된 공부법을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+              '확정된 학습법을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
           },
           503,
         );
@@ -125,10 +125,10 @@ async function handle(request: Request, context: Context) {
         {
           error:
             status === 409
-              ? '다른 곳에서 수정되었거나 삭제된 공부법입니다. 현재 입력을 임시저장한 뒤 목록의 최신 확정본을 확인해 주세요.'
+              ? '다른 곳에서 수정되었거나 삭제된 학습법입니다. 현재 입력을 임시저장한 뒤 목록의 최신 확정본을 확인해 주세요.'
               : status === 400
                 ? '필수 항목 또는 첨부 파일 업로드를 확인해 주세요.'
-                : '공부법을 확정하지 못했습니다. 다시 시도해 주세요.',
+                : '학습법을 확정하지 못했습니다. 다시 시도해 주세요.',
         },
         status,
       );

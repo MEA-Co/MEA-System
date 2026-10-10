@@ -27,7 +27,7 @@ export const groups = [
       {
         key: 'category',
         label: '시험 구분',
-        placeholder: '공부법을 적용할 시험 구분을 선택해 주세요',
+        placeholder: '학습법을 적용할 시험 구분을 선택해 주세요',
         required: true,
       },
       {
@@ -165,6 +165,6 @@ export function studyTitle(values: Activity['values']) {
   const text =
     values.strategy.trim().replace(/\s+/g, ' ') ||
     studySummary(values) ||
-    '공부법';
+    '학습법';
   return text.length > 100 ? text.slice(0, 100) + '…' : text;
 }

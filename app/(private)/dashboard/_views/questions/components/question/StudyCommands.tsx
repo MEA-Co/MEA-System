@@ -21,13 +21,13 @@ export function StudyPicker({
   if (error)
     return (
       <div role="alert">
-        공부법을 불러오지 못했어요.{' '}
+        학습법을 불러오지 못했어요.{' '}
         <Button type="button" onClick={() => void mutate()}>
           다시 시도
         </Button>
       </div>
     );
-  if (!data) return <p role="status">공부법을 불러오는 중이에요.</p>;
+  if (!data) return <p role="status">학습법을 불러오는 중이에요.</p>;
   return (
     <StudyView
       userId={data.userId}
@@ -60,10 +60,10 @@ export function StudyReferenceContent({
       </button>
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="h-dvh max-h-dvh rounded-none md:w-[min(1200px,94vw)] md:max-w-none">
-          <DrawerTitle className="p-6">첨부한 공부법</DrawerTitle>
+          <DrawerTitle className="p-6">첨부한 학습법</DrawerTitle>
           {error ? (
             <div role="alert" className="p-6">
-              공부법을 불러오지 못했어요.{' '}
+              학습법을 불러오지 못했어요.{' '}
               <Button type="button" onClick={() => void mutate()}>
                 다시 시도
               </Button>
@@ -78,7 +78,7 @@ export function StudyReferenceContent({
               onClose={() => setOpen(false)}
             />
           ) : (
-            <p className="p-6">삭제되었거나 조회 권한이 없는 공부법이에요.</p>
+            <p className="p-6">삭제되었거나 조회 권한이 없는 학습법이에요.</p>
           )}
         </DrawerContent>
       </Drawer>

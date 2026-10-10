@@ -8,7 +8,7 @@ import { StudyReportInput } from './StudyReportInput';
 export function StudyActivityDetails({
   activity,
   onClose,
-  notice = '공부법을 읽기 전용으로 표시합니다.',
+  notice = '학습법을 읽기 전용으로 표시합니다.',
 }: {
   activity: Activity;
   notice?: string;

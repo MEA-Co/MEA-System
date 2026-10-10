@@ -76,7 +76,7 @@ export function QuestionRichTextEditor({
     'exploration',
   );
   const Picker = referenceKind === 'study' ? StudyPicker : ExplorationPicker;
-  const referenceLabel = referenceKind === 'study' ? '공부법' : '탐구활동';
+  const referenceLabel = referenceKind === 'study' ? '학습법' : '탐구활동';
   const editorAnchor = useRef<HTMLDivElement>(null);
   const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
@@ -212,7 +212,7 @@ export function QuestionRichTextEditor({
       ? [{ kind: 'exploration' as const, label: '탐구활동' }]
       : []),
     ...(state?.studyCommand?.matched
-      ? [{ kind: 'study' as const, label: '공부법' }]
+      ? [{ kind: 'study' as const, label: '학습법' }]
       : []),
   ];
   function openPicker(kind: 'exploration' | 'study') {

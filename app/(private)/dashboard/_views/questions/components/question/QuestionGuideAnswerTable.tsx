@@ -116,7 +116,7 @@ export function QuestionGuideAnswerTable({
                             <RichTextContent value={value} />
                           ) : field.kind === 'study' ? (
                             <StudyReferenceContent id={value}>
-                              첨부한 공부법 보기
+                              첨부한 학습법 보기
                             </StudyReferenceContent>
                           ) : (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">

@@ -2,7 +2,7 @@ begin;
 create temporary table study_test_users(id uuid, role text);
 insert into study_test_users select gen_random_uuid(), r from unnest(array['consultant','consultant_other','consultant_lead','admin','student']) r;
 insert into auth.users(id) select id from study_test_users;
-insert into public.profiles(id,role,name,student_period) select id,case when role='consultant_other' then 'consultant' else role end,'공부법 회귀',case when role='student' then '1학년 1학기' end from study_test_users;
+insert into public.profiles(id,role,name,student_period) select id,case when role='consultant_other' then 'consultant' else role end,'학습법 회귀',case when role='student' then '1학년 1학기' end from study_test_users;
 grant select on study_test_users to authenticated;
 create temporary table study_test_doc(id uuid, owner_id uuid, vals jsonb, save_id uuid, report jsonb);
 insert into study_test_doc

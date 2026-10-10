@@ -35,7 +35,7 @@ import { richTextPlainText } from '../../lib/rich-text';
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';
   if (field.kind === 'exploration') return '탐구활동 첨부됨';
-  if (field.kind === 'study') return '공부법 첨부됨';
+  if (field.kind === 'study') return '학습법 첨부됨';
   if (field.kind === 'text') return richTextPlainText(value).trim();
   if (field.kind === 'scale') {
     const { score } = scaleAnswer(value);
@@ -348,7 +348,7 @@ export function QuestionBlockPreview({
                                 <RichTextContent value={value} />
                               ) : field.kind === 'study' ? (
                                 <StudyReferenceContent id={value}>
-                                  첨부한 공부법 보기
+                                  첨부한 학습법 보기
                                 </StudyReferenceContent>
                               ) : (
                                 <p className="whitespace-pre-wrap wrap-break-word">

@@ -6,5 +6,5 @@ export const StudyReference = createReferenceMark(
   'data-study-id',
 );
 export function studyCommand(editor: Editor) {
-  return referenceCommand(editor, '공부법');
+  return referenceCommand(editor, '학습법');
 }

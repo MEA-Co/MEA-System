@@ -13,7 +13,7 @@ export const DASHBOARD_PAGES = {
   consultants: { label: '컨설턴트 관리', group: 'members' },
   questions: { label: '질문 관리', group: 'data' },
   exploration: { label: '탐구활동 관리', group: 'data' },
-  study: { label: '공부법 관리', group: 'data' },
+  study: { label: '학습법 관리', group: 'data' },
   consulting: { label: '컨설팅 관리', group: 'operations' },
 } as const;
 

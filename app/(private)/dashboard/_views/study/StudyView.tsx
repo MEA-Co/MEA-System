@@ -127,7 +127,7 @@ export function StudyView({
   return (
     <section
       aria-labelledby={onSelect ? undefined : 'study-management-title'}
-      aria-label={onSelect ? '공부법 목록' : undefined}
+      aria-label={onSelect ? '학습법 목록' : undefined}
       className={onSelect ? 'space-y-2' : 'space-y-6'}
     >
       {!onSelect && (
@@ -142,7 +142,7 @@ export function StudyView({
                   : 'mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl'
               }
             >
-              {onSelect ? '첨부할 공부법 선택' : '공부법 관리'}
+              {onSelect ? '첨부할 학습법 선택' : '학습법 관리'}
             </h1>
           </div>
           <Button
@@ -154,7 +154,7 @@ export function StudyView({
             )}
           >
             <Plus aria-hidden="true" />
-            공부법 추가
+            학습법 추가
           </Button>
         </div>
       )}
@@ -178,7 +178,7 @@ export function StudyView({
       )}
       {isLoading && (
         <p className="text-sm text-muted-foreground">
-          확정된 공부법을 불러오는 중입니다.
+          확정된 학습법을 불러오는 중입니다.
         </p>
       )}
       <Drawer
@@ -193,10 +193,10 @@ export function StudyView({
         >
           <DrawerTitle className="sr-only">
             {readOnly
-              ? '공부법 상세'
+              ? '학습법 상세'
               : existing
-                ? '공부법 상세 · 수정'
-                : '공부법 추가'}
+                ? '학습법 상세 · 수정'
+                : '학습법 추가'}
           </DrawerTitle>
           <div className="h-12 shrink-0" aria-hidden="true" />
           {confirmDiscard && (
@@ -231,8 +231,8 @@ export function StudyView({
               activity={draft}
               notice={
                 draft.ownerId && draft.ownerId !== userId
-                  ? '다른 작성자의 공부법입니다. 읽기 전용으로 표시됩니다.'
-                  : '첨부할 공부법을 미리 보고 있습니다. 읽기 전용으로 표시됩니다.'
+                  ? '다른 작성자의 학습법입니다. 읽기 전용으로 표시됩니다.'
+                  : '첨부할 학습법을 미리 보고 있습니다. 읽기 전용으로 표시됩니다.'
               }
               onClose={returnToList}
             />
@@ -301,8 +301,8 @@ export function StudyView({
               className="absolute left-3 top-2.5 size-4 text-muted-foreground"
             />
             <Input
-              aria-label="공부법 검색"
-              placeholder="공부법 검색"
+              aria-label="학습법 검색"
+              placeholder="학습법 검색"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="pl-9"
@@ -360,7 +360,7 @@ export function StudyView({
                 <li className="px-3 py-4 text-sm text-muted-foreground">
                   {query.trim()
                     ? '검색 결과가 없어요.'
-                    : '첨부할 확정 공부법이 없어요.'}
+                    : '첨부할 확정 학습법이 없어요.'}
                 </li>
               )}
             <li>
@@ -374,7 +374,7 @@ export function StudyView({
                 className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-3 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50"
               >
                 <Plus className="size-4" aria-hidden="true" />
-                공부법 추가
+                학습법 추가
               </button>
             </li>
           </ul>
@@ -385,7 +385,7 @@ export function StudyView({
             <div
               className="flex flex-wrap gap-2"
               role="group"
-              aria-label="공부법 구분"
+              aria-label="학습법 구분"
             >
               <Button
                 type="button"
@@ -396,7 +396,7 @@ export function StudyView({
                   setQuery('');
                 }}
               >
-                내 공부법 <Badge variant="outline">{mine.length}</Badge>
+                내 학습법 <Badge variant="outline">{mine.length}</Badge>
               </Button>
               <Button
                 type="button"
@@ -407,7 +407,7 @@ export function StudyView({
                   setQuery('');
                 }}
               >
-                다른 사람의 공부법{' '}
+                다른 사람의 학습법{' '}
                 <Badge variant="outline">{others.length}</Badge>
               </Button>
             </div>
@@ -417,7 +417,7 @@ export function StudyView({
               <div
                 className="flex gap-1 rounded-xl bg-muted/50 p-1"
                 role="group"
-                aria-label="다른 사람의 공부법 보기 방식"
+                aria-label="다른 사람의 학습법 보기 방식"
               >
                 <Button
                   type="button"
@@ -445,7 +445,7 @@ export function StudyView({
                 >
                   <SelectTrigger
                     className="min-w-48"
-                    aria-label="공부법 작성자 선택"
+                    aria-label="학습법 작성자 선택"
                   >
                     <SelectValue placeholder="작성자를 선택해 주세요">
                       {owner ? ownerLabel(owner) : undefined}
@@ -472,9 +472,9 @@ export function StudyView({
             <h2 className="flex items-center gap-2 font-semibold">
               {showOthers
                 ? otherMode === 'person' && owner
-                  ? `${ownerLabel(owner)}님의 공부법`
-                  : '다른 사람의 공부법'
-                : '내 공부법'}{' '}
+                  ? `${ownerLabel(owner)}님의 학습법`
+                  : '다른 사람의 학습법'
+                : '내 학습법'}{' '}
               <Badge variant="secondary">{filtered.length}</Badge>
             </h2>
             <div className="relative w-full sm:w-72">
@@ -483,7 +483,7 @@ export function StudyView({
                 className="absolute top-2.5 left-3 size-4 text-muted-foreground"
               />
               <Input
-                aria-label="공부법 검색"
+                aria-label="학습법 검색"
                 placeholder="과목, 문제 상황, 학습 전략 검색"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -547,7 +547,7 @@ export function StudyView({
                           ? '상세 · 수정'
                           : '상세 보기'
                       }
-                      aria-label={`${activity.values.strategy.trim() || '공부법'} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
+                      aria-label={`${activity.values.strategy.trim() || '학습법'} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
                       onClick={(event) => (
                         (opener.current = event.currentTarget),
                         open(activity)
@@ -566,7 +566,7 @@ export function StudyView({
                         size="icon-sm"
                         disabled={busy}
                         title="삭제"
-                        aria-label={`${activity.values.strategy.trim() || activity.values.subject.trim() || '공부법'} 삭제`}
+                        aria-label={`${activity.values.strategy.trim() || activity.values.subject.trim() || '학습법'} 삭제`}
                         onClick={() => setPendingDelete(activity)}
                       >
                         <Trash2 aria-hidden="true" />
@@ -587,7 +587,7 @@ export function StudyView({
                   ? '작성자를 선택해 주세요'
                   : query.trim()
                     ? '검색 결과가 없습니다'
-                    : '등록된 공부법이 없어요.'}
+                    : '등록된 학습법이 없어요.'}
               </h3>
             </div>
           )}
@@ -601,12 +601,12 @@ export function StudyView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>공부법을 삭제할까요?</DialogTitle>
+            <DialogTitle>학습법을 삭제할까요?</DialogTitle>
             <DialogDescription className="wrap-break-word">
               ‘
               {pendingDelete?.values.strategy.trim() ||
                 pendingDelete?.values.subject.trim() ||
-                '공부법'}
+                '학습법'}
               ’
               {pendingDelete?.status === 'draft'
                 ? pendingDelete.revision > 0

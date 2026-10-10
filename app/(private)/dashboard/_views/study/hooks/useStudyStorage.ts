@@ -193,7 +193,7 @@ export function useStudyStorage(userId: string) {
       toast.add({
         title: localCleanupFailed
           ? 'DB에 확정했습니다. 다른 탭의 임시저장은 보존했습니다. 목록에서 확인해 주세요.'
-          : '공부법을 확정했습니다. 이후에도 수정할 수 있습니다.',
+          : '학습법을 확정했습니다. 이후에도 수정할 수 있습니다.',
         type: 'success',
       });
     });
@@ -215,7 +215,7 @@ export function useStudyStorage(userId: string) {
         void refreshReferences();
         if (result.cleanupPending)
           toast.add({
-            title: '공부법은 삭제했지만 일부 파일 정리가 지연되고 있습니다.',
+            title: '학습법은 삭제했지만 일부 파일 정리가 지연되고 있습니다.',
             type: 'error',
           });
       }
@@ -224,7 +224,7 @@ export function useStudyStorage(userId: string) {
         title:
           activity.status === 'draft'
             ? '임시저장을 삭제했습니다.'
-            : '공부법을 삭제했습니다.',
+            : '학습법을 삭제했습니다.',
         type: 'success',
       });
     });

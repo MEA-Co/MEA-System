@@ -34,7 +34,7 @@ test('study column round trips alongside text and repeated rows', () => {
   document.prompt = '활동을 첨부해 주세요';
   document.fields.unshift({
     id: randomUUID(),
-    label: '공부법',
+    label: '학습법',
     kind: 'study',
   });
   document.rowMode = 'repeatable';
@@ -74,7 +74,7 @@ const fieldQuestions = load(base + 'lib/field-question.ts', {
 });
 test('text study recommendation survives save validation and editor/readback conversions', () => {
   const document = blocks.emptyQuestionBlock();
-  document.prompt = '공부법을 참고해 작성해 주세요';
+  document.prompt = '학습법을 참고해 작성해 주세요';
   for (const enabled of [true, false]) {
     document.fields[0].studyRecommended = enabled;
     const parsed = blocks.questionBlockSchema.parse(document);

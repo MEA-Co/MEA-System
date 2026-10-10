@@ -104,7 +104,7 @@ export function QuestionTypeEditor({
               <SelectGroup>
                 <SelectLabel>특수 유형</SelectLabel>
                 <SelectItem value="exploration">탐구활동 참조형</SelectItem>
-                <SelectItem value="study">공부법 참조형</SelectItem>
+                <SelectItem value="study">학습법 참조형</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -113,7 +113,7 @@ export function QuestionTypeEditor({
       {part === 'settings' && (kind === 'exploration' || kind === 'study') && (
         <div className="space-y-2">
           <Button variant="outline" disabled>
-            {kind === 'study' ? '공부법 첨부' : '탐구활동 첨부'}
+            {kind === 'study' ? '학습법 첨부' : '탐구활동 첨부'}
           </Button>
         </div>
       )}
@@ -149,7 +149,7 @@ export function QuestionTypeEditor({
               htmlFor={`study-recommended-${question.id}`}
               className="cursor-pointer text-sm"
             >
-              공부법 참조 권장
+              학습법 참조 권장
             </label>
           </div>
         </div>

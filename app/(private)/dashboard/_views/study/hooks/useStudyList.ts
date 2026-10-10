@@ -8,7 +8,7 @@ export type StudyList = { userId: string; activities: ActivityRow[] };
 
 export async function fetchStudyList(url: string): Promise<StudyList> {
   const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) throw new Error('공부법을 불러오지 못했어요.');
+  if (!response.ok) throw new Error('학습법을 불러오지 못했어요.');
   const data: unknown = await response.json();
   if (
     !data ||
@@ -18,7 +18,7 @@ export async function fetchStudyList(url: string): Promise<StudyList> {
     !('activities' in data) ||
     !Array.isArray(data.activities)
   )
-    throw new Error('공부법 목록을 확인하지 못했어요. 다시 시도해 주세요.');
+    throw new Error('학습법 목록을 확인하지 못했어요. 다시 시도해 주세요.');
   return data as StudyList;
 }
 

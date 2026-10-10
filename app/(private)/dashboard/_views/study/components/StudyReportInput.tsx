@@ -93,7 +93,7 @@ export function StudyReportInput({
       {!readOnly && (
         <>
           <p className="text-sm text-muted-foreground">
-            공부법을 설명하는 학습지, 오답 기록 예시 등 관련 자료가 있으면
+            학습법을 설명하는 학습지, 오답 기록 예시 등 관련 자료가 있으면
             첨부해 주세요.
           </p>
           <div
@@ -123,7 +123,7 @@ export function StudyReportInput({
               multiple
               accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx"
               className="hidden"
-              aria-label="공부법 관련 자료 파일"
+              aria-label="학습법 관련 자료 파일"
               onChange={(event) => {
                 addFiles(Array.from(event.target.files ?? []));
                 event.target.value = '';

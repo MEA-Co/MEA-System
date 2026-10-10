@@ -22,7 +22,7 @@ function asField(
     label:
       (kind === 'exploration' || kind === 'study') && field.kind !== kind
         ? kind === 'study'
-          ? '공부법'
+          ? '학습법'
           : '탐구활동'
         : field.label,
     kind,

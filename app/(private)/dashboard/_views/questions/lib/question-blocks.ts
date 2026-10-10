@@ -46,7 +46,7 @@ export const fieldSchema = z
     if (field.studyRecommended !== undefined && field.kind !== 'text') {
       context.addIssue({
         code: 'custom',
-        message: '공부법 참조 권장은 서술형에서만 설정할 수 있어요.',
+        message: '학습법 참조 권장은 서술형에서만 설정할 수 있어요.',
       });
     }
     if (field.kind === 'single' || field.kind === 'multiple') {
