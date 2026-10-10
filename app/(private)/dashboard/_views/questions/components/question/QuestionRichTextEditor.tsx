@@ -7,7 +7,7 @@ import { Plugin } from '@tiptap/pm/state';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
-import { Highlighter, NotebookPen, X } from 'lucide-react';
+import { BookOpen, Compass, Highlighter, X } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -408,10 +408,17 @@ export function QuestionRichTextEditor({
                     }}
                     onClick={() => openPicker(command.kind)}
                   >
-                    <NotebookPen
-                      className="size-5 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
+                    {command.kind === 'study' ? (
+                      <BookOpen
+                        className="size-5 shrink-0 text-violet-600 dark:text-violet-400"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Compass
+                        className="size-5 shrink-0 text-blue-600 dark:text-blue-400"
+                        aria-hidden="true"
+                      />
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium">{command.label}</span>
                       <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
