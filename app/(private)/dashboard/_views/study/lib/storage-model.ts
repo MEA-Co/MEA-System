@@ -9,6 +9,7 @@ export const reportExtension = /\.(pdf|hwp|hwpx|doc|docx|ppt|pptx)$/i;
 const text = z.string().max(50000);
 export const valuesSchema = z
   .object({
+    title: z.string().max(100).default(''),
     category: z.enum(['', '내신', '모의고사(수능)', '기타']),
     subject: z.preprocess(
       (value) => (value === '직접 입력' ? '기타' : value),

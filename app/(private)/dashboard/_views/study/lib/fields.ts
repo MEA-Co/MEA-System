@@ -25,6 +25,12 @@ export const groups = [
     title: '기본 정보',
     fields: [
       {
+        key: 'title',
+        label: '제목 / 이름',
+        placeholder: '학습법을 알아보기 쉽게 제목이나 이름을 입력해 주세요',
+        maxLength: 100,
+      },
+      {
         key: 'category',
         label: '시험 구분',
         placeholder: '학습법을 적용할 시험 구분을 선택해 주세요',
@@ -133,6 +139,7 @@ export type Activity = {
   values: Record<FieldKey, string> & { references: ActivityReference[] };
 };
 export const emptyValues = (): Activity['values'] => ({
+  title: '',
   category: '',
   subject: '',
   customSubject: '',
@@ -160,9 +167,10 @@ export function studySummary(values: Activity['values']) {
     .join(' · ');
 }
 
-/** Keep reference labels short; full strategy remains available in the detail drawer. */
+/** Keep reference labels short; full content remains available in the detail drawer. */
 export function studyTitle(values: Activity['values']) {
   const text =
+    values.title?.trim().replace(/\s+/g, ' ') ||
     values.strategy.trim().replace(/\s+/g, ' ') ||
     studySummary(values) ||
     '학습법';

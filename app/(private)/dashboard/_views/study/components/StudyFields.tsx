@@ -62,7 +62,7 @@ export function StudyFields({
             value: values[field.key],
             placeholder: field.placeholder,
             required,
-            maxLength: 50000,
+            maxLength: 'maxLength' in field ? field.maxLength : 50000,
             onChange: (
               event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
             ) => onChange({ ...values, [field.key]: event.target.value }),

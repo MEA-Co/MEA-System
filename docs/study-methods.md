@@ -6,6 +6,7 @@
 
 첨부 자료의 항목을 다음과 같이 구성한다.
 
+- 제목 / 이름: 선택 입력, 최대 100자. 제목이 있으면 목록·참조 이름에 우선 표시하고, 비어 있으면 학습 전략·기본 정보 순서로 표시한다. 기존 제목 없는 데이터는 그대로 읽으며 이미 답변에 삽입된 참조 이름은 삽입 당시 값을 유지한다.
 - 시험 구분: 내신 / 모의고사(수능) / 기타 중 하나.
 - 과목: 국어 / 영어 / 수학 / 사회 / 과학 / 기타 중 하나. 선택 옆에 과목명(예: 확률과 통계)을 선택 입력한다. 어떤 과목이든 입력 가능하며 과목 선택을 바꿔도 과목명을 유지한다.
 - 문제 상황 유형: 자신이 겪은 문제 상황 / 지도한 학생이 겪었던 문제 상황 / 공통 문제 상황 템플릿 중 하나를 필수 선택한다. 저장 키는 `problemSource`의 `self` / `student` / `template`다. 템플릿 선택 시 대표 문제 상황 16개를 문장 전체로 표시하고, 선택한 본문을 문제 상황 칸에 채운다. 입력 후 자유롭게 수정할 수 있으며 다른 템플릿 선택은 본문만 교체한다. 출처만 변경하면 기존 본문을 유지한다.
@@ -22,7 +23,7 @@
 
 서술형 열에서 `학습법 참조 권장`을 설정한다. 기본 해제, `studyRecommended` boolean으로 저장하며 다른 유형으로 변경하면 제거한다. 기존 탐구활동 권장 옵션과 동시에 설정할 수 있다. 탐구활동은 파란색·나침반 아이콘, 학습법은 보라색·책 아이콘으로 안내한다. 둘 다 권장하면 하나의 말풍선에 두 안내를 나란한 구역으로 모두 표시하며, 입력란은 파란 테두리와 보라색 링을 함께 표시한다. 질문 카드에도 같은 안내 구분을 사용한다. 권장 옵션은 첨부를 필수로 만들지 않는다.
 
-서술형에서 `@`는 탐구활동·학습법 메뉴를 함께 표시하며 `@학습법`으로 좁힐 수 있다. 키보드 방향키·Enter·Escape를 지원한다. 선택기에서 검색, 상세 조회, 새 학습법 추가·임시저장·확정을 수행할 수 있고 확정본만 첨부한다. 학습법의 학습 전략을 짧게 줄인 표시 이름과 UUID를 `studyReference` mark에 저장한다. 하이라이트·저장·재조회에서 참조가 유지되고 Backspace/Delete는 참조 전체를 삭제한다. 참조 이름은 삽입 당시 값이며 상세는 최신 확정본을 읽는다.
+서술형에서 `@`는 탐구활동·학습법 메뉴를 함께 표시하며 `@학습법`으로 좁힐 수 있다. 키보드 방향키·Enter·Escape를 지원한다. 선택기에서 검색, 상세 조회, 새 학습법 추가·임시저장·확정을 수행할 수 있고 확정본만 첨부한다. 학습법의 제목(없으면 학습 전략)을 사용한 표시 이름과 UUID를 `studyReference` mark에 저장한다. 하이라이트·저장·재조회에서 참조가 유지되고 Backspace/Delete는 참조 전체를 삭제한다. 참조 이름은 삽입 당시 값이며 상세는 최신 확정본을 읽는다.
 
 별도 `학습법 참조형` 답변 열(`kind: study`)도 지원한다. 본인 확정 학습법 하나의 UUID를 저장하고, 가이드와 읽기 전용 응답에서 상세를 열 수 있다.
 
@@ -30,7 +31,7 @@
 
 ## 검증
 
-로컬 적용 migration: `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql`. 운영 DB 조회·적용은 하지 않았다. 환경 변수는 변경하지 않았다.
+로컬 적용 migration: `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql` → `20261010083351_study_optional_title.sql`. 운영 DB 조회·적용은 하지 않았다. 환경 변수는 변경하지 않았다.
 
 검증 항목:
 
@@ -59,7 +60,7 @@ MEA_TEST_BLOCK=study node scripts/verify-exploration-storage-local.mjs
    npx supabase migration list --linked
    ```
 
-2. dry-run 결과를 확인한다. 앞선 학습법 migration 두 개를 적용했다면 이번 예상 파일은 `20261010072805_study_problem_templates.sql` 하나다. 미적용 파일이 있다면 `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql` 순서로 적용한다. 다른 migration이나 이력 차이가 나오면 적용 전에 [로컬 DB 안내](local-supabase.md)와 [운영 안내](questions-operations.md)를 기준으로 정의·권한·이력을 검토한다. `--include-all`, 원격 reset/repair로 우회하지 않는다.
+2. dry-run 결과를 확인한다. 앞선 학습법 migration이 모두 적용되었다면 이번 예상 파일은 `20261010083351_study_optional_title.sql` 하나다. 미적용 파일이 있다면 `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql` → `20261010083351_study_optional_title.sql` 순서로 적용한다. 다른 migration이나 이력 차이가 나오면 적용 전에 [로컬 DB 안내](local-supabase.md)와 [운영 안내](questions-operations.md)를 기준으로 정의·권한·이력을 검토한다. `--include-all`, 원격 reset/repair로 우회하지 않는다.
 
    ```bash
    npx supabase db push --linked --dry-run --skip-vault
@@ -79,3 +80,5 @@ MEA_TEST_BLOCK=study node scripts/verify-exploration-storage-local.mjs
 2026-10-10 입력 구성 수정 검증: 문제 상황 출처·과목명·기존 데이터 호환을 포함한 JS 19개, 로컬 `study_storage`·`study_guide_reference`, 타입 검사·변경 범위 lint 통과. 새 함수 migration은 로컬 DB에서 생성하고 이력 일치를 확인했다. 이번 수정의 브라우저 검증·운영 적용은 수행하지 않았다.
 
 2026-10-10 템플릿 활성화: 대표 문제 상황 16개 본문 선택·직접 수정·출처 전환의 입력 보존 테스트 2개, 기존 저장·질문 테스트 19개, 로컬 저장/수정·권한 SQL, 타입·변경 범위 lint·보안 advisor 통과. 템플릿 저장 함수 migration은 로컬 적용·이력 확인 완료, 운영 미적용. 브라우저 테스트는 수행하지 않았다.
+
+2026-10-10 선택 제목: 로컬 `20261010083351_study_optional_title.sql` 적용. 제목 100자·생략/빈 문자열 허용, 제목만 입력한 임시저장 복원, 기존 제목 없는 데이터 조회·저장, 제목 추가/수정/제거 및 권한 SQL 검증. JS 22개·타입·변경 범위 lint·보안 advisor 통과. 운영 미적용, 브라우저 테스트 미실시. 앱 배포 전에 DB migration을 적용한다.

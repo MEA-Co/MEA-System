@@ -231,3 +231,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 학습법 입력 구성 수정(2026-10-10): 예시 채우기·참고자료 UI 제거, 과목(국어/영어/수학/사회/과학/기타) 옆 과목명 선택 입력. 문제 상황은 self/student 출처 필수 선택이며 공통 문제 템플릿은 데이터 등록 전 비활성이다. 보고서 원문 대신 관련 자료 첨부로 안내한다. `20261010061957_study_problem_sources.sql` 로컬 적용·저장/가이드 회귀·타입/변경 범위 lint 통과. 기존 값·첨부는 보존하고 옛 직접 입력 과목은 기타로 읽는다. 운영 적용은 `docs/study-methods.md` 최신 순서를 따른다.
 
 - 학습법 문제 상황 템플릿(2026-10-10): 대표 문장 16개를 선택하여 문제 상황 본문에 직접 입력·수정한다. 제목은 저장하지 않는다. 출처 전환은 본문 유지, 다른 템플릿 선택은 본문만 교체. `20261010072805_study_problem_templates.sql` 로컬 적용, problemSource=self/student/template 허용. 저장/권한 SQL·템플릿 2개·기존 JS 19개·타입·린트·보안 검증, 운영 미적용. 운영 순서는 docs/study-methods.md 참고.
+
+- 학습법 선택 제목(2026-10-10): values.title 선택 입력(100자). 목록·참조·삭제 확인에 제목 우선, 비우면 기존 전략 표시. 기존 제목 없는 데이터 호환. `20261010083351_study_optional_title.sql` 로컬 적용·저장/권한 SQL·JS 22개·타입·린트·보안 검증, 운영 미적용. docs/study-methods.md 순서로 DB 먼저 적용 후 앱 배포.

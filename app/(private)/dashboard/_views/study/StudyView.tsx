@@ -547,7 +547,7 @@ export function StudyView({
                           ? '상세 · 수정'
                           : '상세 보기'
                       }
-                      aria-label={`${activity.values.strategy.trim() || '학습법'} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
+                      aria-label={`${studyTitle(activity.values)} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
                       onClick={(event) => (
                         (opener.current = event.currentTarget),
                         open(activity)
@@ -566,7 +566,7 @@ export function StudyView({
                         size="icon-sm"
                         disabled={busy}
                         title="삭제"
-                        aria-label={`${activity.values.strategy.trim() || activity.values.subject.trim() || '학습법'} 삭제`}
+                        aria-label={`${studyTitle(activity.values)} 삭제`}
                         onClick={() => setPendingDelete(activity)}
                       >
                         <Trash2 aria-hidden="true" />
@@ -603,11 +603,7 @@ export function StudyView({
           <DialogHeader>
             <DialogTitle>학습법을 삭제할까요?</DialogTitle>
             <DialogDescription className="wrap-break-word">
-              ‘
-              {pendingDelete?.values.strategy.trim() ||
-                pendingDelete?.values.subject.trim() ||
-                '학습법'}
-              ’
+              ‘{pendingDelete ? studyTitle(pendingDelete.values) : '학습법'}’
               {pendingDelete?.status === 'draft'
                 ? pendingDelete.revision > 0
                   ? '의 임시 수정본만 삭제합니다. 기존 확정본은 유지됩니다.'

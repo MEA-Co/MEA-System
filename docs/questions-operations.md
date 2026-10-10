@@ -100,3 +100,5 @@ npm run build
 학습법 입력 구성 후속 수정: `20261010061957_study_problem_sources.sql` 로컬 적용. 과목 분류의 기타·선택 과목명, 필수 문제 상황 출처(self/student)를 저장한다. 이전 학습법 migration 이후 적용하며 기존 데이터는 삭제하지 않는다. 최신 적용 순서는 [학습법 운영 적용](study-methods.md#운영-적용-순서)을 따른다.
 
 학습법 문제 상황 템플릿 활성화: `20261010072805_study_problem_templates.sql` 로컬 적용. `problemSource=template` 저장을 허용하며 16개 대표 문장을 선택하면 문제 상황 본문에 입력하고 수정할 수 있다. 앞선 학습법 migration 이후 적용하며 운영 절차는 [학습법 운영 적용](study-methods.md#운영-적용-순서)을 따른다.
+
+학습법 선택 제목: `20261010083351_study_optional_title.sql` 로컬 적용. 선택 제목/이름(100자)을 저장하고 없으면 기존 학습 전략을 표시한다. 운영 반영 순서는 [학습법 운영 적용](study-methods.md#운영-적용-순서)을 따른다. 운영 미적용.

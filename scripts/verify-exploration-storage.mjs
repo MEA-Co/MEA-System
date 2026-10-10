@@ -544,3 +544,35 @@ if (studyMode) {
     );
   });
 }
+
+if (studyMode) {
+  test('선택 제목은 임시저장 후 복원하고 제목 없는 기존 데이터도 읽는다', async () => {
+    const { api } = storageHarness();
+    const draft = make();
+    draft.values.title = '나만의 학습법';
+    assert.equal(model.hasInput(draft), true);
+    await api.saveDraft('A', draft);
+    assert.equal(api.readDrafts('A')[0].values.title, draft.values.title);
+    const { title: _title, ...legacy } = draft.values;
+    assert.equal(model.valuesSchema.parse(legacy).title, '');
+    assert.equal(
+      model.valuesSchema.safeParse({ ...legacy, title: 123 }).success,
+      false,
+    );
+    assert.equal(
+      model.valuesSchema.safeParse({ ...legacy, title: '가'.repeat(101) })
+        .success,
+      false,
+    );
+    const { studyTitle } = load(base + 'fields.ts');
+    assert.equal(
+      studyTitle({ ...draft.values, strategy: '기존 전략' }),
+      '나만의 학습법',
+    );
+    assert.equal(
+      studyTitle({ ...draft.values, title: '  ', strategy: '기존 전략' }),
+      '기존 전략',
+    );
+    assert.equal(studyTitle({ ...legacy, strategy: '기존 전략' }), '기존 전략');
+  });
+}

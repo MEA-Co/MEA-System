@@ -43,6 +43,21 @@ begin
  if result#>>'{values,problemSource}' <> 'template' or result#>>'{values,problem}' <> '템플릿에서 채운 후 직접 수정한 문제 상황' then raise exception 'Template source or edited text not saved'; end if;
  result := public.save_study((result->>'id')::uuid, d.vals || '{"problemSource":"template","problem":"수정 후 다시 저장한 문제 상황"}'::jsonb,'[]',1,gen_random_uuid());
  if result#>>'{values,problem}' <> '수정 후 다시 저장한 문제 상황' then raise exception 'Template update not saved'; end if;
+
+ result := public.save_study(gen_random_uuid(), d.vals || '{"title":"나만의 학습법"}'::jsonb,'[]',0,gen_random_uuid());
+ if result#>>'{values,title}' <> '나만의 학습법' then raise exception 'Title not saved'; end if;
+ result := public.save_study((result->>'id')::uuid, d.vals || '{"title":"새 제목"}'::jsonb,'[]',1,gen_random_uuid());
+ if result#>>'{values,title}' <> '새 제목' then raise exception 'Title not updated'; end if;
+ result := public.save_study((result->>'id')::uuid, d.vals || '{"title":""}'::jsonb,'[]',2,gen_random_uuid());
+ if result#>>'{values,title}' <> '' then raise exception 'Title not cleared'; end if;
+ begin
+  perform public.save_study(gen_random_uuid(), d.vals || jsonb_build_object('title',repeat('가',101)),'[]',0,gen_random_uuid());
+  raise exception 'Long title accepted';
+ exception when invalid_parameter_value then null; end;
+ begin
+  perform public.save_study(gen_random_uuid(), d.vals || '{"title":null}'::jsonb,'[]',0,gen_random_uuid());
+  raise exception 'Non-string title accepted';
+ exception when invalid_parameter_value then null; end;
  -- Both API and direct RPC callers must provide a supported category/subject.
  begin
   perform public.save_study(d.id,jsonb_set(d.vals,'{category}','"invalid"'),'[]',0,d.save_id);
