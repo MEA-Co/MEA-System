@@ -15,6 +15,7 @@ const labels = {
   single: '단일선택형',
   multiple: '다수선택형',
   exploration: '탐구활동 참조형',
+  study: '공부법 참조형',
 };
 
 export function QuestionPlacementCard({

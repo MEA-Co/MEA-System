@@ -35,6 +35,7 @@ import { richTextPlainText } from '../../lib/rich-text';
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';
   if (field.kind === 'exploration') return '탐구활동 첨부됨';
+  if (field.kind === 'study') return '공부법 첨부됨';
   if (field.kind === 'text') return richTextPlainText(value).trim();
   if (field.kind === 'scale') {
     const { score } = scaleAnswer(value);
@@ -60,7 +61,9 @@ import { QuestionAnswerTable } from './QuestionAnswerTable';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
+import { ReferenceRecommendations } from './ReferenceRecommendations';
 import { RichTextContent } from './RichTextContent';
+import { StudyReferenceContent } from './StudyCommands';
 
 type PreviewRow = { id: number; answers: Record<string, string> };
 
@@ -201,6 +204,7 @@ export function QuestionBlockPreview({
         id={question.id}
         disabled={disabled}
         explorationRecommended={field.explorationRecommended}
+        studyRecommended={field.studyRecommended}
         value={row.answers[field.id] ?? ''}
         onChange={(value) => updateAnswer(row.id, field.id, value)}
         placeholder={placeholder}
@@ -261,19 +265,17 @@ export function QuestionBlockPreview({
             value={document.prompt || '질문을 입력하세요'}
             className="min-w-0 flex-1"
           />
-          {document.fields.some(
-            (field) => field.kind === 'text' && field.explorationRecommended,
-          ) && (
-            <aside className="ml-auto max-w-full shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
-              <p className="text-sm font-semibold">
-                탐구활동 참조가 필요한 질문입니다.
-              </p>
-              <p className="mt-0.5 text-xs font-normal">
-                &apos;@탐구활동&apos;을 입력하여 탐구활동을 언급하며
-                답변해주세요!
-              </p>
-            </aside>
-          )}
+          <aside className="ml-auto max-w-full empty:hidden sm:max-w-sm">
+            <ReferenceRecommendations
+              explorationRecommended={document.fields.some(
+                (field) =>
+                  field.kind === 'text' && field.explorationRecommended,
+              )}
+              studyRecommended={document.fields.some(
+                (field) => field.kind === 'text' && field.studyRecommended,
+              )}
+            />
+          </aside>
         </div>
         {(document.details ?? [])
           .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
@@ -344,6 +346,10 @@ export function QuestionBlockPreview({
                             <dd className="mt-1 text-sm">
                               {field.kind === 'text' ? (
                                 <RichTextContent value={value} />
+                              ) : field.kind === 'study' ? (
+                                <StudyReferenceContent id={value}>
+                                  첨부한 공부법 보기
+                                </StudyReferenceContent>
                               ) : (
                                 <p className="whitespace-pre-wrap wrap-break-word">
                                   {answerSummary(field, value)}

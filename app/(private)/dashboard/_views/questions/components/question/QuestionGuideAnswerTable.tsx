@@ -19,6 +19,7 @@ import type {
 import { choiceAnswerValue, scaleAnswer } from '../../lib/question-types';
 
 import { RichTextContent } from './RichTextContent';
+import { StudyReferenceContent } from './StudyCommands';
 
 export function QuestionGuideAnswerTable({
   document,
@@ -113,6 +114,10 @@ export function QuestionGuideAnswerTable({
                             <span className="text-muted-foreground">—</span>
                           ) : field.kind === 'text' ? (
                             <RichTextContent value={value} />
+                          ) : field.kind === 'study' ? (
+                            <StudyReferenceContent id={value}>
+                              첨부한 공부법 보기
+                            </StudyReferenceContent>
                           ) : (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
                               {summary(field, value)}

@@ -13,6 +13,7 @@ export const DASHBOARD_PAGES = {
   consultants: { label: '컨설턴트 관리', group: 'members' },
   questions: { label: '질문 관리', group: 'data' },
   exploration: { label: '탐구활동 관리', group: 'data' },
+  study: { label: '공부법 관리', group: 'data' },
   consulting: { label: '컨설팅 관리', group: 'operations' },
 } as const;
 
@@ -31,11 +32,13 @@ export const DASHBOARD_ROLES = {
     profile: { sidebar: true },
     questions: { sidebar: true },
     exploration: { sidebar: true },
+    study: { sidebar: true },
   },
   consultant_lead: {
     consultants: { sidebar: true },
     questions: { sidebar: true },
     exploration: { sidebar: true },
+    study: { sidebar: true },
     consulting: { sidebar: true },
   },
   admin: {
@@ -43,6 +46,7 @@ export const DASHBOARD_ROLES = {
     consultants: { sidebar: true },
     questions: { sidebar: true },
     exploration: { sidebar: true },
+    study: { sidebar: true },
     consulting: { sidebar: true },
   },
 } as const satisfies Record<MemberRole, RolePages>;

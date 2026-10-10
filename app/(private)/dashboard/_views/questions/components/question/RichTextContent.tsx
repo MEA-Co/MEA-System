@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { type RichTextNode, toEditorDocument } from '../../lib/rich-text';
 
 import { ExplorationReferenceContent } from './ExplorationCommands';
+import { StudyReferenceContent } from './StudyCommands';
 
 import styles from './RichTextContent.module.css';
 
@@ -15,7 +16,9 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
   switch (node.type) {
     case 'text': {
       const reference = node.marks?.find(
-        (mark) => mark.type === 'explorationReference',
+        (mark) =>
+          mark.type === 'explorationReference' ||
+          mark.type === 'studyReference',
       );
       const text = node.marks?.some((mark) => mark.type === 'highlight') ? (
         <mark>{node.text}</mark>
@@ -26,6 +29,10 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
         <ExplorationReferenceContent key={key} id={reference.attrs.id}>
           {text}
         </ExplorationReferenceContent>
+      ) : reference?.type === 'studyReference' ? (
+        <StudyReferenceContent key={key} id={reference.attrs.id}>
+          {text}
+        </StudyReferenceContent>
       ) : (
         <span key={key}>{text}</span>
       );

@@ -20,6 +20,7 @@ export type Question = {
   choiceStyle?: 'list' | 'chip';
   choiceAllowText?: boolean;
   explorationRecommended?: boolean;
+  studyRecommended?: boolean;
   options?: { id: string; label: string; isOther?: boolean }[];
   scaleConfig?: ScaleConfig;
   id: string;

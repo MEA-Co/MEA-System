@@ -2,6 +2,7 @@
 
 import {
   Blocks,
+  BookOpen,
   BriefcaseBusiness,
   GraduationCap,
   MessagesSquare,
@@ -38,6 +39,7 @@ const icons = {
   consultants: BriefcaseBusiness,
   questions: Blocks,
   exploration: NotebookPen,
+  study: BookOpen,
   consulting: MessagesSquare,
 };
 

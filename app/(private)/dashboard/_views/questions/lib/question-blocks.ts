@@ -20,19 +20,33 @@ export const fieldSchema = z
   .object({
     id: z.uuid(),
     label: z.string().trim().min(1).max(100),
-    kind: z.enum(['text', 'scale', 'single', 'multiple', 'exploration']),
+    kind: z.enum([
+      'text',
+      'scale',
+      'single',
+      'multiple',
+      'exploration',
+      'study',
+    ]),
     options: z.array(optionSchema).max(20).optional(),
     scaleMax: z.number().int().min(2).max(9).optional(),
     scaleConfig: scaleConfigSchema.optional(),
     choiceStyle: z.enum(['list', 'chip']).optional(),
     choiceAllowText: z.boolean().optional(),
     explorationRecommended: z.boolean().optional(),
+    studyRecommended: z.boolean().optional(),
   })
   .superRefine((field, context) => {
     if (field.explorationRecommended !== undefined && field.kind !== 'text') {
       context.addIssue({
         code: 'custom',
         message: '탐구활동 참조 권장은 서술형에서만 설정할 수 있어요.',
+      });
+    }
+    if (field.studyRecommended !== undefined && field.kind !== 'text') {
+      context.addIssue({
+        code: 'custom',
+        message: '공부법 참조 권장은 서술형에서만 설정할 수 있어요.',
       });
     }
     if (field.kind === 'single' || field.kind === 'multiple') {

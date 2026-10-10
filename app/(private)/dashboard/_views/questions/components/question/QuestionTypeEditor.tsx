@@ -62,6 +62,8 @@ export function QuestionTypeEditor({
                 kind: next,
                 explorationRecommended:
                   next === 'text' ? question.explorationRecommended : undefined,
+                studyRecommended:
+                  next === 'text' ? question.studyRecommended : undefined,
                 scaleConfig:
                   next === 'scale'
                     ? scaleConfig(question)
@@ -90,7 +92,8 @@ export function QuestionTypeEditor({
               <SelectGroup>
                 <SelectLabel>기본 유형</SelectLabel>
                 {QUESTION_TYPES.filter(
-                  (type) => type.value !== 'exploration',
+                  (type) =>
+                    type.value !== 'exploration' && type.value !== 'study',
                 ).map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
@@ -101,15 +104,16 @@ export function QuestionTypeEditor({
               <SelectGroup>
                 <SelectLabel>특수 유형</SelectLabel>
                 <SelectItem value="exploration">탐구활동 참조형</SelectItem>
+                <SelectItem value="study">공부법 참조형</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
         </div>
       )}
-      {part === 'settings' && kind === 'exploration' && (
+      {part === 'settings' && (kind === 'exploration' || kind === 'study') && (
         <div className="space-y-2">
           <Button variant="outline" disabled>
-            탐구활동 첨부
+            {kind === 'study' ? '공부법 첨부' : '탐구활동 첨부'}
           </Button>
         </div>
       )}
@@ -130,6 +134,22 @@ export function QuestionTypeEditor({
               className="cursor-pointer text-sm"
             >
               탐구활동 참조 권장
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`study-recommended-${question.id}`}
+              checked={question.studyRecommended ?? false}
+              disabled={disabled}
+              onCheckedChange={(checked) =>
+                onChange({ ...question, studyRecommended: checked })
+              }
+            />
+            <label
+              htmlFor={`study-recommended-${question.id}`}
+              className="cursor-pointer text-sm"
+            >
+              공부법 참조 권장
             </label>
           </div>
         </div>

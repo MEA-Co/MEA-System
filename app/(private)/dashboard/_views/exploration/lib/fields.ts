@@ -69,7 +69,7 @@ export const groups = [
         required: true,
         label: '탐구 내용',
         description:
-          '*세특 원문일 수도 있으며, 탐구를 재현할 수 있을 정도로 작성해주세요.',
+          '*세특 원문에 가깝게, 탐구를 재현할 수 있을 정도로 작성해주세요.',
         placeholder:
           '탐구 기획 배경, 방법, 주요 과정과 결과를 자유롭게 작성해주세요.',
         multiline: true,

@@ -6,6 +6,7 @@ export const QUESTION_TYPES = [
   { value: 'single', label: '단일선택형' },
   { value: 'multiple', label: '다수선택형' },
   { value: 'exploration', label: '탐구활동 참조형' },
+  { value: 'study', label: '공부법 참조형' },
 ] as const;
 export type QuestionKind = (typeof QUESTION_TYPES)[number]['value'];
 export function orderedChoiceOptions<T extends { isOther?: boolean }>(
@@ -171,7 +172,7 @@ export function validTypedAnswer(
   if (!value.trim()) return !complete;
   const kind = question.kind ?? 'text';
   if (kind === 'text') return true;
-  if (kind === 'exploration')
+  if (kind === 'exploration' || kind === 'study')
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       value,
     );

@@ -8,7 +8,13 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
-const base = 'app/(private)/dashboard/_views/exploration/lib/';
+const studyMode = process.env.MEA_TEST_BLOCK === 'study';
+const block = studyMode ? 'study' : 'exploration';
+const base = `app/(private)/dashboard/_views/${block}/lib/`;
+const schoolValues = studyMode
+  ? { category: '내신', subject: '수학', problemSource: 'self' }
+  : { grade: '1', semester: '1', recordType: '세특', recordArea: '영어' };
+const topicKey = studyMode ? 'strategy' : 'topic';
 function load(path, imports = {}, globals = {}) {
   const exports = {};
   vm.runInNewContext(
@@ -136,15 +142,10 @@ test('임시저장은 주제가 없어도 어느 항목 하나 또는 참고자�
   activity.reports = [{ clientKey: randomUUID() }];
   assert.equal(model.hasInput(activity), true);
 });
-test('확정은 모든 필수 항목을 검사하고 성장·참고자료·파일은 선택', () => {
+test('확정은 필수 항목을 검사하고 선택 항목은 비어 있어도 저장', () => {
   const values = emptyValues();
   for (const key of Object.keys(model.requiredFields)) values[key] = '작성';
-  Object.assign(values, {
-    grade: '1',
-    semester: '1',
-    recordType: '세특',
-    recordArea: '영어',
-  });
+  Object.assign(values, schoolValues);
   const payload = {
     id: randomUUID(),
     saveId: randomUUID(),
@@ -166,7 +167,12 @@ test('확정은 모든 필수 항목을 검사하고 성장·참고자료·파�
   assert.equal(
     model.confirmRequestSchema.safeParse({
       ...payload,
-      values: { ...values, recordType: '창체', recordArea: '영어' },
+      values: {
+        ...values,
+        ...(studyMode
+          ? { problemSource: 'template' }
+          : { recordType: '창체', recordArea: '영어' }),
+      },
     }).success,
     false,
   );
@@ -182,7 +188,7 @@ test('임시저장을 계정별로 분리하고 새 호출에서 복원, 타 탭
   await assert.rejects(api.removeDraft('A', d), /다른 탭/);
   const changed = await api.saveDraft('A', {
     ...saved,
-    values: { ...saved.values, topic: '새 주제' },
+    values: { ...saved.values, [topicKey]: '새 주제' },
   });
   await assert.rejects(api.saveDraft('A', saved), /다른 탭/);
   await api.removeDraft('A', changed);
@@ -191,17 +197,17 @@ test('임시저장을 계정별로 분리하고 새 호출에서 복원, 타 탭
 test('저장 공간 부족 시 기존 임시저장을 보존', async () => {
   const h = storageHarness();
   const d = make();
-  d.values.topic = '기존';
+  d.values[topicKey] = '기존';
   const saved = await h.api.saveDraft('A', d);
   h.fail();
   await assert.rejects(
     h.api.saveDraft('A', {
       ...saved,
-      values: { ...saved.values, topic: '변경' },
+      values: { ...saved.values, [topicKey]: '변경' },
     }),
     /공간/,
   );
-  assert.equal(h.api.readDrafts('A')[0].values.topic, '기존');
+  assert.equal(h.api.readDrafts('A')[0].values[topicKey], '기존');
 });
 test('첨부만 있는 임시저장: 파일 원문은 브라우저에 복원, JSON에는 메타데이터만 저장', async () => {
   const h = storageHarness();
@@ -234,7 +240,7 @@ test('첨부만 있는 임시저장: 파일 원문은 브라우저에 복원, JS
 test('확정본의 수정 임시저장은 원본 revision을 유지', async () => {
   const { api } = storageHarness();
   const d = { ...make(), revision: 4, status: 'confirmed' };
-  d.values.story = '수정 중';
+  d.values[studyMode ? 'practiceGuide' : 'story'] = '수정 중';
   const saved = await api.saveDraft('A', d);
   assert.equal(saved.revision, 4);
   assert.equal(saved.status, 'draft');
@@ -243,7 +249,7 @@ test('확정본의 수정 임시저장은 원본 revision을 유지', async () =
 test('손상된 임시저장은 조용히 버리거나 덮어쓰지 않음', async () => {
   const h = storageHarness();
   const d = make();
-  d.values.topic = '주제';
+  d.values[topicKey] = '주제';
   await h.api.saveDraft('A', d);
   h.data.set([...h.data.keys()][0], '{broken');
   assert.throws(() => h.api.readDrafts('A'));
@@ -346,11 +352,11 @@ function apiHarness({
     },
   };
   const api = load(
-    'app/api/exploration/[[...path]]/route.ts',
+    `app/api/${block}/[[...path]]/route.ts`,
     {
       'next/headers': { cookies: async () => ({}) },
       zod: require('zod'),
-      '@/app/(private)/dashboard/_views/exploration/lib/storage-model': model,
+      [`@/app/(private)/dashboard/_views/${block}/lib/storage-model`]: model,
       '@/lib/admin': { getViewRole: async () => viewRole },
       '@/lib/auth': {
         getUserAccess: async () => ({
@@ -378,7 +384,7 @@ test('API 인증·역할·교차 출처 검사로 권한 없는 저장 차단', 
   ]) {
     const h = apiHarness(options);
     const r = await h.api.PUT(
-      new Request('http://localhost/api/exploration/' + randomUUID(), {
+      new Request(`http://localhost/api/${block}/` + randomUUID(), {
         method: 'PUT',
         body: '{}',
       }),
@@ -389,7 +395,7 @@ test('API 인증·역할·교차 출처 검사로 권한 없는 저장 차단', 
   }
   const h = apiHarness();
   const r = await h.api.PUT(
-    new Request('http://localhost/api/exploration/' + randomUUID(), {
+    new Request(`http://localhost/api/${block}/` + randomUUID(), {
       method: 'PUT',
       headers: { origin: 'https://evil.test' },
       body: '{}',
@@ -402,7 +408,7 @@ test('API 목록은 컨설턴트 본인 필터로 500개씩 끝까지 조회', a
   const rows = Array.from({ length: 501 }, () => ({ id: randomUUID() }));
   const userId = randomUUID();
   const h = apiHarness({ role: 'consultant', userId, rows });
-  const r = await h.api.GET(new Request('http://localhost/api/exploration'), {
+  const r = await h.api.GET(new Request(`http://localhost/api/${block}`), {
     params: Promise.resolve({}),
   });
   assert.equal((await r.json()).activities.length, 501);
@@ -424,7 +430,7 @@ test('API 필수 입력 누락은 RPC 호출 전에 거절하고 DB 충돌은 40
   const h = apiHarness({ rpcError: { code: '40001' } });
   const put = () =>
     h.api.PUT(
-      new Request('http://localhost/api/exploration/' + id, {
+      new Request(`http://localhost/api/${block}/` + id, {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
@@ -434,7 +440,7 @@ test('API 필수 입력 누락은 RPC 호출 전에 거절하고 DB 충돌은 40
   assert.equal(h.rpcCalls, 0);
   for (const key of Object.keys(model.requiredFields))
     body.values[key] = '작성';
-  Object.assign(body.values, { grade: '1', semester: '1', recordType: '세특' });
+  Object.assign(body.values, schoolValues);
   assert.equal((await put()).status, 409);
   assert.equal(h.rpcCalls, 1);
 });
@@ -448,7 +454,7 @@ test('리드·관리자는 전체 조회, 관리자 컨설턴트 미리보기는
   ]) {
     const h = apiHarness({ role, viewRole });
     const response = await h.api.GET(
-      new Request('http://localhost/api/exploration'),
+      new Request(`http://localhost/api/${block}`),
       { params: Promise.resolve({}) },
     );
     assert.equal(response.status, 200);
@@ -464,7 +470,7 @@ test('질문 첨부용 own scope는 리드·관리자도 본인만 조회', asyn
     const userId = randomUUID();
     const h = apiHarness({ role, userId });
     const response = await h.api.GET(
-      new Request('http://localhost/api/exploration?scope=own'),
+      new Request(`http://localhost/api/${block}?scope=own`),
       { params: Promise.resolve({}) },
     );
     assert.equal(response.status, 200);
@@ -474,3 +480,67 @@ test('질문 첨부용 own scope는 리드·관리자도 본인만 조회', asyn
     );
   }
 });
+
+if (studyMode) {
+  test('공부법의 과목명은 모든 과목에 선택 입력하고 문제 출처는 필수', () => {
+    const values = emptyValues();
+    for (const key of Object.keys(model.requiredFields)) values[key] = '작성';
+    Object.assign(values, {
+      category: '내신',
+      subject: '수학',
+      customSubject: '확률과 통계',
+      problemSource: 'self',
+    });
+    const payload = {
+      id: randomUUID(),
+      saveId: randomUUID(),
+      expectedRevision: 0,
+      values,
+      reports: [],
+    };
+    assert.equal(model.confirmRequestSchema.safeParse(payload).success, true);
+    for (const subject of ['국어', '영어', '수학', '사회', '과학', '기타']) {
+      assert.equal(
+        model.confirmRequestSchema.safeParse({
+          ...payload,
+          values: { ...values, subject, customSubject: '' },
+        }).success,
+        true,
+      );
+    }
+    for (const source of ['self', 'student'])
+      assert.equal(
+        model.confirmRequestSchema.safeParse({
+          ...payload,
+          values: { ...values, problemSource: source },
+        }).success,
+        true,
+      );
+    for (const source of ['', 'template', 'unknown'])
+      assert.equal(
+        model.confirmRequestSchema.safeParse({
+          ...payload,
+          values: { ...values, problemSource: source },
+        }).success,
+        false,
+      );
+  });
+  test('기존 확정본과 임시저장의 내용은 보존하고 과목만 새 분류로 읽는다', () => {
+    const legacy = {
+      ...emptyValues(),
+      subject: '직접 입력',
+      customSubject: '확률과 통계',
+      problem: '기존 내용',
+    };
+    delete legacy.problemSource;
+    const restored = model.valuesSchema.parse(legacy);
+    assert.equal(restored.subject, '기타');
+    assert.equal(restored.customSubject, '확률과 통계');
+    assert.equal(restored.problem, '기존 내용');
+    assert.equal(restored.problemSource, '');
+    assert.equal(
+      model.missingFields(restored).some(([key]) => key === 'problemSource'),
+      true,
+    );
+  });
+}

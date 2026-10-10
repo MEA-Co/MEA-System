@@ -225,3 +225,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 탐구활동 목록 캐시 수정(2026-10-01): QuestionExplorationInput과 @ 메뉴가 같은 URL 키에 각각 배열/객체를 저장하던 SWR 충돌을 제거했다. `useExplorationList`가 `{userId, activities}` 계약과 `exploration-list-v1`+URL 키를 공유하며 잘못된 응답 형식을 거부한다. 배열로 변환한 결과를 같은 키에 저장하지 않는다. 회귀 `scripts/verify-exploration-list-cache.mjs`는 빈 목록/활동 있는 목록/재검증/범위 분리/잘못된 응답을 검증한다. DB migration 없음, 앱 재배포 필요.
 
 - 진로 흐름 부분 제출(2026-10-02): 원본 `5f6064ad-1dd6-4e0d-95dd-611ccacbce92`는 활성 칸 하나의 유효 응답만으로 배포 답변 제출을 허용한다. 전체 공백은 거절하며 다른 질문의 모든 필드/최소 행 검사는 유지한다. `20261002083415_career_flow_partial_submission.sql` 로컬 적용·한 칸/빈 답변 롤백 검증·기존 배포 응답 회귀·보안 검사 통과. 운영은 사용자 적용 대기. 실제 브라우저 제출은 수행하지 않았다.
+
+- 공부법 관리·참조(2026-10-10): `study` 화면/API/테이블과 `study-reports` 버킷을 추가했다. 탐구활동과 같은 임시저장·확정·수정·삭제·첨부·작성자별 조회이며 사진의 시험 구분/과목/문제/전략/실천/진단 항목을 저장한다. 서술형 `studyRecommended`, `@공부법`의 `studyReference`, 특수 답변 `kind: study`를 지원한다. 가이드에서 실제 연결한 공부법·등록 첨부만 컨설턴트가 열람한다. `20261010055936_study_methods.sql` 로컬 적용·회귀·Storage·타입·변경 범위 lint·전체 migration 재생·보안 검증 완료. 운영 미적용, 브라우저 테스트 없음. 전체 lint 기존 스크립트 6개 import 정렬 오류 별도. Webpack 배포 빌드 통과(기본 Turbopack은 실행 환경 포트 제한). 계약·적용 명령은 `docs/study-methods.md`를 따른다.
+
+- 공부법 입력 구성 수정(2026-10-10): 예시 채우기·참고자료 UI 제거, 과목(국어/영어/수학/사회/과학/기타) 옆 과목명 선택 입력. 문제 상황은 self/student 출처 필수 선택이며 공통 문제 템플릿은 데이터 등록 전 비활성이다. 보고서 원문 대신 관련 자료 첨부로 안내한다. `20261010061957_study_problem_sources.sql` 로컬 적용·저장/가이드 회귀·타입/변경 범위 lint 통과. 기존 값·첨부는 보존하고 옛 직접 입력 과목은 기타로 읽는다. 운영 적용은 `docs/study-methods.md` 최신 순서를 따른다.

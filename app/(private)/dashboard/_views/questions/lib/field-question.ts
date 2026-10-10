@@ -14,6 +14,8 @@ export function questionFromField(field: QuestionBlockField): Question {
     choiceAllowText: false,
     explorationRecommended:
       field.kind === 'text' ? field.explorationRecommended : undefined,
+    studyRecommended:
+      field.kind === 'text' ? field.studyRecommended : undefined,
     scaleConfig:
       field.kind === 'scale'
         ? {

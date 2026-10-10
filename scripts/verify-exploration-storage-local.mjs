@@ -22,7 +22,9 @@ const admin = createClient(url, config.SERVICE_ROLE_KEY, {
 });
 const users = [];
 const objectPaths = [];
-const bucket = 'exploration-reports';
+const studyMode = process.env.MEA_TEST_BLOCK === 'study';
+const block = studyMode ? 'study' : 'exploration';
+const bucket = `${block}-reports`;
 async function account(role) {
   const email = `exploration-${randomUUID()}@example.test`;
   const password = randomUUID();
@@ -96,21 +98,36 @@ try {
     ).error,
     '20 MB bucket limit',
   );
-  const values = {
-    grade: '2',
-    semester: '1',
-    recordType: '세특',
-    recordArea: '과학',
-    schoolContext: '수행평가',
-    topic: '로컬 파일 통합 검사',
-    record: '내용',
-    competencies: '문제 해결',
-    motivation: '기획',
-    story: '수행',
-    result: '결과',
-    followup: '',
-    references: [],
-  };
+  const values = studyMode
+    ? {
+        category: '내신',
+        problemSource: 'self',
+        subject: '수학',
+        customSubject: '',
+        problem: '시간 부족',
+        strategy: '오답 분석',
+        practiceGuide: '매일 풀이',
+        practicePeriod: '2주',
+        checklist: '오답률 확인',
+        followup: '유형별 연습',
+        resultDiagnosis: '',
+        references: [],
+      }
+    : {
+        grade: '2',
+        semester: '1',
+        recordType: '세특',
+        recordArea: '과학',
+        schoolContext: '수행평가',
+        topic: '로컬 파일 통합 검사',
+        record: '내용',
+        competencies: '문제 해결',
+        motivation: '기획',
+        story: '수행',
+        result: '결과',
+        followup: '',
+        references: [],
+      };
   const report = {
     clientKey: fileId,
     path,
@@ -126,11 +143,11 @@ try {
     p_expected_revision: 0,
     p_save_id: randomUUID(),
   };
-  const saved = await owner.client.rpc('save_exploration', args);
+  const saved = await owner.client.rpc(`save_${block}`, args);
   assert.equal(saved.error, null, `Confirm: ${saved.error?.message}`);
   assert.equal(saved.data.revision, 1);
   const leadActivityId = randomUUID();
-  const leadSaved = await peerLead.client.rpc('save_exploration', {
+  const leadSaved = await peerLead.client.rpc(`save_${block}`, {
     ...args,
     p_id: leadActivityId,
     p_reports: [],
@@ -139,7 +156,7 @@ try {
   assert.equal(leadSaved.error, null);
   for (const activityId of [id, leadActivityId]) {
     const author = await other.client
-      .from('exploration')
+      .from(block)
       .select('owner:profiles!owner_id(name)')
       .eq('id', activityId)
       .single();
@@ -152,7 +169,7 @@ try {
   }
 
   const named = await other.client
-    .from('exploration')
+    .from(block)
     .select('*, owner:profiles!owner_id(name)')
     .eq('id', id)
     .single();
@@ -162,13 +179,12 @@ try {
     'Author name is included for person filtering',
   );
   assert.equal(
-    (await owner.client.rpc('save_exploration', args)).data.revision,
+    (await owner.client.rpc(`save_${block}`, args)).data.revision,
     1,
     'Idempotent retry',
   );
   assert.equal(
-    (await other.client.from('exploration').select('id').eq('id', id)).data
-      .length,
+    (await other.client.from(block).select('id').eq('id', id)).data.length,
     1,
   );
   for (const viewer of [other, staffAdmin]) {
@@ -180,7 +196,7 @@ try {
     );
     assert.ok(
       (
-        await viewer.client.rpc('delete_exploration', {
+        await viewer.client.rpc(`delete_${block}`, {
           p_id: id,
           p_expected_revision: 1,
         })
@@ -189,8 +205,7 @@ try {
     );
   }
   assert.equal(
-    (await peer.client.from('exploration').select('id').eq('id', id)).data
-      .length,
+    (await peer.client.from(block).select('id').eq('id', id)).data.length,
     0,
   );
   assert.ok((await peer.client.storage.from(bucket).download(path)).error);
@@ -209,7 +224,7 @@ try {
   assert.equal((await downloaded.arrayBuffer()).byteLength, bytes.length);
   assert.equal(
     (
-      await owner.client.rpc('delete_exploration', {
+      await owner.client.rpc(`delete_${block}`, {
         p_id: id,
         p_expected_revision: 1,
       })

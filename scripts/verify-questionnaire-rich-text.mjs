@@ -479,3 +479,141 @@ test('reference deletion is atomic from either edge, inside text and partial sel
     );
   }
 });
+
+const StudyReference = referenceExports.createReferenceMark(
+  'studyReference',
+  'data-study-id',
+);
+const combinedSchema = getSchema([
+  StarterKit,
+  Highlight,
+  referenceExports.ExplorationReference,
+  StudyReference,
+]);
+test('study commands match Korean prefixes, ignore other commands and preserve both reference kinds', () => {
+  for (const [text, matched] of [
+    ['@', true],
+    ['답변 @공', true],
+    ['@공부법', true],
+    ['@탐구활동', false],
+    ['a@b.com', undefined],
+  ]) {
+    const doc = combinedSchema.nodeFromJSON(toEditorDocument(text));
+    const state = EditorState.create({
+      schema: combinedSchema,
+      doc,
+      selection: TextSelection.create(doc, text.length + 1),
+    });
+    assert.equal(
+      referenceExports.referenceCommand({ state }, '공부법')?.matched,
+      matched,
+    );
+  }
+  const doc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: '@활동',
+            marks: [
+              { type: 'explorationReference', attrs: { id: activityId } },
+            ],
+          },
+          { type: 'text', text: ' ' },
+          {
+            type: 'text',
+            text: '@공부법',
+            marks: [
+              { type: 'studyReference', attrs: { id: activityId } },
+              { type: 'highlight' },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const roundtrip = toEditorDocument(
+    serializeRichText(combinedSchema.nodeFromJSON(doc).toJSON()),
+  );
+  assert.equal(
+    roundtrip.content[0].content[0].marks[0].type,
+    'explorationReference',
+  );
+  assert.equal(
+    roundtrip.content[0].content[2].marks.find(
+      (mark) => mark.type === 'studyReference',
+    ).attrs.id,
+    activityId,
+  );
+  assert.equal(richTextPlainText(roundtrip), '@활동 @공부법');
+  doc.content[0].content[2].marks[0].attrs.id = 'javascript:alert(1)';
+  assert.equal(exports.normalizeRichText(doc), null);
+});
+test('mixed references are deleted as whole references, including a partial selection across both', () => {
+  const doc = combinedSchema.nodeFromJSON({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: '앞 ' },
+          {
+            type: 'text',
+            text: '@활동',
+            marks: [
+              { type: 'explorationReference', attrs: { id: activityId } },
+            ],
+          },
+          { type: 'text', text: ' ' },
+          {
+            type: 'text',
+            text: '@공부법',
+            marks: [{ type: 'studyReference', attrs: { id: activityId } }],
+          },
+          { type: 'text', text: ' 뒤' },
+        ],
+      },
+    ],
+  });
+  let state = EditorState.create({
+    schema: combinedSchema,
+    doc,
+    selection: TextSelection.create(doc, 4, 9),
+  });
+  assert.equal(
+    referenceExports.deleteExplorationReference(
+      state,
+      (tr) => {
+        state = state.apply(tr);
+      },
+      'backward',
+    ),
+    true,
+  );
+  assert.equal(state.doc.textContent, '앞  뒤');
+  for (const [pos, direction] of [
+    [11, 'backward'],
+    [7, 'forward'],
+    [9, 'backward'],
+  ]) {
+    let single = EditorState.create({
+      schema: combinedSchema,
+      doc,
+      selection: TextSelection.create(doc, pos),
+    });
+    assert.equal(
+      referenceExports.deleteExplorationReference(
+        single,
+        (tr) => {
+          single = single.apply(tr);
+        },
+        direction,
+      ),
+      true,
+    );
+    assert.equal(single.doc.textContent, '앞 @활동  뒤');
+  }
+});

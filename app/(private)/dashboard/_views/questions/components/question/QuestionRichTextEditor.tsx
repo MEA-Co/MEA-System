@@ -30,9 +30,12 @@ import {
   showRichTextPlaceholder,
   toEditorDocument,
 } from '../../lib/rich-text';
+import { studyCommand, StudyReference } from '../../lib/study-reference';
 
 import { ExplorationPicker } from './ExplorationCommands';
+import { ReferenceRecommendations } from './ReferenceRecommendations';
 import { richTextClasses, RichTextContent } from './RichTextContent';
+import { StudyPicker } from './StudyCommands';
 
 function bubbleMenuContainer() {
   return document.body;
@@ -52,6 +55,7 @@ export function QuestionRichTextEditor({
   ariaLabel,
   ariaLabelledBy,
   explorationRecommended = false,
+  studyRecommended = false,
 }: {
   id: string;
   value: string;
@@ -66,7 +70,13 @@ export function QuestionRichTextEditor({
   ariaLabel?: string;
   ariaLabelledBy?: string;
   explorationRecommended?: boolean;
+  studyRecommended?: boolean;
 }) {
+  const [referenceKind, setReferenceKind] = useState<'exploration' | 'study'>(
+    'exploration',
+  );
+  const Picker = referenceKind === 'study' ? StudyPicker : ExplorationPicker;
+  const referenceLabel = referenceKind === 'study' ? '공부법' : '탐구활동';
   const editorAnchor = useRef<HTMLDivElement>(null);
   const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
@@ -79,7 +89,7 @@ export function QuestionRichTextEditor({
   const triggerId = useId();
   const [hintOpen, setHintOpen] = useState(false);
   const showHint =
-    explorationRecommended &&
+    (explorationRecommended || studyRecommended) &&
     !disabled &&
     hintOpen &&
     !hintDismissed &&
@@ -141,6 +151,7 @@ export function QuestionRichTextEditor({
       Highlight.configure({ multicolor: false }),
       QuestionList,
       ExplorationReference,
+      StudyReference,
       lengthLimit,
     ],
     content: toEditorDocument(value),
@@ -173,6 +184,7 @@ export function QuestionRichTextEditor({
         : !value,
       highlighted: current?.isActive('highlight') ?? false,
       command: current ? explorationCommand(current) : null,
+      studyCommand: current ? studyCommand(current) : null,
     }),
   });
 
@@ -195,8 +207,17 @@ export function QuestionRichTextEditor({
     !pickerOpen &&
     !!state?.command &&
     commandKey !== dismissedCommand;
-  function openPicker() {
-    if (!editor || !state?.command?.matched) return;
+  const commands = [
+    ...(state?.command?.matched
+      ? [{ kind: 'exploration' as const, label: '탐구활동' }]
+      : []),
+    ...(state?.studyCommand?.matched
+      ? [{ kind: 'study' as const, label: '공부법' }]
+      : []),
+  ];
+  function openPicker(kind: 'exploration' | 'study') {
+    if (!editor || !state?.command) return;
+    setReferenceKind(kind);
     editor.chain().focus().deleteRange(state.command).run();
     setHintOpen(false);
     setPickerOpen(true);
@@ -226,6 +247,14 @@ export function QuestionRichTextEditor({
       className={cn(
         'relative min-w-0 rounded-lg border-0 bg-neutral-100 shadow-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-neutral-500 dark:bg-neutral-800',
         explorationRecommended && !disabled && 'focus-within:outline-blue-500',
+        studyRecommended &&
+          !explorationRecommended &&
+          !disabled &&
+          'focus-within:outline-violet-500',
+        explorationRecommended &&
+          studyRecommended &&
+          !disabled &&
+          'focus-within:ring-2 focus-within:ring-violet-400',
         disabled && 'opacity-50',
         className,
       )}
@@ -246,7 +275,7 @@ export function QuestionRichTextEditor({
             className={activityEditorOpen ? 'z-40' : 'z-60'}
           >
             <Popover.Popup
-              aria-label="탐구활동 첨부"
+              aria-label={`${referenceLabel} 첨부`}
               finalFocus={() => editor?.view.dom ?? false}
               className="max-h-[min(28rem,var(--available-height))] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg outline-none"
             >
@@ -254,7 +283,7 @@ export function QuestionRichTextEditor({
                 <Button
                   type="button"
                   size="icon-sm"
-                  aria-label="탐구활동 목록 닫기"
+                  aria-label={`${referenceLabel} 목록 닫기`}
                   variant="ghost"
                   onClick={() => {
                     setPickerOpen(false);
@@ -264,7 +293,7 @@ export function QuestionRichTextEditor({
                   <X className="size-4" aria-hidden="true" />
                 </Button>
               </div>
-              <ExplorationPicker
+              <Picker
                 onEditorOpenChange={setActivityEditorOpen}
                 onSelect={(activityId, title) => {
                   if (!editor || !editor.isEditable) return;
@@ -278,7 +307,10 @@ export function QuestionRichTextEditor({
                         text: `@${title}`,
                         marks: [
                           {
-                            type: 'explorationReference',
+                            type:
+                              referenceKind === 'study'
+                                ? 'studyReference'
+                                : 'explorationReference',
                             attrs: { id: activityId },
                           },
                         ],
@@ -318,7 +350,7 @@ export function QuestionRichTextEditor({
               setDismissedCommand(commandKey);
               editor?.commands.focus();
             }
-            if (!state?.command?.matched) return;
+            if (!commands.length || event.target !== editor?.view.dom) return;
             if (
               event.key === 'Enter' ||
               event.key === 'ArrowDown' ||
@@ -326,7 +358,7 @@ export function QuestionRichTextEditor({
             ) {
               event.preventDefault();
               event.stopPropagation();
-              if (event.key === 'Enter') openPicker();
+              if (event.key === 'Enter') openPicker(commands[0].kind);
               else menuButton.current?.focus();
             }
           }}
@@ -344,27 +376,51 @@ export function QuestionRichTextEditor({
               aria-label="사용 가능한 명령어"
               className="absolute bottom-full left-0 z-40 mb-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border bg-popover p-1 shadow-lg"
             >
-              {state?.command?.matched ? (
-                <Button
-                  type="button"
-                  ref={menuButton}
-                  role="menuitem"
-                  variant="ghost"
-                  className="h-auto w-full items-start justify-start gap-3 px-3 py-2 text-left whitespace-normal"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={openPicker}
-                >
-                  <NotebookPen
-                    className="size-5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">탐구활동</span>
-                    <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
-                      신규 탐구활동을 추가하거나, 작성한 탐구활동을 첨부해요
+              {commands.length ? (
+                commands.map((command, index) => (
+                  <Button
+                    key={command.kind}
+                    type="button"
+                    ref={index === 0 ? menuButton : undefined}
+                    role="menuitem"
+                    variant="ghost"
+                    className="h-auto w-full items-start justify-start gap-3 px-3 py-2 text-left whitespace-normal"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === 'ArrowDown' ||
+                        event.key === 'ArrowUp'
+                      ) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const buttons =
+                          event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                            '[role="menuitem"]',
+                          );
+                        buttons?.[
+                          (index +
+                            (event.key === 'ArrowDown'
+                              ? 1
+                              : commands.length - 1)) %
+                            commands.length
+                        ]?.focus();
+                      }
+                    }}
+                    onClick={() => openPicker(command.kind)}
+                  >
+                    <NotebookPen
+                      className="size-5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{command.label}</span>
+                      <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
+                        신규 {command.label}을 추가하거나, 작성한{' '}
+                        {command.label}을 첨부해요
+                      </span>
                     </span>
-                  </span>
-                </Button>
+                  </Button>
+                ))
               ) : (
                 <p
                   role="status"
@@ -446,19 +502,25 @@ export function QuestionRichTextEditor({
             </BubbleMenu>
           )}
         </TooltipTrigger>
-        {explorationRecommended && (
+        {(explorationRecommended || studyRecommended) && (
           <TooltipContent
             ref={hintPopup}
             id={hintId}
             side="top"
             align="end"
             sideOffset={8}
-            className="relative block max-w-[min(24rem,calc(100vw-2rem))] bg-blue-600 pr-9 text-white"
+            className={cn(
+              'relative block max-w-[min(24rem,calc(100vw-2rem))] p-0 text-white',
+              studyRecommended ? 'bg-violet-600' : 'bg-blue-600',
+              explorationRecommended &&
+                studyRecommended &&
+                'data-[side=bottom]:bg-blue-600',
+            )}
           >
             <button
               type="button"
-              aria-label="탐구활동 참조 안내 닫기"
-              className="absolute right-1 top-1 rounded p-1 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+              aria-label="참조 안내 닫기"
+              className="absolute right-1 top-1 z-10 rounded p-1 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
               onPointerDown={(event) => event.preventDefault()}
               onClick={() => {
                 setHintDismissed(true);
@@ -467,11 +529,11 @@ export function QuestionRichTextEditor({
             >
               <X className="size-4" aria-hidden="true" />
             </button>
-            <p className="font-semibold">탐구활동 참조가 필요한 질문입니다.</p>
-            <p>
-              &apos;@탐구활동&apos; 을 입력하여 탐구활동을 언급하며
-              답변해주세요!
-            </p>
+            <ReferenceRecommendations
+              prominent
+              explorationRecommended={explorationRecommended}
+              studyRecommended={studyRecommended}
+            />
           </TooltipContent>
         )}
       </Tooltip>

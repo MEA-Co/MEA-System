@@ -3,90 +3,97 @@ import { Plugin } from '@tiptap/pm/state';
 
 import { isExplorationId } from './rich-text';
 
-export const ExplorationReference = Mark.create({
-  name: 'explorationReference',
-  inclusive: false,
-  priority: 1000,
-  addKeyboardShortcuts() {
-    return {
-      Backspace: () =>
-        deleteExplorationReference(
-          this.editor.state,
-          this.editor.view.dispatch,
-          'backward',
-        ),
-      Delete: () =>
-        deleteExplorationReference(
-          this.editor.state,
-          this.editor.view.dispatch,
-          'forward',
-        ),
-    };
-  },
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        props: {
-          handleDOMEvents: {
-            beforeinput(view, event) {
-              if (!(event instanceof InputEvent) || event.isComposing)
-                return false;
-              const direction =
-                event.inputType === 'deleteContentBackward'
-                  ? 'backward'
-                  : event.inputType === 'deleteContentForward'
-                    ? 'forward'
-                    : null;
-              if (
-                !direction ||
-                !deleteExplorationReference(
-                  view.state,
-                  view.dispatch,
-                  direction,
+export function createReferenceMark(name: string, attribute: string) {
+  return Mark.create({
+    name,
+    inclusive: false,
+    priority: 1000,
+    addKeyboardShortcuts() {
+      return {
+        Backspace: () =>
+          deleteExplorationReference(
+            this.editor.state,
+            this.editor.view.dispatch,
+            'backward',
+          ),
+        Delete: () =>
+          deleteExplorationReference(
+            this.editor.state,
+            this.editor.view.dispatch,
+            'forward',
+          ),
+      };
+    },
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          props: {
+            handleDOMEvents: {
+              beforeinput(view, event) {
+                if (!(event instanceof InputEvent) || event.isComposing)
+                  return false;
+                const direction =
+                  event.inputType === 'deleteContentBackward'
+                    ? 'backward'
+                    : event.inputType === 'deleteContentForward'
+                      ? 'forward'
+                      : null;
+                if (
+                  !direction ||
+                  !deleteExplorationReference(
+                    view.state,
+                    view.dispatch,
+                    direction,
+                  )
                 )
-              )
-                return false;
-              event.preventDefault();
-              return true;
+                  return false;
+                event.preventDefault();
+                return true;
+              },
             },
           },
+        }),
+      ];
+    },
+    addAttributes() {
+      return {
+        id: {
+          default: null,
+          parseHTML: (element) => element.getAttribute(attribute),
+          renderHTML: (attrs) => ({ [attribute]: attrs.id }),
         },
-      }),
-    ];
-  },
-  addAttributes() {
-    return {
-      id: {
-        default: null,
-        parseHTML: (element) => element.getAttribute('data-exploration-id'),
-        renderHTML: (attrs) => ({ 'data-exploration-id': attrs.id }),
-      },
-    };
-  },
-  parseHTML() {
-    return [
-      {
-        tag: 'span[data-exploration-id]',
-        getAttrs: (element) =>
-          isExplorationId(element.getAttribute('data-exploration-id'))
-            ? {}
-            : false,
-      },
-    ];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'span',
-      mergeAttributes(HTMLAttributes, {
-        class:
-          'cursor-pointer rounded bg-blue-100 px-1 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-      }),
-      0,
-    ];
-  },
-});
+      };
+    },
+    parseHTML() {
+      return [
+        {
+          tag: `span[${attribute}]`,
+          getAttrs: (element) =>
+            isExplorationId(element.getAttribute(attribute)) ? {} : false,
+        },
+      ];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return [
+        'span',
+        mergeAttributes(HTMLAttributes, {
+          class:
+            'cursor-pointer rounded bg-blue-100 px-1 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+        }),
+        0,
+      ];
+    },
+  });
+}
+export const ExplorationReference = createReferenceMark(
+  'explorationReference',
+  'data-exploration-id',
+);
 
 export function explorationCommand(editor: Editor) {
+  return referenceCommand(editor, '탐구활동');
+}
+export function referenceCommand(editor: Editor, label: string) {
   const { $from, empty } = editor.state.selection;
   if (!empty || !$from.parent.isTextblock) return null;
   const before = $from.parent.textBetween(
@@ -100,7 +107,7 @@ export function explorationCommand(editor: Editor) {
   return {
     from: $from.pos - match[1].length - 1,
     to: $from.pos,
-    matched: '탐구활동'.startsWith(match[1]),
+    matched: label.startsWith(match[1]),
   };
 }
 
@@ -120,8 +127,8 @@ export function deleteExplorationReference(
   let range: { from: number; to: number } | null = null;
   state.doc.nodesBetween(start, end, (node, pos) => {
     if (!node.isText) return;
-    const mark = node.marks.find(
-      (item) => item.type.name === 'explorationReference',
+    const mark = node.marks.find((item) =>
+      ['explorationReference', 'studyReference'].includes(item.type.name),
     );
     if (!mark) return;
     const reference = getMarkRange(
@@ -148,7 +155,10 @@ export function deleteExplorationReference(
       .delete(deleteFrom, deleteTo)
       .setStoredMarks(
         (state.storedMarks ?? state.selection.$from.marks()).filter(
-          (mark) => mark.type.name !== 'explorationReference',
+          (mark) =>
+            !['explorationReference', 'studyReference'].includes(
+              mark.type.name,
+            ),
         ),
       ),
   );

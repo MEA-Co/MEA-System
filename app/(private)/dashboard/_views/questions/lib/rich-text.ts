@@ -22,7 +22,7 @@ export type RichTextNode = {
   attrs?: { marker?: 'plus'; start?: number };
   marks?: (
     | { type: 'highlight' }
-    | { type: 'explorationReference'; attrs: { id: string } }
+    | { type: 'explorationReference' | 'studyReference'; attrs: { id: string } }
   )[];
   content?: RichTextNode[];
 };
@@ -52,7 +52,7 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
               !m ||
               typeof m !== 'object' ||
               (m.type !== 'highlight' &&
-                (m.type !== 'explorationReference' ||
+                (!['explorationReference', 'studyReference'].includes(m.type) ||
                   !isExplorationId(m.attrs?.id))),
           ))
       )
@@ -66,7 +66,7 @@ export function normalizeRichText(input: unknown): RichTextNode | null {
                 m.type === 'highlight'
                   ? { type: 'highlight' as const }
                   : {
-                      type: 'explorationReference' as const,
+                      type: m.type as 'explorationReference' | 'studyReference',
                       attrs: { id: m.attrs.id as string },
                     },
               ),

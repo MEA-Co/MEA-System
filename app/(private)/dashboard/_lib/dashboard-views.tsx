@@ -9,6 +9,7 @@ import { ExplorationView } from '../_views/exploration/ExplorationView';
 import { ProfileView } from '../_views/profile/ProfileView';
 import { QuestionsView } from '../_views/questions/QuestionsView';
 import { StudentsView } from '../_views/students/StudentsView';
+import { StudyView } from '../_views/study/StudyView';
 
 import { type DashboardView, resolveDashboardView } from './dashboard-access';
 
@@ -48,6 +49,13 @@ const DASHBOARD_VIEWS = {
   ),
   exploration: ({ userId, role }) => (
     <ExplorationView
+      key={`${userId}:${role}`}
+      userId={userId}
+      canViewOthers={role === 'admin' || role === 'consultant_lead'}
+    />
+  ),
+  study: ({ userId, role }) => (
+    <StudyView
       key={`${userId}:${role}`}
       userId={userId}
       canViewOthers={role === 'admin' || role === 'consultant_lead'}

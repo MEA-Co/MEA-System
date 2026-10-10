@@ -92,3 +92,9 @@ npm run build
 `20261006031716_guide_exploration_reference_read.sql` 로컬 적용 완료, 운영 미적용. 선행 `20261006023910_distributed_guide_answers.sql`이 필요하다. 열람 가능한 최신 가이드 응답의 활성 행에 실제 explorationReference 마크로 연결된 활동만 공유한다. 활동의 최신 확정본과 등록된 보고서만 읽으며 삭제 활동·미첨부 객체·다른 활동·가이드 개인 배포 초안은 공유하지 않는다. 참조 제거 시 새 열람도 차단한다(이미 발급된 파일 URL은 기존 60초 만료까지 유효). 수정/삭제 권한은 소유자 정책 그대로다. 일반 목록과 첨부 선택기는 본인 목록을 유지하며 참조 클릭 조회만 특정 ID로 요청한다.
 
 배포 SQL 회귀 및 기존 exploration_activity_storage 회귀, 타입·린트·보안 advisor 통과. 실제 브라우저 검증과 운영 적용은 수행하지 않았다. 위 운영 절차에서 예상 대기 파일과 대상 `epwlcallocdjkmgdmtlv`를 확인하고 DB 적용 → 대기 없음 확인 → 앱 배포 → 일반 컨설턴트의 가이드 첨부·보고서 열람 확인 순서로 진행한다.
+
+## 공부법 관리·질문 참조 (2026-10-10)
+
+`20261010055936_study_methods.sql` 로컬 적용·검증 완료, 운영 미적용. `study` 테이블과 저장/삭제 RPC, `study-reports` 비공개 버킷, 역할·가이드 참조 RLS, 질문의 `studyRecommended` 및 `kind: study` 검증을 추가한다. 기존 데이터는 변경하지 않는다. 기존 migration을 모두 적용했다면 예상 대기는 이 파일 하나다. 실행 명령·확인 순서는 [공부법 운영 적용](study-methods.md#운영-적용-순서)을 따른다.
+
+공부법 입력 구성 후속 수정: `20261010061957_study_problem_sources.sql` 로컬 적용. 과목 분류의 기타·선택 과목명, 필수 문제 상황 출처(self/student)를 저장한다. 이전 공부법 migration 이후 적용하며 기존 데이터는 삭제하지 않는다. 최신 적용 순서는 [공부법 운영 적용](study-methods.md#운영-적용-순서)을 따른다.

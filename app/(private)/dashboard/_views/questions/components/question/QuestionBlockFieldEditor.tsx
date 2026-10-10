@@ -20,12 +20,15 @@ function asField(
   return {
     id: field.id,
     label:
-      kind === 'exploration' && field.kind !== 'exploration'
-        ? '탐구활동'
+      (kind === 'exploration' || kind === 'study') && field.kind !== kind
+        ? kind === 'study'
+          ? '공부법'
+          : '탐구활동'
         : field.label,
     kind,
     explorationRecommended:
       kind === 'text' ? question.explorationRecommended : undefined,
+    studyRecommended: kind === 'text' ? question.studyRecommended : undefined,
     options:
       kind === 'single' || kind === 'multiple' ? question.options : undefined,
     choiceStyle:
