@@ -8,7 +8,7 @@
 
 - 시험 구분: 내신 / 모의고사(수능) / 기타 중 하나.
 - 과목: 국어 / 영어 / 수학 / 사회 / 과학 / 기타 중 하나. 선택 옆에 과목명(예: 확률과 통계)을 선택 입력한다. 어떤 과목이든 입력 가능하며 과목 선택을 바꿔도 과목명을 유지한다.
-- 문제 상황 유형: 자신이 겪은 문제 상황 / 지도한 학생이 겪었던 문제 상황 중 하나를 필수 선택한다. 공통 문제 상황 템플릿은 데이터 등록 전까지 준비 중인 비활성 항목이다. 저장 키는 `problemSource`의 `self` / `student`다.
+- 문제 상황 유형: 자신이 겪은 문제 상황 / 지도한 학생이 겪었던 문제 상황 / 공통 문제 상황 템플릿 중 하나를 필수 선택한다. 저장 키는 `problemSource`의 `self` / `student` / `template`다. 템플릿 선택 시 대표 문제 상황 16개를 문장 전체로 표시하고, 선택한 본문을 문제 상황 칸에 채운다. 입력 후 자유롭게 수정할 수 있으며 다른 템플릿 선택은 본문만 교체한다. 출처만 변경하면 기존 본문을 유지한다.
 - 문제 상황, 대응 방안(학습 전략), 실천 가이드, 실천 기간, 목표 달성 여부 진단 체크리스트, 후속 대응 전략은 확정 시 필수다.
 - 성적 결과 후속 진단은 시험 후에도 추가할 수 있도록 선택이다. 기간과 체크리스트는 자유롭게 작성하는 텍스트다. 학생별 자동 리마인드 발송이나 성적 자동 집계는 포함하지 않는다.
 - 관련 자료 첨부는 선택이다. 학습지·오답 기록 예시 등 PDF/HWP/HWPX/DOC/DOCX/PPT/PPTX 파일을 파일당 20MB·최대 10개 첨부한다. 예시 공부법 채우기와 별도 참고자료 입력·상세 영역은 제거했다. 플레이스홀더는 답변 예시 대신 각 항목에 작성할 내용과 구체화할 기준을 안내한다.
@@ -30,7 +30,7 @@
 
 ## 검증
 
-로컬 적용 migration: `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql`. 운영 DB 조회·적용은 하지 않았다. 환경 변수는 변경하지 않았다.
+로컬 적용 migration: `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql`. 운영 DB 조회·적용은 하지 않았다. 환경 변수는 변경하지 않았다.
 
 검증 항목:
 
@@ -59,7 +59,7 @@ MEA_TEST_BLOCK=study node scripts/verify-exploration-storage-local.mjs
    npx supabase migration list --linked
    ```
 
-2. dry-run 결과를 확인한다. 첫 공부법 migration까지 적용했다면 이번 예상 파일은 `20261010061957_study_problem_sources.sql` 하나다. 공부법 기능을 아직 적용하지 않았다면 `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` 순서로 두 파일이 예상된다. 다른 migration이나 이력 차이가 나오면 적용 전에 [로컬 DB 안내](local-supabase.md)와 [운영 안내](questions-operations.md)를 기준으로 정의·권한·이력을 검토한다. `--include-all`, 원격 reset/repair로 우회하지 않는다.
+2. dry-run 결과를 확인한다. 앞선 공부법 migration 두 개를 적용했다면 이번 예상 파일은 `20261010072805_study_problem_templates.sql` 하나다. 미적용 파일이 있다면 `20261010055936_study_methods.sql` → `20261010061957_study_problem_sources.sql` → `20261010072805_study_problem_templates.sql` 순서로 적용한다. 다른 migration이나 이력 차이가 나오면 적용 전에 [로컬 DB 안내](local-supabase.md)와 [운영 안내](questions-operations.md)를 기준으로 정의·권한·이력을 검토한다. `--include-all`, 원격 reset/repair로 우회하지 않는다.
 
    ```bash
    npx supabase db push --linked --dry-run --skip-vault
@@ -77,3 +77,5 @@ MEA_TEST_BLOCK=study node scripts/verify-exploration-storage-local.mjs
 5. 기능을 확인한다: 공부법 추가 → 임시저장/새로고침 복원 → 확정 → 수정·파일 다운로드 → 질문의 공부법 권장 설정 → `@공부법`/참조형 첨부 → 저장 후 재조회 → 다른 컨설턴트의 가이드 첨부 열람 → 소유자만 수정·삭제 가능 여부.
 
 2026-10-10 입력 구성 수정 검증: 문제 상황 출처·과목명·기존 데이터 호환을 포함한 JS 19개, 로컬 `study_storage`·`study_guide_reference`, 타입 검사·변경 범위 lint 통과. 새 함수 migration은 로컬 DB에서 생성하고 이력 일치를 확인했다. 이번 수정의 브라우저 검증·운영 적용은 수행하지 않았다.
+
+2026-10-10 템플릿 활성화: 대표 문제 상황 16개 본문 선택·직접 수정·출처 전환의 입력 보존 테스트 2개, 기존 저장·질문 테스트 19개, 로컬 저장/수정·권한 SQL, 타입·변경 범위 lint·보안 advisor 통과. 템플릿 저장 함수 migration은 로컬 적용·이력 확인 완료, 운영 미적용. 브라우저 테스트는 수행하지 않았다.

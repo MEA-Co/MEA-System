@@ -38,14 +38,19 @@ begin
   perform public.save_study(gen_random_uuid(),d.vals-'problemSource','[]',0,gen_random_uuid());
   raise exception 'Missing problem source accepted';
  exception when invalid_parameter_value then null; end;
+
+ result := public.save_study(gen_random_uuid(), d.vals || '{"problemSource":"template","problem":"템플릿에서 채운 후 직접 수정한 문제 상황"}'::jsonb,'[]',0,gen_random_uuid());
+ if result#>>'{values,problemSource}' <> 'template' or result#>>'{values,problem}' <> '템플릿에서 채운 후 직접 수정한 문제 상황' then raise exception 'Template source or edited text not saved'; end if;
+ result := public.save_study((result->>'id')::uuid, d.vals || '{"problemSource":"template","problem":"수정 후 다시 저장한 문제 상황"}'::jsonb,'[]',1,gen_random_uuid());
+ if result#>>'{values,problem}' <> '수정 후 다시 저장한 문제 상황' then raise exception 'Template update not saved'; end if;
  -- Both API and direct RPC callers must provide a supported category/subject.
  begin
   perform public.save_study(d.id,jsonb_set(d.vals,'{category}','"invalid"'),'[]',0,d.save_id);
   raise exception 'Unknown category accepted';
  exception when invalid_parameter_value then null; end;
  begin
-  perform public.save_study(d.id,jsonb_set(d.vals,'{problemSource}','"template"'),'[]',0,d.save_id);
-  raise exception 'Unreleased template accepted';
+  perform public.save_study(d.id,jsonb_set(d.vals,'{problemSource}','"unknown"'),'[]',0,d.save_id);
+  raise exception 'Unknown problem source accepted';
  exception when invalid_parameter_value then null; end;
  begin
   perform public.save_study(d.id,jsonb_set(d.vals,'{resultDiagnosis}','123'),'[]',0,d.save_id);

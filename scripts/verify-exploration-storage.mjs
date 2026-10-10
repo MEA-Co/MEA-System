@@ -170,7 +170,7 @@ test('확정은 필수 항목을 검사하고 선택 항목은 비어 있어도 
       values: {
         ...values,
         ...(studyMode
-          ? { problemSource: 'template' }
+          ? { problemSource: 'unknown' }
           : { recordType: '창체', recordArea: '영어' }),
       },
     }).success,
@@ -508,7 +508,7 @@ if (studyMode) {
         true,
       );
     }
-    for (const source of ['self', 'student'])
+    for (const source of ['self', 'student', 'template'])
       assert.equal(
         model.confirmRequestSchema.safeParse({
           ...payload,
@@ -516,7 +516,7 @@ if (studyMode) {
         }).success,
         true,
       );
-    for (const source of ['', 'template', 'unknown'])
+    for (const source of ['', 'unknown'])
       assert.equal(
         model.confirmRequestSchema.safeParse({
           ...payload,

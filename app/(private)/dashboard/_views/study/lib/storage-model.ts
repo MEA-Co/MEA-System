@@ -14,7 +14,7 @@ export const valuesSchema = z
       (value) => (value === '직접 입력' ? '기타' : value),
       z.enum(['', '국어', '영어', '수학', '사회', '과학', '기타']),
     ),
-    problemSource: z.enum(['', 'self', 'student']).default(''),
+    problemSource: z.enum(['', 'self', 'student', 'template']).default(''),
     customSubject: text,
     problem: text,
     strategy: text,

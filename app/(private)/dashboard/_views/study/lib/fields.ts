@@ -18,7 +18,7 @@ export const subjectOptions = [
 export const problemSourceOptions = [
   { value: 'self', label: '자신이 겪은 문제 상황' },
   { value: 'student', label: '지도한 학생이 겪었던 문제 상황' },
-  { value: 'template', label: '공통 문제 상황 템플릿', disabled: true },
+  { value: 'template', label: '공통 문제 상황 템플릿' },
 ] as const;
 export const groups = [
   {
