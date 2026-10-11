@@ -35,6 +35,7 @@ export const fieldSchema = z
     choiceAllowText: z.boolean().optional(),
     explorationRecommended: z.boolean().optional(),
     studyRecommended: z.boolean().optional(),
+    required: z.boolean().optional(),
   })
   .superRefine((field, context) => {
     if (field.explorationRecommended !== undefined && field.kind !== 'text') {
@@ -135,6 +136,8 @@ export const questionBlockSchema = z
       .optional(),
     fields: z.array(fieldSchema).min(1).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
+    answerLayout: z.enum(['cards', 'table', 'flow']).optional(),
+    initialRows: z.number().int().min(1).max(20).optional(),
     minRows: z.number().int().min(1).max(20).optional(),
     rowLabels: z.array(z.string().trim().max(100)).max(20).optional(),
     maxRows: z.number().int().min(1).max(20).nullable(),
@@ -159,6 +162,21 @@ export const questionBlockSchema = z
       context.addIssue({
         code: 'custom',
         message: '최소 행 수는 최대 행 수보다 클 수 없어요.',
+      });
+    }
+    if (
+      block.rowMode !== 'reference' &&
+      (block.initialRows ?? 1) > (block.maxRows ?? 1)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: '처음 표시할 행 수는 최대 행 수보다 클 수 없어요.',
+      });
+    }
+    if (block.answerLayout === 'flow' && block.rowMode === 'reference') {
+      context.addIssue({
+        code: 'custom',
+        message: '흐름표의 시기는 직접 설정해 주세요.',
       });
     }
     const ids = block.fields.map((field) => field.id);
@@ -247,6 +265,8 @@ export type QuestionBlockRow = {
   }[];
   fields: QuestionBlockField[];
   row_mode: QuestionBlockDocument['rowMode'];
+  answer_layout?: QuestionBlockDocument['answerLayout'];
+  initial_rows?: number;
   max_rows: number | null;
   min_rows?: number;
   row_labels?: string[];
@@ -286,6 +306,8 @@ export function documentFromRow(row: QuestionBlockRow): QuestionBlockDocument {
       })),
     fields: row.fields,
     rowMode: row.row_mode,
+    answerLayout: row.answer_layout ?? 'cards',
+    initialRows: row.initial_rows ?? 1,
     maxRows: row.max_rows,
     minRows: row.min_rows ?? 1,
     rowLabels: row.row_labels ?? [],
@@ -304,6 +326,8 @@ export function emptyQuestionBlock(): QuestionBlockDocument {
     details: [],
     fields: [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
     rowMode: 'single',
+    answerLayout: 'cards',
+    initialRows: 1,
     maxRows: null,
     minRows: 1,
     rowLabels: [],

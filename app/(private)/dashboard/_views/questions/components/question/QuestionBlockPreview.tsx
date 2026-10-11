@@ -27,7 +27,7 @@ import {
 } from '../../lib/question-types';
 import {
   answeredSourceRows,
-  minimumAnswerRows,
+  displayAnswerRows,
   referenceAnswerRows,
 } from '../../lib/reference-rows';
 import { richTextPlainText } from '../../lib/rich-text';
@@ -57,8 +57,10 @@ function answerSummary(field: QuestionBlockField, value: string): string {
     .join(', ');
 }
 
+import { ExplorationReferenceContent } from './ExplorationCommands';
 import { QuestionAnswerTable } from './QuestionAnswerTable';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
+import { QuestionGridInput } from './QuestionGridInput';
 import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { ReferenceRecommendations } from './ReferenceRecommendations';
@@ -101,6 +103,18 @@ export function QuestionBlockPreview({
     initialRows ?? [{ id: 1, answers: {} }],
   );
   const [sourceRows, setSourceRows] = useState<PreviewRow[]>([]);
+  const displaySettings = `${document.answerLayout}:${document.minRows}:${document.maxRows}:${document.initialRows}`;
+  const [displayOverride, setDisplayOverride] = useState<{
+    settings: string;
+    count: number;
+  } | null>(null);
+  const displayCount =
+    displayOverride?.settings === displaySettings
+      ? displayOverride.count
+      : null;
+  const grid =
+    document.answerLayout === 'table' || document.answerLayout === 'flow';
+  const flow = document.answerLayout === 'flow';
   const reference = document.rowMode === 'reference';
   const repeated = document.rowMode !== 'single';
   const maxRows =
@@ -146,8 +160,27 @@ export function QuestionBlockPreview({
   const visibleRows = useMemo(() => {
     if (waiting) return [];
     if (reference) return referenceAnswerRows(matchedRows, rows);
-    return minimumAnswerRows(rows, minRows, maxRows);
-  }, [waiting, reference, matchedRows, rows, maxRows, minRows]);
+    return displayAnswerRows(
+      rows,
+      {
+        minRows,
+        maxRows,
+        answerLayout: document.answerLayout,
+        initialRows: document.initialRows,
+      },
+      displayCount,
+    );
+  }, [
+    waiting,
+    reference,
+    matchedRows,
+    rows,
+    maxRows,
+    minRows,
+    displayCount,
+    document.answerLayout,
+    document.initialRows,
+  ]);
   const answeredRows = useMemo(
     () =>
       visibleRows.filter((row) =>
@@ -197,12 +230,42 @@ export function QuestionBlockPreview({
     fieldIndex: number,
     placeholder = '답변을 입력해 주세요',
   ) {
+    const value = row.answers[field.id] ?? '';
+    if (grid && disabled) {
+      if (!answerSummary(field, value))
+        return <span className="text-sm text-muted-foreground">미입력</span>;
+      if (field.kind === 'text') return <RichTextContent value={value} />;
+      if (field.kind === 'study')
+        return (
+          <StudyReferenceContent id={value}>
+            첨부한 학습법 보기
+          </StudyReferenceContent>
+        );
+      if (field.kind === 'exploration')
+        return (
+          <ExplorationReferenceContent id={value}>
+            첨부한 탐구활동 보기
+          </ExplorationReferenceContent>
+        );
+      const extra =
+        field.kind === 'scale'
+          ? scaleAnswer(value).text
+          : choiceAnswerValue(value, field.kind === 'multiple').text;
+      return (
+        <div className="space-y-1 text-sm whitespace-pre-wrap wrap-anywhere">
+          <p>{answerSummary(field, value)}</p>
+          {extra && <p>{extra}</p>}
+        </div>
+      );
+    }
     const question = questionFromField(field);
     question.id = `${previewId}-${row.id}-${field.id}`;
     return field.kind === 'text' ? (
       <QuestionRichTextEditor
         id={question.id}
         disabled={disabled}
+        compact={grid}
+        required={!flow && field.required !== false}
         explorationRecommended={field.explorationRecommended}
         studyRecommended={field.studyRecommended}
         value={row.answers[field.id] ?? ''}
@@ -228,6 +291,11 @@ export function QuestionBlockPreview({
           <div key={field.id} className="space-y-2">
             <p className="text-sm font-medium">
               {field.label || `답변 ${fieldIndex + 1}`}
+              {field.required === false && (
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  (선택)
+                </span>
+              )}
             </p>
             {renderField(row, field, fieldIndex)}
           </div>
@@ -386,7 +454,53 @@ export function QuestionBlockPreview({
             조건에 맞는 앞선 응답 {matchedRows.length}개에 맞춰 입력합니다.
           </p>
         )}
-        {document.id === CAREER_FLOW_QUESTION_ID ? (
+        {grid ? (
+          <QuestionGridInput
+            document={document}
+            rows={visibleRows}
+            transposed={flow}
+            disabled={disabled}
+            waiting={waiting}
+            renderField={renderField}
+            canAdd={
+              !flow && !reference && repeated && visibleRows.length < maxRows
+            }
+            canRemove={
+              !flow && !reference && repeated && visibleRows.length > minRows
+            }
+            onAdd={() => {
+              if (
+                disabled ||
+                waiting ||
+                flow ||
+                reference ||
+                visibleRows.length >= maxRows
+              )
+                return;
+              const id = Math.max(Date.now(), nextRow.current++);
+              nextRow.current = id + 1;
+              setDisplayOverride({
+                settings: displaySettings,
+                count: visibleRows.length + 1,
+              });
+              setRows([...visibleRows, { id, answers: {} }]);
+            }}
+            onRemove={(id) => {
+              if (
+                disabled ||
+                flow ||
+                reference ||
+                visibleRows.length <= minRows
+              )
+                return;
+              setDisplayOverride({
+                settings: displaySettings,
+                count: visibleRows.length - 1,
+              });
+              setRows(visibleRows.filter((row) => row.id !== id));
+            }}
+          />
+        ) : document.id === CAREER_FLOW_QUESTION_ID ? (
           <QuestionAnswerTable
             document={document}
             rows={visibleRows}

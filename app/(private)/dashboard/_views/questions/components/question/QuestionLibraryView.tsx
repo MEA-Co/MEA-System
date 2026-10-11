@@ -42,6 +42,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -74,10 +81,12 @@ import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 function MaxItemsInput({
   value,
   disabled,
+  ariaLabel = '최대 항목 수',
   onChange,
 }: {
   value: number;
   disabled: boolean;
+  ariaLabel?: string;
   onChange: (value: number) => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -88,7 +97,7 @@ function MaxItemsInput({
       min={1}
       max={20}
       step={1}
-      aria-label="최대 항목 수"
+      aria-label={ariaLabel}
       aria-describedby="max-rows-description"
       className="h-9 w-20 text-center"
       disabled={disabled}
@@ -600,6 +609,43 @@ export function QuestionLibraryView({
     setDraft((current) => (current ? { ...current, ...changes } : null));
   }
 
+  function changeAnswerLayout(
+    answerLayout: QuestionBlockDocument['answerLayout'],
+  ) {
+    if (!draft || !answerLayout) return;
+    if (
+      answerLayout === 'table' &&
+      (draft.answerLayout ?? 'cards') === 'cards' &&
+      draft.rowMode === 'single'
+    ) {
+      updateDraft({
+        answerLayout,
+        rowMode: 'repeatable',
+        maxRows: 20,
+        minRows: 1,
+        initialRows: 5,
+      });
+    } else if (answerLayout === 'flow' && draft.rowMode === 'single') {
+      updateDraft({
+        answerLayout,
+        rowMode: 'repeatable',
+        maxRows: 6,
+        minRows: 1,
+        initialRows: 6,
+        rowLabels: [
+          '고1 1학기',
+          '고1 2학기',
+          '고2 1학기',
+          '고2 2학기',
+          '고3 1학기',
+          '고3 2학기',
+        ],
+      });
+    } else {
+      updateDraft({ answerLayout });
+    }
+  }
+
   function updateField(fieldId: string, updated: QuestionBlockField) {
     const previous = draft?.fields.find((field) => field.id === fieldId);
     if (previous && previous.kind !== updated.kind) {
@@ -1095,13 +1141,64 @@ export function QuestionLibraryView({
                   />
                 </div>
 
+                <div className="space-y-3 rounded-xl border bg-background p-5 sm:p-6">
+                  <Label htmlFor="answer-layout">답변 표시 방식</Label>
+                  <Select
+                    value={draft.answerLayout ?? 'cards'}
+                    onValueChange={(layout) => {
+                      if (
+                        layout === 'cards' ||
+                        layout === 'table' ||
+                        layout === 'flow'
+                      )
+                        changeAnswerLayout(layout);
+                    }}
+                  >
+                    <SelectTrigger
+                      id="answer-layout"
+                      className="w-full sm:w-64"
+                    >
+                      <SelectValue>
+                        {draft.answerLayout === 'table'
+                          ? '일반 표'
+                          : draft.answerLayout === 'flow'
+                            ? '흐름표'
+                            : '카드'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cards">카드</SelectItem>
+                      <SelectItem value="table">일반 표</SelectItem>
+                      <SelectItem
+                        value="flow"
+                        disabled={draft.rowMode === 'reference'}
+                      >
+                        흐름표
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    {draft.answerLayout === 'flow'
+                      ? '시기를 가로로, 답변 항목을 세로로 배치합니다. 해당하는 칸만 입력하며 응답자는 시기를 추가하거나 삭제하지 않습니다.'
+                      : draft.answerLayout === 'table'
+                        ? '열 제목 아래의 칸에 바로 입력합니다. 처음 표시할 행 수와 최소 작성 행 수를 따로 설정할 수 있습니다.'
+                        : '항목별로 답변을 펼쳐 입력합니다.'}
+                  </p>
+                </div>
+
                 <div className="space-y-4">
+                  <h3 className="font-semibold">
+                    {draft.answerLayout === 'flow'
+                      ? '답변 항목 (세로)'
+                      : '답변 열'}
+                  </h3>
                   {draft.fields.map((field, index) => (
                     <QuestionBlockFieldEditor
                       key={field.id}
                       field={field}
                       index={index}
                       fieldCount={draft.fields.length}
+                      answerLayout={draft.answerLayout}
                       onChange={(updated) => updateField(field.id, updated)}
                       onRemove={() => void changeAnswerField(field)}
                     />
@@ -1125,7 +1222,10 @@ export function QuestionLibraryView({
                       })
                     }
                   >
-                    <Plus aria-hidden="true" /> 답변 열 추가
+                    <Plus aria-hidden="true" />
+                    {draft.answerLayout === 'flow'
+                      ? '답변 항목 추가'
+                      : '답변 열 추가'}
                   </Button>
                 </div>
 
@@ -1137,7 +1237,11 @@ export function QuestionLibraryView({
                       </p>
                     ) : (
                       <>
-                        <Label htmlFor="min-rows">최소</Label>
+                        <Label htmlFor="min-rows">
+                          {draft.answerLayout === 'flow'
+                            ? '최소 작성 시기 수'
+                            : '최소 작성 행 수'}
+                        </Label>
                         <Input
                           id="min-rows"
                           type="number"
@@ -1152,10 +1256,20 @@ export function QuestionLibraryView({
                               value >= 1 &&
                               value <= (draft.maxRows ?? 1)
                             )
-                              updateDraft({ minRows: value });
+                              updateDraft({
+                                minRows: value,
+                                initialRows: Math.max(
+                                  draft.initialRows ?? 1,
+                                  value,
+                                ),
+                              });
                           }}
                         />
-                        <Label htmlFor="max-rows">최대</Label>
+                        <Label htmlFor="max-rows">
+                          {draft.answerLayout === 'flow'
+                            ? '시기 수'
+                            : '최대 행 수'}
+                        </Label>
                         <MaxItemsInput
                           value={
                             draft.rowMode === 'repeatable'
@@ -1163,28 +1277,93 @@ export function QuestionLibraryView({
                               : 1
                           }
                           disabled={false}
+                          ariaLabel={
+                            draft.answerLayout === 'flow'
+                              ? '시기 수'
+                              : '최대 행 수'
+                          }
                           onChange={(count) => {
                             if (draft.rowMode === 'reference') return;
                             updateDraft({
                               rowMode: count > 1 ? 'repeatable' : 'single',
                               maxRows: count > 1 ? count : null,
                               minRows: Math.min(draft.minRows ?? 1, count),
+                              initialRows:
+                                draft.answerLayout === 'flow'
+                                  ? count
+                                  : Math.min(
+                                      Math.max(
+                                        draft.initialRows ?? 1,
+                                        draft.minRows ?? 1,
+                                      ),
+                                      count,
+                                    ),
                             });
                           }}
                         />
-                        <Label htmlFor="max-rows">개 항목 입력</Label>
+                        {draft.answerLayout === 'table' && (
+                          <>
+                            <Label htmlFor="initial-rows">
+                              처음 표시할 행 수
+                            </Label>
+                            <Input
+                              id="initial-rows"
+                              type="number"
+                              min={draft.minRows ?? 1}
+                              max={draft.maxRows ?? 1}
+                              className="w-20"
+                              value={Math.max(
+                                draft.initialRows ?? 1,
+                                draft.minRows ?? 1,
+                              )}
+                              onChange={(event) => {
+                                const value = Number(event.target.value);
+                                if (
+                                  Number.isInteger(value) &&
+                                  value >= (draft.minRows ?? 1) &&
+                                  value <= (draft.maxRows ?? 1)
+                                )
+                                  updateDraft({ initialRows: value });
+                              }}
+                            />
+                          </>
+                        )}
                       </>
                     )}
                   </div>
+                  <p
+                    id="max-rows-description"
+                    className="text-sm text-muted-foreground"
+                  >
+                    {draft.rowMode === 'reference'
+                      ? '행 개수는 참조한 질문의 응답을 따릅니다. 흐름표를 사용하려면 조건 설정에서 앞선 질문의 응답 참조를 꺼 주세요.'
+                      : draft.answerLayout === 'flow'
+                        ? '모든 시기를 표시합니다. 최소 작성 시기 수만큼 한 칸 이상 입력해야 합니다.'
+                        : draft.answerLayout === 'table'
+                          ? '처음 표시된 빈 여분 행은 작성 필수가 아닙니다. 최소 작성 행 수만큼 입력하면 됩니다.'
+                          : '최소 작성 행 수만큼 입력해야 하며 최대 행 수까지 추가할 수 있습니다.'}
+                  </p>
                   {draft.rowMode !== 'reference' && (
                     <div className="mt-3 overflow-hidden rounded-xl border">
-                      <Table aria-label="행 이름 설정">
+                      <Table
+                        aria-label={
+                          draft.answerLayout === 'flow'
+                            ? '시기 이름 설정'
+                            : '행 이름 설정'
+                        }
+                      >
                         <TableHeader>
                           <TableRow className="bg-muted/40 hover:bg-muted/40">
                             <TableHead className="w-24 text-center">
-                              행 번호
+                              {draft.answerLayout === 'flow'
+                                ? '시기 번호'
+                                : '행 번호'}
                             </TableHead>
-                            <TableHead>행 이름</TableHead>
+                            <TableHead>
+                              {draft.answerLayout === 'flow'
+                                ? '시기 이름 (가로)'
+                                : '행 이름'}
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1198,7 +1377,7 @@ export function QuestionLibraryView({
                                 <TableCell>
                                   <Input
                                     id={`row-label-${index}`}
-                                    aria-label={`${index + 1}행 이름`}
+                                    aria-label={`${index + 1}${draft.answerLayout === 'flow' ? '번째 시기 이름' : '행 이름'}`}
                                     maxLength={100}
                                     placeholder={String(index + 1)}
                                     value={draft.rowLabels?.[index] ?? ''}

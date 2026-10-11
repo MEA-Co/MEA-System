@@ -38,3 +38,23 @@ export function minimumAnswerRows(
   }
   return visible;
 }
+
+/** Display spare table rows without turning initialization into saved answers. */
+export function displayAnswerRows(
+  rows: PreviewAnswerRow[],
+  settings: {
+    minRows: number;
+    maxRows: number;
+    answerLayout?: 'cards' | 'table' | 'flow';
+    initialRows?: number;
+  },
+  displayCount: number | null = null,
+): PreviewAnswerRow[] {
+  const minimum =
+    settings.answerLayout === 'flow'
+      ? settings.maxRows
+      : settings.answerLayout === 'table'
+        ? Math.max(settings.minRows, displayCount ?? settings.initialRows ?? 1)
+        : settings.minRows;
+  return minimumAnswerRows(rows, minimum, settings.maxRows);
+}

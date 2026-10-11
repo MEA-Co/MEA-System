@@ -69,6 +69,9 @@ function mount(distributed = true, empty = false) {
     swr: { useSWRConfig: () => ({ mutate: async () => {} }) },
     '@/components/ui/button': { Button: 'Button' },
     '@/components/ui/toast': { toast: { add() {} } },
+    '../../lib/career-flow-placeholders': {
+      CAREER_FLOW_QUESTION_ID: '5f6064ad-1dd6-4e0d-95dd-611ccacbce92',
+    },
     '../../lib/rich-text': { richTextPlainText: (value) => value },
     '../../lib/question-responses': {
       snapshotRows: (s) =>

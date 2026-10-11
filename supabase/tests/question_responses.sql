@@ -101,7 +101,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ begin
  begin perform public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
- begin perform public.read_guide_answers(array[(select source_id from publish_docs)]); raise exception 'Consultant read guide before distribution'; exception when insufficient_privilege then null; end;
+ if public.read_guide_answers(array[(select source_id from publish_docs)]) is distinct from '{}'::jsonb then raise exception 'Published-only guide leaked to consultant'; end if;
  if exists(select 1 from public.response_sessions) then raise exception 'Consultant leaked'; end if;
 end $$;
 reset role;
