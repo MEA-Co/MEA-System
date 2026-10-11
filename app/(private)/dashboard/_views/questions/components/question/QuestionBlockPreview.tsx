@@ -278,6 +278,8 @@ export function QuestionBlockPreview({
       <QuestionChoiceInput
         question={question}
         disabled={disabled}
+        compact={grid}
+        ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || `행 ${visibleRows.findIndex((item) => item.id === row.id) + 1}`} · ${field.label || `답변 ${fieldIndex + 1}`}`}
         value={row.answers[field.id] ?? ''}
         onChange={(value) => updateAnswer(row.id, field.id, value)}
       />
