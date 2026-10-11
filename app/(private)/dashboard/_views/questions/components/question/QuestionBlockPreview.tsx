@@ -278,6 +278,8 @@ export function QuestionBlockPreview({
       <QuestionChoiceInput
         question={question}
         disabled={disabled}
+        compact={grid}
+        ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || `행 ${visibleRows.findIndex((item) => item.id === row.id) + 1}`} · ${field.label || `답변 ${fieldIndex + 1}`}`}
         value={row.answers[field.id] ?? ''}
         onChange={(value) => updateAnswer(row.id, field.id, value)}
       />
@@ -292,7 +294,7 @@ export function QuestionBlockPreview({
             <p className="text-sm font-medium">
               {field.label || `답변 ${fieldIndex + 1}`}
               {field.required === false && (
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                <span className="ml-2 inline-flex rounded-md bg-teal-100 px-1.5 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-900 dark:text-teal-100">
                   (선택)
                 </span>
               )}
@@ -689,9 +691,6 @@ export function QuestionBlockPreview({
                         }}
                       >
                         <Plus aria-hidden="true" /> 항목 추가
-                        <span className="text-xs" role="status">
-                          ({visibleRows.length} / {maxRows})
-                        </span>
                       </Button>
                     </td>
                   </tr>

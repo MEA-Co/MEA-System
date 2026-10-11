@@ -158,6 +158,33 @@ export function encodeChoiceAnswerValue(
     ? JSON.stringify({ choices, text })
     : encodeChoiceAnswers(choices, multiple);
 }
+export function updateChoiceSelection(
+  question: Pick<Question, 'kind' | 'options'>,
+  value: string,
+  selectedIds: readonly string[],
+): string {
+  const multiple = question.kind === 'multiple';
+  const selected = new Set(multiple ? selectedIds : selectedIds.slice(0, 1));
+  const previous = choiceAnswerValue(value, multiple).choices;
+  const next = orderedChoiceOptions(question.options ?? []).flatMap(
+    (option): ChoiceAnswer[] => {
+      if (!selected.has(option.id)) return [];
+      if (!option.isOther) return [option.id];
+      const existing = previous.filter(
+        (answer) => typeof answer !== 'string' && answer.id === option.id,
+      );
+      if (existing.length) return multiple ? existing : existing.slice(0, 1);
+      return [
+        {
+          id: option.id,
+          text: '',
+          ...(multiple ? { entryId: crypto.randomUUID() } : {}),
+        },
+      ];
+    },
+  );
+  return encodeChoiceAnswerValue(next, multiple, false, '');
+}
 export function selectedOptions(value: string): string[] {
   return choiceAnswerValue(value, true).choices.map(choiceAnswerId);
 }

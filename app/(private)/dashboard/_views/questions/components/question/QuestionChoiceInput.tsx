@@ -18,6 +18,7 @@ import {
 import type { Question } from '../../lib/types';
 
 import { questionStyles } from './question-styles';
+import { QuestionChoiceDropdownInput } from './QuestionChoiceDropdownInput';
 import { QuestionExplorationInput } from './QuestionExplorationInput';
 import { QuestionStudyInput } from './QuestionStudyInput';
 
@@ -26,6 +27,8 @@ export function QuestionChoiceInput({
   value = '',
   onChange,
   disabled = false,
+  compact = false,
+  ariaLabel = '답변 선택',
   onScaleLabelChange,
   scaleLabelEditingDisabled = false,
 }: {
@@ -33,9 +36,22 @@ export function QuestionChoiceInput({
   value?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  compact?: boolean;
+  ariaLabel?: string;
   onScaleLabelChange?: (key: 'low' | 'middle' | 'high', value: string) => void;
   scaleLabelEditingDisabled?: boolean;
 }) {
+  if (compact && (question.kind === 'single' || question.kind === 'multiple')) {
+    return (
+      <QuestionChoiceDropdownInput
+        question={question}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        ariaLabel={ariaLabel}
+      />
+    );
+  }
   if (question.kind === 'exploration') {
     return (
       <QuestionExplorationInput

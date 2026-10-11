@@ -68,6 +68,7 @@ export function QuestionBlockFieldEditor({
   const changeQuestion = (updated: Question) =>
     onChange(asField(field, updated));
   const flow = answerLayout === 'flow';
+  const compactChoices = answerLayout === 'table' || flow;
 
   return (
     <div className={questionStyles.questionCard}>
@@ -123,6 +124,7 @@ export function QuestionBlockFieldEditor({
         question={question}
         onChange={changeQuestion}
         disabled={false}
+        compactChoices={compactChoices}
       />
     </div>
   );

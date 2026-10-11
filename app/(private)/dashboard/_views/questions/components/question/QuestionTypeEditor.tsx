@@ -35,11 +35,13 @@ export function QuestionTypeEditor({
   onChange,
   disabled,
   part = 'settings',
+  compactChoices = false,
 }: {
   question: Question;
   onChange: (value: Question) => void;
   disabled: boolean;
   part?: 'header' | 'settings';
+  compactChoices?: boolean;
 }) {
   const kind = question.kind ?? 'text';
   const options = orderedChoiceOptions(question.options ?? []);
@@ -167,22 +169,32 @@ export function QuestionTypeEditor({
             {kind === 'single' ? '하나만' : '여러 개를'} 선택할 수 있어요.
             선택지는 2~20개까지 작성할 수 있어요.
           </p>
-          <div className="flex items-center gap-3 py-1">
-            <Switch
-              id={`choice-style-${question.id}`}
-              checked={question.choiceStyle === 'chip'}
-              disabled={disabled}
-              onCheckedChange={(checked) =>
-                onChange({
-                  ...question,
-                  choiceStyle: checked ? 'chip' : 'list',
-                })
-              }
-            />
-            <label htmlFor={`choice-style-${question.id}`} className="text-sm">
-              칩 스타일
-            </label>
-          </div>
+          {compactChoices ? (
+            <p className="text-xs text-muted-foreground">
+              표에서는 드롭다운으로 선택합니다. 선택지와 직접 입력 항목은
+              아래에서 설정해 주세요.
+            </p>
+          ) : (
+            <div className="flex items-center gap-3 py-1">
+              <Switch
+                id={`choice-style-${question.id}`}
+                checked={question.choiceStyle === 'chip'}
+                disabled={disabled}
+                onCheckedChange={(checked) =>
+                  onChange({
+                    ...question,
+                    choiceStyle: checked ? 'chip' : 'list',
+                  })
+                }
+              />
+              <label
+                htmlFor={`choice-style-${question.id}`}
+                className="text-sm"
+              >
+                칩 스타일
+              </label>
+            </div>
+          )}
           {regularOptions.map((option, index) => (
             <div key={option.id} className="flex items-center gap-2">
               <span

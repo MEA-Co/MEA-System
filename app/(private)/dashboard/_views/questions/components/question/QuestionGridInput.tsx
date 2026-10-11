@@ -61,14 +61,9 @@ export function QuestionGridInput({
   const editable = !disabled && !waiting;
   const firstColumnWidth = transposed ? 160 : 112;
   const columnCount = transposed ? rows.length : document.fields.length;
-  const minimumRows =
-    document.rowMode === 'repeatable'
-      ? Math.min(document.minRows ?? 1, document.maxRows ?? 1)
-      : 1;
-  const cellClass =
-    'border-r border-b bg-background p-2 align-top last:border-r-0';
+  const cellClass = 'border-r border-b p-2 align-top last:border-r-0';
   const headerClass =
-    'border-r border-b bg-muted px-3 py-3 text-left align-top font-medium whitespace-normal [overflow-wrap:anywhere] last:border-r-0';
+    'border-r border-b px-3 py-3 text-left align-top font-medium whitespace-normal [overflow-wrap:anywhere] last:border-r-0';
 
   function rowLabel(index: number) {
     return (
@@ -124,7 +119,7 @@ export function QuestionGridInput({
       <td
         key={transposed ? row.id : field.id}
         headers={`${gridId}-row-${row.id} ${gridId}-field-${field.id}`}
-        className={cellClass}
+        className={`${cellClass} ${!transposed && field.required === false ? 'bg-teal-50/70 dark:bg-teal-950/30' : 'bg-background'}`}
       >
         <div className="min-w-0">
           {renderField(
@@ -171,7 +166,7 @@ export function QuestionGridInput({
                 <tr>
                   <th
                     scope="col"
-                    className={`${headerClass} sticky left-0 z-30`}
+                    className={`${headerClass} sticky left-0 z-30 bg-muted`}
                   >
                     {transposed ? '항목' : '번호'}
                   </th>
@@ -181,7 +176,7 @@ export function QuestionGridInput({
                           key={row.id}
                           id={`${gridId}-row-${row.id}`}
                           scope="col"
-                          className={headerClass}
+                          className={`${headerClass} bg-muted`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <span>{rowLabel(rowIndex)}</span>
@@ -194,11 +189,11 @@ export function QuestionGridInput({
                           key={field.id}
                           id={`${gridId}-field-${field.id}`}
                           scope="col"
-                          className={headerClass}
+                          className={`${headerClass} ${field.required === false ? 'bg-teal-100 text-teal-950 dark:bg-teal-950 dark:text-teal-100' : 'bg-muted'}`}
                         >
                           {fieldLabel(fieldIndex)}
                           {field.required === false && (
-                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            <span className="ml-2 inline-flex rounded-md bg-teal-200 px-1.5 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-800 dark:text-teal-50">
                               (선택)
                             </span>
                           )}
@@ -213,7 +208,7 @@ export function QuestionGridInput({
                         <th
                           id={`${gridId}-field-${field.id}`}
                           scope="row"
-                          className={`${headerClass} sticky left-0 z-10`}
+                          className={`${headerClass} sticky left-0 z-10 bg-muted`}
                         >
                           {fieldLabel(fieldIndex)}
                         </th>
@@ -225,7 +220,7 @@ export function QuestionGridInput({
                         <th
                           id={`${gridId}-row-${row.id}`}
                           scope="row"
-                          className={`${headerClass} sticky left-0 z-10`}
+                          className={`${headerClass} sticky left-0 z-10 bg-muted`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <span>{rowLabel(rowIndex)}</span>
@@ -240,20 +235,13 @@ export function QuestionGridInput({
               </tbody>
             </table>
           </div>
-          {editable && document.rowMode !== 'reference' && (
-            <p className="text-xs text-muted-foreground">
-              최소 {minimumRows}
-              {transposed ? '개 시기를' : '행을'} 작성하세요.{' '}
-              {transposed
-                ? '모든 칸을 채울 필요는 없어요.'
-                : '입력하지 않은 여분 행은 비워 둘 수 있어요.'}
-            </p>
-          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {disabled
                 ? '가로로 스크롤해 모든 항목을 확인할 수 있어요.'
-                : '각 칸에 바로 입력하세요. Tab 키로 다음 칸으로 이동할 수 있어요.'}
+                : transposed
+                  ? '기억나는 칸만 입력하세요. Tab 키로 다음 칸으로 이동할 수 있어요.'
+                  : '각 칸에 바로 입력하세요. Tab 키로 다음 칸으로 이동할 수 있어요.'}
             </p>
             {editable && canAdd && (
               <Button type="button" variant="outline" size="sm" onClick={onAdd}>
