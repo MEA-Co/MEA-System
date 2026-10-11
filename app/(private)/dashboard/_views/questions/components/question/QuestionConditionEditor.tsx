@@ -110,7 +110,12 @@ export function QuestionConditionEditor({
       condition: next ? { mode: 'all', clauses: [next] } : null,
       afterBlockId: null,
       ...(referencing
-        ? { rowMode: next ? 'reference' : 'single', maxRows: null, minRows: 1 }
+        ? {
+            rowMode: next ? 'reference' : 'single',
+            maxRows: null,
+            minRows: 1,
+            initialRows: 1,
+          }
         : {}),
       sourceBlockId: referencing && next ? next.blockId : null,
       sourceFieldId: null,
@@ -224,11 +229,12 @@ export function QuestionConditionEditor({
                 </Label>
                 <Switch
                   id="reference-condition-answers"
-                  disabled={unavailable}
+                  disabled={unavailable || document.answerLayout === 'flow'}
                   checked={referencing}
                   onCheckedChange={(checked) =>
                     onChange({
                       rowMode: checked ? 'reference' : 'single',
+                      initialRows: 1,
                       maxRows: null,
                       minRows: 1,
                       sourceBlockId: checked ? questionId : null,

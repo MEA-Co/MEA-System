@@ -6,11 +6,15 @@ import { questionStyles } from '@/app/(private)/dashboard/_views/questions/compo
 import { QuestionTypeEditor } from '@/app/(private)/dashboard/_views/questions/components/question/QuestionTypeEditor';
 import type { Question } from '@/app/(private)/dashboard/_views/questions/lib/types';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { questionFromField } from '../../lib/field-question';
-import type { QuestionBlockField } from '../../lib/question-blocks';
+import type {
+  QuestionBlockDocument,
+  QuestionBlockField,
+} from '../../lib/question-blocks';
 
 function asField(
   field: QuestionBlockField,
@@ -26,6 +30,7 @@ function asField(
           : '탐구활동'
         : field.label,
     kind,
+    required: field.required,
     explorationRecommended:
       kind === 'text' ? question.explorationRecommended : undefined,
     studyRecommended: kind === 'text' ? question.studyRecommended : undefined,
@@ -48,18 +53,21 @@ export function QuestionBlockFieldEditor({
   field,
   index,
   fieldCount,
+  answerLayout = 'cards',
   onChange,
   onRemove,
 }: {
   field: QuestionBlockField;
   index: number;
   fieldCount: number;
+  answerLayout?: QuestionBlockDocument['answerLayout'];
   onChange: (value: QuestionBlockField) => void;
   onRemove: () => void;
 }) {
   const question = questionFromField(field);
   const changeQuestion = (updated: Question) =>
     onChange(asField(field, updated));
+  const flow = answerLayout === 'flow';
 
   return (
     <div className={questionStyles.questionCard}>
@@ -74,7 +82,7 @@ export function QuestionBlockFieldEditor({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={`답변 열 ${index + 1} 삭제`}
+          aria-label={`답변 ${flow ? '항목' : '열'} ${index + 1} 삭제`}
           disabled={fieldCount === 1}
           onClick={onRemove}
         >
@@ -82,7 +90,9 @@ export function QuestionBlockFieldEditor({
         </Button>
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`answer-label-${field.id}`}>열 제목</Label>
+        <Label htmlFor={`answer-label-${field.id}`}>
+          {flow ? '답변 항목 이름 (세로)' : '열 제목'}
+        </Label>
         <Input
           id={`answer-label-${field.id}`}
           value={field.label}
@@ -94,6 +104,21 @@ export function QuestionBlockFieldEditor({
           }
         />
       </div>
+      {!flow && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`answer-required-${field.id}`}
+            checked={field.required !== false}
+            onCheckedChange={(required) => onChange({ ...field, required })}
+          />
+          <Label
+            htmlFor={`answer-required-${field.id}`}
+            className="cursor-pointer"
+          >
+            필수 입력
+          </Label>
+        </div>
+      )}
       <QuestionTypeEditor
         question={question}
         onChange={changeQuestion}
