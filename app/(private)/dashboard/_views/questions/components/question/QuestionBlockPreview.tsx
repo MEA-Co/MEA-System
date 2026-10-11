@@ -294,7 +294,7 @@ export function QuestionBlockPreview({
             <p className="text-sm font-medium">
               {field.label || `답변 ${fieldIndex + 1}`}
               {field.required === false && (
-                <span className="ml-2 inline-flex rounded-md bg-teal-100 px-1.5 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-900 dark:text-teal-100">
+                <span className="ml-2 inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   (선택)
                 </span>
               )}

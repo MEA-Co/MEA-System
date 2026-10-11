@@ -38,7 +38,7 @@ function errorMessage(message: string, status: number) {
   if (message.includes('used by another block'))
     return '다른 질문이 참조하고 있어 삭제할 수 없어요.';
   if (message.includes('Referenced answer fields'))
-    return '다른 질문에서 참조하는 열이나 행 구성은 바꿀 수 없어요.';
+    return '다른 질문이 참조하는 열이나 행 구성이에요. 연결된 질문의 조건과 응답 참조를 해제하고 저장한 뒤 다시 수정해 주세요.';
   if (status === 409)
     return '다른 곳에서 질문이 변경됐어요. 목록을 확인해 주세요.';
   if (status === 403) return '이 질문을 수정할 권한이 없어요.';
@@ -297,7 +297,15 @@ async function handle(request: Request, context: Context) {
       }
       const status = errorStatus(result.error.code);
       return json(
-        { error: errorMessage(result.error.message, status) },
+        {
+          error: errorMessage(result.error.message, status),
+          code:
+            result.error.code === '40001'
+              ? 'revision_conflict'
+              : result.error.code === '55000'
+                ? 'question_edit_restricted'
+                : 'question_save_failed',
+        },
         status,
       );
     }
