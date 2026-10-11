@@ -833,7 +833,11 @@ export function QuestionLibraryView({
         }
         const message = readError(data);
         if (response.status < 500) pendingSaves.current.delete(attemptId);
-        recordError(message, response.status === 409);
+        recordError(
+          message,
+          response.status === 409 &&
+            (data.code === 'revision_conflict' || data.code === undefined),
+        );
         if (manual || saveError !== message)
           toast.add({ title: message, type: 'error' });
         return;

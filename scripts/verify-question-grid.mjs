@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import { z } from 'zod';
 
+import { clearQuestionCondition } from '../app/(private)/dashboard/_views/questions/lib/question-condition.ts';
 import { displayAnswerRows } from '../app/(private)/dashboard/_views/questions/lib/reference-rows.ts';
 
 function loadSource(path, dependencies = {}) {
@@ -184,4 +185,93 @@ test('invalid layouts, row bounds and optional-field types are rejected', () => 
     }).success,
     false,
   );
+});
+
+test('clearing a condition keeps table fields and repeatable row settings intact', () => {
+  const sourceId = crypto.randomUUID();
+  const document = {
+    ...emptyQuestionBlock(),
+    prompt: '조건부 문제집 추천 표',
+    answerLayout: 'table',
+    rowMode: 'repeatable',
+    minRows: 5,
+    initialRows: 6,
+    maxRows: 8,
+    rowLabels: ['첫 번째'],
+    afterBlockId: sourceId,
+    condition: {
+      mode: 'all',
+      clauses: [{ blockId: sourceId, op: 'answered' }],
+    },
+  };
+  const cleared = { ...document, ...clearQuestionCondition(document) };
+  assert.equal(questionBlockSchema.safeParse(cleared).success, true);
+  assert.equal(cleared.condition, null);
+  assert.equal(cleared.afterBlockId, null);
+  assert.equal(cleared.fields, document.fields);
+  assert.equal(cleared.rowLabels, document.rowLabels);
+  assert.equal(cleared.rowMode, 'repeatable');
+  assert.equal(cleared.minRows, 5);
+  assert.equal(cleared.initialRows, 6);
+  assert.equal(cleared.maxRows, 8);
+  assert.equal(cleared.answerLayout, 'table');
+  assert.ok(document.condition);
+});
+
+test('clearing a reference removes every source link and returns a valid single-row question', () => {
+  const sourceId = crypto.randomUUID();
+  const fieldId = crypto.randomUUID();
+  const document = {
+    ...emptyQuestionBlock(),
+    prompt: '앞선 답변에 대한 후속 질문',
+    rowMode: 'reference',
+    sourceBlockId: sourceId,
+    sourceFieldId: fieldId,
+    afterBlockId: sourceId,
+    condition: {
+      mode: 'all',
+      clauses: [{ blockId: sourceId, fieldId, op: 'answered' }],
+    },
+  };
+  const cleared = { ...document, ...clearQuestionCondition(document) };
+  assert.equal(questionBlockSchema.safeParse(cleared).success, true);
+  assert.equal(cleared.condition, null);
+  assert.equal(cleared.sourceBlockId, null);
+  assert.equal(cleared.sourceFieldId, null);
+  assert.equal(cleared.afterBlockId, null);
+  assert.equal(cleared.rowMode, 'single');
+  assert.equal(cleared.maxRows, null);
+  assert.equal(cleared.minRows, 1);
+  assert.equal(cleared.initialRows, 1);
+  assert.equal(cleared.fields, document.fields);
+});
+
+test('clearing flow conditions preserves the fixed periods and partial-input minimum', () => {
+  const document = {
+    ...emptyQuestionBlock(),
+    prompt: '성적 흐름',
+    answerLayout: 'flow',
+    rowMode: 'repeatable',
+    minRows: 2,
+    initialRows: 6,
+    maxRows: 6,
+    rowLabels: [
+      '고1 1학기',
+      '고1 2학기',
+      '고2 1학기',
+      '고2 2학기',
+      '고3 1학기',
+      '고3 2학기',
+    ],
+    condition: {
+      mode: 'all',
+      clauses: [{ blockId: crypto.randomUUID(), op: 'answered' }],
+    },
+  };
+  const cleared = { ...document, ...clearQuestionCondition(document) };
+  assert.equal(questionBlockSchema.safeParse(cleared).success, true);
+  assert.equal(cleared.answerLayout, 'flow');
+  assert.equal(cleared.rowLabels, document.rowLabels);
+  assert.equal(cleared.minRows, 2);
+  assert.equal(displayAnswerRows([], cleared).length, 6);
 });

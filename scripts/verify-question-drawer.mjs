@@ -12,6 +12,7 @@ function mount({
   failSave = false,
   embedded = false,
   guideFields = [],
+  saveResults = [],
 } = {}) {
   const placed = [];
   const saves = [];
@@ -201,6 +202,14 @@ function mount({
             method: options.method,
             body: JSON.parse(options.body),
           });
+          const result = saveResults.shift();
+          if (result instanceof Error) throw result;
+          if (result)
+            return {
+              ok: false,
+              status: result.status,
+              json: async () => result.data,
+            };
           const doc = JSON.parse(options.body).document;
           return {
             ok: true,
@@ -681,4 +690,98 @@ test('type changes ask only for occupied guide fields; labels do not ask', async
     .props.onRemove();
   await app.flush();
   assert.equal(prompts, 1);
+});
+
+test('dependency rejection keeps edits available for another save after the dependency is removed', async () => {
+  const app = mount({
+    embedded: 'existing',
+    saveResults: [
+      {
+        status: 409,
+        data: {
+          error: '연결된 질문의 조건을 해제해 주세요.',
+          code: 'question_edit_restricted',
+        },
+      },
+    ],
+  });
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('보존할 수정 내용');
+  await app.flush();
+  const saveButton = () =>
+    app.find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    );
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+  assert.equal(
+    app.find('QuestionRichTextEditor').props.value,
+    '보존할 수정 내용',
+  );
+  assert.equal(saveButton().props.disabled, false);
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 2);
+  assert.equal(
+    app.saves[1].body.expectedRevision,
+    app.saves[0].body.expectedRevision,
+  );
+  assert.notEqual(app.saves[1].body.saveId, app.saves[0].body.saveId);
+  assert.equal(app.saves[1].body.document.prompt, '보존할 수정 내용');
+});
+
+test('a revision conflict still blocks another save and keeps the unsaved content', async () => {
+  const app = mount({
+    embedded: 'existing',
+    saveResults: [
+      {
+        status: 409,
+        data: { error: '수정 번호 충돌', code: 'revision_conflict' },
+      },
+    ],
+  });
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('충돌 중 보존할 내용');
+  await app.flush();
+  const saveButton = () =>
+    app.find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    );
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(saveButton().props.disabled, true);
+  assert.equal(
+    app.find('QuestionRichTextEditor').props.value,
+    '충돌 중 보존할 내용',
+  );
+  app.tick();
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+});
+
+test('an uncertain save retries with the same save ID, revision and content', async () => {
+  const app = mount({
+    embedded: 'existing',
+    saveResults: [new Error('offline')],
+  });
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('재시도할 내용');
+  await app.flush();
+  const saveButton = () =>
+    app.find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    );
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+  assert.equal(saveButton().props.disabled, false);
+  await saveButton().props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 2);
+  assert.deepEqual(app.saves[1].body, app.saves[0].body);
 });

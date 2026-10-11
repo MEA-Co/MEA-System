@@ -119,7 +119,7 @@ export function QuestionGridInput({
       <td
         key={transposed ? row.id : field.id}
         headers={`${gridId}-row-${row.id} ${gridId}-field-${field.id}`}
-        className={`${cellClass} ${!transposed && field.required === false ? 'bg-teal-50/70 dark:bg-teal-950/30' : 'bg-background'}`}
+        className={`${cellClass} ${!transposed && field.required === false ? 'bg-slate-50/60 dark:bg-slate-950/20' : 'bg-background'}`}
       >
         <div className="min-w-0">
           {renderField(
@@ -189,11 +189,11 @@ export function QuestionGridInput({
                           key={field.id}
                           id={`${gridId}-field-${field.id}`}
                           scope="col"
-                          className={`${headerClass} ${field.required === false ? 'bg-teal-100 text-teal-950 dark:bg-teal-950 dark:text-teal-100' : 'bg-muted'}`}
+                          className={`${headerClass} ${field.required === false ? 'bg-slate-100/70 text-slate-600 dark:bg-slate-900 dark:text-slate-300' : 'bg-muted'}`}
                         >
                           {fieldLabel(fieldIndex)}
                           {field.required === false && (
-                            <span className="ml-2 inline-flex rounded-md bg-teal-200 px-1.5 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-800 dark:text-teal-50">
+                            <span className="ml-2 inline-flex rounded-md bg-slate-200/60 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                               (선택)
                             </span>
                           )}

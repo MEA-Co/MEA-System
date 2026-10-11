@@ -439,10 +439,15 @@ export function QuestionRichTextEditor({
             </div>
           )}
           {placeholderTone === 'example' ? (
-            <div className="grid">
+            <div className="grid min-w-0">
               {state?.empty && (
                 <span
-                  className="pointer-events-none col-start-1 row-start-1 px-3 py-2 text-sm whitespace-pre-wrap text-blue-400 wrap-anywhere dark:text-blue-300"
+                  className={cn(
+                    'pointer-events-none col-start-1 row-start-1 px-3 py-2 text-sm text-blue-400 dark:text-blue-300',
+                    compact
+                      ? 'min-w-0 truncate'
+                      : 'whitespace-pre-wrap wrap-anywhere',
+                  )}
                   aria-hidden="true"
                 >
                   {placeholder}
@@ -457,7 +462,10 @@ export function QuestionRichTextEditor({
             <>
               {state?.empty && (
                 <span
-                  className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground"
+                  className={cn(
+                    'pointer-events-none absolute top-2 left-3 text-sm text-muted-foreground',
+                    compact && 'right-3 truncate leading-5',
+                  )}
                   aria-hidden="true"
                 >
                   {placeholder}
