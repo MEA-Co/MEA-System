@@ -26,7 +26,24 @@ function load(path, imports = {}) {
 }
 const fields = load('lib/fields.ts');
 const templates = load('lib/problem-templates.ts');
+let hookFrame;
 const { StudyFields } = load('components/StudyFields.tsx', {
+  react: {
+    useState(initial) {
+      const { states } = hookFrame;
+      const index = hookFrame.index++;
+      if (!(index in states)) {
+        states[index] = typeof initial === 'function' ? initial() : initial;
+      }
+      return [
+        states[index],
+        (next) => {
+          states[index] =
+            typeof next === 'function' ? next(states[index]) : next;
+        },
+      ];
+    },
+  },
   '../lib/fields': fields,
   '../lib/problem-templates': templates,
   '@/components/ui/input': { Input: 'input' },
@@ -48,13 +65,34 @@ function nodes(tree) {
   if (!tree || typeof tree !== 'object') return [];
   return [tree, ...nodes(tree.props?.children)];
 }
+function createRenderer() {
+  const states = [];
+  return (values, onChange) => {
+    hookFrame = { states, index: 0 };
+    try {
+      return nodes(StudyFields({ values, onChange }));
+    } finally {
+      hookFrame = undefined;
+    }
+  };
+}
 function render(values, onChange) {
-  return nodes(StudyFields({ values, onChange }));
+  return createRenderer()(values, onChange);
 }
 function picker(tree) {
   return tree.find(
-    (node) => node.type === 'Select' && node.props.value === null,
+    (node) =>
+      node.type === 'Select' &&
+      nodes(node).some(
+        (child) =>
+          child.type === 'SelectTrigger' &&
+          child.props.id === 'study-problem-template',
+      ),
   );
+}
+function pickerLabel(tree) {
+  return nodes(picker(tree)).find((node) => node.type === 'SelectValue').props
+    .children;
 }
 
 test('20개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보존한다', () => {
@@ -65,9 +103,14 @@ test('20개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보�
     problemSource: 'template',
     problem: '기존 문제',
     strategy: '기존 전략',
+    practiceGuide: '기존 실천 가이드',
+    checklist: '기존 기준',
+    followup: '기존 후속 대응',
+    problemExperience: '기존 경험',
   };
   let next;
-  const tree = render(values, (v) => {
+  const draw = createRenderer();
+  const tree = draw(values, (v) => {
     next = v;
   });
   assert.equal(templates.problemTemplates.length, 20);
@@ -82,13 +125,29 @@ test('20개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보�
     assert.equal(next.subject, template.subject);
     assert.equal(next.customSubject, template.customSubject);
     assert.equal(next.problemSource, 'template');
-    assert.equal(next.strategy, values.strategy);
+    assert.deepEqual(
+      structuredClone(next),
+      structuredClone({
+        ...values,
+        problem: template.problem,
+        category: template.category,
+        subject: template.subject,
+        customSubject: template.customSubject,
+      }),
+    );
+    const selectedTree = draw(next, () => {});
+    assert.equal(picker(selectedTree).props.value, template.id);
+    assert.equal(pickerLabel(selectedTree), template.problem);
   }
-  const input = render(next, (v) => {
+  const input = draw(next, (v) => {
     next = v;
   }).find((n) => n.type === 'input' && n.props.name === 'problem');
   input.props.onChange({ target: { value: '내 상황에 맞게 수정한 문장' } });
   assert.equal(next.problem, '내 상황에 맞게 수정한 문장');
+  const editedTree = draw(next, () => {});
+  const lastTemplate = templates.problemTemplates.at(-1);
+  assert.equal(picker(editedTree).props.value, lastTemplate.id);
+  assert.equal(pickerLabel(editedTree), lastTemplate.problem);
 });
 
 test('출처 전환은 문제 본문을 유지하고 템플릿에서만 선택기를 표시한다', () => {
@@ -114,6 +173,70 @@ test('출처 전환은 문제 본문을 유지하고 템플릿에서만 선택�
 });
 
 const storage = load('lib/storage-model.ts', { zod: require('zod') });
+test('저장한 템플릿 문제 상황을 다시 열어도 선택 문구를 표시한다', () => {
+  for (const template of templates.problemTemplates) {
+    const { id, ...templateValues } = template;
+    const saved = storage.valuesSchema.parse({
+      ...fields.emptyValues(),
+      ...templateValues,
+      problemSource: 'template',
+    });
+    const tree = render(saved, () => {});
+    assert.equal(picker(tree).props.value, id);
+    assert.equal(pickerLabel(tree), template.problem);
+  }
+});
+test('분류를 직접 바꿔도 같은 문제 상황의 템플릿 선택은 유지한다', () => {
+  const template = templates.problemTemplates[0];
+  const values = {
+    ...fields.emptyValues(),
+    problemSource: 'template',
+    problem: template.problem,
+    category: '내신',
+    subject: '기타',
+    customSubject: '직접 수정한 과목명',
+  };
+  const tree = render(values, () => {});
+  assert.equal(picker(tree).props.value, template.id);
+  assert.equal(pickerLabel(tree), template.problem);
+});
+test('새 블록은 선택이 남지 않고 수정한 저장 본문은 등록된 상황으로 표시한다', () => {
+  const template = templates.problemTemplates[0];
+  const values = {
+    ...fields.emptyValues(),
+    problemSource: 'template',
+    problem: template.problem,
+  };
+  const existing = createRenderer();
+  assert.equal(picker(existing(values, () => {})).props.value, template.id);
+  const edited = { ...values, problem: '내 상황에 맞게 수정한 문제' };
+  const editedTree = existing(edited, () => {});
+  assert.equal(picker(editedTree).props.value, template.id);
+  assert.equal(pickerLabel(editedTree), template.problem);
+
+  const reopened = render(storage.valuesSchema.parse(edited), () => {});
+  assert.equal(picker(reopened).props.value, null);
+  assert.equal(pickerLabel(reopened), '등록한 문제 상황');
+  const newBlock = render(
+    { ...fields.emptyValues(), problemSource: 'template' },
+    () => {},
+  );
+  assert.equal(picker(newBlock).props.value, null);
+  assert.equal(pickerLabel(newBlock), undefined);
+});
+test('빈 문제는 선택 안내를 표시하고 무효 선택은 입력을 바꾸지 않는다', () => {
+  let changes = 0;
+  const values = { ...fields.emptyValues(), problemSource: 'template' };
+  const tree = render(values, () => {
+    changes += 1;
+  });
+  assert.equal(picker(tree).props.value, null);
+  assert.equal(pickerLabel(tree), undefined);
+  picker(tree).props.onValueChange('unknown-template');
+  picker(tree).props.onValueChange(null);
+  assert.equal(changes, 0);
+  assert.equal(values.problem, '');
+});
 test('기존 데이터와 임시저장 형식을 보존하며 새 필드를 기본값으로 읽는다', () => {
   const legacy = {
     ...fields.emptyValues(),

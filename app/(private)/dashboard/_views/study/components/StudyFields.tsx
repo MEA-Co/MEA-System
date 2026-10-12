@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +72,18 @@ export function StudyFields({
   values: Activity['values'];
   onChange: (values: Activity['values']) => void;
 }) {
+  const [selectedProblemTemplate, setSelectedProblemTemplate] = useState(() => {
+    const problemText =
+      values.problemSource === 'template' ? values.problem.trim() : '';
+    const template = problemTemplates.find(
+      (item) => item.problem === problemText,
+    );
+    return {
+      id: template?.id ?? null,
+      label: template?.problem ?? (problemText ? '등록한 문제 상황' : ''),
+    };
+  });
+
   return (
     <div className="grid grid-cols-1 gap-y-3 lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] lg:gap-x-2 lg:gap-y-6">
       {groups.flatMap((group) => [
@@ -266,12 +280,16 @@ export function StudyFields({
                           대표 문제 상황 선택
                         </Label>
                         <Select<string>
-                          value={null}
+                          value={selectedProblemTemplate.id}
                           onValueChange={(value) => {
                             const template = problemTemplates.find(
                               (item) => item.id === value,
                             );
                             if (template) {
+                              setSelectedProblemTemplate({
+                                id: template.id,
+                                label: template.problem,
+                              });
                               onChange({
                                 ...values,
                                 problem: template.problem,
@@ -284,9 +302,15 @@ export function StudyFields({
                         >
                           <SelectTrigger
                             id="study-problem-template"
-                            className="w-full"
+                            className={`min-h-9 w-full min-w-0 whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none ${selectedProblemTemplate.label ? 'data-placeholder:text-foreground' : ''}`}
+                            title={selectedProblemTemplate.label || undefined}
                           >
-                            <SelectValue placeholder="문제 상황을 선택해 주세요" />
+                            <SelectValue
+                              placeholder="문제 상황을 선택해 주세요"
+                              className="min-w-0 whitespace-normal wrap-anywhere break-keep"
+                            >
+                              {selectedProblemTemplate.label || undefined}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent
                             alignItemWithTrigger={false}
