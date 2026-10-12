@@ -365,7 +365,39 @@ do $$ begin
  or exists(select 1 from archive_submissions a left join public.response_submissions r on r.session_id=a.session_id where to_jsonb(r) is distinct from a.value)
  then raise exception 'Archive/restore changed responses'; end if;
 end $$;
+-- A lead unrelated to both source ownership and review authorship can read
+-- reviews on active distributions, but cannot create new requests there.
+create temp table unrelated_review_lead as select gen_random_uuid() id;
+insert into auth.users(id) select id from unrelated_review_lead;
+insert into public.profiles(id,role,name) select id,'consultant_lead','다른 검토 리드' from unrelated_review_lead;
+grant select on unrelated_review_lead to authenticated;
+select set_config('request.jwt.claim.sub',(select id::text from unrelated_review_lead),true);
+set local role authenticated;
+do $$ declare qid uuid := (select source_id from publish_docs); result jsonb; begin
+ result := public.read_question_reviews(qid);
+ if jsonb_array_length(result->'reviews') = 0 then raise exception 'Distributed reviews missing for unrelated lead'; end if;
+ if (result->>'canRequest')::boolean or (result->>'canResolve')::boolean then raise exception 'Read access granted write permission'; end if;
+ if not exists(select 1 from public.question_review_requests where question_id=qid) then raise exception 'Review RLS still blocks lead'; end if;
+end $$;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+do $$ begin
+ begin
+ perform public.read_question_reviews((select source_id from publish_docs));
+ raise exception 'Consultant read review history';
+ exception when insufficient_privilege then null; end;
+end $$;
+reset role;
 update public.questionnaires set archived_at=now() where id in (select (doc->>'questionnaireId')::uuid from publish_docs union all select (doc->>'questionnaireId')::uuid from second_review_doc);
+select set_config('request.jwt.claim.sub',(select id::text from unrelated_review_lead),true);
+set local role authenticated;
+do $$ begin
+ begin
+ perform public.read_question_reviews((select source_id from publish_docs));
+ raise exception 'Archived reviews leaked to unrelated lead';
+ exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
 set local role authenticated;
 do $$ begin
  if public.read_guide_answers(array[(select source_id from publish_docs)]) <> '{}'::jsonb then raise exception 'Archived guide leaked'; end if;
