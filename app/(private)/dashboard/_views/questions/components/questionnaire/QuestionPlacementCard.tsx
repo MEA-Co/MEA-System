@@ -51,6 +51,11 @@ export function QuestionPlacementCard({
       <RichTextContent value={question.prompt} />
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">{rowLimitLabel(question)}</Badge>
+        {question.purpose === 'study_registration' && (
+          <Button type="button" variant="outline" size="sm" disabled>
+            {question.button_label || '학습법 추가'}
+          </Button>
+        )}
         {question.fields.map((field) => (
           <Badge key={field.id} variant="outline">
             {field.label} · {labels[field.kind]}

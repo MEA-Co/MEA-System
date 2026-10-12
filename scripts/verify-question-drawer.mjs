@@ -13,6 +13,7 @@ function mount({
   embedded = false,
   guideFields = [],
   saveResults = [],
+  purpose = 'response',
 } = {}) {
   const placed = [];
   const saves = [];
@@ -27,6 +28,8 @@ function mount({
     created_by: 'owner',
     title: '질문',
     prompt: '본문',
+    purpose,
+    button_label: purpose === 'study_registration' ? '학습법 추가' : null,
     fields: [],
     row_mode: 'single',
     max_rows: null,
@@ -43,6 +46,11 @@ function mount({
     id: q.id,
     title: q.title,
     prompt: q.prompt,
+    purpose: q.purpose ?? 'response',
+    buttonLabel:
+      q.purpose === 'study_registration'
+        ? (q.button_label ?? '학습법 추가')
+        : undefined,
     fields: q.fields,
     rowMode: q.row_mode,
     maxRows: null,
@@ -219,6 +227,8 @@ function mount({
                 id: doc.id,
                 title: doc.title,
                 prompt: doc.prompt,
+                purpose: doc.purpose ?? 'response',
+                button_label: doc.buttonLabel ?? null,
                 fields: doc.fields,
                 revision: 2,
               },
@@ -784,4 +794,111 @@ test('an uncertain save retries with the same save ID, revision and content', as
   await app.flush();
   assert.equal(app.saves.length, 2);
   assert.deepEqual(app.saves[1].body, app.saves[0].body);
+});
+
+test('a reusable study registration card hides answer settings and saves its own original definition', async () => {
+  const app = mount({ embedded: true });
+  await app.flush();
+  const purpose = app.find('Select', (p) => p.value === 'response');
+  assert.equal(purpose.props.disabled, false);
+  purpose.props.onValueChange('study_registration');
+  await app.flush();
+  assert.equal(app.find('QuestionBlockFieldEditor'), null);
+  assert.equal(app.find('QuestionConditionEditor'), null);
+  assert.equal(
+    app.find('SelectTrigger', (p) => p.id === 'answer-layout'),
+    null,
+  );
+  app
+    .find('QuestionRichTextEditor')
+    .props.onChange('사용한 학습법을 등록해 주세요.');
+  app
+    .find('Input', (p) => p.id === 'block-title')
+    .props.onChange({ target: { value: '학습법 기록' } });
+  app
+    .find('Input', (p) => p.id === 'study-registration-button')
+    .props.onChange({ target: { value: '학습법 작성하기' } });
+  await app.flush();
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+  const document = app.saves[0].body.document;
+  assert.equal(document.purpose, 'study_registration');
+  assert.equal(document.buttonLabel, '학습법 작성하기');
+  assert.equal(document.title, '학습법 기록');
+  assert.deepEqual(document.fields, []);
+  assert.equal(document.rowMode, 'single');
+  assert.equal(document.maxRows, null);
+  assert.equal(document.minRows, 1);
+  assert.equal(document.initialRows, 1);
+  assert.deepEqual(document.rowLabels, []);
+  assert.equal(document.sourceBlockId, null);
+  assert.equal(document.sourceFieldId, null);
+  assert.equal(document.afterBlockId, null);
+  assert.equal(document.condition, null);
+  assert.equal(
+    app.find('Select', (p) => p.value === 'study_registration').props.disabled,
+    true,
+  );
+  const place = app.find('Button', (p) => p.children === '질문지에 배치');
+  assert.equal(place.props.disabled, false);
+  place.props.onClick();
+  assert.equal(app.placed[0].id, document.id);
+  assert.equal(app.placed[0].purpose, 'study_registration');
+  assert.equal(app.placed[0].button_label, '학습법 작성하기');
+});
+
+test('an unsaved registration card can return to a response question with a new answer field', async () => {
+  const app = mount({ embedded: true });
+  await app.flush();
+  app
+    .find('Select', (p) => p.value === 'response')
+    .props.onValueChange('study_registration');
+  await app.flush();
+  app
+    .find('Select', (p) => p.value === 'study_registration')
+    .props.onValueChange('response');
+  await app.flush();
+  const field = app.find('QuestionBlockFieldEditor');
+  assert.ok(field);
+  assert.equal(field.props.field.kind, 'text');
+  assert.ok(field.props.field.id);
+  assert.ok(app.find('QuestionConditionEditor'));
+  assert.equal(
+    app.find('Input', (p) => p.id === 'study-registration-button'),
+    null,
+  );
+});
+
+test('saved response and registration card kinds remain immutable while card content stays editable', async () => {
+  for (const purpose of ['response', 'study_registration']) {
+    const app = mount({ embedded: 'existing', purpose });
+    await app.flush();
+    const kind = app.find('Select', (p) => p.value === purpose);
+    assert.equal(kind.props.disabled, true);
+    kind.props.onValueChange(
+      purpose === 'response' ? 'study_registration' : 'response',
+    );
+    await app.flush();
+    assert.ok(app.find('Select', (p) => p.value === purpose));
+    app
+      .find('QuestionRichTextEditor')
+      .props.onChange('카드 내용을 수정합니다.');
+    await app.flush();
+    await app
+      .find(
+        'Button',
+        (p) => Array.isArray(p.children) && p.children.includes('저장'),
+      )
+      .props.onClick();
+    await app.flush();
+    assert.equal(app.saves[0].body.document.purpose, purpose);
+    assert.equal(app.saves[0].body.document.id, app.row.id);
+    assert.equal(app.saves[0].method, 'PUT');
+  }
 });

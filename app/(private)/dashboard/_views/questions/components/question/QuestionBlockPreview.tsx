@@ -66,22 +66,11 @@ import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { ReferenceRecommendations } from './ReferenceRecommendations';
 import { RichTextContent } from './RichTextContent';
 import { StudyReferenceContent } from './StudyCommands';
+import { StudyRegistrationCard } from './StudyRegistrationCard';
 
 type PreviewRow = { id: number; answers: Record<string, string> };
 
-export function QuestionBlockPreview({
-  document,
-  questions = [],
-  ancestors = [],
-  onAnsweredRowsChange,
-  runtime,
-  questionNumber = 1,
-  showPrivateDetails = false,
-  guideAnswer,
-  initialRows,
-  onStoredRowsChange,
-  disabled = false,
-}: {
+export type QuestionBlockPreviewProps = {
   document: QuestionBlockDocument;
   questions?: QuestionBlockRow[];
   ancestors?: string[];
@@ -93,7 +82,34 @@ export function QuestionBlockPreview({
   initialRows?: PreviewRow[];
   onStoredRowsChange?: (rows: PreviewRow[]) => void;
   disabled?: boolean;
-}) {
+};
+
+export function QuestionBlockPreview(props: QuestionBlockPreviewProps) {
+  if (props.document.purpose === 'study_registration')
+    return (
+      <StudyRegistrationCard
+        document={props.document}
+        questionNumber={props.questionNumber}
+        showPrivateDetails={props.showPrivateDetails}
+        disabled={props.disabled || props.runtime?.waiting}
+      />
+    );
+  return <QuestionBlockResponsePreview {...props} />;
+}
+
+function QuestionBlockResponsePreview({
+  document,
+  questions = [],
+  ancestors = [],
+  onAnsweredRowsChange,
+  runtime,
+  questionNumber = 1,
+  showPrivateDetails = false,
+  guideAnswer,
+  initialRows,
+  onStoredRowsChange,
+  disabled = false,
+}: QuestionBlockPreviewProps) {
   const nextRow = useRef(
     Math.max(1, ...(initialRows ?? []).map((row) => row.id)) + 1,
   );

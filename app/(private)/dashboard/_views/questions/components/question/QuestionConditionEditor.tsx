@@ -93,7 +93,10 @@ export function QuestionConditionEditor({
   const clause = document.condition?.clauses[0];
   const questionId = clause?.blockId ?? pendingQuestionId;
   const fieldId = clause ? (clause.fieldId ?? 'all') : pendingFieldId;
-  const selectedQuestion = questions.find(
+  const responseQuestions = questions.filter(
+    (question) => question.purpose !== 'study_registration',
+  );
+  const selectedQuestion = responseQuestions.find(
     (question) => question.id === questionId,
   );
   const selectedField = selectedQuestion?.fields.find(
@@ -105,7 +108,7 @@ export function QuestionConditionEditor({
       ? 'choice'
       : (clause?.op ?? '');
   const referencing = document.rowMode === 'reference';
-  const unavailable = questions.length === 0;
+  const unavailable = responseQuestions.length === 0;
   const hasCondition = !!(
     document.condition ||
     pendingQuestionId ||
@@ -178,7 +181,7 @@ export function QuestionConditionEditor({
               disabled={unavailable}
               options={[
                 { value: 'none', label: '조건 없음' },
-                ...questions.map((question) => ({
+                ...responseQuestions.map((question) => ({
                   value: question.id,
                   label: questionName(question),
                 })),

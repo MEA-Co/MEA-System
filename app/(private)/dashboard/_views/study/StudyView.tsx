@@ -37,11 +37,15 @@ export function StudyView({
   canViewOthers = false,
   onSelect,
   onEditorOpenChange,
+  registrationOnly = false,
+  registrationLabel = '학습법 추가',
 }: {
   userId: string;
   canViewOthers?: boolean;
   onSelect?: (activity: Activity) => void;
   onEditorOpenChange?: (open: boolean) => void;
+  registrationOnly?: boolean;
+  registrationLabel?: string;
 }) {
   const opener = useRef<HTMLElement | null>(null);
   const {
@@ -126,37 +130,58 @@ export function StudyView({
 
   return (
     <section
-      aria-labelledby={onSelect ? undefined : 'study-management-title'}
-      aria-label={onSelect ? '학습법 목록' : undefined}
-      className={onSelect ? 'space-y-2' : 'space-y-6'}
+      aria-labelledby={
+        registrationOnly || onSelect ? undefined : 'study-management-title'
+      }
+      aria-label={
+        registrationOnly ? '학습법 등록' : onSelect ? '학습법 목록' : undefined
+      }
+      className={
+        registrationOnly ? 'space-y-3' : onSelect ? 'space-y-2' : 'space-y-6'
+      }
     >
-      {!onSelect && (
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            {!onSelect && <DashboardPageCategory view="study" />}
-            <h1
-              id="study-management-title"
-              className={
-                onSelect
-                  ? 'mt-1 text-lg font-semibold'
-                  : 'mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl'
-              }
+      {registrationOnly ? (
+        <Button
+          type="button"
+          disabled={!ready || busy}
+          className="h-auto min-h-9 max-w-full text-left whitespace-normal wrap-anywhere"
+          onClick={(event) => {
+            opener.current = event.currentTarget;
+            create();
+          }}
+        >
+          <Plus aria-hidden="true" />
+          {registrationLabel}
+        </Button>
+      ) : (
+        !onSelect && (
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              {!onSelect && <DashboardPageCategory view="study" />}
+              <h1
+                id="study-management-title"
+                className={
+                  onSelect
+                    ? 'mt-1 text-lg font-semibold'
+                    : 'mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl'
+                }
+              >
+                {onSelect ? '첨부할 학습법 선택' : '학습법 관리'}
+              </h1>
+            </div>
+            <Button
+              type="button"
+              disabled={!ready || busy}
+              onClick={(event) => (
+                (opener.current = event.currentTarget),
+                create()
+              )}
             >
-              {onSelect ? '첨부할 학습법 선택' : '학습법 관리'}
-            </h1>
+              <Plus aria-hidden="true" />
+              학습법 추가
+            </Button>
           </div>
-          <Button
-            type="button"
-            disabled={!ready || busy}
-            onClick={(event) => (
-              (opener.current = event.currentTarget),
-              create()
-            )}
-          >
-            <Plus aria-hidden="true" />
-            학습법 추가
-          </Button>
-        </div>
+        )
       )}
       {localError && (
         <p role="alert" className="text-sm text-destructive">
@@ -291,7 +316,7 @@ export function StudyView({
           )}
         </DrawerContent>
       </Drawer>
-      {onSelect ? (
+      {registrationOnly ? null : onSelect ? (
         <div className="space-y-2">
           <div className="relative">
             <Search

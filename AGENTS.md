@@ -14,6 +14,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 재사용 학습법 등록 안내 카드(2026-10-12): 공통 제작기의 카드 종류에서 안내를 선택하고 제목·본문·버튼 이름을 설정해 원본 저장/배치로 어느 질문지에도 재사용한다. purpose=response/study_registration·button_label을 저장하며 안내 fields=[]·single/cards·행1·조건/참조 없음, 저장 후 종류 고정이다. 기존 StudyView의 등록 전용 모드로 본인 학습법을 등록하고 답변 필드/콜백은 생성하지 않는다. 응답 식별/제출 metadata는 빈 rows/active/body로만 유지해 읽기 전용 표시를 보존하며 안내-only 완료는 차단한다. `20261012050319_study_registration_cards.sql` 운영 적용, 임시 migration+회귀에서 기존 데이터·함수 ACL·가이드 해시 607716af71009f7941df8fef56b2e443 보존 검증·전체 롤백, 영구 적용 후 신규/조건 해제 SQL·대기 없음 확인 완료. 최신 main의 이미 적용된 migration 3개를 보존해 합쳤으며 repair/재적용 없음. 타입·변경 파일 린트·JS 회귀 78개·Webpack 빌드 통과, 보안 기존 경고4/새0. 로컬 DB/Docker 및 실제 브라우저 검증·앱 배포는 미수행. 다음은 앱 배포 후 제작/등록/제출 화면 확인이며 docs/questions-operations.md를 따른다.
+
 - 표 표시·조건 해제 보완(2026-10-12): 선택 항목을 옅은 회청색으로 낮추고 compact 서술형 placeholder를 한 줄 말줄임으로 제한했다. 실제 답변 줄바꿈/높이 확장은 유지한다. 명시적 조건 해제 버튼·조건 메뉴의 조건 없음은 pending 선택과 condition/source/after 연결을 함께 정리하고 참조형은 단일 행으로 복귀한다. 대상이 목록에 없어도 해제 가능하며 저장 후에 원본 fields/row_mode 수정 제한이 풀린다. 다른 incoming 참조·참조 체인·배포 잠금은 유지한다. API는 실제 revision 충돌과 정책 거절을 구분해 참조 차단 후 같은 편집기 재저장을 허용한다. 타입·변경 파일 린트·JS 회귀 52개·Webpack 빌드 통과. 기존 사용자 승인 범위에서 `question_condition_removal.sql`을 운영에 가상 데이터만으로 실행해 조건/참조 해제·동일 필드 ID·다른 참조·체인·제작/게시 수정·배포/관리자 잠금을 검증하고 전부 롤백했다. DB 스키마/권한/migration 변경 없음. 이번 UI의 실제 브라우저 검증·앱 배포는 미수행.
 
 - 표 표시 정리(2026-10-12): 일반 표의 선택 열은 청록색 머리글·셀 배경과 `(선택)` 배지로 필수 열과 구분한다. 응답 화면의 최소 행/시기 안내와 반복 답변 추가 버튼의 현재/최대 수치를 제거했다. 제작 설정과 행 추가·삭제/제출 제한은 유지한다. DB 스키마 변경 없음. 타입·변경 파일 린트·기존 표 회귀 6개 통과.

@@ -84,7 +84,16 @@ export function QuestionLibraryPicker({
                   {richTextPlainText(q.prompt)}
                 </span>
                 <span className="mt-2 block text-xs text-muted-foreground">
-                  답변 열 {q.fields.length}개{q.condition ? ' · 조건 있음' : ''}
+                  {q.purpose === 'study_registration' ? (
+                    <span className="inline-flex rounded-full bg-blue-50 px-2 py-1 font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+                      학습법 등록 안내
+                    </span>
+                  ) : (
+                    <>
+                      답변 열 {q.fields.length}개
+                      {q.condition ? ' · 조건 있음' : ''}
+                    </>
+                  )}
                 </span>
               </span>
               {placedIds.has(q.id) && (

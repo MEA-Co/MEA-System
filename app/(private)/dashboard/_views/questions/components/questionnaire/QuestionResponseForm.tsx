@@ -116,6 +116,9 @@ function ResponseEditor({
   const { mutate } = useSWRConfig();
   const [rows, setRows] = useState(() => snapshotRows(initial));
   const [snapshot, setSnapshot] = useState(initial);
+  const hasResponseQuestions = snapshot.questions.some(
+    (question) => question.definition.purpose !== 'study_registration',
+  );
   const [remoteAnswerVersion, setRemoteAnswerVersion] = useState(0);
   const [savedAt, setSavedAt] = useState(initial.savedAt);
   const [saving, setSaving] = useState(false);
@@ -152,13 +155,21 @@ function ResponseEditor({
   const change = useCallback(
     (id: string, value: PreviewAnswerRow[]) => {
       if (locked || session.current.retry?.complete) return;
+      if (
+        snapshot.questions.some(
+          (question) =>
+            question.definition.id === id &&
+            question.definition.purpose === 'study_registration',
+        )
+      )
+        return;
       setRows((current) =>
         JSON.stringify(current[id]) === JSON.stringify(value)
           ? current
           : { ...current, [id]: value },
       );
     },
-    [locked],
+    [locked, snapshot.questions],
   );
   useEffect(() => {
     onEditorState?.({ dirty, saving, emptyTitle: false });
@@ -196,6 +207,7 @@ function ResponseEditor({
     };
   }, [dirty, saving]);
   async function save(complete = false) {
+    if (!hasResponseQuestions) return;
     if (session.current.busy || locked || (!dirty && !complete)) return;
     if (complete && !session.current.retry) {
       const career = snapshot.questions.find(
@@ -366,35 +378,37 @@ function ResponseEditor({
   }, []);
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
-        <p role="status" className="text-sm text-muted-foreground">
-          {saving
-            ? '저장 중…'
-            : dirty
-              ? '작성 중 · 10초마다 자동 저장돼요.'
-              : savedAt
-                ? '저장 완료 · 언제든 수정할 수 있어요.'
-                : '답변을 작성해 주세요.'}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={locked || saving || !dirty}
-            onClick={() => void save()}
-          >
-            저장
-          </Button>
-          {distributed && (
+      {hasResponseQuestions && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
+          <p role="status" className="text-sm text-muted-foreground">
+            {saving
+              ? '저장 중…'
+              : dirty
+                ? '작성 중 · 10초마다 자동 저장돼요.'
+                : savedAt
+                  ? '저장 완료 · 언제든 수정할 수 있어요.'
+                  : '답변을 작성해 주세요.'}
+          </p>
+          <div className="flex gap-2">
             <Button
-              disabled={locked || saving || !!pendingSave}
-              onClick={() => void save(true)}
+              variant="outline"
+              disabled={locked || saving || !dirty}
+              onClick={() => void save()}
             >
-              제출
+              저장
             </Button>
-          )}
+            {distributed && (
+              <Button
+                disabled={locked || saving || !!pendingSave}
+                onClick={() => void save(true)}
+              >
+                제출
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-      {distributed && (
+      )}
+      {distributed && hasResponseQuestions && (
         <p className="text-sm text-muted-foreground">
           저장한 답변은 본인만 볼 수 있습니다. 제출하면 리드에게 공개되며, 제출
           후에도 수정할 수 있습니다.

@@ -4,7 +4,9 @@
 
 ## 현재 적용 상태
 
-2026-10-12 운영 대상 `epwlcallocdjkmgdmtlv`의 최신 이력은 `20261011143258_question_answer_layouts`이며 적용 후 dry-run에 대기 migration이 없음을 확인했다. 사용자의 테스트 성공 후 운영 적용·커밋 승인에 따라 에이전트가 이번 표형 응답 migration 한 개를 적용했다. 적용 전 임시 migration과 신규 SQL 회귀를 단일 트랜잭션에서 시험한 뒤 롤백했고, 영구 적용 후 신규 SQL 회귀도 통과했다. 자세한 검증 결과는 아래 표형 응답 절을 따른다.
+2026-10-12 운영 `epwlcallocdjkmgdmtlv`의 최신 이력은 `20261012050319_study_registration_cards`다. 다른 작업에서 이미 운영에 반영한 검토 조회·학습법 솔루션·게시 공동 편집 migration 3개는 최신 main을 합쳐 로컬 이력과 맞췄고 재적용/repair하지 않았다. 등록 카드 migration 한 개만 임시 시험·회귀·기존 데이터/권한/가이드 보존 검사 후 적용했으며, 적용 후 신규 SQL 회귀와 기존 조건 해제 회귀·dry-run 대기 없음을 확인했다. 새 보안 경고는 없고 기존 경고 4개가 유지된다. 앱 배포와 실제 브라우저 기능 확인은 별도다.
+
+선행 표형 응답 migration `20261011143258_question_answer_layouts`도 2026-10-12 운영 적용과 회귀 검증을 완료했다. 당시 검증 내용은 아래 표형 응답 절을 따른다.
 
 아래 날짜별 절과 이전 기록의 ‘운영 미적용/적용 대기’는 당시 상태이며 현재 운영 이력보다 우선하지 않는다. 이번 환경에서 로컬 DB 적용·SQL 회귀는 실행하지 않았고 실제 브라우저 테스트와 앱 배포 확인도 하지 않았다.
 
@@ -12,7 +14,7 @@
 
 ## 이후 DB 변경 적용 순서
 
-운영 DB 적용은 원칙적으로 사용자가 수행한다. 이번 표형 응답 변경은 사용자가 테스트 성공 후 운영 적용을 명시적으로 승인하여 에이전트가 수행한 사례다. DB 변경이 없는 코드·문서 정리에 새 migration은 필요하지 않다.
+운영 DB 적용은 원칙적으로 사용자가 수행한다. 표형 응답과 학습법 등록 안내 변경은 사용자의 검증 후 적용·커밋 승인 범위에서 에이전트가 수행했다. DB 변경이 없는 코드·문서 정리에 새 migration은 필요하지 않다.
 
 1. 변경 내용을 저장하고 필요하면 운영 백업/복원 지점을 확인한다. 연결 대상과 이력을 점검한다.
 
@@ -203,3 +205,23 @@ npx supabase db push --linked --dry-run --skip-vault
 ```
 
 대기 없음 확인 후 앱을 배포한다. 다른 리드 계정으로 게시 질문지 제목·배치·원본·설명 저장을 확인하고 비공개 초안과 배포 원본은 수정할 수 없는지 확인한다.
+
+## 재사용 학습법 등록 안내 카드 (2026-10-12)
+
+예상 migration은 `20261012050319_study_registration_cards.sql` 한 개다. 현재 운영에는 이미 적용했으므로 남은 작업은 앱 배포와 화면 확인이다. 적용 전 `prepare-study-registration-check.mjs`가 만든 임시 migration+회귀를 한 트랜잭션에서 실행하고 모두 롤백했다. 기존 질문/응답/세션/제출/학습법 데이터 hash, 변경 함수 ACL과 가이드 함수 hash 보존을 확인했다. 적용 후 신규 등록 카드 SQL와 조건 해제 SQL도 가상 데이터만으로 통과·롤백했고, 보안 진단은 기존 경고 4개로 동일했다. 타입·변경 파일 린트·등록/응답/학습법 JS 회귀 78개·Webpack 빌드 통과, 로컬 DB 전용 migration 검증은 Docker가 없어 미실행이다. 실제 브라우저 검증과 앱 배포는 아직 하지 않았다.
+
+변경 대상은 `questions.purpose`·`button_label`, 목적별 빈 답변 설정, 원본 저장/조회와 게시·배포 답변 저장의 안내 metadata 처리다. 기존 RLS·권한·배포 잠금·GUID 가이드 지정은 유지하며 학습법 저장 함수는 변경하지 않는다. 빈 응답 metadata는 표시용이고 카드에 답변을 입력할 수 없다. 안내-only 완료는 거절하며 일반 답변의 필수 검사와 제출 수는 유지한다.
+
+적용 또는 확인 순서는 프로젝트 이동 → 운영 대상/이력 확인 → dry-run의 예상 파일 확인 → 실제 적용 → 대기 없음 재확인 → 앱 배포 → 기능 확인이다. 현재 환경에서 앞의 DB 단계는 완료됐으며 아래 명령은 재현·확인용이다. 예상 외 migration이 나오면 먼저 이력을 검토하고 `migration repair`나 재적용으로 우회하지 않는다.
+
+```bash
+cd /Users/jwg/MEA-System
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --dry-run
+# 최초 적용 시 예상: 20261012050319_study_registration_cards.sql 한 개
+# 현재 운영은 이미 적용되어 대기 없음
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --dry-run
+```
+
+앱 배포 후 새 카드의 종류를 `학습법 등록 안내`로 선택해 제목·본문·버튼 이름을 저장하고 질문지의 원하는 위치에 배치한다. 버튼이 본인 학습법 등록 화면을 열고, 확정한 학습법이 학습법 관리에 저장되는지 확인한다. 등록 중 질문 답변 작성 상태가 바뀌지 않는지, 일반 답변 제출이 정상인지, 제출 열람의 등록 버튼이 비활성인지 확인한다. 특정 2주차 질문지나 실제 사용자 학습법 데이터는 이 작업에서 수정·생성하지 않았다.

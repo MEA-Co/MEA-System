@@ -123,6 +123,8 @@ export const questionBlockSchema = z
     id: z.uuid(),
     title: z.string().trim().max(200).default(''),
     prompt: z.string().max(10000),
+    purpose: z.enum(['response', 'study_registration']).optional(),
+    buttonLabel: z.string().trim().min(1).max(100).optional(),
     details: z
       .array(
         z.object({
@@ -134,7 +136,7 @@ export const questionBlockSchema = z
       )
       .max(20)
       .optional(),
-    fields: z.array(fieldSchema).min(1).max(20),
+    fields: z.array(fieldSchema).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
     answerLayout: z.enum(['cards', 'table', 'flow']).optional(),
     initialRows: z.number().int().min(1).max(20).optional(),
@@ -153,7 +155,40 @@ export const questionBlockSchema = z
   })
   .superRefine((block, context) => {
     if (!richTextPlainText(block.prompt).trim()) {
-      context.addIssue({ code: 'custom', message: '질문을 입력해 주세요.' });
+      context.addIssue({
+        code: 'custom',
+        message:
+          block.purpose === 'study_registration'
+            ? '안내 내용을 입력해 주세요.'
+            : '질문을 입력해 주세요.',
+      });
+    }
+    if (block.purpose === 'study_registration') {
+      if (
+        block.fields.length !== 0 ||
+        block.rowMode !== 'single' ||
+        (block.answerLayout ?? 'cards') !== 'cards' ||
+        (block.minRows ?? 1) !== 1 ||
+        (block.initialRows ?? 1) !== 1 ||
+        block.maxRows !== null ||
+        !!block.rowLabels?.length ||
+        block.sourceBlockId !== null ||
+        block.sourceFieldId !== null ||
+        block.afterBlockId !== null ||
+        block.condition !== null
+      )
+        context.addIssue({
+          code: 'custom',
+          message: '학습법 등록 안내에는 답변 열이나 조건을 설정할 수 없어요.',
+        });
+      return;
+    }
+    if (block.fields.length === 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['fields'],
+        message: '답변 열을 한 개 이상 추가해 주세요.',
+      });
     }
     if (
       block.rowMode === 'repeatable' &&
@@ -256,6 +291,8 @@ export type QuestionBlockRow = {
   questionnaire_usage?: import('./question-usage').QuestionnaireUsage[] | null;
   title: string;
   prompt: string;
+  purpose?: QuestionBlockDocument['purpose'];
+  button_label?: string | null;
   details?: {
     id: string;
     title: string;
@@ -296,6 +333,11 @@ export function documentFromRow(row: QuestionBlockRow): QuestionBlockDocument {
     id: row.id,
     title: row.title,
     prompt: row.prompt,
+    purpose: row.purpose ?? 'response',
+    buttonLabel:
+      row.purpose === 'study_registration'
+        ? (row.button_label ?? '학습법 추가')
+        : undefined,
     details: [...(row.details ?? [])]
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
       .map(({ id, title, text, visibleToConsultants }) => ({
@@ -323,6 +365,7 @@ export function emptyQuestionBlock(): QuestionBlockDocument {
     id: crypto.randomUUID(),
     title: '',
     prompt: '',
+    purpose: 'response',
     details: [],
     fields: [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
     rowMode: 'single',

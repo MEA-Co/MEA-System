@@ -42,6 +42,7 @@ export function describeClause(
 }
 
 export function rowLimitLabel(question: QuestionBlockRow) {
+  if (question.purpose === 'study_registration') return '학습법 등록 안내';
   return question.row_mode === 'reference'
     ? '앞선 응답 수만큼 반복'
     : `행 최대 ${question.row_mode === 'repeatable' ? (question.max_rows ?? 1) : 1}개`;
