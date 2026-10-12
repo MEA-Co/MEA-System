@@ -16,10 +16,13 @@ export const subjectOptions = [
   '기타',
 ] as const;
 export const problemSourceOptions = [
-  { value: 'self', label: '자신이 겪은 문제 상황' },
-  { value: 'student', label: '지도한 학생이 겪었던 문제 상황' },
+  { value: 'self', label: '자신 또는 지도한 학생이 겪은 문제 상황' },
   { value: 'template', label: '공통 문제 상황 템플릿' },
 ] as const;
+// 기존 학생 경험 값은 저장 데이터를 바꾸지 않고 통합 선택지로 표시한다.
+export function problemSourceDisplayValue(value: string) {
+  return value === 'student' ? 'self' : value;
+}
 export const groups = [
   {
     title: '기본 정보',
@@ -30,67 +33,68 @@ export const groups = [
         placeholder: '학습법을 알아보기 쉽게 제목이나 이름을 입력해 주세요',
         maxLength: 100,
       },
+    ],
+  },
+  {
+    title: '문제 상황',
+    fields: [
+      {
+        key: 'problemSource',
+        label: '문제 상황 출처',
+        placeholder: '문제 상황 출처 선택',
+        required: true,
+      },
       {
         key: 'category',
-        label: '시험 구분',
-        placeholder: '학습법을 적용할 시험 구분을 선택해 주세요',
+        label: '학습법 적용 대상',
+        placeholder: '내신/모의고사(수능)/기타 중에 선택해주세요.',
         required: true,
       },
       {
         key: 'subject',
-        label: '과목',
-        placeholder: '과목 선택',
+        label: '교과',
+        placeholder: '교과 선택',
         required: true,
       },
       {
         key: 'customSubject',
-        label: '과목명',
-        placeholder: '세부 과목명을 입력해 주세요',
-      },
-    ],
-  },
-  {
-    title: '문제와 학습 전략',
-    fields: [
-      {
-        key: 'problemSource',
-        label: '문제 상황 유형',
-        placeholder: '문제 상황 유형 선택',
-        required: true,
+        label: '세부 과목명',
+        placeholder: '예: 확률과 통계',
       },
       {
         key: 'problem',
         label: '문제 상황',
-        placeholder:
-          '누가 어떤 학습 상황에서 어려움을 겪었는지, 반복되는 문제와 학습에 미친 영향을 구체적으로 작성해 주세요.',
+        placeholder: '예: 경우의 수-수형도 유형 문제에서의 잦은 실수',
         required: true,
-        multiline: true,
-      },
-      {
-        key: 'strategy',
-        label: '대응 방안 (학습 전략)',
-        placeholder:
-          '문제를 개선하기 위해 사용할 학습 방법과 이 방법으로 바꾸려는 습관이나 능력을 작성해 주세요.',
-        required: true,
-        multiline: true,
+        description: '문제 상황을 명확하게 명사형으로 작성해주세요.',
       },
     ],
   },
   {
-    title: '실천 계획',
+    title: '대응 솔루션',
     fields: [
       {
-        key: 'practiceGuide',
-        label: '대응 방안 실천 가이드',
+        key: 'strategy',
+        label: '대응 솔루션 (학습 전략)',
         placeholder:
-          '학생이 그대로 따라 할 수 있도록 실천 순서, 학습량과 빈도, 기록 방법을 구체적으로 작성해 주세요.',
+          '예: 오답 발생 시 오답 유형을 스스로 인지하고 개선할 수 있도록 기록하는 습관 들이기',
+        required: true,
+        multiline: true,
+      },
+      {
+        key: 'practiceGuide',
+        label: '대응 솔루션 실천 가이드',
+        description:
+          '학생이 그대로 따라 할 수 있도록 무엇을, 어떤 순서로, 얼마나 자주 해야 하는지 구체적이고 명확하게 작성해 주세요. 주차별 주간·일간 세부적인 실천 사항이 있다면 기간과 함께 작성해주어도 좋습니다.',
+        placeholder:
+          '예: 오답 발생 시마다 A4 한장에 틀린 시간, 틀린 문제 유형, 틀린 이유를 한 줄씩 기입하면서\n(1) 오답을 인지하고 줄여야겠다는 습관을 체화함과 동시에\n(2) 자주 발생하는 오답 원인을 확인하여 개선하고\n(3) 매일 동일 문제 대비 오답 수를 한 문제씩이라도 반드시 줄여본다.',
         required: true,
         multiline: true,
       },
       {
         key: 'practicePeriod',
-        label: '대응 방안 실천 기간',
-        placeholder: '전략을 실천할 전체 기간을 작성해 주세요',
+        label: '실천 기간',
+        placeholder: '솔루션을 적용할 시점과 실천 기간을 작성해 주세요',
         required: true,
       },
     ],
@@ -101,7 +105,8 @@ export const groups = [
       {
         key: 'checklist',
         label: '기간 종료 후 목표 달성 여부 진단 체크리스트',
-        placeholder:
+        placeholder: '예: 2주간 매일 동일한 문제 수 대비 오답 수가 감소했다.',
+        description:
           '기간 종료 후 스스로 확인할 수 있는 항목을 하나씩 작성해 주세요. 각 항목에 목표 달성을 판단할 구체적인 기준을 포함해 주세요.',
         required: true,
         multiline: true,
@@ -113,15 +118,6 @@ export const groups = [
           '목표를 달성했을 때 학습 효과를 유지할 방법과, 달성하지 못했을 때 보완하거나 변경할 방법을 작성해 주세요.',
         required: true,
         multiline: true,
-      },
-      {
-        key: 'resultDiagnosis',
-        label: '성적 결과 후속 진단',
-        placeholder:
-          '시험 종료 후 전략 적용 전후의 성적과 학습 변화를 비교하고, 효과가 있었던 방법과 보완할 점을 작성해 주세요.',
-        multiline: true,
-        description:
-          '시험 기간에 적용한 전략은 시험 종료 후 성적 상승 정도와 후속 진단을 추가할 수 있습니다.',
       },
     ],
   },
@@ -136,7 +132,13 @@ export type Activity = {
   updatedAt: string;
   localVersion?: string;
   reports?: ActivityReport[];
-  values: Record<FieldKey, string> & { references: ActivityReference[] };
+  values: Record<FieldKey, string> & {
+    // 화면에서 제거한 항목의 기존 저장 값은 유지한다.
+    resultDiagnosis: string;
+    problemExperience: string;
+    periodEnabled: boolean;
+    references: ActivityReference[];
+  };
 };
 export const emptyValues = (): Activity['values'] => ({
   title: '',
@@ -151,6 +153,8 @@ export const emptyValues = (): Activity['values'] => ({
   checklist: '',
   followup: '',
   resultDiagnosis: '',
+  problemExperience: '',
+  periodEnabled: true,
   references: [],
 });
 export function studySummary(values: Activity['values']) {

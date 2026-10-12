@@ -15,7 +15,12 @@ export const valuesSchema = z
       (value) => (value === '직접 입력' ? '기타' : value),
       z.enum(['', '국어', '영어', '수학', '사회', '과학', '기타']),
     ),
-    problemSource: z.enum(['', 'self', 'student', 'template']).default(''),
+    problemSource: z
+      .enum(['', 'self', 'student', 'template'])
+      .default('')
+      .transform((value) => (value === 'student' ? 'self' : value)),
+    problemExperience: text.default(''),
+    periodEnabled: z.boolean().default(true),
     customSubject: text,
     problem: text,
     strategy: text,
@@ -72,7 +77,9 @@ export const requiredFields = {
 } as const;
 export function missingFields(values: Activity['values']) {
   return Object.entries(requiredFields).filter(
-    ([key]) => !values[key as keyof typeof requiredFields]?.trim(),
+    ([key]) =>
+      (key !== 'practicePeriod' || values.periodEnabled) &&
+      !values[key as keyof typeof requiredFields]?.trim(),
   );
 }
 export function hasInput(activity: Activity) {

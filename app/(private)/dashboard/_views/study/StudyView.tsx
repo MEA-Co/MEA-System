@@ -26,8 +26,8 @@ import {
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
 import { StudyActivityDetails } from './components/StudyActivityDetails';
+import { StudyExamplesDialog } from './components/StudyExamplesDialog';
 import { StudyFields } from './components/StudyFields';
-import { StudyReportInput } from './components/StudyReportInput';
 import { useStudyStorage } from './hooks/useStudyStorage';
 import { type Activity, studySummary, studyTitle } from './lib/fields';
 import { hasInput, missingFields } from './lib/storage-model';
@@ -250,14 +250,12 @@ export function StudyView({
                 disabled={busy || confirmDiscard}
                 className="min-w-0 space-y-6"
               >
+                <div className="flex justify-end">
+                  <StudyExamplesDialog />
+                </div>
                 <StudyFields
                   values={draft.values}
                   onChange={(values) => setDraft({ ...draft, values })}
-                />
-                <StudyReportInput
-                  activityId={draft.clientKey}
-                  reports={draft.reports ?? []}
-                  onChange={(reports) => setDraft({ ...draft, reports })}
                 />
                 <div className="sticky bottom-0 space-y-2 border-t bg-background py-4">
                   <p className="text-xs text-muted-foreground">
