@@ -279,6 +279,7 @@ export function StudyView({
                   <StudyExamplesDialog />
                 </div>
                 <StudyFields
+                  key={draft.clientKey}
                   values={draft.values}
                   onChange={(values) => setDraft({ ...draft, values })}
                 />
