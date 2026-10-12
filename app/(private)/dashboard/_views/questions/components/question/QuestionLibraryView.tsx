@@ -359,7 +359,9 @@ export function QuestionLibraryView({
       ].map((q) => [q.id, q]),
     ).values(),
   ];
-  const candidates = relatedQuestions.filter((block) => block.id !== draft?.id);
+  const candidates = relatedQuestions.filter(
+    (block) => block.id !== draft?.id && block.purpose !== 'study_registration',
+  );
   const opener = useRef<HTMLElement | null>(null);
   const listHeading = useRef<HTMLHeadingElement | null>(null);
   const openedFromList = useRef(false);
@@ -621,6 +623,35 @@ export function QuestionLibraryView({
     setDraft((current) => (current ? { ...current, ...changes } : null));
   }
 
+  function changePurpose(purpose: QuestionBlockDocument['purpose']) {
+    if (
+      !draft ||
+      !purpose ||
+      revision > 0 ||
+      savingRef.current ||
+      purpose === (draft.purpose ?? 'response')
+    )
+      return;
+    updateDraft({
+      purpose,
+      buttonLabel: purpose === 'study_registration' ? '학습법 추가' : undefined,
+      fields:
+        purpose === 'study_registration'
+          ? []
+          : [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
+      rowMode: 'single',
+      answerLayout: 'cards',
+      minRows: 1,
+      initialRows: 1,
+      maxRows: null,
+      rowLabels: [],
+      sourceBlockId: null,
+      sourceFieldId: null,
+      afterBlockId: null,
+      condition: null,
+    });
+  }
+
   function changeAnswerLayout(
     answerLayout: QuestionBlockDocument['answerLayout'],
   ) {
@@ -692,7 +723,9 @@ export function QuestionLibraryView({
       if (
         window.confirm(
           emptyPrompt
-            ? '질문 본문이 비어 있어 저장할 수 없어요. 저장하지 않은 변경 내용을 버릴까요?'
+            ? draft?.purpose === 'study_registration'
+              ? '안내 내용이 비어 있어 저장할 수 없어요. 저장하지 않은 변경 내용을 버릴까요?'
+              : '질문 본문이 비어 있어 저장할 수 없어요. 저장하지 않은 변경 내용을 버릴까요?'
             : '저장하지 않은 질문 변경 내용을 버릴까요?',
         )
       )
@@ -756,7 +789,9 @@ export function QuestionLibraryView({
       if (manual)
         toast.add({
           title:
-            '질문 본문이 비어 있어 저장할 수 없어요. 질문을 입력해 주세요.',
+            draft.purpose === 'study_registration'
+              ? '안내 내용이 비어 있어 저장할 수 없어요. 내용을 입력해 주세요.'
+              : '질문 본문이 비어 있어 저장할 수 없어요. 질문을 입력해 주세요.',
           type: 'error',
         });
       return;
@@ -885,7 +920,14 @@ export function QuestionLibraryView({
       pendingSaves.current.delete(attemptId);
       guideConfirmations.current.delete(attemptId);
       guideSavePaused.current = false;
-      if (manual) toast.add({ title: '질문을 저장했어요.', type: 'success' });
+      if (manual)
+        toast.add({
+          title:
+            attempt.document.purpose === 'study_registration'
+              ? '안내 카드를 저장했어요.'
+              : '질문을 저장했어요.',
+          type: 'success',
+        });
     } catch {
       const message = '저장 결과를 확인하지 못했어요. 연결을 확인해 주세요.';
       recordError(message);
@@ -1071,12 +1113,14 @@ export function QuestionLibraryView({
                 ))}
               </Tabs.List>
               <Tabs.Panel value="preview">
-                {editorData.relationships.error ? (
+                {draft.purpose !== 'study_registration' &&
+                editorData.relationships.error ? (
                   <p role="alert">
                     참조 질문을 불러오지 못했어요. 조건 설정의 다시 시도를 눌러
                     주세요.
                   </p>
-                ) : editorData.relationships.isLoading ? (
+                ) : draft.purpose !== 'study_registration' &&
+                  editorData.relationships.isLoading ? (
                   <p role="status">참조 질문을 불러오고 있어요…</p>
                 ) : (
                   <QuestionBlockPreview
@@ -1094,7 +1138,47 @@ export function QuestionLibraryView({
               >
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="block-title">관리용 이름 (선택)</Label>
+                    <Label htmlFor="card-purpose">카드 종류</Label>
+                    <Select
+                      value={draft.purpose ?? 'response'}
+                      disabled={revision > 0 || busy}
+                      onValueChange={(purpose) => {
+                        if (
+                          purpose === 'response' ||
+                          purpose === 'study_registration'
+                        )
+                          changePurpose(purpose);
+                      }}
+                    >
+                      <SelectTrigger
+                        id="card-purpose"
+                        className="w-full sm:w-64"
+                      >
+                        <SelectValue>
+                          {draft.purpose === 'study_registration'
+                            ? '학습법 등록 안내'
+                            : '응답 질문'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="response">응답 질문</SelectItem>
+                        <SelectItem value="study_registration">
+                          학습법 등록 안내
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {revision > 0
+                        ? '저장한 카드의 종류는 바꿀 수 없습니다. 내용은 계속 수정할 수 있어요.'
+                        : '응답을 받는 질문이나 학습법 등록을 안내하는 카드를 만들 수 있어요. 저장 후 카드 종류는 유지됩니다.'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="block-title">
+                      {draft.purpose === 'study_registration'
+                        ? '카드 제목'
+                        : '관리용 이름 (선택)'}
+                    </Label>
                     <Input
                       id="block-title"
                       maxLength={200}
@@ -1102,7 +1186,11 @@ export function QuestionLibraryView({
                       onChange={(event) =>
                         updateDraft({ title: event.target.value })
                       }
-                      placeholder="입력하지 않으면 질문 내용이 이름으로 표시됩니다."
+                      placeholder={
+                        draft.purpose === 'study_registration'
+                          ? '학습법 등록 안내'
+                          : '입력하지 않으면 질문 내용이 이름으로 표시됩니다.'
+                      }
                     />
                   </div>
                   {(busy || conflicted || saveError || valid) && (
@@ -1124,15 +1212,25 @@ export function QuestionLibraryView({
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold">질문과 답변 구성</h2>
+                    <h2 className="font-semibold">
+                      {draft.purpose === 'study_registration'
+                        ? '등록 안내 구성'
+                        : '질문과 답변 구성'}
+                    </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      질문과 답변의 내용을 구성합니다.
+                      {draft.purpose === 'study_registration'
+                        ? '학습법을 추가할 수 있도록 안내 내용과 버튼을 구성합니다.'
+                        : '질문과 답변의 내용을 구성합니다.'}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-4 rounded-xl border border-neutral-200 bg-background p-5 sm:p-6 dark:border-neutral-700">
-                  <h3 className="font-semibold">질문</h3>
+                  <h3 className="font-semibold">
+                    {draft.purpose === 'study_registration'
+                      ? '안내 내용'
+                      : '질문'}
+                  </h3>
                   <div className="flex items-start gap-2 sm:gap-3">
                     <span
                       aria-hidden="true"
@@ -1144,8 +1242,16 @@ export function QuestionLibraryView({
                       id={`question-prompt-${draft.id}`}
                       value={draft.prompt}
                       onChange={(prompt) => updateDraft({ prompt })}
-                      placeholder="질문을 입력하세요"
-                      ariaLabel="질문"
+                      placeholder={
+                        draft.purpose === 'study_registration'
+                          ? '추가할 학습법과 작성 방법을 안내해 주세요'
+                          : '질문을 입력하세요'
+                      }
+                      ariaLabel={
+                        draft.purpose === 'study_registration'
+                          ? '안내 내용'
+                          : '질문'
+                      }
                       maxLength={10000}
                       compact
                       className="min-w-0 flex-1 rounded-lg"
@@ -1157,295 +1263,319 @@ export function QuestionLibraryView({
                   />
                 </div>
 
-                <div className="space-y-3 rounded-xl border bg-background p-5 sm:p-6">
-                  <Label htmlFor="answer-layout">답변 표시 방식</Label>
-                  <Select
-                    value={draft.answerLayout ?? 'cards'}
-                    onValueChange={(layout) => {
-                      if (
-                        layout === 'cards' ||
-                        layout === 'table' ||
-                        layout === 'flow'
-                      )
-                        changeAnswerLayout(layout);
-                    }}
-                  >
-                    <SelectTrigger
-                      id="answer-layout"
-                      className="w-full sm:w-64"
-                    >
-                      <SelectValue>
-                        {draft.answerLayout === 'table'
-                          ? '일반 표'
-                          : draft.answerLayout === 'flow'
-                            ? '흐름표'
-                            : '카드'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cards">카드</SelectItem>
-                      <SelectItem value="table">일반 표</SelectItem>
-                      <SelectItem
-                        value="flow"
-                        disabled={draft.rowMode === 'reference'}
-                      >
-                        흐름표
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    {draft.answerLayout === 'flow'
-                      ? '시기를 가로로, 답변 항목을 세로로 배치합니다. 해당하는 칸만 입력하며 응답자는 시기를 추가하거나 삭제하지 않습니다.'
-                      : draft.answerLayout === 'table'
-                        ? '열 제목 아래의 칸에 바로 입력합니다. 처음 표시할 행 수와 최소 작성 행 수를 따로 설정할 수 있습니다.'
-                        : '항목별로 답변을 펼쳐 입력합니다.'}
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold">
-                    {draft.answerLayout === 'flow'
-                      ? '답변 항목 (세로)'
-                      : '답변 열'}
-                  </h3>
-                  {draft.fields.map((field, index) => (
-                    <QuestionBlockFieldEditor
-                      key={field.id}
-                      field={field}
-                      index={index}
-                      fieldCount={draft.fields.length}
-                      answerLayout={draft.answerLayout}
-                      onChange={(updated) => updateField(field.id, updated)}
-                      onRemove={() => void changeAnswerField(field)}
+                {draft.purpose === 'study_registration' ? (
+                  <div className="space-y-2 rounded-xl border bg-background p-5 sm:p-6">
+                    <Label htmlFor="study-registration-button">버튼 이름</Label>
+                    <Input
+                      id="study-registration-button"
+                      maxLength={100}
+                      value={draft.buttonLabel ?? '학습법 추가'}
+                      placeholder="학습법 추가"
+                      onChange={(event) =>
+                        updateDraft({ buttonLabel: event.target.value })
+                      }
                     />
-                  ))}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-12 w-full border-dashed"
-                    disabled={draft.fields.length >= 20}
-                    onClick={() =>
-                      updateDraft({
-                        fields: [
-                          ...draft.fields,
-                          {
-                            id: crypto.randomUUID(),
-                            label: `답변 ${draft.fields.length + 1}`,
-                            kind: 'text',
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    <Plus aria-hidden="true" />
-                    {draft.answerLayout === 'flow'
-                      ? '답변 항목 추가'
-                      : '답변 열 추가'}
-                  </Button>
-                </div>
-
-                <div className="space-y-2 rounded-xl border bg-background p-5 sm:p-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {draft.rowMode === 'reference' ? (
+                    <p className="text-sm text-muted-foreground">
+                      이 카드는 질문지 답변을 받지 않습니다. 등록한 학습법은
+                      학습법 목록에 저장됩니다.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3 rounded-xl border bg-background p-5 sm:p-6">
+                      <Label htmlFor="answer-layout">답변 표시 방식</Label>
+                      <Select
+                        value={draft.answerLayout ?? 'cards'}
+                        onValueChange={(layout) => {
+                          if (
+                            layout === 'cards' ||
+                            layout === 'table' ||
+                            layout === 'flow'
+                          )
+                            changeAnswerLayout(layout);
+                        }}
+                      >
+                        <SelectTrigger
+                          id="answer-layout"
+                          className="w-full sm:w-64"
+                        >
+                          <SelectValue>
+                            {draft.answerLayout === 'table'
+                              ? '일반 표'
+                              : draft.answerLayout === 'flow'
+                                ? '흐름표'
+                                : '카드'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cards">카드</SelectItem>
+                          <SelectItem value="table">일반 표</SelectItem>
+                          <SelectItem
+                            value="flow"
+                            disabled={draft.rowMode === 'reference'}
+                          >
+                            흐름표
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <p className="text-sm text-muted-foreground">
-                        앞선 질문의 응답 항목 수에 맞춰 반복됩니다.
+                        {draft.answerLayout === 'flow'
+                          ? '시기를 가로로, 답변 항목을 세로로 배치합니다. 해당하는 칸만 입력하며 응답자는 시기를 추가하거나 삭제하지 않습니다.'
+                          : draft.answerLayout === 'table'
+                            ? '열 제목 아래의 칸에 바로 입력합니다. 처음 표시할 행 수와 최소 작성 행 수를 따로 설정할 수 있습니다.'
+                            : '항목별로 답변을 펼쳐 입력합니다.'}
                       </p>
-                    ) : (
-                      <>
-                        <Label htmlFor="min-rows">
-                          {draft.answerLayout === 'flow'
-                            ? '최소 작성 시기 수'
-                            : '최소 작성 행 수'}
-                        </Label>
-                        <Input
-                          id="min-rows"
-                          type="number"
-                          min={1}
-                          max={draft.maxRows ?? 1}
-                          className="w-20"
-                          value={draft.minRows ?? 1}
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            if (
-                              Number.isInteger(value) &&
-                              value >= 1 &&
-                              value <= (draft.maxRows ?? 1)
-                            )
-                              updateDraft({
-                                minRows: value,
-                                initialRows: Math.max(
-                                  draft.initialRows ?? 1,
-                                  value,
-                                ),
-                              });
-                          }}
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="font-semibold">
+                        {draft.answerLayout === 'flow'
+                          ? '답변 항목 (세로)'
+                          : '답변 열'}
+                      </h3>
+                      {draft.fields.map((field, index) => (
+                        <QuestionBlockFieldEditor
+                          key={field.id}
+                          field={field}
+                          index={index}
+                          fieldCount={draft.fields.length}
+                          answerLayout={draft.answerLayout}
+                          onChange={(updated) => updateField(field.id, updated)}
+                          onRemove={() => void changeAnswerField(field)}
                         />
-                        <Label htmlFor="max-rows">
-                          {draft.answerLayout === 'flow'
-                            ? '시기 수'
-                            : '최대 행 수'}
-                        </Label>
-                        <MaxItemsInput
-                          value={
-                            draft.rowMode === 'repeatable'
-                              ? (draft.maxRows ?? 1)
-                              : 1
-                          }
-                          disabled={false}
-                          ariaLabel={
-                            draft.answerLayout === 'flow'
-                              ? '시기 수'
-                              : '최대 행 수'
-                          }
-                          onChange={(count) => {
-                            if (draft.rowMode === 'reference') return;
-                            updateDraft({
-                              rowMode: count > 1 ? 'repeatable' : 'single',
-                              maxRows: count > 1 ? count : null,
-                              minRows: Math.min(draft.minRows ?? 1, count),
-                              initialRows:
-                                draft.answerLayout === 'flow'
-                                  ? count
-                                  : Math.min(
-                                      Math.max(
-                                        draft.initialRows ?? 1,
-                                        draft.minRows ?? 1,
-                                      ),
-                                      count,
-                                    ),
-                            });
-                          }}
-                        />
-                        {draft.answerLayout === 'table' && (
+                      ))}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-12 w-full border-dashed"
+                        disabled={draft.fields.length >= 20}
+                        onClick={() =>
+                          updateDraft({
+                            fields: [
+                              ...draft.fields,
+                              {
+                                id: crypto.randomUUID(),
+                                label: `답변 ${draft.fields.length + 1}`,
+                                kind: 'text',
+                              },
+                            ],
+                          })
+                        }
+                      >
+                        <Plus aria-hidden="true" />
+                        {draft.answerLayout === 'flow'
+                          ? '답변 항목 추가'
+                          : '답변 열 추가'}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2 rounded-xl border bg-background p-5 sm:p-6">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {draft.rowMode === 'reference' ? (
+                          <p className="text-sm text-muted-foreground">
+                            앞선 질문의 응답 항목 수에 맞춰 반복됩니다.
+                          </p>
+                        ) : (
                           <>
-                            <Label htmlFor="initial-rows">
-                              처음 표시할 행 수
+                            <Label htmlFor="min-rows">
+                              {draft.answerLayout === 'flow'
+                                ? '최소 작성 시기 수'
+                                : '최소 작성 행 수'}
                             </Label>
                             <Input
-                              id="initial-rows"
+                              id="min-rows"
                               type="number"
-                              min={draft.minRows ?? 1}
+                              min={1}
                               max={draft.maxRows ?? 1}
                               className="w-20"
-                              value={Math.max(
-                                draft.initialRows ?? 1,
-                                draft.minRows ?? 1,
-                              )}
+                              value={draft.minRows ?? 1}
                               onChange={(event) => {
                                 const value = Number(event.target.value);
                                 if (
                                   Number.isInteger(value) &&
-                                  value >= (draft.minRows ?? 1) &&
+                                  value >= 1 &&
                                   value <= (draft.maxRows ?? 1)
                                 )
-                                  updateDraft({ initialRows: value });
+                                  updateDraft({
+                                    minRows: value,
+                                    initialRows: Math.max(
+                                      draft.initialRows ?? 1,
+                                      value,
+                                    ),
+                                  });
                               }}
                             />
+                            <Label htmlFor="max-rows">
+                              {draft.answerLayout === 'flow'
+                                ? '시기 수'
+                                : '최대 행 수'}
+                            </Label>
+                            <MaxItemsInput
+                              value={
+                                draft.rowMode === 'repeatable'
+                                  ? (draft.maxRows ?? 1)
+                                  : 1
+                              }
+                              disabled={false}
+                              ariaLabel={
+                                draft.answerLayout === 'flow'
+                                  ? '시기 수'
+                                  : '최대 행 수'
+                              }
+                              onChange={(count) => {
+                                if (draft.rowMode === 'reference') return;
+                                updateDraft({
+                                  rowMode: count > 1 ? 'repeatable' : 'single',
+                                  maxRows: count > 1 ? count : null,
+                                  minRows: Math.min(draft.minRows ?? 1, count),
+                                  initialRows:
+                                    draft.answerLayout === 'flow'
+                                      ? count
+                                      : Math.min(
+                                          Math.max(
+                                            draft.initialRows ?? 1,
+                                            draft.minRows ?? 1,
+                                          ),
+                                          count,
+                                        ),
+                                });
+                              }}
+                            />
+                            {draft.answerLayout === 'table' && (
+                              <>
+                                <Label htmlFor="initial-rows">
+                                  처음 표시할 행 수
+                                </Label>
+                                <Input
+                                  id="initial-rows"
+                                  type="number"
+                                  min={draft.minRows ?? 1}
+                                  max={draft.maxRows ?? 1}
+                                  className="w-20"
+                                  value={Math.max(
+                                    draft.initialRows ?? 1,
+                                    draft.minRows ?? 1,
+                                  )}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    if (
+                                      Number.isInteger(value) &&
+                                      value >= (draft.minRows ?? 1) &&
+                                      value <= (draft.maxRows ?? 1)
+                                    )
+                                      updateDraft({ initialRows: value });
+                                  }}
+                                />
+                              </>
+                            )}
                           </>
                         )}
-                      </>
-                    )}
-                  </div>
-                  <p
-                    id="max-rows-description"
-                    className="text-sm text-muted-foreground"
-                  >
-                    {draft.rowMode === 'reference'
-                      ? '행 개수는 참조한 질문의 응답을 따릅니다. 흐름표를 사용하려면 조건 설정에서 앞선 질문의 응답 참조를 꺼 주세요.'
-                      : draft.answerLayout === 'flow'
-                        ? '모든 시기를 표시합니다. 최소 작성 시기 수만큼 한 칸 이상 입력해야 합니다.'
-                        : draft.answerLayout === 'table'
-                          ? '처음 표시된 빈 여분 행은 작성 필수가 아닙니다. 최소 작성 행 수만큼 입력하면 됩니다.'
-                          : '최소 작성 행 수만큼 입력해야 하며 최대 행 수까지 추가할 수 있습니다.'}
-                  </p>
-                  {draft.rowMode !== 'reference' && (
-                    <div className="mt-3 overflow-hidden rounded-xl border">
-                      <Table
-                        aria-label={
-                          draft.answerLayout === 'flow'
-                            ? '시기 이름 설정'
-                            : '행 이름 설정'
-                        }
+                      </div>
+                      <p
+                        id="max-rows-description"
+                        className="text-sm text-muted-foreground"
                       >
-                        <TableHeader>
-                          <TableRow className="bg-muted/40 hover:bg-muted/40">
-                            <TableHead className="w-24 text-center">
-                              {draft.answerLayout === 'flow'
-                                ? '시기 번호'
-                                : '행 번호'}
-                            </TableHead>
-                            <TableHead>
-                              {draft.answerLayout === 'flow'
-                                ? '시기 이름 (가로)'
-                                : '행 이름'}
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {Array.from(
-                            { length: draft.maxRows ?? 1 },
-                            (_, index) => (
-                              <TableRow key={index}>
-                                <TableCell className="text-center text-muted-foreground">
-                                  {index + 1}
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    id={`row-label-${index}`}
-                                    aria-label={`${index + 1}${draft.answerLayout === 'flow' ? '번째 시기 이름' : '행 이름'}`}
-                                    maxLength={100}
-                                    placeholder={String(index + 1)}
-                                    value={draft.rowLabels?.[index] ?? ''}
-                                    onChange={(event) => {
-                                      const labels = Array.from(
-                                        { length: draft.maxRows ?? 1 },
-                                        (_, i) => draft.rowLabels?.[i] ?? '',
-                                      );
-                                      labels[index] = event.target.value;
-                                      updateDraft({ rowLabels: labels });
-                                    }}
-                                  />
-                                </TableCell>
+                        {draft.rowMode === 'reference'
+                          ? '행 개수는 참조한 질문의 응답을 따릅니다. 흐름표를 사용하려면 조건 설정에서 앞선 질문의 응답 참조를 꺼 주세요.'
+                          : draft.answerLayout === 'flow'
+                            ? '모든 시기를 표시합니다. 최소 작성 시기 수만큼 한 칸 이상 입력해야 합니다.'
+                            : draft.answerLayout === 'table'
+                              ? '처음 표시된 빈 여분 행은 작성 필수가 아닙니다. 최소 작성 행 수만큼 입력하면 됩니다.'
+                              : '최소 작성 행 수만큼 입력해야 하며 최대 행 수까지 추가할 수 있습니다.'}
+                      </p>
+                      {draft.rowMode !== 'reference' && (
+                        <div className="mt-3 overflow-hidden rounded-xl border">
+                          <Table
+                            aria-label={
+                              draft.answerLayout === 'flow'
+                                ? '시기 이름 설정'
+                                : '행 이름 설정'
+                            }
+                          >
+                            <TableHeader>
+                              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                <TableHead className="w-24 text-center">
+                                  {draft.answerLayout === 'flow'
+                                    ? '시기 번호'
+                                    : '행 번호'}
+                                </TableHead>
+                                <TableHead>
+                                  {draft.answerLayout === 'flow'
+                                    ? '시기 이름 (가로)'
+                                    : '행 이름'}
+                                </TableHead>
                               </TableRow>
-                            ),
-                          )}
-                        </TableBody>
-                      </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {Array.from(
+                                { length: draft.maxRows ?? 1 },
+                                (_, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell className="text-center text-muted-foreground">
+                                      {index + 1}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Input
+                                        id={`row-label-${index}`}
+                                        aria-label={`${index + 1}${draft.answerLayout === 'flow' ? '번째 시기 이름' : '행 이름'}`}
+                                        maxLength={100}
+                                        placeholder={String(index + 1)}
+                                        value={draft.rowLabels?.[index] ?? ''}
+                                        onChange={(event) => {
+                                          const labels = Array.from(
+                                            { length: draft.maxRows ?? 1 },
+                                            (_, i) =>
+                                              draft.rowLabels?.[i] ?? '',
+                                          );
+                                          labels[index] = event.target.value;
+                                          updateDraft({ rowLabels: labels });
+                                        }}
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                ),
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                  <div>
-                    <h2 className="font-semibold">조건 설정</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      질문들간의 관계를 설정합니다.
-                    </p>
-                  </div>
-                </div>
-                {editorData.relationships.error ? (
-                  <div role="alert">
-                    <p>참조 질문을 불러오지 못했어요.</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => void editorData.relationships.mutate()}
-                    >
-                      다시 시도
-                    </Button>
-                  </div>
-                ) : editorData.relationships.isLoading ? (
-                  <p role="status">참조 질문을 불러오고 있어요…</p>
-                ) : (
-                  <QuestionConditionEditor
-                    key={draft.id}
-                    questions={candidates}
-                    document={draft}
-                    onChange={updateDraft}
-                  />
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                      <div>
+                        <h2 className="font-semibold">조건 설정</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          질문들간의 관계를 설정합니다.
+                        </p>
+                      </div>
+                    </div>
+                    {editorData.relationships.error ? (
+                      <div role="alert">
+                        <p>참조 질문을 불러오지 못했어요.</p>
+                        <Button
+                          variant="outline"
+                          onClick={() => void editorData.relationships.mutate()}
+                        >
+                          다시 시도
+                        </Button>
+                      </div>
+                    ) : editorData.relationships.isLoading ? (
+                      <p role="status">참조 질문을 불러오고 있어요…</p>
+                    ) : (
+                      <QuestionConditionEditor
+                        key={draft.id}
+                        questions={candidates}
+                        document={draft}
+                        onChange={updateDraft}
+                      />
+                    )}
+                  </>
                 )}
                 {embedded && (
                   <p className="text-sm text-muted-foreground">
-                    저장한 질문은 질문 관리에도 등록됩니다.
+                    {draft.purpose === 'study_registration'
+                      ? '저장한 안내 카드는 질문 관리에서도 다시 불러올 수 있습니다.'
+                      : '저장한 질문은 질문 관리에도 등록됩니다.'}
                   </p>
                 )}
               </Tabs.Panel>
@@ -1648,7 +1778,9 @@ export function QuestionLibraryView({
             <DialogTitle>작성 중인 내용을 버릴까요?</DialogTitle>
             <DialogDescription>
               {emptyPrompt
-                ? '질문 본문이 비어 있어 저장할 수 없어요. 계속 작성해 질문을 입력하거나 변경 내용을 버려 주세요.'
+                ? draft?.purpose === 'study_registration'
+                  ? '안내 내용이 비어 있어 저장할 수 없어요. 계속 작성해 내용을 입력하거나 변경 내용을 버려 주세요.'
+                  : '질문 본문이 비어 있어 저장할 수 없어요. 계속 작성해 질문을 입력하거나 변경 내용을 버려 주세요.'
                 : '저장하지 않은 질문의 변경 내용은 사라집니다.'}
             </DialogDescription>
           </DialogHeader>
@@ -1677,11 +1809,16 @@ export function QuestionLibraryView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>질문을 삭제할까요?</DialogTitle>
+            <DialogTitle>
+              {pendingArchive?.purpose === 'study_registration'
+                ? '안내 카드를 삭제할까요?'
+                : '질문을 삭제할까요?'}
+            </DialogTitle>
             <DialogDescription>
               ‘{pendingArchive ? questionName(pendingArchive) : '이 질문'}’을
-              삭제합니다. 이 질문에 연결된 게시 단계의 응답도 함께 삭제되며
-              되돌릴 수 없습니다.
+              {pendingArchive?.purpose === 'study_registration'
+                ? '삭제합니다. 이미 등록한 학습법은 유지됩니다.'
+                : '삭제합니다. 이 질문에 연결된 게시 단계의 응답도 함께 삭제되며 되돌릴 수 없습니다.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

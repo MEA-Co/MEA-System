@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
-function mount(distributed = true, empty = false) {
+function mount(distributed = true, empty = false, registration = false) {
   const calls = [];
   const state = [];
   let cursor = 0;
@@ -59,6 +59,20 @@ function mount(distributed = true, empty = false) {
     initial.revision = 0;
     initial.savedAt = null;
     initial.submittedAt = null;
+  }
+  if (registration) {
+    const card = {
+      questionId: 'registration',
+      responseId: 'registration-response',
+      definition: {
+        id: 'registration',
+        purpose: 'study_registration',
+        fields: [],
+      },
+      rows: [],
+    };
+    if (registration === 'mixed') initial.questions.push(card);
+    else initial.questions = [card];
   }
   const imports = {
     react,
@@ -118,7 +132,7 @@ function mount(distributed = true, empty = false) {
             revision: 3,
             questions: initial.questions.map((q) => ({
               ...q,
-              rows: body.answers.q,
+              rows: body.answers[q.definition.id],
             })),
           }),
         };
@@ -200,4 +214,34 @@ test('initializing a blank field does not enable save or mark the response dirty
     .find((node) => node.props.children === '저장');
   assert.equal(save.props.disabled, true);
   assert.equal(view.calls.length, 0);
+});
+
+test('registration-only questionnaires have no answer save or submit controls', () => {
+  const view = mount(true, true, true);
+  const preview = view.find(view.render(), 'Preview')[0];
+  assert.equal(preview.props.library[0].purpose, 'study_registration');
+  preview.props.response.onChange('registration', [
+    { id: 1, answers: { injected: 'ignored' } },
+  ]);
+  assert.equal(view.find(view.render(), 'Button').length, 0);
+  assert.equal(view.calls.length, 0);
+});
+
+test('registration cards stay empty while ordinary answers continue to save and submit', async () => {
+  const view = mount(true, true, 'mixed');
+  const preview = view.find(view.render(), 'Preview')[0];
+  preview.props.response.onChange('registration', [
+    { id: 1, answers: { injected: 'ignored' } },
+  ]);
+  preview.props.response.onChange('q', [
+    { id: 1, answers: { f: 'real answer' } },
+  ]);
+  const save = view
+    .find(view.render(), 'Button')
+    .find((node) => node.props.children === '저장');
+  assert.equal(save.props.disabled, false);
+  save.props.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(view.calls[0].body.answers.registration, []);
+  assert.equal(view.calls[0].body.answers.q[0].answers.f, 'real answer');
 });

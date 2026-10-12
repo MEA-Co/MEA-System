@@ -31,6 +31,12 @@ function errorStatus(code?: string) {
 function errorMessage(message: string, status: number) {
   if (message.includes('Distributed question is immutable'))
     return '배포된 질문지에 사용된 질문은 수정하거나 삭제할 수 없어요.';
+  if (message.includes('Question purpose is immutable'))
+    return '저장된 카드 종류는 바꿀 수 없어요. 다른 종류는 새 카드로 만들어 주세요.';
+  if (
+    message.includes('Study registration cards cannot be answer dependencies')
+  )
+    return '학습법 등록 안내 카드는 답변 조건이나 참조 대상으로 사용할 수 없어요.';
   if (message.includes('used by a questionnaire'))
     return '질문지에 배치된 질문이에요. 해당 질문지에서 제거한 뒤 삭제해 주세요.';
   if (message.includes('dependency cycle'))
@@ -126,7 +132,7 @@ async function handle(request: Request, context: Context) {
         // Filter before counting and paging so preview pages stay full and totals
         // never include other authors. RLS and actual account privileges stay intact.
         const columns =
-          'id,created_by,title,prompt,fields,row_mode,answer_layout,initial_rows,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at';
+          'id,created_by,title,prompt,purpose,button_label,fields,row_mode,answer_layout,initial_rows,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at';
         const pattern =
           '%' + parsed.data.search.trim().replace(/[\\%_]/g, '\\$&') + '%';
         const pageSize = 10;
@@ -211,7 +217,7 @@ async function handle(request: Request, context: Context) {
     // library. Batch reads to avoid the Data API's per-response row limit.
     const relationshipsOnly = params.get('mode') === 'relationships';
     const columns = relationshipsOnly
-      ? 'id,created_by,title,prompt,fields,row_mode,answer_layout,initial_rows,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at'
+      ? 'id,created_by,title,prompt,purpose,button_label,fields,row_mode,answer_layout,initial_rows,max_rows,min_rows,row_labels,source_block_id,source_field_id,after_block_id,condition,revision,created_at,updated_at,archived_at'
       : '*, details:question_details(id,title,text:body,visibleToConsultants:visible_to_consultants,position)';
     const blocks: QuestionBlockRow[] = [];
     const batchSize = 500;

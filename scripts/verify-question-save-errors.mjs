@@ -137,3 +137,23 @@ test('other save errors retain their status without claiming a revision conflict
     assert.equal((await response.json()).code, 'question_save_failed');
   }
 });
+
+test('immutable card kinds and registration dependency restrictions explain the allowed actions', async () => {
+  for (const [message, expected, status] of [
+    ['Question purpose is immutable', /다른 종류는 새 카드로/, 409],
+    [
+      'Study registration cards cannot be answer dependencies',
+      /답변 조건이나 참조 대상으로 사용할 수 없어요/,
+      400,
+    ],
+  ]) {
+    const response = await setup({
+      code: status === 409 ? '55000' : '22023',
+      message,
+    }).save();
+    const result = await response.json();
+    assert.equal(response.status, status);
+    assert.notEqual(result.code, 'revision_conflict');
+    assert.match(result.error, expected);
+  }
+});

@@ -31,7 +31,10 @@ export type QuestionResponseSave = {
 };
 export function snapshotRows(snapshot: QuestionResponseSnapshot) {
   return Object.fromEntries(
-    snapshot.questions.map((q) => [q.definition.id, q.rows]),
+    snapshot.questions.map((q) => [
+      q.definition.id,
+      q.definition.purpose === 'study_registration' ? [] : q.rows,
+    ]),
   );
 }
 
@@ -43,6 +46,8 @@ export function mergeGuideResponseRows(
 ) {
   return Object.fromEntries(
     next.questions.map((question) => {
+      if (question.definition.purpose === 'study_registration')
+        return [question.definition.id, []];
       const old = previous.questions.find(
         (item) => item.definition.id === question.definition.id,
       );

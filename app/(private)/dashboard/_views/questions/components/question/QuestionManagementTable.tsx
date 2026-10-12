@@ -240,6 +240,11 @@ export function QuestionManagementTable({
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
                   {richTextPlainText(q.prompt)}
                 </p>
+                {q.purpose === 'study_registration' && (
+                  <span className="mt-2 inline-block rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                    학습법 등록 안내
+                  </span>
+                )}
                 {(reviewCounts?.unreadCounts[q.id] ?? 0) > 0 && (
                   <span className="mt-2 mr-2 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
                     <span className="size-2 rounded-full bg-blue-500" />새 검토
