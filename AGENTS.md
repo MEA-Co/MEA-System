@@ -241,3 +241,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 학습법 문제 상황 템플릿(2026-10-10): 대표 문장 16개를 선택하여 문제 상황 본문에 직접 입력·수정한다. 제목은 저장하지 않는다. 출처 전환은 본문 유지, 다른 템플릿 선택은 본문만 교체. `20261010072805_study_problem_templates.sql` 로컬 적용, problemSource=self/student/template 허용. 저장/권한 SQL·템플릿 2개·기존 JS 19개·타입·린트·보안 검증, 운영 미적용. 운영 순서는 docs/study-methods.md 참고.
 
 - 학습법 선택 제목(2026-10-10): values.title 선택 입력(100자). 목록·참조·삭제 확인에 제목 우선, 비우면 기존 전략 표시. 기존 제목 없는 데이터 호환. `20261010083351_study_optional_title.sql` 로컬 적용·저장/권한 SQL·JS 22개·타입·린트·보안 검증, 운영 미적용. docs/study-methods.md 순서로 DB 먼저 적용 후 앱 배포.
+
+- 게시 질문지 공동 편집(2026-10-12): `20261012050042_published_questionnaire_collaboration.sql` 로컬 적용. 다른 리드·관리자도 활성 게시 질문지 제목·배치와 원본 내용/설정/설명을 수정한다. 작성자·상태/삭제 권한·비공개 초안·배포 원본 잠금·가이드 삭제 확인은 유지한다. 독립 목록은 작성자 필터 유지, 게시 출처는 편집기에서 병합한다. 로컬 리드 계정 생성은 `scripts/create-local-consultant.mjs --lead`, 비밀 파일 `.env.local-consultant-lead.json`. 타입/변경 파일 린트/공동 편집 및 가이드 SQL/security advisor 통과. 운영·브라우저 테스트 미수행. 운영 절차는 docs/questions-operations.md 마지막 절.

@@ -14,14 +14,21 @@ assert.equal(
 );
 const auth = { persistSession: false, autoRefreshToken: false };
 const admin = createClient(url, process.env.SUPABASE_SECRET_KEY, { auth });
-const file = '.env.local-consultant.json';
+const lead = process.argv.includes('--lead');
+const role = lead ? 'consultant_lead' : 'consultant';
+const email = lead
+  ? 'codex-consultant-lead@example.test'
+  : 'codex-consultant@example.test';
+const file = lead
+  ? '.env.local-consultant-lead.json'
+  : '.env.local-consultant.json';
 const credentials = existsSync(file)
   ? JSON.parse(readFileSync(file, 'utf8'))
   : {
-      email: 'codex-consultant@example.test',
+      email,
       password: randomBytes(24).toString('base64url'),
     };
-assert.equal(credentials.email, 'codex-consultant@example.test');
+assert.equal(credentials.email, email);
 const client = createClient(
   url,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
@@ -50,7 +57,11 @@ if (existing.error) throw existing.error;
 if (!existing.data) {
   const result = await admin
     .from('profiles')
-    .insert({ id, role: 'consultant', name: '로컬 테스트 컨설턴트' });
+    .insert({
+      id,
+      role,
+      name: lead ? '로컬 테스트 컨설턴트 리드' : '로컬 테스트 컨설턴트',
+    });
   if (result.error) throw result.error;
 }
 const profile = await client
@@ -59,7 +70,7 @@ const profile = await client
   .eq('id', id)
   .single();
 if (profile.error) throw profile.error;
-assert.equal(profile.data.role, 'consultant');
+assert.equal(profile.data.role, role);
 await client.auth.signOut();
 // eslint-disable-next-line no-console -- Report local account verification without credentials.
 console.log({

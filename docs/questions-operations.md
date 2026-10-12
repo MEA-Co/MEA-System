@@ -176,3 +176,30 @@ npx supabase db query --linked --project-ref epwlcallocdjkmgdmtlv --file /privat
 `20261012011802_distributed_question_review_visibility.sql` 로컬 적용 완료, 운영 미적용. `can_read_question_reviews`는 활성 게시본뿐 아니라 배포본에 포함된 질문도 다른 리드에게 공유한다. 요청 작성은 게시 중만 허용하며 처리 권한은 원본 작성자/관리자로 유지한다. 일반 컨설턴트와 보관본만 남은 질문에 대한 무관한 리드 조회는 차단한다. 배포 응답 SQL 회귀(RPC/RLS 조회, 작성·처리 불가, 일반 컨설턴트 및 보관 후 차단), 보안 advisor 통과. 로컬 적용 대기 없음 확인. 브라우저 테스트 및 운영 적용은 수행하지 않았다.
 
 위 운영 적용 순서대로 연결 대상 `epwlcallocdjkmgdmtlv`·이력 확인 → dry-run에서 예상 migration 확인 → 적용 → 대기 없음 재확인 → 앱 배포 → 다른 리드의 배포본 검토 요청 조회 확인을 진행한다. 이번 예상 파일 외 이전 미적용 파일이 나오면 먼저 이력을 검토한다.
+
+## 게시 질문지 공동 편집 (2026-10-12)
+
+`20261012050042_published_questionnaire_collaboration.sql`은 로컬 적용 완료이며 운영 적용은 수행하지 않았다. 다른 컨설턴트 리드·관리자도 활성 게시 질문지의 제목·배치와 포함된 원본 질문의 내용·답변 설정·설명을 수정한다. 원본 작성자는 유지되고 공유 원본 변경은 다른 질문지에도 반영된다. 비공개 초안·삭제·상태 변경 권한은 유지하며 다른 배포본에서 사용하는 원본은 계속 잠긴다. 독립 질문 목록은 기존 작성자 필터를 유지한다. 가이드 응답 삭제 확인도 동일하게 적용한다.
+
+로컬 리드 테스트 계정은 `node scripts/create-local-consultant.mjs --lead`로 생성/확인한다. localhost 연결만 허용하며 자격 증명은 Git 제외 파일 `.env.local-consultant-lead.json`에 저장된다. 운영에서는 실행하지 않는다.
+
+타입 검사·변경 파일 린트·공동 편집 SQL·가이드 필드 변경/질문 제거 SQL·로컬 security advisor 통과, 로컬 migration 대기 없음. SQL 가상 데이터는 롤백했다. 실제 브라우저 테스트는 수행하지 않았다.
+
+운영은 다음 순서로 적용한다. 다른 컴퓨터에서는 첫 경로를 실제 프로젝트 경로로 바꾼다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run --skip-vault
+```
+
+연결 대상이 `epwlcallocdjkmgdmtlv`인지 확인한다. 이번 예상 파일은 `20261012050042_published_questionnaire_collaboration.sql`이다. 다른 미적용 migration이 나오면 먼저 이력을 검토한 뒤 적용한다. 치환 대상 함수 정의가 예상과 다르면 migration이 중단되므로 강제로 이력을 맞추지 않는다.
+
+```bash
+npx supabase db push --linked --skip-vault
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run --skip-vault
+```
+
+대기 없음 확인 후 앱을 배포한다. 다른 리드 계정으로 게시 질문지 제목·배치·원본·설명 저장을 확인하고 비공개 초안과 배포 원본은 수정할 수 없는지 확인한다.

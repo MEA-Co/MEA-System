@@ -234,7 +234,9 @@ export async function loadQuestionnaireView(
       409,
       '보관된 질문지예요. 목록에서 상태를 복원한 뒤 열어 주세요.',
     );
-  const editable = selected.isOwner && selected.status !== 'distributed';
+  const editable =
+    (selected.isOwner && selected.status !== 'distributed') ||
+    (staff && selected.status === 'published');
   const documentResult = await client.rpc(
     editable ? 'read_questionnaire_draft' : 'read_published_questionnaire',
     { p_questionnaire_id: requestedId },

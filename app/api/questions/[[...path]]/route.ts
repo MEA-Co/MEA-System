@@ -99,7 +99,8 @@ async function handle(request: Request, context: Context) {
         )
         .eq('id', id)
         .is('archived_at', null);
-      if (ownOnly) query = query.eq('created_by', userId);
+      if (access.role === 'admin' && ownOnly)
+        query = query.eq('created_by', userId);
       const result = await query
         .maybeSingle()
         .overrideTypes<QuestionBlockRow, { merge: false }>();

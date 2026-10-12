@@ -294,6 +294,7 @@ function QuestionnaireContent({
           <QuestionnaireComposer
             key={`editor:${editorDraft.questionnaireId}`}
             initialDraft={editorDraft}
+            publishedSources={data.publishedSources}
             published={selected?.status === 'published'}
             onEditorState={reportEditor}
             paused={paused}

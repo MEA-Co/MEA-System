@@ -50,6 +50,7 @@ import { QuestionResponseForm } from './QuestionResponseForm';
 export function QuestionnaireComposer({
   initialDraft,
   published = false,
+  publishedSources = [],
   remoteUnavailable = false,
   reviewContext,
   onEditorState,
@@ -59,6 +60,7 @@ export function QuestionnaireComposer({
   paused?: boolean;
   initialDraft: QuestionnaireDraft;
   published?: boolean;
+  publishedSources?: QuestionBlockRow[];
   remoteUnavailable?: boolean;
   reviewContext?: QuestionnaireReviewContext;
 }) {
@@ -114,7 +116,11 @@ export function QuestionnaireComposer({
     [],
   );
   const library = useQuestionLibrary();
-  const questions = library.data ?? [];
+  const questions = [
+    ...new Map(
+      [...publishedSources, ...(library.data ?? [])].map((q) => [q.id, q]),
+    ).values(),
+  ];
   const hasPlacements = sections.some((s) =>
     s.questions.some((q) => q.sourceQuestionId),
   );
@@ -745,6 +751,8 @@ export function QuestionnaireComposer({
                     key={`${editingQuestionId ?? 'new'}:${editorInstance}`}
                     embedded={{
                       questionId: editingQuestionId,
+                      allowSharedEdit: published,
+                      sharedSources: questions,
                       actionLabel:
                         editingQuestionId && placedIds.has(editingQuestionId)
                           ? '완료'

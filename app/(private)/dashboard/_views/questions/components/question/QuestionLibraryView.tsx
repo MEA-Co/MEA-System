@@ -220,6 +220,8 @@ export function QuestionLibraryView({
     onPlace: (question: QuestionBlockRow) => void | Promise<void>;
     onCancel: () => void;
     questionId?: string;
+    allowSharedEdit?: boolean;
+    sharedSources?: QuestionBlockRow[];
     actionLabel?: string;
     onSaved?: (question: QuestionBlockRow) => void;
     paused?: boolean;
@@ -349,7 +351,14 @@ export function QuestionLibraryView({
     requestedId === closingId ? null : requestedId,
     unsaved,
   );
-  const relatedQuestions = editorData.relationships.data ?? [];
+  const relatedQuestions = [
+    ...new Map(
+      [
+        ...(embedded?.sharedSources ?? []),
+        ...(editorData.relationships.data ?? []),
+      ].map((q) => [q.id, q]),
+    ).values(),
+  ];
   const candidates = relatedQuestions.filter((block) => block.id !== draft?.id);
   const opener = useRef<HTMLElement | null>(null);
   const listHeading = useRef<HTMLHeadingElement | null>(null);
@@ -493,7 +502,10 @@ export function QuestionLibraryView({
     const local =
       sessions.current.get(requestedId) ?? readLocalDraft(userId, requestedId);
     if (
-      (remote && role !== 'admin' && remote.created_by !== userId) ||
+      (remote &&
+        role !== 'admin' &&
+        remote.created_by !== userId &&
+        !embedded?.allowSharedEdit) ||
       (!remote && !local)
     ) {
       toast.add({
