@@ -222,6 +222,7 @@ export function QuestionLibraryView({
     onCancel: () => void;
     questionId?: string;
     allowSharedEdit?: boolean;
+    questionnaireId?: string;
     sharedSources?: QuestionBlockRow[];
     actionLabel?: string;
     onSaved?: (question: QuestionBlockRow) => void;
@@ -351,6 +352,7 @@ export function QuestionLibraryView({
   const editorData = useQuestionEditorData(
     requestedId === closingId ? null : requestedId,
     unsaved,
+    embedded?.allowSharedEdit ? embedded.questionnaireId : undefined,
   );
   const relatedQuestions = [
     ...new Map(

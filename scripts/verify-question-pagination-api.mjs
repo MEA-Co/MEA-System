@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import vm from 'node:vm';
+
 import ts from 'typescript';
 const require = createRequire(import.meta.url);
 function setup({
@@ -12,6 +13,7 @@ function setup({
   viewRole = role,
   count = 0,
   rpcError = null,
+  sharedSources = [],
 } = {}) {
   const calls = [];
   const z = require('zod').z;
@@ -52,13 +54,16 @@ function setup({
         rpc: async (name, args) => {
           calls.push({ name, args });
           return {
-            data: {
-              blocks: [],
-              references: [],
-              total: 41,
-              page: args.p_page,
-              pageSize: 10,
-            },
+            data:
+              name === 'read_published_question_sources'
+                ? sharedSources
+                : {
+                    blocks: [],
+                    references: [],
+                    total: 41,
+                    page: args.p_page,
+                    pageSize: 10,
+                  },
             error: rpcError,
           };
         },
@@ -255,4 +260,73 @@ test('admin lead preview detail query includes author constraint', async () => {
   assert.ok(
     client.calls.some((c) => c.filter === 'created_by' && c.value === 'actor'),
   );
+});
+
+test('published source lookup supports admin lead preview without owner filter', async () => {
+  for (const role of ['admin', 'consultant_lead']) {
+    const id = randomUUID();
+    const questionnaireId = randomUUID();
+    const block = {
+      id,
+      created_by: 'another-author',
+      title: '학습법 블록 등록',
+      purpose: 'study_registration',
+      archived_at: null,
+    };
+    const client = setup({
+      role,
+      viewRole: 'consultant_lead',
+      sharedSources: [block],
+    });
+    const response = await client.get(`?questionnaireId=${questionnaireId}`, [
+      id,
+    ]);
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).block, block);
+    assert.equal(client.calls.length, 1);
+    assert.equal(client.calls[0].name, 'read_published_question_sources');
+    assert.equal(client.calls[0].args.p_questionnaire_id, questionnaireId);
+  }
+});
+
+test('questionnaire context cannot expose unplaced or archived originals', async () => {
+  const id = randomUUID();
+  for (const sharedSources of [
+    [],
+    [{ id: randomUUID() }],
+    [{ id, archived_at: '2026-10-13' }],
+  ]) {
+    const client = setup({ sharedSources });
+    assert.equal(
+      (await client.get(`?questionnaireId=${randomUUID()}`, [id])).status,
+      404,
+    );
+  }
+});
+
+test('questionnaire lookup rejects bad context and propagates access and server errors', async () => {
+  const client = setup();
+  assert.equal(
+    (await client.get('?questionnaireId=bad', [randomUUID()])).status,
+    400,
+  );
+  assert.equal(client.calls.length, 0);
+  for (const [code, status] of [
+    ['42501', 403],
+    ['XX000', 503],
+  ]) {
+    const client = setup({ rpcError: { code } });
+    assert.equal(
+      (await client.get(`?questionnaireId=${randomUUID()}`, [randomUUID()]))
+        .status,
+      status,
+    );
+  }
+  const preview = setup({ role: 'admin', viewRole: 'consultant' });
+  assert.equal(
+    (await preview.get(`?questionnaireId=${randomUUID()}`, [randomUUID()]))
+      .status,
+    403,
+  );
+  assert.equal(preview.calls.length, 0);
 });

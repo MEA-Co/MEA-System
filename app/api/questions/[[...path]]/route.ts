@@ -104,6 +104,30 @@ async function handle(request: Request, context: Context) {
       return json({ error: '경로를 찾을 수 없어요.' }, 404);
     }
     if (id) {
+      const questionnaireId = new URL(request.url).searchParams.get(
+        'questionnaireId',
+      );
+      if (questionnaireId !== null) {
+        if (!z.uuid().safeParse(questionnaireId).success)
+          return json({ error: '질문지 정보를 확인해 주세요.' }, 400);
+        if (!['admin', 'consultant_lead'].includes(viewRole))
+          return json({ error: '질문 관리 권한이 없어요.' }, 403);
+        // The questionnaire RPC checks access and placement. An admin's lead
+        // preview must not apply the independent library's owner-only filter here.
+        const sources = await client.rpc('read_published_question_sources', {
+          p_questionnaire_id: questionnaireId,
+        });
+        if (sources.error)
+          return json(
+            { error: '질문지의 질문을 불러오지 못했어요.' },
+            errorStatus(sources.error.code),
+          );
+        const block = (sources.data as QuestionBlockRow[] | null)?.find(
+          (question) => question.id === id && !question.archived_at,
+        );
+        if (!block) return json({ error: '질문을 찾을 수 없어요.' }, 404);
+        return json({ block, userId });
+      }
       let query = client
         .from('questions')
         .select(

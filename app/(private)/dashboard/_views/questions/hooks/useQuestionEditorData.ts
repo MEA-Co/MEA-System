@@ -19,9 +19,15 @@ async function loadRelationships(url: string): Promise<QuestionBlockRow[]> {
     throw new Error(result.error ?? '참조 질문을 불러오지 못했어요.');
   return result.blocks;
 }
-export function useQuestionEditorData(id: string | null, unsaved: boolean) {
+export function useQuestionEditorData(
+  id: string | null,
+  unsaved: boolean,
+  questionnaireId?: string,
+) {
   const detail = useSWR(
-    id && id !== 'new' && !unsaved ? `/api/questions/${id}` : null,
+    id && id !== 'new' && !unsaved
+      ? `/api/questions/${id}${questionnaireId ? `?questionnaireId=${encodeURIComponent(questionnaireId)}` : ''}`
+      : null,
     loadDetail,
     { revalidateOnFocus: false, keepPreviousData: false },
   );

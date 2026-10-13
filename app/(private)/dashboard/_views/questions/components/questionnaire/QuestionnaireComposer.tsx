@@ -752,6 +752,7 @@ export function QuestionnaireComposer({
                     embedded={{
                       questionId: editingQuestionId,
                       allowSharedEdit: published,
+                      questionnaireId: initialDraft.questionnaireId,
                       sharedSources: questions,
                       actionLabel:
                         editingQuestionId && placedIds.has(editingQuestionId)
