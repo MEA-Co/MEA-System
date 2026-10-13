@@ -95,7 +95,7 @@ function pickerLabel(tree) {
     .children;
 }
 
-test('20개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보존한다', () => {
+test('19개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보존한다', () => {
   const values = {
     ...fields.emptyValues(),
     category: '내신',
@@ -113,10 +113,10 @@ test('20개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보�
   const tree = draw(values, (v) => {
     next = v;
   });
-  assert.equal(templates.problemTemplates.length, 20);
+  assert.equal(templates.problemTemplates.length, 19);
   assert.equal(
     new Set(templates.problemTemplates.map((item) => item.id)).size,
-    20,
+    19,
   );
   for (const template of templates.problemTemplates) {
     picker(tree).props.onValueChange(template.id);

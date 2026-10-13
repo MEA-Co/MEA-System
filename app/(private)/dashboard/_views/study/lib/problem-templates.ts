@@ -126,14 +126,6 @@ export const problemTemplates = [
     customSubject: '',
   },
   {
-    id: 'qa-17',
-    problem:
-      '예비 고1 국어 학습에서 모의고사 풀이와 문법 공부의 우선순위 결정에 어려움',
-    category: '기타',
-    subject: '국어',
-    customSubject: '',
-  },
-  {
     id: 'qa-18',
     problem:
       '수능 국어 연계 학습이 부족한 상태에서 수능특강·수능완성·기출의 우선순위 결정에 어려움',
