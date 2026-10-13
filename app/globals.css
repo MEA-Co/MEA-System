@@ -28,6 +28,7 @@
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
+  --color-control-track: var(--control-track);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
@@ -53,6 +54,8 @@
 }
 
 :root {
+  /* Neutral greys keep surfaces, controls, and navigation in one palette. */
+  --control-track: #f0f0f0;
   --brand: #ffe233;
   --brand-foreground: #151515;
   --card: oklch(1 0 0);
@@ -77,19 +80,20 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: #f0f0ed;
+  --sidebar: #f0f0f0;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: var(--brand-foreground);
-  --sidebar-accent: #e5e5e0;
+  --sidebar-accent: #e5e5e5;
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: #d5d5cf;
-  --sidebar-ring: #68685f;
+  --sidebar-border: #d5d5d5;
+  --sidebar-ring: var(--ring);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
 }
 
 .dark {
+  --control-track: #303030;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

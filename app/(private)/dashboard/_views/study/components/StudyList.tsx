@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent,TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { type Activity, studySummary, studyTitle } from '../lib/fields';
 
@@ -34,8 +35,6 @@ type StudyListProps = {
   mine: Activity[];
   others: Activity[];
   showOthers: boolean;
-  otherMode: 'all' | 'person';
-  setOtherMode: (value: 'all' | 'person') => void;
   owner: string;
   setOwner: (value: string) => void;
   ownerLabel: (id?: string) => string;
@@ -60,8 +59,6 @@ export function StudyList({
   mine,
   others,
   showOthers,
-  otherMode,
-  setOtherMode,
   owner,
   setOwner,
   ownerLabel,
@@ -77,126 +74,60 @@ export function StudyList({
   onDelete,
 }: StudyListProps) {
   const loading = !ready || isLoading;
-  return (
-    <div className="space-y-5">
-      {canViewOthers && (
-        <div
-          className="flex flex-wrap gap-2 border-b pb-5"
-          role="group"
-          aria-label="학습법 구분"
-        >
-          <Button
-            variant="filter"
-            type="button"
-            aria-pressed={scope === 'mine'}
-            onClick={() => {
-              setScope('mine');
-              setQuery('');
-            }}
-          >
-            내 학습법{' '}
-            <Badge
-              variant="count"
-              aria-label={loading ? '불러오는 중' : undefined}
-            >
-              {loading ? '—' : mine.length}
-            </Badge>
-          </Button>
-          <Button
-            variant="filter"
-            type="button"
-            aria-pressed={scope === 'others'}
-            onClick={() => {
-              setScope('others');
-              setQuery('');
-            }}
-          >
-            다른 사람의 학습법{' '}
-            <Badge
-              variant="count"
-              aria-label={loading ? '불러오는 중' : undefined}
-            >
-              {loading ? '—' : others.length}
-            </Badge>
-          </Button>
-        </div>
-      )}
-      {showOthers && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div
-            className="flex flex-wrap gap-1"
-            role="group"
-            aria-label="다른 사람의 학습법 보기 방식"
-          >
-            <Button
-              variant="filter"
-              type="button"
-              size="sm"
-              aria-pressed={otherMode === 'all'}
-              onClick={() => setOtherMode('all')}
-            >
-              전체 보기
-            </Button>
-            <Button
-              variant="filter"
-              type="button"
-              size="sm"
-              aria-pressed={otherMode === 'person'}
-              onClick={() => setOtherMode('person')}
-            >
-              사람별 보기
-            </Button>
-          </div>
-          {otherMode === 'person' && (
-            <Select
-              value={owner || null}
-              onValueChange={(value) => setOwner(value ?? '')}
-            >
-              <SelectTrigger
-                className="w-full sm:w-56"
-                aria-label="학습법 작성자 선택"
-              >
-                <SelectValue placeholder="작성자를 선택해 주세요">
-                  {owner ? ownerLabel(owner) : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {people.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.label} (
-                    {
-                      others.filter(
-                        (activity) => activity.ownerId === person.id,
-                      ).length
-                    }
-                    개)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-semibold">
-          {showOthers
-            ? otherMode === 'person' && owner
-              ? `${ownerLabel(owner)}님의 학습법`
-              : '다른 사람의 학습법'
-            : '내 학습법'}{' '}
-          <Badge
-            variant="count"
-            aria-label={loading ? '불러오는 중' : undefined}
-          >
-            {loading ? '—' : filtered.length}
-          </Badge>
-        </h2>
+  const content = (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <CollectionSearch
           aria-label="학습법 검색"
           placeholder="과목, 문제 상황, 학습 전략 검색"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          containerClassName="sm:w-auto sm:min-w-0 sm:flex-1"
         />
+        {showOthers && (
+          <Select
+            value={owner || 'all'}
+            onValueChange={(value) =>
+              setOwner(!value || value === 'all' ? '' : value)
+            }
+          >
+            <SelectTrigger
+              className="w-full sm:w-56"
+              aria-label="학습법 작성자 필터"
+            >
+              <SelectValue>
+                {owner ? ownerLabel(owner) : '전체 작성자'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 작성자</SelectItem>
+              {people.map((person) => (
+                <SelectItem key={person.id} value={person.id}>
+                  {person.label} (
+                  {
+                    others.filter((activity) => activity.ownerId === person.id)
+                      .length
+                  }
+                  개)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+      <div className="flex min-h-5 flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <h2 className="font-medium">
+          {showOthers
+            ? owner
+              ? `${ownerLabel(owner)}님의 학습법`
+              : '다른 작성자가 공유한 학습법'
+            : '내가 작성한 학습법'}
+        </h2>
+        <span aria-live="polite" className="tabular-nums">
+          {loading
+            ? '불러오는 중'
+            : `${filtered.length}개${query.trim() || (showOthers && owner) ? ' 검색됨' : ''}`}
+        </span>
       </div>
       <div className="min-h-64" aria-busy={loading}>
         {filtered.length ? (
@@ -287,26 +218,76 @@ export function StudyList({
                 ? '목록을 불러오지 못했습니다'
                 : localError
                   ? '임시저장을 확인하지 못했습니다'
-                  : showOthers && otherMode === 'person' && !owner
-                    ? '작성자를 선택해 주세요'
-                    : query.trim()
-                      ? '검색 결과가 없습니다'
-                      : '등록된 학습법이 없습니다'
+                  : query.trim() || (showOthers && owner)
+                    ? '검색 결과가 없습니다'
+                    : '등록된 학습법이 없습니다'
             }
             description={
               remoteError || localError
                 ? '위의 오류 안내를 확인해 주세요.'
-                : showOthers && otherMode === 'person' && !owner
-                  ? '작성자를 선택하면 해당 학습법을 볼 수 있습니다.'
-                  : query.trim()
-                    ? '다른 검색어로 찾아보세요.'
-                    : showOthers
-                      ? '다른 작성자가 확정한 학습법이 여기에 표시됩니다.'
-                      : '학습법 추가 버튼으로 나만의 학습 전략을 기록해 보세요.'
+                : query.trim() || (showOthers && owner)
+                  ? showOthers
+                    ? '검색어를 바꾸거나 전체 작성자로 선택해 보세요.'
+                    : '다른 검색어로 찾아보세요.'
+                  : showOthers
+                    ? '다른 작성자가 확정한 학습법이 여기에 표시됩니다.'
+                    : '학습법 추가 버튼으로 나만의 학습 전략을 기록해 보세요.'
             }
           />
         )}
       </div>
     </div>
+  );
+  if (!canViewOthers) return content;
+  return (
+    <Tabs
+      value={scope}
+      onValueChange={(value) => {
+        if ((value === 'mine' || value === 'others') && value !== scope) {
+          setScope(value);
+          setQuery('');
+        }
+      }}
+    >
+      <TabsList
+        className="grid w-full grid-cols-2 gap-1 rounded-lg bg-control-track p-1 sm:inline-flex sm:w-fit"
+        aria-label="학습법 구분"
+      >
+        <TabsTrigger
+          type="button"
+          className="min-w-0 px-2 sm:px-4"
+          value="mine"
+        >
+          내 학습법{' '}
+          <Badge
+            variant="count"
+            aria-label={loading ? '불러오는 중' : undefined}
+          >
+            {loading ? '—' : mine.length}
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger
+          type="button"
+          className="min-w-0 px-2 sm:px-4"
+          aria-label="다른 사람의 학습법"
+          value="others"
+        >
+          <span className="sm:hidden">다른 사람</span>
+          <span className="hidden sm:inline">다른 사람의 학습법</span>
+          <Badge
+            variant="count"
+            aria-label={loading ? '불러오는 중' : undefined}
+          >
+            {loading ? '—' : others.length}
+          </Badge>
+        </TabsTrigger>
+      </TabsList>
+
+      {(['mine', 'others'] as const).map((value) => (
+        <TabsContent key={value} value={value}>
+          {scope === value ? content : null}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }

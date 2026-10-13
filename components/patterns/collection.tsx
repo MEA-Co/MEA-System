@@ -26,32 +26,31 @@ export function CollectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-5 border-b pb-6">
-      <div className="space-y-2">
-        {category}
-        <h1
-          id={id}
-          className="text-2xl font-extrabold tracking-tight md:text-3xl"
-        >
-          {title}
-        </h1>
-        {description && (
-          <p className="text-sm leading-6 text-muted-foreground">
-            {description}
-          </p>
-        )}
-      </div>
-      {action}
+    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 border-b pb-5">
+      {category && <div className="col-span-2">{category}</div>}
+      <h1
+        id={id}
+        className="min-w-0 text-2xl font-extrabold tracking-tight md:text-3xl"
+      >
+        {title}
+      </h1>
+      {action && <div className="col-start-2 shrink-0">{action}</div>}
+      {description && (
+        <p className="col-span-2 text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+      )}
     </header>
   );
 }
 
 export function CollectionSearch({
   className,
+  containerClassName,
   ...props
-}: ComponentProps<typeof Input>) {
+}: ComponentProps<typeof Input> & { containerClassName?: string }) {
   return (
-    <div className="relative w-full sm:w-80">
+    <div className={cn('relative w-full sm:w-80', containerClassName)}>
       <Search
         aria-hidden="true"
         className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground"

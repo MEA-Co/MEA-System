@@ -64,7 +64,6 @@ export function StudyView({
   }, [draft, onEditorOpenChange]);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'mine' | 'others'>('mine');
-  const [otherMode, setOtherMode] = useState<'all' | 'person'>('all');
   const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -101,9 +100,7 @@ export function StudyView({
   const ownerLabel = (id?: string) =>
     people.find((person) => person.id === id)?.label ?? '이름 비공개';
   const scoped = showOthers
-    ? others.filter(
-        (activity) => otherMode === 'all' || activity.ownerId === owner,
-      )
+    ? others.filter((activity) => !owner || activity.ownerId === owner)
     : mine;
   const filtered = scoped.filter((activity) =>
     Object.values(activity.values)
@@ -158,13 +155,15 @@ export function StudyView({
               <Button
                 type="button"
                 disabled={!ready || busy}
+                aria-label="학습법 추가"
                 onClick={(event) => {
                   opener.current = event.currentTarget;
                   create();
                 }}
               >
                 <Plus aria-hidden="true" />
-                학습법 추가
+                <span className="hidden sm:inline">학습법 추가</span>
+                <span className="sm:hidden">추가</span>
               </Button>
             }
           />
@@ -395,8 +394,6 @@ export function StudyView({
           mine={mine}
           others={others}
           showOthers={showOthers}
-          otherMode={otherMode}
-          setOtherMode={setOtherMode}
           owner={owner}
           setOwner={setOwner}
           ownerLabel={ownerLabel}

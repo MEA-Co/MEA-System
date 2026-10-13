@@ -45,8 +45,6 @@ const base = {
   mine: [],
   others: [],
   showOthers: false,
-  otherMode: 'all',
-  setOtherMode: noop,
   owner: '',
   setOwner: noop,
   ownerLabel: () => '작성자',
@@ -92,7 +90,7 @@ test('로딩 완료 후 빈 목록과 검색 없음·실패를 구분하고 같�
     [{}, '등록된 학습법이 없습니다'],
     [{ query: '없는 검색어' }, '검색 결과가 없습니다'],
     [{ remoteError: new Error('network') }, '목록을 불러오지 못했습니다'],
-    [{ showOthers: true, otherMode: 'person' }, '작성자를 선택해 주세요'],
+    [{ showOthers: true, owner: 'author-1' }, '검색 결과가 없습니다'],
   ]) {
     const tree = draw(overrides);
     assert.equal(ofType(tree, 'CollectionLoadingState').length, 0);
@@ -152,4 +150,49 @@ test('타인 학습법은 읽기 전용으로 표시하고 삭제를 제공하�
     ofType(tree, 'Button').some((node) => node.props.title === '상세 보기'),
     true,
   );
+});
+
+test('다른 사람 목록은 전체 작성자로 시작하고 선택·전체 복귀가 한 필터에서 동작한다', () => {
+  let owner = '';
+  const render = () =>
+    draw({
+      showOthers: true,
+      owner,
+      people: [{ id: 'author-1', label: '작성자' }],
+      setOwner: (value) => {
+        owner = value;
+      },
+    });
+  const select = () => ofType(render(), 'Select')[0];
+  assert.equal(select().props.value, 'all');
+  select().props.onValueChange('author-1');
+  assert.equal(owner, 'author-1');
+  assert.equal(select().props.value, 'author-1');
+  select().props.onValueChange('all');
+  assert.equal(owner, '');
+  assert.equal(select().props.value, 'all');
+  assert.equal(ofType(draw({ showOthers: false }), 'Select').length, 0);
+});
+
+test('탭 전환은 검색을 초기화하고 권한이 없으면 탭을 표시하지 않는다', () => {
+  const changes = [];
+  const tree = draw({
+    setScope: (value) => changes.push(value),
+    setQuery: (value) => changes.push(value),
+  });
+  const tabs = ofType(tree, 'Tabs')[0];
+  tabs.props.onValueChange('mine');
+  assert.deepEqual(changes, []);
+  tabs.props.onValueChange('others');
+  assert.deepEqual(changes, ['others', '']);
+  assert.deepEqual(
+    ofType(tree, 'TabsTrigger').map((node) => node.props.value),
+    ['mine', 'others'],
+  );
+  assert.equal(
+    ofType(tree, 'TabsContent').find((node) => node.props.value === 'others')
+      .props.children,
+    null,
+  );
+  assert.equal(ofType(draw({ canViewOthers: false }), 'Tabs').length, 0);
 });
