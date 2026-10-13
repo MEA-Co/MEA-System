@@ -95,7 +95,7 @@ function pickerLabel(tree) {
     .children;
 }
 
-test('19개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보존한다', () => {
+test('56개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보존한다', () => {
   const values = {
     ...fields.emptyValues(),
     category: '내신',
@@ -113,10 +113,10 @@ test('19개 템플릿은 문제와 분류를 함께 채우고 솔루션을 보�
   const tree = draw(values, (v) => {
     next = v;
   });
-  assert.equal(templates.problemTemplates.length, 19);
+  assert.equal(templates.problemTemplates.length, 56);
   assert.equal(
     new Set(templates.problemTemplates.map((item) => item.id)).size,
-    19,
+    56,
   );
   for (const template of templates.problemTemplates) {
     picker(tree).props.onValueChange(template.id);
@@ -332,7 +332,7 @@ test('템플릿을 바꾸면 이전 세부 과목명이 남지 않는다', () =>
     customSubject: '기하',
   };
   const template = templates.problemTemplates.find(
-    (item) => item.id === 'qa-09',
+    (item) => item.id === 'week2-english-09',
   );
   picker(
     render(value, (next) => {
@@ -344,11 +344,42 @@ test('템플릿을 바꾸면 이전 세부 과목명이 남지 않는다', () =>
   assert.equal(value.customSubject, '');
 });
 
-test('과목 공통 템플릿 4개는 제외한다', () => {
+test('교과군별 10·10·10·8·8·10개와 문구 중복을 확인한다', () => {
+  const expected = { 국어: 10, 영어: 10, 수학: 10, 사회: 8, 과학: 8, 기타: 10 };
+  for (const [subject, count] of Object.entries(expected)) {
+    assert.equal(
+      templates.problemTemplates.filter((item) => item.subject === subject)
+        .length,
+      count,
+    );
+  }
   assert.equal(
-    templates.problemTemplates.some((item) =>
-      ['qa-21', 'qa-22', 'qa-23', 'qa-24'].includes(item.id),
-    ),
-    false,
+    new Set(templates.problemTemplates.map((item) => item.problem)).size,
+    56,
   );
+  for (const template of templates.problemTemplates) {
+    assert.ok(fields.subjectOptions.includes(template.subject));
+    assert.ok(fields.categoryOptions.includes(template.category));
+  }
+});
+
+test('교체 전 저장한 문제는 원문과 분류를 유지하며 새 템플릿으로 치환하지 않는다', () => {
+  const saved = storage.valuesSchema.parse({
+    ...fields.emptyValues(),
+    problemSource: 'template',
+    problem: '기하 독학 시 방학 중 예습 범위와 문제 난이도 설정에 어려움',
+    category: '내신',
+    subject: '수학',
+    customSubject: '기하',
+    strategy: '기존 전략',
+  });
+  const before = structuredClone(saved);
+  let changes = 0;
+  const tree = render(saved, () => {
+    changes += 1;
+  });
+  assert.equal(picker(tree).props.value, null);
+  assert.equal(pickerLabel(tree), '등록한 문제 상황');
+  assert.deepEqual(structuredClone(saved), before);
+  assert.equal(changes, 0);
 });
