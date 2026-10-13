@@ -14,6 +14,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 로컬 Supabase
 
+- 흐름표 추가 칸 표시(2026-10-13): origin/main의 제출 응답 내보내기까지 fast-forward(9a46d35)했다. +를 시기 사이의 폭48px·옅은 회청색 단일 셀로 표시하며 머리글+모든 답변 행을 같은 tbody에서 rowSpan한다. 이미 추가한 시기 그룹 다음에 배치하고 sticky 머리글/기존 데이터열·ID/추가 후 이름 포커스/20개 제한/읽기 전용을 유지한다. DB·저장 계약 변경 없음. 타입·변경 파일 린트·관련JS32개·Webpack빌드 통과, 실제 브라우저 검증·앱 배포는 미수행.
+
 - 흐름표 중간 시기 추가(2026-10-13): 최신 origin/main(de1d57b)을 반영했다. 공통 제작기의 flowInsertAfter/DB flow_insert_after에 기본 시기 뒤 추가 허용 위치를 저장하고, 응답자는 해당 +에서 이름 있는 시기를 추가·삭제한다. max_rows는 기본 시기 수로 유지하며 기본+추가 총 20개 이하, 고정 시기 삭제 불가다. 응답 rows의 flowIndex/flowAfter/label로 기존 ID·답변·위치와 가이드 이름을 보존한다. 저장 metadata가 있으면 원본 기본 수/표 형식 변경은 차단하고, 아직 저장되지 않은 흐름표와 충돌하는 원격 변경은 현재 입력을 유지·잠가 복사 안내한다. `20261013033907_question_flow_insertions.sql` 운영 적용 완료. 임시 migration+회귀·적용 후 회귀는 가상 데이터만 실행·전체 롤백했으며 기존 데이터/함수 ACL/가이드 함수 해시 보존, 대기 없음, 보안 기존4/새0 확인. 타입·변경 파일 린트·관련 JS115개·Webpack 빌드 통과. 로컬 DB 및 실제 브라우저 검증·앱 배포는 미수행. 다음 단계와 명령은 docs/questions-operations.md의 중간 시기 추가 절을 따른다.
 
 - 재사용 학습법 등록 안내 카드(2026-10-12): 공통 제작기의 카드 종류에서 안내를 선택하고 제목·본문·버튼 이름을 설정해 원본 저장/배치로 어느 질문지에도 재사용한다. purpose=response/study_registration·button_label을 저장하며 안내 fields=[]·single/cards·행1·조건/참조 없음, 저장 후 종류 고정이다. 기존 StudyView의 등록 전용 모드로 본인 학습법을 등록하고 답변 필드/콜백은 생성하지 않는다. 응답 식별/제출 metadata는 빈 rows/active/body로만 유지해 읽기 전용 표시를 보존하며 안내-only 완료는 차단한다. `20261012050319_study_registration_cards.sql` 운영 적용, 임시 migration+회귀에서 기존 데이터·함수 ACL·가이드 해시 607716af71009f7941df8fef56b2e443 보존 검증·전체 롤백, 영구 적용 후 신규/조건 해제 SQL·대기 없음 확인 완료. 최신 main의 이미 적용된 migration 3개를 보존해 합쳤으며 repair/재적용 없음. 타입·변경 파일 린트·JS 회귀 78개·Webpack 빌드 통과, 보안 기존 경고4/새0. 로컬 DB/Docker 및 실제 브라우저 검증·앱 배포는 미수행. 다음은 앱 배포 후 제작/등록/제출 화면 확인이며 docs/questions-operations.md를 따른다.

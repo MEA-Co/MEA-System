@@ -1,7 +1,14 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import {
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -73,7 +80,23 @@ export function QuestionGridInput({
   const editable = !disabled && !waiting;
   const firstColumnWidth = transposed ? 160 : 112;
   const columnCount = transposed ? rows.length : document.fields.length;
-  const cellClass = 'border-r border-b p-2 align-top last:border-r-0';
+  const insertionWidth = 48;
+  const insertionAfterRows = new Map<number, PreviewAnswerRow>();
+  if (transposed && editable && onInsertFlow && rows.length < MAX_FLOW_ROWS) {
+    rows.forEach((row, index) => {
+      if (
+        isCustomFlowRow(row) ||
+        row.flowIndex === undefined ||
+        row.flowIndex > (document.maxRows ?? 1) ||
+        !document.flowInsertAfter?.includes(row.flowIndex)
+      )
+        return;
+      let last = index;
+      while (rows[last + 1]?.flowAfter === row.flowIndex) last++;
+      insertionAfterRows.set(rows[last].id, row);
+    });
+  }
+  const cellClass = 'border-r border-b p-2 align-top';
   const headerClass =
     'border-r border-b px-3 py-3 text-left align-top font-medium whitespace-normal [overflow-wrap:anywhere] last:border-r-0';
 
@@ -148,7 +171,7 @@ export function QuestionGridInput({
       <td
         key={transposed ? row.id : field.id}
         headers={`${gridId}-row-${row.id} ${gridId}-field-${field.id}`}
-        className={`${cellClass} ${!transposed && field.required === false ? 'bg-slate-50/60 dark:bg-slate-950/20' : 'bg-background'}`}
+        className={`${cellClass} ${insertionAfterRows.has(row.id) ? '' : 'last:border-r-0'} ${!transposed && field.required === false ? 'bg-slate-50/60 dark:bg-slate-950/20' : 'bg-background'}`}
       >
         <div className="min-w-0">
           {renderField(
@@ -159,6 +182,62 @@ export function QuestionGridInput({
           )}
         </div>
       </td>
+    );
+  }
+
+  function flowHeader(row: PreviewAnswerRow, rowIndex: number) {
+    const insertionAnchor = insertionAfterRows.get(row.id);
+    return (
+      <Fragment key={row.id}>
+        <th
+          id={`${gridId}-row-${row.id}`}
+          scope="col"
+          className={`${headerClass} sticky top-0 z-20 bg-muted`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            {isCustomFlowRow(row) && editable && onFlowLabelChange ? (
+              <Input
+                ref={(input) => {
+                  if (input) flowLabelInputs.current.set(row.id, input);
+                  else flowLabelInputs.current.delete(row.id);
+                }}
+                id={`${gridId}-flow-label-${row.id}`}
+                value={row.label ?? ''}
+                maxLength={100}
+                placeholder="시기 이름"
+                aria-label={`${document.rowLabels?.[(row.flowAfter ?? 1) - 1]?.trim() || `시기 ${row.flowAfter}`} 뒤 추가 시기 ${rows.filter((item) => item.flowAfter === row.flowAfter).findIndex((item) => item.id === row.id) + 1} 이름`}
+                className="h-8 min-w-0 flex-1 rounded-lg text-sm"
+                onChange={(event) =>
+                  onFlowLabelChange(row.id, event.target.value)
+                }
+              />
+            ) : (
+              <span>{rowLabel(rowIndex)}</span>
+            )}
+            {removeButton(row, rowIndex)}
+          </div>
+        </th>
+        {insertionAnchor && (
+          <td
+            rowSpan={document.fields.length + 1}
+            className="relative border-r border-b bg-slate-100/80 p-0 align-middle last:border-r-0 dark:bg-slate-900/70"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute inset-0 size-full rounded-none p-0 text-slate-500 hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-inset dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              aria-label={`${flowRowLabel(insertionAnchor, document.rowLabels)} 뒤 시기 추가`}
+              onClick={() => {
+                const id = onInsertFlow?.(insertionAnchor.flowIndex!);
+                if (id !== undefined) pendingFlowFocus.current = id;
+              }}
+            >
+              <Plus aria-hidden="true" />
+            </Button>
+          </td>
+        )}
+      </Fragment>
     );
   }
 
@@ -179,7 +258,12 @@ export function QuestionGridInput({
           >
             <table
               className="w-full table-fixed border-separate border-spacing-0 text-sm"
-              style={{ minWidth: firstColumnWidth + columnCount * 240 }}
+              style={{
+                minWidth:
+                  firstColumnWidth +
+                  columnCount * 240 +
+                  insertionAfterRows.size * insertionWidth,
+              }}
             >
               <caption className="sr-only">
                 {document.title || '질문'} ·{' '}
@@ -187,94 +271,59 @@ export function QuestionGridInput({
               </caption>
               <colgroup>
                 <col style={{ width: firstColumnWidth }} />
-                {Array.from({ length: columnCount }, (_, index) => (
-                  <col key={index} style={{ width: 240 }} />
-                ))}
+                {transposed
+                  ? rows.map((row) => (
+                      <Fragment key={row.id}>
+                        <col style={{ width: 240 }} />
+                        {insertionAfterRows.has(row.id) && (
+                          <col style={{ width: insertionWidth }} />
+                        )}
+                      </Fragment>
+                    ))
+                  : document.fields.map((field) => (
+                      <col key={field.id} style={{ width: 240 }} />
+                    ))}
               </colgroup>
-              <thead className="sticky top-0 z-20">
-                <tr>
-                  <th
-                    scope="col"
-                    className={`${headerClass} sticky left-0 z-30 bg-muted`}
-                  >
-                    {transposed ? '항목' : '번호'}
-                  </th>
-                  {transposed
-                    ? rows.map((row, rowIndex) => (
-                        <th
-                          key={row.id}
-                          id={`${gridId}-row-${row.id}`}
-                          scope="col"
-                          className={`${headerClass} bg-muted`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            {isCustomFlowRow(row) &&
-                            editable &&
-                            onFlowLabelChange ? (
-                              <Input
-                                ref={(input) => {
-                                  if (input)
-                                    flowLabelInputs.current.set(row.id, input);
-                                  else flowLabelInputs.current.delete(row.id);
-                                }}
-                                id={`${gridId}-flow-label-${row.id}`}
-                                value={row.label ?? ''}
-                                maxLength={100}
-                                placeholder="시기 이름"
-                                aria-label={`${document.rowLabels?.[(row.flowAfter ?? 1) - 1]?.trim() || `시기 ${row.flowAfter}`} 뒤 추가 시기 ${rows.filter((item) => item.flowAfter === row.flowAfter).findIndex((item) => item.id === row.id) + 1} 이름`}
-                                className="h-8 min-w-0 flex-1 rounded-lg text-sm"
-                                onChange={(event) =>
-                                  onFlowLabelChange(row.id, event.target.value)
-                                }
-                              />
-                            ) : (
-                              <span>{rowLabel(rowIndex)}</span>
-                            )}
-                            {editable &&
-                              !isCustomFlowRow(row) &&
-                              row.flowIndex !== undefined &&
-                              row.flowIndex <= (document.maxRows ?? 1) &&
-                              document.flowInsertAfter?.includes(
-                                row.flowIndex,
-                              ) &&
-                              onInsertFlow &&
-                              rows.length < MAX_FLOW_ROWS && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  aria-label={`${rowLabel(rowIndex)} 뒤 시기 추가`}
-                                  onClick={() => {
-                                    const id = onInsertFlow(row.flowIndex!);
-                                    if (id !== undefined)
-                                      pendingFlowFocus.current = id;
-                                  }}
-                                >
-                                  <Plus aria-hidden="true" />
-                                </Button>
-                              )}
-                            {removeButton(row, rowIndex)}
-                          </div>
-                        </th>
-                      ))
-                    : document.fields.map((field, fieldIndex) => (
-                        <th
-                          key={field.id}
-                          id={`${gridId}-field-${field.id}`}
-                          scope="col"
-                          className={`${headerClass} ${field.required === false ? 'bg-slate-100/70 text-slate-600 dark:bg-slate-900 dark:text-slate-300' : 'bg-muted'}`}
-                        >
-                          {fieldLabel(fieldIndex)}
-                          {field.required === false && (
-                            <span className="ml-2 inline-flex rounded-md bg-slate-200/60 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                              (선택)
-                            </span>
-                          )}
-                        </th>
-                      ))}
-                </tr>
-              </thead>
+              {!transposed && (
+                <thead className="sticky top-0 z-20">
+                  <tr>
+                    <th
+                      scope="col"
+                      className={`${headerClass} sticky left-0 z-30 bg-muted`}
+                    >
+                      번호
+                    </th>
+                    {document.fields.map((field, fieldIndex) => (
+                      <th
+                        key={field.id}
+                        id={`${gridId}-field-${field.id}`}
+                        scope="col"
+                        className={`${headerClass} ${field.required === false ? 'bg-slate-100/70 text-slate-600 dark:bg-slate-900 dark:text-slate-300' : 'bg-muted'}`}
+                      >
+                        {fieldLabel(fieldIndex)}
+                        {field.required === false && (
+                          <span className="ml-2 inline-flex rounded-md bg-slate-200/60 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            (선택)
+                          </span>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              )}
               <tbody>
+                {/* The flow header shares this row group so each + cell spans the whole table. */}
+                {transposed && (
+                  <tr>
+                    <th
+                      scope="col"
+                      className={`${headerClass} sticky top-0 left-0 z-30 bg-muted`}
+                    >
+                      항목
+                    </th>
+                    {rows.map(flowHeader)}
+                  </tr>
+                )}
                 {transposed
                   ? document.fields.map((field, fieldIndex) => (
                       <tr key={field.id}>

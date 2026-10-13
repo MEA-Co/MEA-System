@@ -54,12 +54,17 @@ function createHarness({
   disabled = false,
   waiting = false,
   insertAfter = [1, 3],
+  fields = [
+    { id: 'score', label: '성적', kind: 'text' },
+    { id: 'note', label: '대응', kind: 'text' },
+  ],
 } = {}) {
   const scopes = new Map();
   let active = null;
   let effects = [];
   let stored;
   let answered;
+  const focusHistory = [];
   const dependencyEqual = (a, b) =>
     Array.isArray(a) &&
     Array.isArray(b) &&
@@ -202,10 +207,7 @@ function createHarness({
     initialRows: 3,
     rowLabels: ['고1 1학기', '고1 2학기', '고2 1학기'],
     flowInsertAfter: insertAfter,
-    fields: [
-      { id: 'score', label: '성적', kind: 'text' },
-      { id: 'note', label: '대응', kind: 'text' },
-    ],
+    fields,
     condition: null,
     sourceBlockId: null,
     sourceFieldId: null,
@@ -242,14 +244,20 @@ function createHarness({
     for (const item of nodes(tree)) {
       const ref = item.props.ref;
       if (!ref) continue;
-      const target = { isConnected: true, focus() {}, scrollIntoView() {} };
+      const target = {
+        isConnected: true,
+        focus() {
+          focusHistory.push(item.props.id ?? item.props['aria-label']);
+        },
+        scrollIntoView() {},
+      };
       if (typeof ref === 'function') ref(target);
       else ref.current = target;
     }
     const pending = effects;
     effects = [];
     pending.forEach((callback) => callback());
-    return { tree, grid: grid.props, stored, answered };
+    return { tree, grid: grid.props, stored, answered, focusHistory };
   }
   return { render, document };
 }
@@ -265,6 +273,116 @@ const click = (node) => {
   node.props.onClick({ currentTarget: { isConnected: true, focus() {} } });
 };
 
+// A row-spanning cell can cross ordinary rows, but never a thead/tbody boundary.
+function directChildren(node) {
+  function unwrap(children) {
+    if (Array.isArray(children)) return children.flatMap(unwrap);
+    if (!children?.props) return [];
+    if (children.type === 'fragment') return unwrap(children.props.children);
+    return [children];
+  }
+  return unwrap(node.props.children);
+}
+
+const rowCells = (row) =>
+  directChildren(row).filter(
+    (node) => node.type === 'th' || node.type === 'td',
+  );
+const insertionCells = (tree) =>
+  nodes(tree).filter(
+    (node) => node.type === 'td' && node.props.rowSpan !== undefined,
+  );
+
+function assertInsertionLayout(view, expectedOrder) {
+  const table = nodes(view.tree).find((node) => node.type === 'table');
+  assert.ok(table);
+  assert.equal(
+    nodes(table).filter((node) => node.type === 'thead').length,
+    0,
+    'Flow header and answer rows must share one row group',
+  );
+  const bodies = nodes(table).filter((node) => node.type === 'tbody');
+  assert.equal(bodies.length, 1);
+  const rows = directChildren(bodies[0]).filter((node) => node.type === 'tr');
+  assert.equal(rows.length, view.grid.document.fields.length + 1);
+  const headerCells = rowCells(rows[0]);
+  assert.equal(headerCells.length, expectedOrder.length);
+  const actualOrder = headerCells.map((cell, index) => {
+    if (index === 0) return 'items';
+    const add = nodes(cell).find(
+      (node) =>
+        node.type === 'button' &&
+        /뒤 시기 추가$/.test(node.props['aria-label'] ?? ''),
+    );
+    if (add) return add.props['aria-label'];
+    const period = view.grid.rows.find((row) =>
+      cell.props.id?.endsWith(`-row-${row.id}`),
+    );
+    assert.ok(period, 'Every ordinary header must retain its period ID');
+    assert.equal(cell.type, 'th');
+    assert.equal(cell.props.scope, 'col');
+    return period.id;
+  });
+  assert.deepEqual(plain(actualOrder), expectedOrder);
+  const slots = insertionCells(table);
+  const expectedSlots = expectedOrder.filter(
+    (item) => typeof item === 'string' && item !== 'items',
+  );
+  assert.equal(slots.length, expectedSlots.length);
+  for (const cell of slots) {
+    assert.ok(
+      headerCells.includes(cell),
+      'Each insertion cell exists once in the first row',
+    );
+    assert.equal(cell.props.rowSpan, view.grid.document.fields.length + 1);
+    assert.equal(
+      nodes(cell).filter((node) => node.type === 'button').length,
+      1,
+    );
+    assert.equal(
+      nodes(cell).filter((node) => node.type === 'PlusIcon').length,
+      1,
+    );
+    assert.equal(nodes(cell).filter((node) => node.type === 'input').length, 0);
+    assert.equal(
+      content(cell),
+      '',
+      'The narrow insertion cell contains only its plus control',
+    );
+  }
+  for (const cell of headerCells.filter((node) => node.type === 'th'))
+    assert.equal(
+      nodes(cell).filter((node) => node.type === 'PlusIcon').length,
+      0,
+      'Insertion plus must not be inside a period header',
+    );
+  for (const row of rows.slice(1)) {
+    assert.equal(
+      rowCells(row).length,
+      view.grid.rows.length + 1,
+      'Answer rows must not repeat insertion placeholders',
+    );
+    assert.equal(
+      nodes(row).filter((node) => node.type === 'PlusIcon').length,
+      0,
+    );
+  }
+  const colgroup = nodes(table).find((node) => node.type === 'colgroup');
+  assert.ok(colgroup);
+  const widths = directChildren(colgroup).map((col) => {
+    assert.equal(col.type, 'col');
+    return Number.parseFloat(String(col.props.style.width));
+  });
+  const expectedWidths = expectedOrder.map((item, index) =>
+    index === 0 ? 160 : typeof item === 'number' ? 240 : 48,
+  );
+  assert.deepEqual(plain(widths), expectedWidths);
+  assert.equal(
+    table.props.style.minWidth,
+    widths.reduce((sum, width) => sum + width, 0),
+  );
+}
+
 test('actual grid actions insert and edit a period through preview callbacks without moving fixed answers', () => {
   const harness = createHarness();
   let view = harness.render();
@@ -274,6 +392,10 @@ test('actual grid actions insert and edit a period through preview callbacks wit
   view = harness.render();
   const custom = view.stored.find((row) => row.flowAfter === 1);
   assert.ok(custom);
+  assert.ok(
+    view.focusHistory.at(-1).endsWith(`-flow-label-${custom.id}`),
+    'Insertion must focus the custom name input',
+  );
   assert.equal(custom.label, '');
   labelInput(view.tree).props.onChange({ target: { value: '중간고사 직후' } });
   view = harness.render();
@@ -405,6 +527,7 @@ for (const state of ['readonly', 'waiting'])
     assert.equal(button(view.tree, '고1 1학기 뒤 시기 추가'), undefined);
     assert.equal(labelInput(view.tree), undefined);
     assert.equal(button(view.tree, '여름 방학 시기 삭제'), undefined);
+    assert.equal(insertionCells(view.tree).length, 0);
     assert.equal(view.grid.onInsertFlow(1), undefined);
     view.grid.onFlowLabelChange(102, '변경 금지');
     view.grid.onRemove(102);
@@ -427,6 +550,7 @@ test('disabling a slot preserves custom labels, field names and reopened answer 
     document: { ...harness.document, flowInsertAfter: [] },
   });
   assert.equal(button(view.tree, '고1 1학기 뒤 시기 추가'), undefined);
+  assert.equal(insertionCells(view.tree).length, 0);
   assert.ok(
     nodes(view.tree).some(
       (node) =>
@@ -469,4 +593,87 @@ test('the actual preview callback and grid both stop insertion at twenty total p
   assert.equal(view.grid.onInsertFlow(1), undefined);
   view = harness.render();
   assert.deepEqual(view.stored, rows);
+});
+
+test('a narrow insertion cell spans the period header and all three answer rows', () => {
+  const fields = [
+    { id: 'score', label: '성적', kind: 'text' },
+    { id: 'note', label: '특이사항', kind: 'text' },
+    { id: 'plan', label: '대응', kind: 'text' },
+  ];
+  const view = createHarness({ fields }).render();
+  assertInsertionLayout(view, [
+    'items',
+    11,
+    '고1 1학기 뒤 시기 추가',
+    12,
+    13,
+    '고2 1학기 뒤 시기 추가',
+  ]);
+  assert.ok(
+    insertionCells(view.tree).every((cell) => cell.props.rowSpan === 4),
+  );
+});
+
+test('the narrow insertion cell moves after the anchor custom group and keeps the following fixed period aligned', () => {
+  const harness = createHarness();
+  let view = harness.render();
+  click(button(view.tree, '고1 1학기 뒤 시기 추가'));
+  view = harness.render();
+  const first = view.stored[1].id;
+  labelInput(view.tree).props.onChange({ target: { value: '첫 추가' } });
+  view = harness.render();
+  click(button(view.tree, '고1 1학기 뒤 시기 추가'));
+  view = harness.render();
+  const second = view.stored[2].id;
+  assertInsertionLayout(view, [
+    'items',
+    11,
+    first,
+    second,
+    '고1 1학기 뒤 시기 추가',
+    12,
+    13,
+    '고2 1학기 뒤 시기 추가',
+  ]);
+  assert.equal(view.stored[1].label, '첫 추가');
+  click(button(view.tree, '고2 1학기 뒤 시기 추가'));
+  view = harness.render();
+  const last = view.stored.at(-1).id;
+  assertInsertionLayout(view, [
+    'items',
+    11,
+    first,
+    second,
+    '고1 1학기 뒤 시기 추가',
+    12,
+    13,
+    last,
+    '고2 1학기 뒤 시기 추가',
+  ]);
+  assert.deepEqual(
+    view.stored.filter((row) => row.flowIndex !== undefined),
+    fixedRows(),
+  );
+});
+
+test('ordinary response tables keep the separate header and never render insertion spacer columns', () => {
+  const harness = createHarness({
+    initialRows: [{ id: 50, answers: { score: '일반 표 답변' } }],
+  });
+  const view = harness.render({
+    document: {
+      ...harness.document,
+      answerLayout: 'table',
+      flowInsertAfter: [],
+    },
+  });
+  const table = nodes(view.tree).find((node) => node.type === 'table');
+  assert.ok(table);
+  assert.equal(nodes(table).filter((node) => node.type === 'thead').length, 1);
+  assert.equal(insertionCells(table).length, 0);
+  const widths = directChildren(
+    nodes(table).find((node) => node.type === 'colgroup'),
+  ).map((col) => col.props.style.width);
+  assert.deepEqual(plain(widths), [112, 240, 240]);
 });
