@@ -157,7 +157,6 @@ export function StudyView({
             action={
               <Button
                 type="button"
-                variant="brand"
                 disabled={!ready || busy}
                 onClick={(event) => {
                   opener.current = event.currentTarget;
@@ -188,11 +187,6 @@ export function StudyView({
             다시 불러오기
           </Button>
         </div>
-      )}
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">
-          확정된 학습법을 불러오는 중입니다.
-        </p>
       )}
       <Drawer
         open={!!draft}

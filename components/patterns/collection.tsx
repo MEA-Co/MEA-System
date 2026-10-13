@@ -1,8 +1,15 @@
 import { Search } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 export function CollectionHeader({
@@ -15,7 +22,7 @@ export function CollectionHeader({
   id: string;
   category?: ReactNode;
   title: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
 }) {
   return (
@@ -39,32 +46,6 @@ export function CollectionHeader({
   );
 }
 
-export function CollectionFilter({
-  selected,
-  className,
-  ...props
-}: ComponentProps<typeof Button> & { selected: boolean }) {
-  return (
-    <Button
-      variant="ghost"
-      aria-pressed={selected}
-      className={cn(
-        'rounded-md hover:bg-muted aria-pressed:bg-brand aria-pressed:text-brand-foreground aria-pressed:hover:bg-brand/85',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function CollectionCount({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex min-w-5 items-center justify-center rounded-sm bg-foreground/10 px-1.5 py-0.5 text-xs font-semibold tabular-nums in-aria-pressed:bg-black/10 in-aria-pressed:text-brand-foreground">
-      {children}
-    </span>
-  );
-}
-
 export function CollectionSearch({
   className,
   ...props
@@ -75,35 +56,8 @@ export function CollectionSearch({
         aria-hidden="true"
         className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground"
       />
-      <Input
-        className={cn(
-          'h-10 rounded-md border-border bg-background pl-9',
-          className,
-        )}
-        {...props}
-      />
+      <Input className={cn('pl-9', className)} {...props} />
     </div>
-  );
-}
-
-export function CollectionStatus({
-  draft,
-  children,
-}: {
-  draft: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        'ml-2 inline-flex rounded-sm px-2 py-1 align-middle text-xs font-medium',
-        draft
-          ? 'bg-brand/20 text-foreground'
-          : 'bg-muted text-muted-foreground',
-      )}
-    >
-      {children}
-    </span>
   );
 }
 
@@ -117,17 +71,29 @@ export function CollectionEmptyState({
   description: string;
 }) {
   return (
-    <div
-      role="status"
-      className="flex flex-col items-center rounded-lg border bg-muted/40 px-6 py-16 text-center"
-    >
-      <div className="mb-4 flex size-12 items-center justify-center rounded-md bg-background text-foreground">
-        {icon}
+    <Empty role="status" className="min-h-64">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">{icon}</EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+export function CollectionLoadingState({ label }: { label: string }) {
+  return (
+    <div role="status" className="min-h-64 rounded-lg border bg-background">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true" className="divide-y">
+        {[0, 1].map((row) => (
+          <div key={row} className="space-y-3 p-5 sm:p-6">
+            <Skeleton className="h-5 w-2/5" />
+            <Skeleton className="h-4 w-1/4" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ))}
       </div>
-      <h3 className="font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {description}
-      </p>
     </div>
   );
 }

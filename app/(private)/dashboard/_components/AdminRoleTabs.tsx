@@ -20,15 +20,14 @@ export function AdminRoleTabs({ role }: { role: MemberRole }) {
       role="group"
       aria-label="역할 화면 전환"
       aria-busy={pending}
-      className="fixed top-3 right-3 z-40 flex max-w-[calc(100vw-5rem)] flex-wrap items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-lg backdrop-blur-sm sm:top-4 sm:right-4"
+      className="fixed top-3 right-3 z-40 flex max-w-[calc(100vw-5rem)] flex-wrap items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-sm backdrop-blur-sm sm:top-4 sm:right-4"
     >
       {roles.map((candidate) => (
         <Button
           key={candidate}
           type="button"
           size="sm"
-          variant={candidate === role ? 'default' : 'ghost'}
-          className="rounded-lg"
+          variant="filter"
           aria-pressed={candidate === role}
           disabled={pending}
           onClick={() => {
