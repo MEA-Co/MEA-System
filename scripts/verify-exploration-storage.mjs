@@ -26,6 +26,7 @@ function load(path, imports = {}, globals = {}) {
     }).outputText,
     {
       exports,
+      TextEncoder,
       console,
       process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'http://local.test' } },
       crypto: { randomUUID },
@@ -41,8 +42,10 @@ function load(path, imports = {}, globals = {}) {
   );
   return exports;
 }
-const model = load(base + 'storage-model.ts');
-const { emptyValues } = load(base + 'fields.ts');
+const domain = studyMode ? 'lib/study/' : base;
+const payload = studyMode ? load(domain + 'payload-size.ts') : {};
+const model = load(domain + 'storage-model.ts', { './payload-size': payload });
+const { emptyValues } = load(domain + 'fields.ts');
 const make = () => ({
   clientKey: randomUUID(),
   status: 'draft',
@@ -111,7 +114,7 @@ function storageHarness() {
   return {
     api: load(
       base + 'local-drafts.ts',
-      { './storage-model': model },
+      { [studyMode ? '@/lib/study/storage-model' : './storage-model']: model },
       { localStorage: storage, navigator: {}, indexedDB },
     ),
     data,
@@ -292,7 +295,7 @@ test('첨부 파일 업로드 후 확정 실패 시 파일을 삭제하지 않�
   const api = load(
     base + 'api-client.ts',
     {
-      './storage-model': model,
+      [studyMode ? '@/lib/study/storage-model' : './storage-model']: model,
       '@/lib/supabase/client': { createClient: () => client },
     },
     {
@@ -305,8 +308,11 @@ test('첨부 파일 업로드 후 확정 실패 시 파일을 삭제하지 않�
     },
   );
   const saveId = randomUUID();
-  await assert.rejects(api.confirmActivity('A', d, saveId), /offline/);
-  await api.confirmActivity('A', d, saveId);
+  await assert.rejects(
+    api[studyMode ? 'confirmStudy' : 'confirmActivity']('A', d, saveId),
+    /offline/,
+  );
+  await api[studyMode ? 'confirmStudy' : 'confirmActivity']('A', d, saveId);
   assert.equal(paths[0], paths[1]);
   assert.equal(bodies[0].saveId, bodies[1].saveId);
 });
@@ -320,6 +326,7 @@ function apiHarness({
 } = {}) {
   const filters = [];
   let rpcCalls = 0;
+  let lastQuery;
   let page = [];
   const query = {
     select() {
@@ -346,17 +353,38 @@ function apiHarness({
   };
   const client = {
     from: () => query,
-    rpc: async () => {
+    rpc: async (name, params) => {
       rpcCalls++;
+      if (name === 'read_study_page') {
+        lastQuery = params;
+        if (params.p_scope === 'own') filters.push(['owner_id', userId]);
+        return {
+          data: {
+            activities: rows.slice(0, 10),
+            total: rows.length,
+            page: 1,
+            pageSize: 10,
+          },
+          error: rpcError,
+        };
+      }
       return { data: {}, error: rpcError };
     },
   };
   const api = load(
     `app/api/${block}/[[...path]]/route.ts`,
     {
+      '../list-page': studyMode
+        ? load('app/api/study/list-page.ts', {
+            '@/lib/study/list-query': load(domain + 'list-query.ts'),
+          })
+        : {},
       'next/headers': { cookies: async () => ({}) },
       zod: require('zod'),
-      [`@/app/(private)/dashboard/_views/${block}/lib/storage-model`]: model,
+      [studyMode
+        ? '@/lib/study/storage-model'
+        : `@/app/(private)/dashboard/_views/${block}/lib/storage-model`]: model,
+      '@/lib/study/payload-size': payload,
       '@/lib/admin': { getViewRole: async () => viewRole },
       '@/lib/auth': {
         getUserAccess: async () => ({
@@ -372,6 +400,9 @@ function apiHarness({
   return {
     api,
     filters,
+    get lastQuery() {
+      return lastQuery;
+    },
     get rpcCalls() {
       return rpcCalls;
     },
@@ -404,18 +435,18 @@ test('API 인증·역할·교차 출처 검사로 권한 없는 저장 차단', 
   );
   assert.equal(r.status, 403);
 });
-test('API 목록은 컨설턴트 본인 필터로 500개씩 끝까지 조회', async () => {
+test('API 목록은 도메인별 조회 계약과 본인 필터를 유지', async () => {
   const rows = Array.from({ length: 501 }, () => ({ id: randomUUID() }));
   const userId = randomUUID();
   const h = apiHarness({ role: 'consultant', userId, rows });
   const r = await h.api.GET(new Request(`http://localhost/api/${block}`), {
     params: Promise.resolve({}),
   });
-  assert.equal((await r.json()).activities.length, 501);
+  assert.equal((await r.json()).activities.length, studyMode ? 10 : 501);
   assert.equal(
     h.filters.filter(([key, value]) => key === 'owner_id' && value === userId)
       .length,
-    2,
+    studyMode ? 1 : 2,
   );
 });
 test('API 필수 입력 누락은 RPC 호출 전에 거절하고 DB 충돌은 409로 반환', async () => {
@@ -459,7 +490,9 @@ test('리드·관리자는 전체 조회, 관리자 컨설턴트 미리보기는
     );
     assert.equal(response.status, 200);
     assert.equal(
-      h.filters.some(([key]) => key === 'owner_id'),
+      studyMode
+        ? h.lastQuery.p_own_only
+        : h.filters.some(([key]) => key === 'owner_id'),
       ownOnly,
     );
   }
@@ -564,7 +597,7 @@ if (studyMode) {
         .success,
       false,
     );
-    const { studyTitle } = load(base + 'fields.ts');
+    const { studyTitle } = load(domain + 'fields.ts');
     assert.equal(
       studyTitle({ ...draft.values, strategy: '기존 전략' }),
       '나만의 학습법',
@@ -574,5 +607,46 @@ if (studyMode) {
       '기존 전략',
     );
     assert.equal(studyTitle({ ...legacy, strategy: '기존 전략' }), '기존 전략');
+  });
+}
+
+if (studyMode) {
+  test('학습법 전체 UTF-8 크기는 JSONB 공백과 한글·이스케이프를 포함한다', () => {
+    assert.equal(
+      payload.studyValuesBytes({ a: '가\n"\\', b: ['나', true] }),
+      Buffer.byteLength('{"a": "가\\n\\"\\\\", "b": ["나", true]}'),
+    );
+  });
+  test('필드별 길이가 유효해도 전체 크기를 넘으면 API가 RPC 전에 구체적 안내로 거절한다', async () => {
+    const h = apiHarness();
+    const id = randomUUID();
+    const values = emptyValues();
+    for (const key of Object.keys(model.requiredFields)) values[key] = '작성';
+    Object.assign(values, schoolValues);
+    values.references = Array.from({ length: 18 }, () => ({
+      clientKey: randomUUID(),
+      title: 'a'.repeat(50000),
+      selection: 'a'.repeat(50000),
+      usage: 'a'.repeat(50000),
+    }));
+    assert.ok(
+      payload.studyValuesBytes(values) > payload.MAX_STUDY_VALUES_BYTES,
+    );
+    const response = await h.api.PUT(
+      new Request('http://localhost/api/study/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({
+          id,
+          saveId: randomUUID(),
+          expectedRevision: 0,
+          values,
+          reports: [],
+        }),
+      }),
+      { params: Promise.resolve({ path: [id] }) },
+    );
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error, payload.STUDY_SIZE_ERROR);
+    assert.equal(h.rpcCalls, 0);
   });
 }

@@ -15,7 +15,7 @@ import {
 
 import { studyExamples } from '../lib/examples';
 
-import { StudyActivityDetails } from './StudyActivityDetails';
+import { StudyDetails } from './StudyDetails';
 
 export function StudyExamplesDialog({
   onOpenChange,
@@ -76,9 +76,9 @@ export function StudyExamplesDialog({
             <ChevronRight />
           </Button>
         </div>
-        <StudyActivityDetails
-          key={example.activity.clientKey}
-          activity={example.activity}
+        <StudyDetails
+          key={example.study.clientKey}
+          study={example.study}
           notice=""
           hideEmptyFields
           onClose={() => changeOpen(false)}

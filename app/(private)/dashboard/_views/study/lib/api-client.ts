@@ -1,7 +1,10 @@
+import type { Study } from '@/lib/study/fields';
+import {
+  fromRow,
+  REPORT_BUCKET,
+  type StudyRow,
+} from '@/lib/study/storage-model';
 import { createClient } from '@/lib/supabase/client';
-
-import type { Activity } from './fields';
-import { type ActivityRow, fromRow, REPORT_BUCKET } from './storage-model';
 
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -16,20 +19,14 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
     );
   return body as T;
 }
-export async function loadActivities() {
-  const { activities } = await request<{ activities: ActivityRow[] }>(
-    '/api/study',
-  );
-  return activities.map(fromRow);
-}
-export async function confirmActivity(
+export async function confirmStudy(
   userId: string,
-  activity: Activity,
+  study: Study,
   saveId: string,
 ) {
   const client = createClient();
   const reports = [];
-  for (const report of activity.reports ?? []) {
+  for (const report of study.reports ?? []) {
     const { file, ...metadata } = report;
     if (report.path) {
       reports.push({ ...metadata, path: report.path });
@@ -40,7 +37,7 @@ export async function confirmActivity(
         `${report.name}: 임시저장한 파일을 찾을 수 없습니다. 삭제 후 다시 첨부해 주세요.`,
       );
     const extension = report.name.split('.').pop()!.toLowerCase();
-    const path = `${userId}/${activity.clientKey}/${report.clientKey}.${extension}`;
+    const path = `${userId}/${study.clientKey}/${report.clientKey}.${extension}`;
     const { error } = await client.storage
       .from(REPORT_BUCKET)
       .upload(path, file, {
@@ -57,33 +54,33 @@ export async function confirmActivity(
     }
     reports.push({ ...metadata, path });
   }
-  const { activity: row } = await request<{ activity: ActivityRow }>(
-    `/api/study/${activity.clientKey}`,
+  const { activity: row } = await request<{ activity: StudyRow }>(
+    `/api/study/${study.clientKey}`,
     {
       method: 'PUT',
       body: JSON.stringify({
-        id: activity.clientKey,
-        expectedRevision: activity.revision,
+        id: study.clientKey,
+        expectedRevision: study.revision,
         saveId,
-        values: activity.values,
+        values: study.values,
         reports,
       }),
     },
   );
   return fromRow(row);
 }
-export async function deleteActivity(activity: Activity) {
+export async function deleteStudy(study: Study) {
   return request<{ ok: boolean; cleanupPending: boolean }>(
-    `/api/study/${activity.clientKey}`,
+    `/api/study/${study.clientKey}`,
     {
       method: 'DELETE',
-      body: JSON.stringify({ expectedRevision: activity.revision }),
+      body: JSON.stringify({ expectedRevision: study.revision }),
     },
   );
 }
-export async function downloadReport(activityId: string, reportId: string) {
+export async function downloadReport(studyId: string, reportId: string) {
   const { url } = await request<{ url: string }>(
-    `/api/study/${activityId}/files/${reportId}`,
+    `/api/study/${studyId}/files/${reportId}`,
   );
   const link = document.createElement('a');
   link.href = url;

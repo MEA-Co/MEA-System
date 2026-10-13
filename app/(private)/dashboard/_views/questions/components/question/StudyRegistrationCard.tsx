@@ -12,7 +12,9 @@ import type { QuestionBlockDocument } from '../../lib/question-blocks';
 import { RichTextContent } from './RichTextContent';
 
 function StudyRegistrationAction({ label }: { label: string }) {
-  const { data, error, mutate } = useStudyList('own');
+  const { data, error, mutate } = useStudyList('own', true, undefined, {
+    identityOnly: true,
+  });
   if (error && !data)
     return (
       <div role="alert" className="space-y-2 text-sm text-destructive">

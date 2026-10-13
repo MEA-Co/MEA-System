@@ -1,13 +1,10 @@
-import type { Activity } from './fields';
+import type { Study } from './fields';
 
 // 시험 구분이 특정되지 않은 공통 학습 상황은 기타로 분류한다.
 // 특정되지 않은 세부 과목명은 빈 값으로 둔다.
 type ProblemTemplate = {
   id: string;
-} & Pick<
-  Activity['values'],
-  'problem' | 'category' | 'subject' | 'customSubject'
->;
+} & Pick<Study['values'], 'problem' | 'category' | 'subject' | 'customSubject'>;
 
 export const problemTemplates = [
   {

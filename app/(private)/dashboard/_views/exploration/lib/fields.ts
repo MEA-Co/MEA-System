@@ -1,3 +1,12 @@
+import type {
+  ContentReference as ActivityReference,
+  ReportAttachment as ActivityReport,
+} from '@/lib/content/attachments';
+export type {
+  ContentReference as ActivityReference,
+  ReportAttachment as ActivityReport,
+} from '@/lib/content/attachments';
+
 export const gradeOptions = ['1', '2', '3'];
 export const semesterOptions = ['1', '2'];
 export const recordTypeOptions = ['창체', '세특'];
@@ -171,21 +180,6 @@ export const groups = [
 }[];
 
 type FieldKey = (typeof groups)[number]['fields'][number]['key'];
-export type ActivityReference = {
-  clientKey: string;
-  title: string;
-  selection: string;
-  usage: string;
-};
-export type ActivityReport = {
-  clientKey: string;
-  name: string;
-  size: number;
-  type: string;
-  lastModified: number;
-  path?: string;
-  file?: File;
-};
 export type Activity = {
   ownerId?: string;
   ownerName?: string;

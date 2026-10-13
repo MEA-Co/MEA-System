@@ -1,6 +1,12 @@
 # 학습법 개편 운영 적용 절차
 
-## 적용 대상과 데이터 보존
+## 현재 상태와 기록 구분
+
+- `20261012024650_study_solution_fields.sql`은 [질문 운영 기록](../questions-operations.md)의 2026-10-12 등록 안내 카드 적용 기록에서 운영 반영을 확인했다. 아래 최초 적용 절차의 당시 미적용 표현을 현재 상태로 해석하거나 재적용하지 않는다.
+- `20261013085231_study_query_contract.sql`은 로컬 적용·검증 완료, 운영 미적용이다. 다음 적용은 아래 **조회 구조 정리 적용 (2026-10-13)** 절을 따른다.
+- 문서 정리 중 운영 DB를 새로 조회하거나 변경하지 않았다. 실제 배포 직전 연결 대상과 migration 이력을 다시 확인한다.
+
+## 최초 솔루션 개편 적용 기록과 데이터 보존
 
 예상 프로젝트: `epwlcallocdjkmgdmtlv`.
 예상 migration: **`20261012024650_study_solution_fields.sql` 한 개**.
@@ -14,7 +20,7 @@
 4. 활성 행의 revision을 1 올리고 save ID·수정 시각을 갱신해 배포 전 편집본이 덮어쓰지 못하게 한다.
 5. 조건부 기간 필수 검사, 경험 저장, 기존 클라이언트의 새 필드 생략 호환을 제공하는 저장 함수를 교체한다. 기존 역할·RLS·Storage 정책은 변경하지 않는다.
 
-체크리스트는 문자열/줄바꿈 형식을 그대로 사용하므로 배열로 변환하거나 원문을 다시 생성하지 않는다. 기존 서술형 문제 상황도 임의로 요약하지 않는다. 20개 템플릿은 앱 코드에 있고 기존 작성 내용을 덮어쓰지 않는다.
+체크리스트는 문자열/줄바꿈 형식을 그대로 사용하므로 배열로 변환하거나 원문을 다시 생성하지 않는다. 기존 서술형 문제 상황도 임의로 요약하지 않는다. 현재 56개 템플릿은 앱 코드에 있고 기존 작성 내용을 덮어쓰지 않는다.
 
 ## 1. 작업 시간 확보와 백업
 
@@ -117,3 +123,62 @@ docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=
 ```
 
 공식 참고: [Supabase migration 관리](https://supabase.com/docs/guides/deployment/database-migrations).
+
+## 조회 구조 정리 적용 (2026-10-13)
+
+이번 변경은 `20261013085231_study_query_contract.sql` 한 개다.
+read_study_page/read_study_summary 조회 함수와 실행 권한만 추가하며, 기존 행·저장 함수·삭제 함수는 변경하지 않는다.
+앞 절의 데이터 이전/백업 절차는 과거 solution_fields migration 전용이며 이번 조회 함수 추가 때문에 재실행하지 않는다.
+
+로컬 DB에 적용했고 조회 SQL 회귀는 가상 데이터로 실행한 뒤 롤백했다.
+운영 조회/쓰기와 앱 배포는 하지 않았다. 실제 적용은 다른 디자인 변경과 함께 최종 배포 시 진행한다.
+
+1. 프로젝트 경로와 연결된 운영 대상을 확인한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+```
+
+연결된 대상이 의도한 운영 프로젝트인지 확인한다. 현재 저장소 연결 참조는 epwlcallocdjkmgdmtlv다.
+출력이 다르거나 이력이 어긋나면 적용하지 말고 검토한다.
+
+2. 적용 예정 파일을 확인한다.
+
+```bash
+npx supabase db push --linked --dry-run
+```
+
+이번 추가 파일은 20261013085231_study_query_contract.sql이다.
+다른 미적용 migration도 나오면 기존 운영 이력·각 변경의 승인/검증 상태를 먼저 확인한다.
+예상과 다르다고 include-all/repair/reset으로 강제 진행하지 않는다.
+
+3. 대상·예정 파일 검토 후 적용하고, 대기 없음과 이력을 확인한다.
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+4. 앱을 검증하고 기존 운영 배포 파이프라인으로 배포한다. build만으로 배포되지는 않는다.
+
+```bash
+npm run typecheck
+npm run build -- --webpack
+```
+
+DB 함수를 먼저 적용해야 새 앱의 목록 RPC 호출이 성공한다.
+운영 배포 파이프라인의 실행은 기존 프로젝트 절차를 따른다.
+
+5. 운영 앱에서 본인/타인 목록, 검색·다음 페이지, 임시저장 통합, 확정 필터의 삭제 대상,
+질문 @ 선택·학습법 첨부의 다음 페이지 및 선택 유지, 큰 입력의 오류 안내를 확인한다.
+학생/비로그인 접근 차단과 컨설턴트 타인 목록 차단도 확인한다.
+
+로컬 조회 회귀 재실행:
+
+```bash
+docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/tests/study_queries.sql
+node scripts/verify-study-pagination.mjs --local
+```

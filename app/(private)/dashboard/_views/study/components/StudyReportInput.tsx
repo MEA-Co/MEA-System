@@ -3,27 +3,27 @@ import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
-
-import { downloadReport } from '../lib/api-client';
-import { type Activity } from '../lib/fields';
+import { type Study } from '@/lib/study/fields';
 import {
   MAX_REPORT_SIZE,
   MAX_REPORTS,
   reportExtension,
-} from '../lib/storage-model';
+} from '@/lib/study/storage-model';
 
-type Reports = NonNullable<Activity['reports']>;
+import { downloadReport } from '../lib/api-client';
+
+type Reports = NonNullable<Study['reports']>;
 
 import { StudyFieldIcon } from './StudyFieldIcon';
 
 export function StudyReportInput({
-  activityId,
+  studyId,
   reports,
   onChange,
   readOnly = false,
 }: {
   readOnly?: boolean;
-  activityId: string;
+  studyId: string;
   reports: Reports;
   onChange: (reports: Reports) => void;
 }) {
@@ -75,11 +75,11 @@ export function StudyReportInput({
 
   return (
     <section
-      aria-labelledby="activity-report-heading"
+      aria-labelledby="study-report-heading"
       className="space-y-4 rounded-2xl border p-5 md:p-6"
     >
       <h2
-        id="activity-report-heading"
+        id="study-report-heading"
         className="flex items-center gap-2 text-base font-semibold text-foreground"
       >
         <StudyFieldIcon field="report" />
@@ -164,7 +164,7 @@ export function StudyReportInput({
                   aria-label={`${name} 다운로드`}
                   onClick={async () => {
                     try {
-                      await downloadReport(activityId, clientKey);
+                      await downloadReport(studyId, clientKey);
                     } catch (error) {
                       toast.add({
                         title:

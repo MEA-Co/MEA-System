@@ -24,15 +24,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { type Study, studyTitle } from '@/lib/study/fields';
+import { matchesStudySearch, STUDY_PAGE_SIZE } from '@/lib/study/list-query';
+import { fromRow,type StudyRow } from '@/lib/study/storage-model';
 
 import { request } from '../lib/api-client';
-import { type Activity, studyTitle } from '../lib/fields';
-import { matchesStudySearch, STUDY_PAGE_SIZE } from '../lib/list-query';
-import { type ActivityRow, fromRow } from '../lib/storage-model';
 
 type Page = {
   userId: string;
-  activities: ActivityRow[];
+  activities: StudyRow[];
   total: number;
   page: number;
   pageSize: number;
@@ -45,12 +45,12 @@ type Summary = {
 type Props = {
   userId: string;
   canViewOthers: boolean;
-  local: Activity[];
+  local: Study[];
   ready: boolean;
   busy: boolean;
   localError: unknown;
-  onOpen: (activity: Activity, opener: HTMLElement) => void;
-  onDelete: (activity: Activity) => void;
+  onOpen: (study: Study, opener: HTMLElement) => void;
+  onDelete: (study: Study) => void;
 };
 
 export function StudyTable({
@@ -80,7 +80,7 @@ export function StudyTable({
     return () => clearTimeout(timer);
   }, [query]);
   const localVersion = local
-    .map((activity) => `${activity.clientKey}:${activity.updatedAt}`)
+    .map((study) => `${study.clientKey}:${study.updatedAt}`)
     .sort()
     .join('|');
   const [seenLocalVersion, setSeenLocalVersion] = useState(localVersion);
@@ -104,7 +104,7 @@ export function StudyTable({
     owner: scope === 'others' ? owner : '',
   });
   const localMatches = local
-    .filter((activity) => matchesStudySearch(activity.values, search))
+    .filter((study) => matchesStudySearch(study.values, search))
     .sort(
       (a, b) =>
         b.updatedAt.localeCompare(a.updatedAt) ||
@@ -113,8 +113,8 @@ export function StudyTable({
   const localState = JSON.stringify({
     ids: combined
       ? local
-          .filter((activity) => activity.revision > 0)
-          .map((activity) => activity.clientKey)
+          .filter((study) => study.revision > 0)
+          .map((study) => study.clientKey)
           .sort()
       : [],
     count: combined ? localMatches.length : 0,
@@ -254,7 +254,6 @@ export function StudyTable({
         query={search}
         owner={scope === 'others' ? owner : ''}
         drafts={drafts}
-        local={local}
       />
       <nav
         aria-label="학습법 페이지"
@@ -312,7 +311,7 @@ export function StudyTable({
           <Badge variant="count">
             {summary.data
               ? summary.data.mine +
-                local.filter((activity) => activity.revision === 0).length
+                local.filter((study) => study.revision === 0).length
               : '—'}
           </Badge>
         </TabsTrigger>
@@ -348,9 +347,8 @@ export function StudyTableRows({
   query,
   owner,
   drafts,
-  local,
 }: {
-  rows: Activity[];
+  rows: Study[];
   loading: boolean;
   error: unknown;
   total: number;
@@ -363,7 +361,6 @@ export function StudyTableRows({
   query: string;
   owner: string;
   drafts: boolean;
-  local: Activity[];
 }) {
   return (
     <div
@@ -412,15 +409,12 @@ export function StudyTableRows({
               ></TableCell>
             </TableRow>
           ) : (
-            rows.map((activity) => {
-              const editable = !activity.ownerId || activity.ownerId === userId;
-              const localDraft = local.find(
-                (draft) => draft.clientKey === activity.clientKey,
-              );
-              const target = editable && localDraft ? localDraft : activity;
+            rows.map((study) => {
+              const editable = !study.ownerId || study.ownerId === userId;
+              const target = study;
               return (
                 <TableRow
-                  key={activity.clientKey}
+                  key={study.clientKey}
                   tabIndex={-1}
                   className="h-[80px] cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-[60px]"
                   onClick={(event) => {
@@ -439,24 +433,24 @@ export function StudyTableRows({
                       type="button"
                       className="block w-full cursor-pointer truncate text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
                       disabled={busy}
-                      title={studyTitle(activity.values)}
+                      title={studyTitle(study.values)}
                       onClick={(event) => onOpen(target, event.currentTarget)}
                     >
-                      {studyTitle(activity.values)}
+                      {studyTitle(study.values)}
                     </button>
                     <p
                       className="truncate text-xs text-muted-foreground"
-                      title={activity.values.problem}
+                      title={study.values.problem}
                     >
-                      {activity.values.problem || '기본 정보 미입력'}
+                      {study.values.problem || '기본 정보 미입력'}
                     </p>
                     <div className="mt-1 flex min-w-0 items-center gap-2 text-xs sm:hidden">
                       <span className="truncate text-muted-foreground">
-                        {activity.values.subject || '교과 미입력'}
+                        {study.values.subject || '교과 미입력'}
                       </span>
                       {showOthers ? (
                         <span className="truncate text-muted-foreground">
-                          {activity.ownerName || '이름 비공개'}
+                          {study.ownerName || '이름 비공개'}
                         </span>
                       ) : (
                         <Badge
@@ -476,16 +470,16 @@ export function StudyTableRows({
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="truncate">
-                      {activity.values.subject || '—'}
+                      {study.values.subject || '—'}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {activity.values.customSubject}
+                      {study.values.customSubject}
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {showOthers ? (
                       <span className="block truncate">
-                        {activity.ownerName || '이름 비공개'}
+                        {study.ownerName || '이름 비공개'}
                       </span>
                     ) : (
                       <Badge
@@ -502,7 +496,7 @@ export function StudyTableRows({
                     )}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {activity.updatedAt.slice(0, 10)}
+                    {study.updatedAt.slice(0, 10)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
@@ -510,7 +504,7 @@ export function StudyTableRows({
                         variant="ghost"
                         size="icon-sm"
                         disabled={busy}
-                        aria-label={`${studyTitle(activity.values)} ${editable ? '상세 · 수정' : '상세 보기'}`}
+                        aria-label={`${studyTitle(study.values)} ${editable ? '상세 · 수정' : '상세 보기'}`}
                         onClick={(event) => onOpen(target, event.currentTarget)}
                       >
                         {editable ? <Pencil /> : <Eye />}
@@ -520,7 +514,7 @@ export function StudyTableRows({
                           variant="ghost"
                           size="icon-sm"
                           disabled={busy}
-                          aria-label={`${studyTitle(activity.values)} 삭제`}
+                          aria-label={`${studyTitle(study.values)} 삭제`}
                           onClick={() => onDelete(target)}
                         >
                           <Trash2 />

@@ -1,20 +1,19 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-
 import {
-  type Activity,
   groups,
   problemSourceDisplayValue,
   problemSourceOptions,
-} from '../lib/fields';
+  type Study,
+} from '@/lib/study/fields';
 
-export function StudyActivityDetails({
-  activity,
+export function StudyDetails({
+  study,
   onClose,
   notice = '학습법을 읽기 전용으로 표시합니다.',
   hideEmptyFields = false,
 }: {
-  activity: Activity;
+  study: Study;
   notice?: string;
   hideEmptyFields?: boolean;
   onClose: () => void;
@@ -28,7 +27,7 @@ export function StudyActivityDetails({
             .filter(
               (group) =>
                 !hideEmptyFields ||
-                group.fields.some((field) => activity.values[field.key].trim()),
+                group.fields.some((field) => study.values[field.key].trim()),
             )
             .flatMap((group) => [
               <Card
@@ -44,7 +43,7 @@ export function StudyActivityDetails({
                     {group.fields
                       .filter(
                         (field) =>
-                          !hideEmptyFields || activity.values[field.key].trim(),
+                          !hideEmptyFields || study.values[field.key].trim(),
                       )
                       .map((field) => (
                         <div
@@ -57,7 +56,7 @@ export function StudyActivityDetails({
                           <dd className="mt-2 whitespace-pre-wrap wrap-break-word break-keep text-sm leading-relaxed">
                             {field.key === 'checklist' ? (
                               <ul className="list-disc space-y-2 pl-5">
-                                {activity.values.checklist
+                                {study.values.checklist
                                   .split('\n')
                                   .filter((text) => text.trim())
                                   .map((text, index) => (
@@ -65,7 +64,7 @@ export function StudyActivityDetails({
                                   ))}
                               </ul>
                             ) : field.key === 'practicePeriod' &&
-                              !activity.values.periodEnabled ? (
+                              !study.values.periodEnabled ? (
                               '기간 설정 없음'
                             ) : (
                               (field.key === 'problemSource'
@@ -73,20 +72,20 @@ export function StudyActivityDetails({
                                     (option) =>
                                       option.value ===
                                       problemSourceDisplayValue(
-                                        activity.values.problemSource,
+                                        study.values.problemSource,
                                       ),
                                   )?.label
-                                : activity.values[field.key]) || '입력하지 않음'
+                                : study.values[field.key]) || '입력하지 않음'
                             )}
                           </dd>
                           {field.key === 'problem' &&
-                            activity.values.problemExperience && (
+                            study.values.problemExperience && (
                               <>
                                 <dt className="mt-5 border-t pt-4 text-sm font-semibold text-foreground">
                                   문제 상황에 대한 구체적인 경험
                                 </dt>
                                 <dd className="mt-2 whitespace-pre-wrap wrap-break-word break-keep text-sm leading-relaxed">
-                                  {activity.values.problemExperience}
+                                  {study.values.problemExperience}
                                 </dd>
                               </>
                             )}

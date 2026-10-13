@@ -2,9 +2,15 @@
 
 import useSWR from 'swr';
 
-import type { ActivityRow } from '../lib/storage-model';
+import type { StudyRow } from '@/lib/study/storage-model';
 
-export type StudyList = { userId: string; activities: ActivityRow[] };
+export type StudyList = {
+  userId: string;
+  activities: StudyRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+};
 
 export async function fetchStudyList(url: string): Promise<StudyList> {
   const response = await fetch(url, { cache: 'no-store' });
@@ -26,13 +32,19 @@ export function useStudyList(
   scope: 'own' | 'accessible',
   enabled = true,
   referenceId?: string,
+  options: { query?: string; page?: number; identityOnly?: boolean } = {},
 ) {
-  const url =
-    scope === 'own'
-      ? '/api/study?scope=own'
-      : referenceId
-        ? `/api/study?reference=${encodeURIComponent(referenceId)}`
-        : '/api/study';
+  const params = new URLSearchParams({
+    scope: 'own',
+    page: String(options.page ?? 1),
+    q: options.query?.trim() ?? '',
+  });
+  if (options.identityOnly) params.set('mode', 'context');
+  if (referenceId) {
+    params.set('reference', referenceId);
+    if (scope === 'accessible') params.delete('scope');
+  }
+  const url = `/api/study?${params}`;
   // Version the response contract so old array-shaped URL caches cannot be reused.
   return useSWR(
     enabled ? ['study-list-v1', url] : null,

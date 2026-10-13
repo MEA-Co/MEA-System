@@ -21,71 +21,48 @@ function load(path, imports = {}) {
   );
   return exports;
 }
-const query = load('app/(private)/dashboard/_views/study/lib/list-query.ts');
+const query = load('lib/study/list-query.ts');
 const api = load('app/api/study/list-page.ts', {
-  '@/app/(private)/dashboard/_views/study/lib/list-query': query,
+  '@/lib/study/list-query': query,
 });
 const user = '10000000-0000-4000-8000-000000000001';
 const owner = '10000000-0000-4000-8000-000000000002';
-function clientWith(total = 23, fail = false) {
-  const requests = [];
-  const client = createClient('http://localhost:54321', 'test-key', {
-    auth: { persistSession: false },
-    global: {
-      fetch: async (input, init) => {
-        const url = new URL(input);
-        requests.push({ url, init });
-        if (fail)
-          return new Response(JSON.stringify({ message: 'failed' }), {
-            status: 500,
-          });
-        if (init.method === 'HEAD')
-          return new Response(null, {
-            status: 200,
-            headers: { 'content-range': `*/${total}` },
-          });
-        const offset = Number(url.searchParams.get('offset'));
-        const limit = Number(url.searchParams.get('limit'));
-        const rows = Array.from(
-          { length: Math.min(limit, Math.max(0, total - offset)) },
-          (_, index) => ({ id: offset + index }),
-        );
-        return new Response(JSON.stringify(rows), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        });
-      },
+
+test('page API validates inputs and passes bounded query metadata to one RPC', async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, params) => {
+      calls.push({ name, params });
+      return {
+        data: { activities: [], total: 3, page: 1, pageSize: 10 },
+        error: null,
+      };
     },
-  });
-  return { client, requests };
-}
-test('server caps a page at ten, counts with identical filters, and orders ties by id', async () => {
-  const { client, requests } = clientWith();
+  };
   const result = await api.readStudyPage(
     client,
-    new URLSearchParams({
-      scope: 'others',
-      owner,
-      q: '수학',
-      page: '2',
-      pageSize: '5000',
-    }),
+    new URLSearchParams({ q: ' %_* ', page: '2' }),
     user,
-    false,
+    true,
+    { ids: [owner], count: 3 },
   );
-  assert.equal(result.body.activities.length, 10);
-  assert.equal(result.body.total, 23);
-  assert.equal(result.body.page, 2);
-  const [count, rows] = requests.map((r) => r.url.searchParams);
-  assert.equal(rows.get('limit'), '10');
-  assert.equal(rows.get('offset'), '10');
-  assert.equal(rows.get('order'), 'updated_at.desc,id.asc');
-  for (const key of ['owner_id', 'deleted_at', 'or'])
-    assert.deepEqual(rows.getAll(key), count.getAll(key));
-  assert.deepEqual(rows.getAll('owner_id'), [`neq.${user}`, `eq.${owner}`]);
-});
-test('own scope cannot be changed by author, and inaccessible other scope is rejected', async () => {
-  const { client, requests } = clientWith();
+  assert.equal(result.status, 200);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].name, 'read_study_page');
+  assert.equal(calls[0].params.p_query, '%_*');
+  assert.equal(calls[0].params.p_local_count, 3);
+  assert.equal(calls[0].params.p_excluded[0], owner);
+  for (const params of [
+    { page: '0' },
+    { scope: 'bad' },
+    { owner: 'bad' },
+    { q: 'a'.repeat(201) },
+  ])
+    assert.equal(
+      (await api.readStudyPage(client, new URLSearchParams(params), user, true))
+        .status,
+      400,
+    );
   assert.equal(
     (
       await api.readStudyPage(
@@ -97,85 +74,66 @@ test('own scope cannot be changed by author, and inaccessible other scope is rej
     ).status,
     403,
   );
-  assert.equal(requests.length, 0);
+  assert.equal(
+    (
+      await api.readStudyPage(client, new URLSearchParams(), user, true, {
+        ids: ['bad'],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(calls.length, 1);
+});
+test('other scope cannot receive local metadata and RPC failures propagate', async () => {
+  let params;
+  const client = {
+    rpc: async (_, input) => {
+      params = input;
+      return { data: {}, error: null };
+    },
+  };
   await api.readStudyPage(
     client,
-    new URLSearchParams({ scope: 'own', owner }),
+    new URLSearchParams({ scope: 'others' }),
     user,
-    true,
+    false,
+    { ids: [owner], count: 4 },
   );
-  assert.deepEqual(requests[1].url.searchParams.getAll('owner_id'), [
-    `eq.${user}`,
-  ]);
-});
-test('deletion beyond the last page clamps to a valid page; empty lists use page one', async () => {
-  for (const [total, page, count] of [
-    [23, 3, 3],
-    [0, 1, 0],
-  ]) {
-    const { client } = clientWith(total);
-    const result = await api.readStudyPage(
-      client,
-      new URLSearchParams({ page: '9' }),
+  assert.equal(params.p_local_count, 0);
+  assert.equal(params.p_excluded.length, 0);
+  await assert.rejects(() =>
+    api.readStudyPage(
+      { rpc: async () => ({ error: new Error('failed') }) },
+      new URLSearchParams(),
       user,
-      false,
-    );
-    assert.equal(result.body.page, page);
-    assert.equal(result.body.activities.length, count);
-  }
-});
-test('invalid page, scope, owner, and excessive search are rejected before querying', async () => {
-  const { client, requests } = clientWith();
-  for (const params of [
-    { page: '-1' },
-    { page: '1.5' },
-    { page: '100001' },
-    { owner: 'invalid' },
-    { scope: 'all' },
-    { q: 'x'.repeat(201) },
-  ]) {
-    assert.equal(
-      (
-        await api.readStudyPage(
-          client,
-          new URLSearchParams(params),
-          user,
-          false,
-        )
-      ).status,
-      400,
-    );
-  }
-  assert.equal(requests.length, 0);
-});
-test('search punctuation remains a literal substring, including wildcards and quotes', () => {
-  for (const text of [
-    '수학',
-    '%_*',
-    'a.b',
-    'a"),owner_id.neq.x',
-    '[x](a)+?^$|\\',
-    'a\nb',
-  ]) {
-    const clause = query.studySearchFilter(text).split('.imatch.')[1];
-    const match = clause.match(/^"((?:\\.|[^"\\])*)"/s);
-    assert.ok(match);
-    const pattern = match[1].replace(/\\(.)/gs, '$1');
-    const regex = new RegExp(pattern, 'i');
-    assert.ok(regex.test(`prefix${text}suffix`));
-    if (text !== '수학') assert.equal(regex.test('unrelated'), false);
-    assert.ok(
-      query.matchesStudySearch({ problem: `prefix${text}suffix` }, text),
-    );
-  }
-});
-test('query failures propagate instead of displaying an empty result', async () => {
-  const { client } = clientWith(0, true);
-  await assert.rejects(
-    api.readStudyPage(client, new URLSearchParams(), user, false),
+      true,
+    ),
   );
 });
-
+test('summary uses one aggregate RPC and disambiguates equal author names', async () => {
+  let calls = 0;
+  const result = await api.readStudySummary(
+    {
+      rpc: async () => {
+        calls++;
+        return {
+          data: {
+            mine: 1,
+            others: 4,
+            people: [
+              { id: owner, label: '동명', count: 2 },
+              { id: user, label: '동명', count: 2 },
+            ],
+          },
+        };
+      },
+    },
+    user,
+    false,
+  );
+  assert.equal(calls, 1);
+  assert.notEqual(result.people[0].label, result.people[1].label);
+});
 if (process.argv.includes('--local')) {
   test('local authenticated PostgREST accepts page/count/author/search queries under RLS', async () => {
     const env = require('@next/env');
@@ -263,71 +221,3 @@ if (process.argv.includes('--local')) {
     }
   });
 }
-
-test('combined pagination reserves local rows and fetches only the remaining server rows', async () => {
-  for (const count of [0, 5, 10, 12]) {
-    for (const page of [1, 2, 4]) {
-      const { client, requests } = clientWith(23);
-      const result = await api.readStudyPage(
-        client,
-        new URLSearchParams({ page: String(page) }),
-        user,
-        true,
-        { count, ids: [] },
-      );
-      assert.equal(result.body.total, 23 + count);
-      const start = (result.body.page - 1) * 10;
-      const locals = Math.min(10, Math.max(0, count - start));
-      assert.ok(result.body.activities.length + locals <= 10);
-      const get = requests.find(({ init }) => init.method !== 'HEAD');
-      if (locals === 10) assert.equal(get, undefined);
-      else {
-        assert.equal(
-          Number(get.url.searchParams.get('offset')),
-          Math.max(0, start - count),
-        );
-        assert.equal(Number(get.url.searchParams.get('limit')), 10 - locals);
-      }
-    }
-  }
-});
-
-test('local replacement IDs are excluded before pagination and matching contents stay local', async () => {
-  const saved = [user, owner];
-  const requests = [];
-  const client = createClient('http://localhost:54321', 'test-key', {
-    auth: { persistSession: false },
-    global: {
-      fetch: async (input) => {
-        const url = new URL(input);
-        requests.push(url);
-        return new Response(
-          JSON.stringify(
-            url.searchParams.get('select') === 'id'
-              ? saved.map((id) => ({ id }))
-              : [{ id: owner }],
-          ),
-          { headers: { 'content-type': 'application/json' } },
-        );
-      },
-    },
-  });
-  const result = await api.readStudyPage(
-    client,
-    new URLSearchParams(),
-    user,
-    true,
-    { ids: [user], count: 1 },
-  );
-  assert.equal(result.body.total, 2);
-  assert.equal(result.body.activities.length, 1);
-  assert.equal(requests[1].searchParams.get('id'), `in.(${owner})`);
-  const invalid = await api.readStudyPage(
-    client,
-    new URLSearchParams(),
-    user,
-    true,
-    { ids: ['bad-id'], count: -1 },
-  );
-  assert.equal(invalid.status, 400);
-});

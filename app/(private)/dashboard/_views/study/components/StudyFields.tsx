@@ -14,16 +14,15 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-
 import {
-  type Activity,
   categoryOptions,
   groups,
   problemSourceDisplayValue,
   problemSourceOptions,
+  type Study,
   subjectOptions,
-} from '../lib/fields';
-import { problemTemplates } from '../lib/problem-templates';
+} from '@/lib/study/fields';
+import { problemTemplates } from '@/lib/study/problem-templates';
 
 import { StudyRequiredMark } from './StudyRequiredMark';
 
@@ -79,8 +78,8 @@ export function StudyFields({
   values,
   onChange,
 }: {
-  values: Activity['values'];
-  onChange: (values: Activity['values']) => void;
+  values: Study['values'];
+  onChange: (values: Study['values']) => void;
 }) {
   const [selectedProblemTemplate, setSelectedProblemTemplate] = useState(() => {
     const problemText =

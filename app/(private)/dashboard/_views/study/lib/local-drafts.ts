@@ -1,10 +1,10 @@
-import type { Activity, ActivityReport } from './fields';
-import { hasInput, localActivitySchema } from './storage-model';
+import type { ReportAttachment,Study } from '@/lib/study/fields';
+import { hasInput, localStudySchema } from '@/lib/study/storage-model';
 
 const scope = (userId: string) =>
   `mea:study:v1:${process.env.NEXT_PUBLIC_SUPABASE_URL}:${userId}:`;
-const blobKey = (userId: string, activityId: string, reportId: string) =>
-  `${scope(userId)}${activityId}:${reportId}`;
+const blobKey = (userId: string, studyId: string, reportId: string) =>
+  `${scope(userId)}${studyId}:${reportId}`;
 
 function openFiles(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -40,26 +40,26 @@ async function fileOperation<T>(
 }
 export async function restoreFiles(
   userId: string,
-  activity: Activity,
-): Promise<Activity> {
+  study: Study,
+): Promise<Study> {
   const reports = await Promise.all(
-    (activity.reports ?? []).map(async (report) => {
+    (study.reports ?? []).map(async (report) => {
       if (report.path || report.file) return report;
       const file = await fileOperation<File | undefined>('readonly', (store) =>
-        store.get(blobKey(userId, activity.clientKey, report.clientKey)),
+        store.get(blobKey(userId, study.clientKey, report.clientKey)),
       );
       return { ...report, file };
     }),
   );
-  return { ...activity, reports };
+  return { ...study, reports };
 }
-export function readDrafts(userId: string): Activity[] {
+export function readDrafts(userId: string): Study[] {
   const prefix = scope(userId);
-  const drafts: Activity[] = [];
+  const drafts: Study[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key?.startsWith(prefix)) continue;
-    const parsed = localActivitySchema.safeParse(
+    const parsed = localStudySchema.safeParse(
       JSON.parse(localStorage.getItem(key)!),
     );
     if (!parsed.success)
@@ -79,45 +79,42 @@ async function withDraftLock<T>(
     ? navigator.locks.request(`${scope(userId)}${id}`, run)
     : run();
 }
-function checkVersion(userId: string, activity: Activity) {
-  const raw = localStorage.getItem(`${scope(userId)}${activity.clientKey}`);
-  const current = raw ? localActivitySchema.parse(JSON.parse(raw)) : null;
-  if ((current?.localVersion ?? undefined) !== activity.localVersion)
+function checkVersion(userId: string, study: Study) {
+  const raw = localStorage.getItem(`${scope(userId)}${study.clientKey}`);
+  const current = raw ? localStudySchema.parse(JSON.parse(raw)) : null;
+  if ((current?.localVersion ?? undefined) !== study.localVersion)
     throw new Error(
       '다른 탭에서 임시저장이 변경되었습니다. 입력 내용은 유지됩니다. 목록에서 최신 임시저장을 확인해 주세요.',
     );
 }
-export async function saveDraft(
-  userId: string,
-  activity: Activity,
-): Promise<Activity> {
-  if (!hasInput(activity)) throw new Error('항목을 하나 이상 입력해 주세요.');
-  return withDraftLock(userId, activity.clientKey, async () => {
-    checkVersion(userId, activity);
-    const reports = (activity.reports ?? []).map(
+export async function saveDraft(userId: string, study: Study): Promise<Study> {
+  if (!hasInput(study)) throw new Error('항목을 하나 이상 입력해 주세요.');
+  return withDraftLock(userId, study.clientKey, async () => {
+    checkVersion(userId, study);
+    const reports = (study.reports ?? []).map(
       ({ file: _file, ...report }) => report,
     );
-    const saved = localActivitySchema.parse({
-      ...activity,
+    const saved = localStudySchema.parse({
+      ...study,
       status: 'draft',
       reports,
       updatedAt: new Date().toISOString(),
       localVersion: crypto.randomUUID(),
     });
-    for (const report of activity.reports ?? []) {
+    for (const report of study.reports ?? []) {
       if (report.file && !report.path)
         await fileOperation('readwrite', (store) =>
           store.put(
             report.file,
-            blobKey(userId, activity.clientKey, report.clientKey),
+            blobKey(userId, study.clientKey, report.clientKey),
           ),
         );
     }
-    checkVersion(userId, activity);
+    checkVersion(userId, study);
     // Only publish the draft after all file transactions commit. Quota failures preserve the old draft.
     try {
       localStorage.setItem(
-        `${scope(userId)}${activity.clientKey}`,
+        `${scope(userId)}${study.clientKey}`,
         JSON.stringify(saved),
       );
     } catch {
@@ -125,18 +122,18 @@ export async function saveDraft(
         '브라우저 임시저장 공간이 부족하거나 저장이 차단되었습니다. 입력 내용은 유지됩니다.',
       );
     }
-    return { ...saved, reports: activity.reports ?? [] };
+    return { ...saved, reports: study.reports ?? [] };
   });
 }
-export async function removeDraft(userId: string, activity: Activity) {
-  return withDraftLock(userId, activity.clientKey, async () => {
-    checkVersion(userId, activity);
-    localStorage.removeItem(`${scope(userId)}${activity.clientKey}`);
+export async function removeDraft(userId: string, study: Study) {
+  return withDraftLock(userId, study.clientKey, async () => {
+    checkVersion(userId, study);
+    localStorage.removeItem(`${scope(userId)}${study.clientKey}`);
     // Garbage collection is best effort; never report a successful DB confirmation as failed.
     await Promise.allSettled(
-      (activity.reports ?? []).map((report: ActivityReport) =>
+      (study.reports ?? []).map((report: ReportAttachment) =>
         fileOperation('readwrite', (store) =>
-          store.delete(blobKey(userId, activity.clientKey, report.clientKey)),
+          store.delete(blobKey(userId, study.clientKey, report.clientKey)),
         ),
       ),
     );
@@ -144,8 +141,8 @@ export async function removeDraft(userId: string, activity: Activity) {
 }
 
 const editorKey = (userId: string) => `mea:study-editor:${scope(userId)}`;
-const editorSchema = localActivitySchema.extend({
-  localVersion: localActivitySchema.shape.localVersion.optional(),
+const editorSchema = localStudySchema.extend({
+  localVersion: localStudySchema.shape.localVersion.optional(),
 });
 export function readEditor(userId: string) {
   const raw = sessionStorage.getItem(editorKey(userId));
@@ -156,16 +153,10 @@ export function readEditor(userId: string) {
     baseline: editorSchema.parse(data.baseline),
   };
 }
-export function writeEditor(
-  userId: string,
-  draft: Activity,
-  baseline: Activity,
-) {
-  const serialize = (activity: Activity) => ({
-    ...activity,
-    reports: (activity.reports ?? []).map(
-      ({ file: _file, ...report }) => report,
-    ),
+export function writeEditor(userId: string, draft: Study, baseline: Study) {
+  const serialize = (study: Study) => ({
+    ...study,
+    reports: (study.reports ?? []).map(({ file: _file, ...report }) => report),
   });
   sessionStorage.setItem(
     editorKey(userId),

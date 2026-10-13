@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 
-import { StudyActivityDetails } from '@/app/(private)/dashboard/_views/study/components/StudyActivityDetails';
+import { StudyDetails } from '@/app/(private)/dashboard/_views/study/components/StudyDetails';
 import { useStudyList } from '@/app/(private)/dashboard/_views/study/hooks/useStudyList';
-import { studyTitle } from '@/app/(private)/dashboard/_views/study/lib/fields';
-import { fromRow } from '@/app/(private)/dashboard/_views/study/lib/storage-model';
 import { StudyView } from '@/app/(private)/dashboard/_views/study/StudyView';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { studyTitle } from '@/lib/study/fields';
+import { fromRow } from '@/lib/study/storage-model';
 
 export function StudyPicker({
   onSelect,
@@ -17,7 +17,9 @@ export function StudyPicker({
   onSelect: (id: string, title: string) => void;
   onEditorOpenChange?: (open: boolean) => void;
 }) {
-  const { data, error, mutate } = useStudyList('own');
+  const { data, error, mutate } = useStudyList('own', true, undefined, {
+    identityOnly: true,
+  });
   if (error)
     return (
       <div role="alert">
@@ -73,8 +75,8 @@ export function StudyReferenceContent({
               불러오는 중이에요.
             </p>
           ) : activity ? (
-            <StudyActivityDetails
-              activity={fromRow(activity)}
+            <StudyDetails
+              study={fromRow(activity)}
               onClose={() => setOpen(false)}
             />
           ) : (

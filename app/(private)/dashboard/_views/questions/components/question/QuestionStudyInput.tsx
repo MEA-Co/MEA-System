@@ -2,15 +2,10 @@
 
 import { Menu } from '@base-ui/react/menu';
 import { Check, Eye, Paperclip, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { StudyActivityDetails } from '@/app/(private)/dashboard/_views/study/components/StudyActivityDetails';
+import { StudyDetails } from '@/app/(private)/dashboard/_views/study/components/StudyDetails';
 import { useStudyList } from '@/app/(private)/dashboard/_views/study/hooks/useStudyList';
-import {
-  studySummary,
-  studyTitle,
-} from '@/app/(private)/dashboard/_views/study/lib/fields';
-import { fromRow } from '@/app/(private)/dashboard/_views/study/lib/storage-model';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -19,6 +14,9 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
+import { studySummary, studyTitle } from '@/lib/study/fields';
+import { fromRow } from '@/lib/study/storage-model';
 
 import { StudyReferenceContent } from './StudyCommands';
 
@@ -32,9 +30,33 @@ export function QuestionStudyInput({
   disabled?: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const { data, error, isLoading, mutate } = useStudyList('own', !disabled);
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const { data, error, isLoading, mutate } = useStudyList(
+    'own',
+    !disabled,
+    undefined,
+    { query: search, page },
+  );
+  const selectedResult = useStudyList(
+    'own',
+    !disabled && !!value,
+    value || undefined,
+  );
+  const current = data?.page ?? page;
+  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / 10));
   const activities = data?.activities;
-  const selected = activities?.find((activity) => activity.id === value);
+  const selected = selectedResult.data?.activities.find(
+    (activity) => activity.id === value,
+  );
   if (disabled && value)
     return (
       <StudyReferenceContent id={value}>
@@ -49,22 +71,7 @@ export function QuestionStudyInput({
     );
   return (
     <div className="space-y-3">
-      {error ? (
-        <div role="alert" className="text-sm text-destructive">
-          학습법을 불러오지 못했어요.
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            다시 시도
-          </Button>
-        </div>
-      ) : isLoading ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          학습법을 불러오는 중이에요.
-        </p>
-      ) : !activities?.length ? (
-        <p className="text-sm text-muted-foreground">
-          첨부할 학습법이 없어요. 학습법 관리에서 먼저 확정해 주세요.
-        </p>
-      ) : (
+      {
         // Keep the trigger's conditional focus guards outside the parent spacing layout.
         <div>
           <Menu.Root>
@@ -75,12 +82,42 @@ export function QuestionStudyInput({
             <Menu.Portal>
               <Menu.Positioner align="start" sideOffset={6} className="z-50">
                 <Menu.Popup className="max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+                  <div className="space-y-2 p-2">
+                    <Input
+                      value={query}
+                      maxLength={200}
+                      aria-label="학습법 검색"
+                      placeholder="학습법 검색"
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Escape' && event.key !== 'Tab')
+                          event.stopPropagation();
+                      }}
+                    />
+                    {error ? (
+                      <div role="alert">
+                        불러오지 못했어요.{' '}
+                        <Button size="sm" onClick={() => void mutate()}>
+                          다시 시도
+                        </Button>
+                      </div>
+                    ) : isLoading || query.trim() !== search ? (
+                      <p role="status">불러오는 중이에요.</p>
+                    ) : !activities?.length ? (
+                      <p className="text-sm text-muted-foreground">
+                        검색 결과가 없어요.
+                      </p>
+                    ) : null}
+                  </div>
                   <Menu.RadioGroup
                     value={selected?.id ?? ''}
                     onValueChange={(id) => onChange?.(id)}
                     aria-label="첨부할 학습법"
                   >
-                    {activities.map((activity) => (
+                    {(!isLoading && query.trim() === search
+                      ? (activities ?? [])
+                      : []
+                    ).map((activity) => (
                       <Menu.RadioItem
                         key={activity.id}
                         value={activity.id}
@@ -104,12 +141,33 @@ export function QuestionStudyInput({
                       </Menu.RadioItem>
                     ))}
                   </Menu.RadioGroup>
+                  <div className="flex items-center justify-between gap-2 border-t p-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading || !!error || current <= 1}
+                      onClick={() => setPage(current - 1)}
+                    >
+                      이전
+                    </Button>
+                    <span className="text-xs">
+                      {current} / {pages}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading || !!error || current >= pages}
+                      onClick={() => setPage(current + 1)}
+                    >
+                      다음
+                    </Button>
+                  </div>
                 </Menu.Popup>
               </Menu.Positioner>
             </Menu.Portal>
           </Menu.Root>
         </div>
-      )}
+      }
       {selected && (
         <div className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
           <div className="min-w-0">
@@ -139,8 +197,8 @@ export function QuestionStudyInput({
                 <DrawerHeader>
                   <DrawerTitle>학습법 자세히 보기</DrawerTitle>
                 </DrawerHeader>
-                <StudyActivityDetails
-                  activity={fromRow(selected)}
+                <StudyDetails
+                  study={fromRow(selected)}
                   notice="첨부한 학습법입니다. 읽기 전용으로 표시됩니다."
                   onClose={() => setDetailsOpen(false)}
                 />
@@ -162,10 +220,10 @@ export function QuestionStudyInput({
           </div>
         </div>
       )}
-      {value && !selected && !isLoading && (
+      {value && !selected && !selectedResult.isLoading && (
         <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
           <p role="alert" className="text-sm text-destructive">
-            {error
+            {selectedResult.error
               ? '선택한 활동을 확인하지 못했어요.'
               : '선택한 활동을 찾을 수 없어요. 다시 선택해 주세요.'}
           </p>

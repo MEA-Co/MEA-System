@@ -1,7 +1,7 @@
-import { type Activity, emptyValues } from './fields';
+import { emptyValues,type Study } from '@/lib/study/fields';
 
 // 사용자가 제공한 표의 세 가지 예시. 작성 데이터나 DB에는 삽입하지 않는다.
-export const studyExamples: { title: string; activity: Activity }[] = [
+export const studyExamples: { title: string; study: Study }[] = [
   {
     title: '수학 · 확률과 통계',
     values: {
@@ -55,7 +55,7 @@ export const studyExamples: { title: string; activity: Activity }[] = [
   },
 ].map((example, index) => ({
   title: example.title,
-  activity: {
+  study: {
     clientKey: `study-example-${index + 1}`,
     revision: 0,
     status: 'draft',

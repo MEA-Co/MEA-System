@@ -1,5 +1,5 @@
 'use client';
-import { Eye, Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { CollectionHeader } from '@/components/patterns/collection';
@@ -29,17 +29,17 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
+import { type Study, studyTitle } from '@/lib/study/fields';
+import { hasInput, missingFields } from '@/lib/study/storage-model';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
-import { StudyActivityDetails } from './components/StudyActivityDetails';
+import { StudyDetails } from './components/StudyDetails';
 import { StudyExamplesDialog } from './components/StudyExamplesDialog';
 import { StudyFields } from './components/StudyFields';
+import { StudySelectList } from './components/StudySelectList';
 import { StudyTable } from './components/StudyTable';
 import { useStudyStorage } from './hooks/useStudyStorage';
-import { type Activity, studySummary, studyTitle } from './lib/fields';
-import { hasInput, missingFields } from './lib/storage-model';
 
 export function StudyView({
   userId,
@@ -51,34 +51,30 @@ export function StudyView({
 }: {
   userId: string;
   canViewOthers?: boolean;
-  onSelect?: (activity: Activity) => void;
+  onSelect?: (study: Study) => void;
   onEditorOpenChange?: (open: boolean) => void;
   registrationOnly?: boolean;
   registrationLabel?: string;
 }) {
   const opener = useRef<HTMLElement | null>(null);
   const {
-    activities,
+    studies,
     draft,
     setDraft,
     busy,
     dirty,
     ready,
     localError,
-    remoteError,
-    isLoading,
-    refresh,
     create,
     open,
     saveLocal,
     confirm,
     remove,
-  } = useStudyStorage(userId, !!onSelect, !onSelect && !registrationOnly);
+  } = useStudyStorage(userId, !onSelect && !registrationOnly);
   useEffect(() => {
     onEditorOpenChange?.(!!draft);
   }, [draft, onEditorOpenChange]);
-  const [query, setQuery] = useState('');
-  const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Study | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
@@ -86,17 +82,7 @@ export function StudyView({
   const readOnly =
     (!!draft?.ownerId && draft.ownerId !== userId) ||
     (!!onSelect && draft?.status === 'confirmed');
-  const canEdit = (activity: Activity) =>
-    !activity.ownerId || activity.ownerId === userId;
   const existing = draft && draft.revision > 0;
-  const scoped = activities.filter(canEdit);
-  const filtered = scoped.filter((activity) =>
-    Object.values(activity.values)
-      .filter((value): value is string => typeof value === 'string')
-      .some((value) =>
-        value.toLowerCase().includes(query.trim().toLowerCase()),
-      ),
-  );
 
   function returnToList() {
     if (busy || confirmDiscard || examplesOpen) return;
@@ -162,19 +148,6 @@ export function StudyView({
           {localError}
         </p>
       )}
-      {remoteError && (
-        <div
-          role="alert"
-          className="flex items-center gap-3 text-sm text-destructive"
-        >
-          <span>
-            확정 목록을 불러오지 못했습니다. 임시저장은 계속 사용할 수 있습니다.
-          </span>
-          <Button variant="outline" size="sm" onClick={() => void refresh()}>
-            다시 불러오기
-          </Button>
-        </div>
-      )}
       <Drawer
         open={!!draft}
         onOpenChange={(open) => {
@@ -224,8 +197,8 @@ export function StudyView({
             </AlertDialogContent>
           </AlertDialog>
           {draft && readOnly && (
-            <StudyActivityDetails
-              activity={draft}
+            <StudyDetails
+              study={draft}
               notice={
                 draft.ownerId && draft.ownerId !== userId
                   ? '다른 작성자의 학습법입니다. 읽기 전용으로 표시됩니다.'
@@ -296,105 +269,32 @@ export function StudyView({
         </DrawerContent>
       </Drawer>
       {registrationOnly ? null : onSelect ? (
-        <div className="space-y-2">
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="absolute left-3 top-2.5 size-4 text-muted-foreground"
-            />
-            <Input
-              aria-label="학습법 검색"
-              placeholder="학습법 검색"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <ul className="divide-y">
-            {filtered
-              .filter((activity) => activity.status === 'confirmed')
-              .map((activity) => (
-                <li
-                  key={activity.clientKey}
-                  className="flex items-center gap-1"
-                >
-                  <button
-                    type="button"
-                    disabled={busy || !ready}
-                    onClick={() => onSelect(activity)}
-                    aria-label={`${studyTitle(activity.values)} 첨부하기`}
-                    className="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {studyTitle(activity.values)}
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-muted-foreground">
-                        {studySummary(activity.values)}
-                      </span>
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                    >
-                      첨부하기
-                    </span>
-                  </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="mr-2 shrink-0 cursor-pointer disabled:cursor-default"
-                    disabled={busy || !ready}
-                    title="상세 보기"
-                    aria-label={`${studyTitle(activity.values)} 상세 보기`}
-                    onClick={(event) => {
-                      opener.current = event.currentTarget;
-                      open(activity);
-                    }}
-                  >
-                    <Eye className="size-4" aria-hidden="true" />
-                  </Button>
-                </li>
-              ))}
-            {!isLoading &&
-              !filtered.some((activity) => activity.status === 'confirmed') && (
-                <li className="px-3 py-4 text-sm text-muted-foreground">
-                  {query.trim()
-                    ? '검색 결과가 없어요.'
-                    : '첨부할 확정 학습법이 없어요.'}
-                </li>
-              )}
-            <li>
-              <button
-                type="button"
-                disabled={!ready || busy}
-                onClick={(event) => {
-                  opener.current = event.currentTarget;
-                  create();
-                }}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-3 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                학습법 추가
-              </button>
-            </li>
-          </ul>
-        </div>
+        <StudySelectList
+          busy={busy || !ready}
+          onSelect={onSelect}
+          onOpen={(study, element) => {
+            opener.current = element;
+            open(study);
+          }}
+          onCreate={(element) => {
+            opener.current = element;
+            create();
+          }}
+        />
       ) : (
         <StudyTable
           userId={userId}
           canViewOthers={canViewOthers}
-          local={activities.filter((activity) => activity.status === 'draft')}
+          local={studies.filter((study) => study.status === 'draft')}
           ready={ready}
           busy={busy}
           localError={localError}
-          onOpen={(activity, element) => {
+          onOpen={(study, element) => {
             opener.current = element;
-            open(activity);
+            open(study);
           }}
-          onDelete={(activity) => {
-            setPendingDelete(activity);
+          onDelete={(study) => {
+            setPendingDelete(study);
             setDeleteOpen(true);
           }}
         />

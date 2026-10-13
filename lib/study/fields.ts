@@ -1,11 +1,11 @@
 import type {
-  ActivityReference,
-  ActivityReport,
-} from '../../exploration/lib/fields';
+  ContentReference,
+  ReportAttachment,
+} from '@/lib/content/attachments';
 export type {
-  ActivityReference,
-  ActivityReport,
-} from '../../exploration/lib/fields';
+  ContentReference,
+  ReportAttachment,
+} from '@/lib/content/attachments';
 export const categoryOptions = ['내신', '모의고사(수능)', '기타'] as const;
 export const subjectOptions = [
   '국어',
@@ -123,7 +123,7 @@ export const groups = [
   },
 ] as const;
 export type FieldKey = (typeof groups)[number]['fields'][number]['key'];
-export type Activity = {
+export type Study = {
   ownerId?: string;
   ownerName?: string;
   clientKey: string;
@@ -131,16 +131,16 @@ export type Activity = {
   status: 'draft' | 'confirmed';
   updatedAt: string;
   localVersion?: string;
-  reports?: ActivityReport[];
+  reports?: ReportAttachment[];
   values: Record<FieldKey, string> & {
     // 화면에서 제거한 항목의 기존 저장 값은 유지한다.
     resultDiagnosis: string;
     problemExperience: string;
     periodEnabled: boolean;
-    references: ActivityReference[];
+    references: ContentReference[];
   };
 };
-export const emptyValues = (): Activity['values'] => ({
+export const emptyValues = (): Study['values'] => ({
   title: '',
   category: '',
   subject: '',
@@ -157,7 +157,7 @@ export const emptyValues = (): Activity['values'] => ({
   periodEnabled: true,
   references: [],
 });
-export function studySummary(values: Activity['values']) {
+export function studySummary(values: Study['values']) {
   return [
     values.category,
     [
@@ -172,7 +172,7 @@ export function studySummary(values: Activity['values']) {
 }
 
 /** Keep reference labels short; full content remains available in the detail drawer. */
-export function studyTitle(values: Activity['values']) {
+export function studyTitle(values: Study['values']) {
   const text =
     values.title?.trim().replace(/\s+/g, ' ') ||
     values.strategy.trim().replace(/\s+/g, ' ') ||

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import type { Activity } from './fields';
+import type { Study } from './fields';
+import {
+  MAX_STUDY_VALUES_BYTES,
+  STUDY_SIZE_ERROR,
+  studyValuesBytes,
+} from './payload-size';
 
 export const REPORT_BUCKET = 'study-reports';
 export const MAX_REPORT_SIZE = 20 * 1024 * 1024;
@@ -51,7 +56,7 @@ export const reportSchema = z
     path: z.string().max(300).optional(),
   })
   .strict();
-export const localActivitySchema = z
+export const localStudySchema = z
   .object({
     clientKey: z.uuid(),
     revision: z.number().int().nonnegative(),
@@ -75,30 +80,28 @@ export const requiredFields = {
   checklist: '진단 체크리스트',
   followup: '후속 대응 전략',
 } as const;
-export function missingFields(values: Activity['values']) {
+export function missingFields(values: Study['values']) {
   return Object.entries(requiredFields).filter(
     ([key]) =>
       (key !== 'practicePeriod' || values.periodEnabled) &&
       !values[key as keyof typeof requiredFields]?.trim(),
   );
 }
-export function hasInput(activity: Activity) {
+export function hasInput(study: Study) {
   return (
-    Object.entries(activity.values).some(([key, value]) =>
+    Object.entries(study.values).some(([key, value]) =>
       key === 'references'
-        ? activity.values.references.some((item) =>
+        ? study.values.references.some((item) =>
             [item.title, item.selection, item.usage].some((s) => s.trim()),
           )
         : typeof value === 'string' && !!value.trim(),
-    ) || !!activity.reports?.length
+    ) || !!study.reports?.length
   );
 }
-export function activityFingerprint(activity: Activity) {
+export function studyFingerprint(study: Study) {
   return JSON.stringify({
-    values: activity.values,
-    reports: (activity.reports ?? []).map(
-      ({ file: _file, ...report }) => report,
-    ),
+    values: study.values,
+    reports: (study.reports ?? []).map(({ file: _file, ...report }) => report),
   });
 }
 export const confirmRequestSchema = z
@@ -113,6 +116,12 @@ export const confirmRequestSchema = z
   })
   .strict()
   .superRefine(({ values, reports }, ctx) => {
+    if (studyValuesBytes(values) > MAX_STUDY_VALUES_BYTES)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['values'],
+        message: STUDY_SIZE_ERROR,
+      });
     for (const [key, label] of missingFields(values))
       ctx.addIssue({
         code: 'custom',
@@ -126,18 +135,18 @@ export const confirmRequestSchema = z
         message: '첨부 파일이 중복되었습니다.',
       });
   });
-export type ActivityRow = {
+export type StudyRow = {
   id: string;
   owner_id: string;
   owner?: { name: string } | null;
-  values: Activity['values'];
+  values: Study['values'];
   reports: z.infer<typeof reportSchema>[];
   revision: number;
   updated_at: string;
   save_id: string;
   deleted_at: string | null;
 };
-export function fromRow(row: ActivityRow): Activity {
+export function fromRow(row: StudyRow): Study {
   return {
     clientKey: row.id,
     ownerId: row.owner_id,

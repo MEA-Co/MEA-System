@@ -14,26 +14,52 @@ const sessionStorage = {
 };
 function load(name, imports = {}) {
   const exports = {};
-  vm.runInNewContext(ts.transpileModule(readFileSync(`app/(private)/dashboard/_views/study/lib/${name}.ts`, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS },
-  }).outputText, { exports, require: (id) => imports[id] ?? require(id), process, sessionStorage });
+  vm.runInNewContext(
+    ts.transpileModule(
+      readFileSync(
+        name === 'local-drafts'
+          ? `app/(private)/dashboard/_views/study/lib/${name}.ts`
+          : `lib/study/${name}.ts`,
+        'utf8',
+      ),
+      {
+        compilerOptions: { module: ts.ModuleKind.CommonJS },
+      },
+    ).outputText,
+    {
+      exports,
+      require: (id) => imports[id] ?? require(id),
+      process,
+      sessionStorage,
+      TextEncoder,
+    },
+  );
   return exports;
 }
 const fields = load('fields');
-const model = load('storage-model');
-const local = load('local-drafts', { './storage-model': model });
+const model = load('storage-model', { './payload-size': load('payload-size') });
+const local = load('local-drafts', { '@/lib/study/storage-model': model });
 const baseline = {
   clientKey: '10000000-0000-4000-8000-000000000001',
-  revision: 0, status: 'draft', updatedAt: '2026-10-13T00:00:00.000Z',
-  values: fields.emptyValues(), reports: [],
+  revision: 0,
+  status: 'draft',
+  updatedAt: '2026-10-13T00:00:00.000Z',
+  values: fields.emptyValues(),
+  reports: [],
 };
 test('reload restores new unsaved input and its original baseline separately', () => {
-  const draft = { ...baseline, values: { ...baseline.values, title: '작성 중', problem: '문제 상황' } };
+  const draft = {
+    ...baseline,
+    values: { ...baseline.values, title: '작성 중', problem: '문제 상황' },
+  };
   local.writeEditor('one', draft, baseline);
   const restored = local.readEditor('one');
   assert.equal(restored.draft.values.title, '작성 중');
   assert.equal(restored.baseline.values.title, '');
-  assert.notEqual(model.activityFingerprint(restored.draft), model.activityFingerprint(restored.baseline));
+  assert.notEqual(
+    model.studyFingerprint(restored.draft),
+    model.studyFingerprint(restored.baseline),
+  );
   assert.equal(restored.draft.localVersion, undefined);
 });
 test('recovery is account scoped and explicit close removes it', () => {
@@ -42,9 +68,15 @@ test('recovery is account scoped and explicit close removes it', () => {
   assert.equal(local.readEditor('one'), null);
 });
 test('manual save baseline and version survive reload', () => {
-  const saved = { ...baseline, localVersion: '10000000-0000-4000-8000-000000000002' };
+  const saved = {
+    ...baseline,
+    localVersion: '10000000-0000-4000-8000-000000000002',
+  };
   local.writeEditor('one', saved, saved);
   const restored = local.readEditor('one');
   assert.equal(restored.draft.localVersion, saved.localVersion);
-  assert.equal(model.activityFingerprint(restored.draft), model.activityFingerprint(restored.baseline));
+  assert.equal(
+    model.studyFingerprint(restored.draft),
+    model.studyFingerprint(restored.baseline),
+  );
 });

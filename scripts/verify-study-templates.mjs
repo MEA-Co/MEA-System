@@ -11,14 +11,23 @@ const base = 'app/(private)/dashboard/_views/study/';
 function load(path, imports = {}) {
   const exports = {};
   vm.runInNewContext(
-    ts.transpileModule(readFileSync(base + path, 'utf8'), {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        jsx: ts.JsxEmit.ReactJSX,
+    ts.transpileModule(
+      readFileSync(
+        path.startsWith('lib/')
+          ? path.replace('lib/', 'lib/study/')
+          : base + path,
+        'utf8',
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          jsx: ts.JsxEmit.ReactJSX,
+        },
       },
-    }).outputText,
+    ).outputText,
     {
       exports,
+      TextEncoder,
       require: (id) => (id === 'react/jsx-runtime' ? require(id) : imports[id]),
     },
   );
@@ -45,8 +54,8 @@ const { StudyFields } = load('components/StudyFields.tsx', {
       ];
     },
   },
-  '../lib/fields': fields,
-  '../lib/problem-templates': templates,
+  '@/lib/study/fields': fields,
+  '@/lib/study/problem-templates': templates,
   '@/components/ui/button': { Button: 'button' },
   '@/components/ui/card': {
     Card: 'section',
@@ -179,7 +188,10 @@ test('출처 전환은 문제 본문을 유지하고 템플릿에서만 선택�
   assert.equal(next.problem, values.problem);
 });
 
-const storage = load('lib/storage-model.ts', { zod: require('zod') });
+const storage = load('lib/storage-model.ts', {
+  zod: require('zod'),
+  './payload-size': load('lib/payload-size.ts'),
+});
 test('저장한 템플릿 문제 상황을 다시 열어도 선택 문구를 표시한다', () => {
   for (const template of templates.problemTemplates) {
     const { id, ...templateValues } = template;

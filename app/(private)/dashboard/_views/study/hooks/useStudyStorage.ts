@@ -1,17 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import { useSWRConfig } from 'swr';
 
 import { toast } from '@/components/ui/toast';
+import { emptyValues,type Study } from '@/lib/study/fields';
+import {
+  MAX_STUDY_VALUES_BYTES,
+  STUDY_SIZE_ERROR,
+  studyValuesBytes,
+} from '@/lib/study/payload-size';
+import {
+  hasInput,
+  missingFields,
+  REPORT_BUCKET,
+  studyFingerprint,
+} from '@/lib/study/storage-model';
 import { createClient } from '@/lib/supabase/client';
 
-import {
-  confirmActivity,
-  deleteActivity,
-  loadActivities,
-} from '../lib/api-client';
-import { type Activity, emptyValues } from '../lib/fields';
+import { confirmStudy, deleteStudy } from '../lib/api-client';
 import {
   clearEditor,
   readDrafts,
@@ -21,18 +28,8 @@ import {
   saveDraft,
   writeEditor,
 } from '../lib/local-drafts';
-import {
-  activityFingerprint,
-  hasInput,
-  missingFields,
-  REPORT_BUCKET,
-} from '../lib/storage-model';
 
-export function useStudyStorage(
-  userId: string,
-  loadFullList = true,
-  persistCreation = false,
-) {
+export function useStudyStorage(userId: string, persistCreation = false) {
   const { mutate: mutateCache } = useSWRConfig();
   const refreshReferences = () =>
     mutateCache(
@@ -40,17 +37,11 @@ export function useStudyStorage(
         Array.isArray(key) &&
         ['study-list-v1', 'study-page', 'study-summary'].includes(key[0]),
     );
-  const {
-    data: confirmed = [],
-    error: remoteError,
-    isLoading,
-    mutate,
-  } = useSWR(loadFullList ? ['study', userId] : null, loadActivities);
-  const [local, setLocal] = useState<Activity[]>([]);
+  const [local, setLocal] = useState<Study[]>([]);
   const [localError, setLocalError] = useState('');
   const [ready, setReady] = useState(false);
-  const [draft, setDraft] = useState<Activity | null>(null);
-  const [baseline, setBaseline] = useState<Activity | null>(null);
+  const [draft, setDraft] = useState<Study | null>(null);
+  const [baseline, setBaseline] = useState<Study | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const creating = useRef(false);
@@ -59,7 +50,7 @@ export function useStudyStorage(
     !!draft &&
     (!baseline
       ? hasInput(draft)
-      : activityFingerprint(draft) !== activityFingerprint(baseline));
+      : studyFingerprint(draft) !== studyFingerprint(baseline));
   const refreshLocal = useCallback(() => {
     try {
       setLocal(readDrafts(userId));
@@ -88,7 +79,7 @@ export function useStudyStorage(
               setDraft(saved.draft);
               setBaseline(saved.baseline);
             } else {
-              const activity: Activity = {
+              const study: Study = {
                 clientKey: crypto.randomUUID(),
                 revision: 0,
                 status: 'draft',
@@ -96,8 +87,8 @@ export function useStudyStorage(
                 values: emptyValues(),
                 reports: [],
               };
-              setDraft(activity);
-              setBaseline(activity);
+              setDraft(study);
+              setBaseline(study);
             }
           }
         } catch {
@@ -170,7 +161,7 @@ export function useStudyStorage(
   }
   function create() {
     creating.current = persistCreation;
-    const activity: Activity = {
+    const study: Study = {
       clientKey: crypto.randomUUID(),
       revision: 0,
       status: 'draft',
@@ -178,16 +169,14 @@ export function useStudyStorage(
       values: emptyValues(),
       reports: [],
     };
-    setDraft(activity);
-    setBaseline(activity);
+    setDraft(study);
+    setBaseline(study);
     attempt.current = null;
   }
-  function open(activity: Activity) {
+  function open(study: Study) {
     void run(async () => {
       const restored =
-        activity.status === 'draft'
-          ? await restoreFiles(userId, activity)
-          : activity;
+        study.status === 'draft' ? await restoreFiles(userId, study) : study;
       setDraft(restored);
       setBaseline(restored);
       attempt.current = null;
@@ -216,6 +205,10 @@ export function useStudyStorage(
   }
   function confirm() {
     if (!draft || (draft.ownerId && draft.ownerId !== userId)) return;
+    if (studyValuesBytes(draft.values) > MAX_STUDY_VALUES_BYTES) {
+      toast.add({ title: STUDY_SIZE_ERROR, type: 'error' });
+      return;
+    }
     const missing = missingFields(draft.values);
     if (missing.length) {
       toast.add({
@@ -225,30 +218,22 @@ export function useStudyStorage(
       return;
     }
     void run(async () => {
-      const fingerprint = activityFingerprint(draft);
+      const fingerprint = studyFingerprint(draft);
       if (attempt.current?.fingerprint !== fingerprint)
         attempt.current = { fingerprint, saveId: crypto.randomUUID() };
-      const saved = await confirmActivity(
-        userId,
-        draft,
-        attempt.current.saveId,
-      );
+      const saved = await confirmStudy(userId, draft, attempt.current.saveId);
       let localCleanupFailed = false;
       try {
         await removeDraft(userId, draft);
       } catch {
         localCleanupFailed = true;
       }
-      const oldPaths = (
-        confirmed.find((a) => a.clientKey === draft.clientKey)?.reports ??
-        baseline?.reports ??
-        []
-      ).flatMap((r) =>
+      const oldPaths = (baseline?.reports ?? []).flatMap((r) =>
         r.path && !saved.reports?.some((next) => next.path === r.path)
           ? [r.path]
           : [],
       );
-      // Deletion is restricted by Storage RLS to objects no active confirmed activity references.
+      // Deletion is restricted by Storage RLS to objects no active confirmed study references.
       if (oldPaths.length)
         await createClient()
           .storage.from(REPORT_BUCKET)
@@ -258,13 +243,6 @@ export function useStudyStorage(
       setBaseline(saved);
       attempt.current = null;
       refreshLocal();
-      await mutate(
-        (current = []) => [
-          saved,
-          ...current.filter((a) => a.clientKey !== saved.clientKey),
-        ],
-        { revalidate: false },
-      );
       void refreshReferences();
       toast.add({
         title: localCleanupFailed
@@ -274,20 +252,15 @@ export function useStudyStorage(
       });
     });
   }
-  async function remove(activity: Activity) {
-    if (activity.ownerId && activity.ownerId !== userId) return false;
+  async function remove(study: Study) {
+    if (study.ownerId && study.ownerId !== userId) return false;
     let success = false;
     await run(async () => {
-      if (activity.status === 'draft') {
-        await removeDraft(userId, activity);
+      if (study.status === 'draft') {
+        await removeDraft(userId, study);
         refreshLocal();
       } else {
-        const result = await deleteActivity(activity);
-        await mutate(
-          (current = []) =>
-            current.filter((a) => a.clientKey !== activity.clientKey),
-          { revalidate: false },
-        );
+        const result = await deleteStudy(study);
         void refreshReferences();
         if (result.cleanupPending)
           toast.add({
@@ -298,7 +271,7 @@ export function useStudyStorage(
       success = true;
       toast.add({
         title:
-          activity.status === 'draft'
+          study.status === 'draft'
             ? '임시저장을 삭제했습니다.'
             : '학습법을 삭제했습니다.',
         type: 'success',
@@ -306,23 +279,17 @@ export function useStudyStorage(
     });
     return success;
   }
-  const activities = [
-    ...local,
-    ...confirmed.filter(
-      (activity) => !local.some((d) => d.clientKey === activity.clientKey),
-    ),
-  ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const studies = [...local].sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
+  );
   return {
-    activities,
+    studies,
     draft,
     setDraft,
     busy,
     dirty,
     ready,
     localError,
-    remoteError,
-    isLoading,
-    refresh: mutate,
     create,
     open,
     saveLocal,

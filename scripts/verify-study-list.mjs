@@ -26,9 +26,9 @@ vm.runInNewContext(
     require: (id) =>
       id === 'react/jsx-runtime'
         ? require(id)
-        : id === '../lib/fields'
+        : id === '@/lib/study/fields'
           ? { studyTitle: (values) => values.title }
-          : id === '../lib/list-query'
+          : id === '@/lib/study/list-query'
             ? { STUDY_PAGE_SIZE: 10 }
             : placeholders,
   },
@@ -109,7 +109,7 @@ test('own rows reopen local edits without discarding them and delete the visible
   let opened;
   let removed;
   const tree = draw({
-    rows: [activity],
+    rows: [draft],
     local: [draft],
     onOpen: (value) => (opened = value),
     onDelete: (value) => (removed = value),
@@ -120,4 +120,20 @@ test('own rows reopen local edits without discarding them and delete the visible
     .props.onClick();
   assert.equal(opened, draft);
   assert.equal(removed, draft);
+});
+
+test('confirmed rows keep their own open/delete target even when an unsaved local copy exists', () => {
+  let opened, removed;
+  const tree = draw({
+    rows: [activity],
+    local: [{ ...activity, status: 'draft' }],
+    onOpen: (value) => (opened = value),
+    onDelete: (value) => (removed = value),
+  });
+  ofType(tree, 'button')[0].props.onClick({ currentTarget: {} });
+  ofType(tree, 'Button')
+    .find((node) => node.props['aria-label'] === '학습법 삭제')
+    .props.onClick();
+  assert.equal(opened, activity);
+  assert.equal(removed, activity);
 });

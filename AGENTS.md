@@ -8,6 +8,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## 도메인별 기준 문서
+
+데이터·API·권한을 변경하기 전에 아래 기준 문서를 먼저 읽고, 계약 변경 시 같은 작업에서 갱신한다.
+큰 데이터 범주별로 기준 문서를 유지하며 AGENTS.md에는 문서 매핑과 핵심 작업 규칙만 추가한다.
+기준 문서는 현재 계약, 작업 기록은 변경 이력, 운영 문서는 적용 절차로 분리한다.
+신규 도메인 문서는 저장 모델·API 요청/응답·권한·충돌/삭제·코드 책임·검증·운영 상태를 포함한다.
+
+| 범주 | 먼저 읽을 기준 문서 | 보조 문서 |
+| --- | --- | --- |
+| 학습법 | [데이터·API·권한](docs/study/data-api.md) | [입력/UI](docs/study/ui.md), [운영](docs/study/operations.md) |
+| 탐구활동 | [저장 구조](docs/exploration-activity-storage.md) | 기존 참조·파일 권한 계약 유지 |
+| 질문·질문지·응답 | [기능 계약](docs/questions.md), [저장 구조](docs/questionnaire-storage-design.md) | [운영](docs/questions-operations.md) |
+
+학습법 관련 작업은 [문서 목록](docs/study/README.md)을 먼저 확인하고, 변경한 내용에 맞춰 `docs/study/`의 관련 문서를 같은 작업에서 반드시 수정·조정한다. UI·사용 흐름은 `ui.md`, 데이터·API·권한·코드 구조는 `data-api.md`, migration·검증·배포 상태와 절차는 `operations.md`에 반영한다. 질문 참조·등록 등 다른 도메인과 연결된 계약은 해당 도메인 문서도 함께 갱신한다. 상세 구현·작업 이력·적용 상태를 AGENTS.md에 중복 기록하지 않으며, 이곳에는 문서 매핑과 작업 규칙만 유지한다.
+
 ## 검증 방식
 
 - 사용자가 명시적으로 요청하지 않으면 실제 브라우저 테스트를 진행하지 않는다. 임시 검증 페이지나 예시 데이터로 수행하는 브라우저 테스트도 포함한다. 기본 검증은 타입 검사·린트 등으로 진행한다.
@@ -22,8 +37,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 흐름표 추가 칸 표시(2026-10-13): origin/main의 제출 응답 내보내기까지 fast-forward(9a46d35)했다. +를 시기 사이의 폭48px·옅은 회청색 단일 셀로 표시하며 머리글+모든 답변 행을 같은 tbody에서 rowSpan한다. 이미 추가한 시기 그룹 다음에 배치하고 sticky 머리글/기존 데이터열·ID/추가 후 이름 포커스/20개 제한/읽기 전용을 유지한다. DB·저장 계약 변경 없음. 타입·변경 파일 린트·관련JS32개·Webpack빌드 통과, 실제 브라우저 검증·앱 배포는 미수행.
 
 - 흐름표 중간 시기 추가(2026-10-13): 최신 origin/main(de1d57b)을 반영했다. 공통 제작기의 flowInsertAfter/DB flow_insert_after에 기본 시기 뒤 추가 허용 위치를 저장하고, 응답자는 해당 +에서 이름 있는 시기를 추가·삭제한다. max_rows는 기본 시기 수로 유지하며 기본+추가 총 20개 이하, 고정 시기 삭제 불가다. 응답 rows의 flowIndex/flowAfter/label로 기존 ID·답변·위치와 가이드 이름을 보존한다. 저장 metadata가 있으면 원본 기본 수/표 형식 변경은 차단하고, 아직 저장되지 않은 흐름표와 충돌하는 원격 변경은 현재 입력을 유지·잠가 복사 안내한다. `20261013033907_question_flow_insertions.sql` 운영 적용 완료. 임시 migration+회귀·적용 후 회귀는 가상 데이터만 실행·전체 롤백했으며 기존 데이터/함수 ACL/가이드 함수 해시 보존, 대기 없음, 보안 기존4/새0 확인. 타입·변경 파일 린트·관련 JS115개·Webpack 빌드 통과. 로컬 DB 및 실제 브라우저 검증·앱 배포는 미수행. 다음 단계와 명령은 docs/questions-operations.md의 중간 시기 추가 절을 따른다.
-
-- 재사용 학습법 등록 안내 카드(2026-10-12): 공통 제작기의 카드 종류에서 안내를 선택하고 제목·본문·버튼 이름을 설정해 원본 저장/배치로 어느 질문지에도 재사용한다. purpose=response/study_registration·button_label을 저장하며 안내 fields=[]·single/cards·행1·조건/참조 없음, 저장 후 종류 고정이다. 기존 StudyView의 등록 전용 모드로 본인 학습법을 등록하고 답변 필드/콜백은 생성하지 않는다. 응답 식별/제출 metadata는 빈 rows/active/body로만 유지해 읽기 전용 표시를 보존하며 안내-only 완료는 차단한다. `20261012050319_study_registration_cards.sql` 운영 적용, 임시 migration+회귀에서 기존 데이터·함수 ACL·가이드 해시 607716af71009f7941df8fef56b2e443 보존 검증·전체 롤백, 영구 적용 후 신규/조건 해제 SQL·대기 없음 확인 완료. 최신 main의 이미 적용된 migration 3개를 보존해 합쳤으며 repair/재적용 없음. 타입·변경 파일 린트·JS 회귀 78개·Webpack 빌드 통과, 보안 기존 경고4/새0. 로컬 DB/Docker 및 실제 브라우저 검증·앱 배포는 미수행. 다음은 앱 배포 후 제작/등록/제출 화면 확인이며 docs/questions-operations.md를 따른다.
 
 - 표 표시·조건 해제 보완(2026-10-12): 선택 항목을 옅은 회청색으로 낮추고 compact 서술형 placeholder를 한 줄 말줄임으로 제한했다. 실제 답변 줄바꿈/높이 확장은 유지한다. 명시적 조건 해제 버튼·조건 메뉴의 조건 없음은 pending 선택과 condition/source/after 연결을 함께 정리하고 참조형은 단일 행으로 복귀한다. 대상이 목록에 없어도 해제 가능하며 저장 후에 원본 fields/row_mode 수정 제한이 풀린다. 다른 incoming 참조·참조 체인·배포 잠금은 유지한다. API는 실제 revision 충돌과 정책 거절을 구분해 참조 차단 후 같은 편집기 재저장을 허용한다. 타입·변경 파일 린트·JS 회귀 52개·Webpack 빌드 통과. 기존 사용자 승인 범위에서 `question_condition_removal.sql`을 운영에 가상 데이터만으로 실행해 조건/참조 해제·동일 필드 ID·다른 참조·체인·제작/게시 수정·배포/관리자 잠금을 검증하고 전부 롤백했다. DB 스키마/권한/migration 변경 없음. 이번 UI의 실제 브라우저 검증·앱 배포는 미수행.
 
@@ -41,38 +54,27 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 운영 상태(2026-10-02): 사용자가 `20261002071428_direct_question_responses.sql`까지 운영 적용 완료를 알렸다. 아래 과거 작업의 “운영 미적용”은 현재 상태가 아니다. 이번 문서 정리에서는 운영 재조회나 앱 실사용 검증을 하지 않았다. 현행 계약은 docs/questions.md·docs/questionnaire-storage-design.md, 적용 절차는 docs/questions-operations.md를 우선한다. 폐기된 설계안·일회성 이전 안내·과거 운영 반영 문서는 삭제했으며 과거 기록은 Git 이력으로 확인한다.
 
-
 - 질문 버전 제거(2026-10-02, 이전 질문 snapshot 정책보다 우선): `20261002071428_direct_question_responses.sql` 로컬 적용. `question_responses.question_id`가 원본을 직접 참조하며 `question_versions`·`question_version_id`·불변 버전/구조 비교 함수를 제거했다. 응답 JSON은 `questionId`; 기존 응답 ID·본문·행·세션 보존. 질문 UPDATE 트리거가 OLD.fields와 새 필드 ID/유형으로 가이드 응답을 정리하고 기존 저장 확인·revision/definitionToken·질문지별 제거 범위를 유지한다. 구형 원본 없는 배포 응답만 legacy_question_id/legacy_definition으로 호환하며 새 원본 응답에는 NULL. 원본 응답 4개·구형 2개의 이전 전후 데이터 동일성, SQL 회귀 9개, DB lint/security advisor 검증. 운영 읽기 전용 확인: questions=30, question_versions=0, responses=0, sessions=0, 원본 없는 배치=0; 최신 운영 이력 20261002061031, 63932·70012·71428 대기. 운영 쓰기 미수행, 사용자가 docs/questions-operations.md 최신 순서로 적용한다.
-
 
 - 질문 제거 가이드 정책(2026-10-02): 20261002070012_guide_question_removal_without_history.sql 로컬 적용. 질문/섹션 제거는 해당 질문지 가이드 응답 존재 시 확인하며 그 질문지의 응답만 삭제, 다른 질문지·원본 유지. DB confirmedRemovedGuideQuestions/PGA02로 우회 차단. 가이드 구조 변경 안내·이전 답변 보관/복구 UI 및 RPC 이전 답변 필드를 제거, 기존 가이드 previous_responses/이미 제외된 질문 응답 정리. 최신 유효 응답은 유지. 재배치 새 responseId에 과거 로컬 입력 복원 금지. question_versions 자체는 유지. 운영 사용자 적용 절차는 docs/questions-operations.md 마지막 절.
 
-
 - 가이드 응답 항목 보존(2026-10-02): 20261002063932_guide_answer_field_confirmation.sql 로컬 적용. 질문 내용 수정/항목 추가는 응답 유지, 항목 삭제/kind 변경은 대상 필드 응답만 삭제한다. 공통 질문 편집기는 실제 가이드 응답이 있는 필드만 변경 전 확인하며 취소는 원상 유지. save_question은 confirmedGuideAnswerFields를 잠금 아래 재검사하고 미확인 시 PGA01로 거절한다. guide_answer_field_ids는 작성자/관리자에게 필드 ID만 반환. 기존 question_versions 테이블은 유지하며 테이블 제거 완료로 간주하지 않는다. 운영 사용자 적용 순서는 docs/questions-operations.md 마지막 절.
-
 
 - 질문지 ID 이름 통일(2026-10-02): `20261002061031_canonical_questionnaire_identifiers.sql` 로컬 적용. 앱/API 문서는 questionnaireId 하나, DB 하위 연결은 questionnaire_id/origin_questionnaire_id, RPC는 p_questionnaire_id/p_origin_questionnaire_id. 기존 UUID 유지. private.questionnaire_owners 제거, legacy_parent_id는 보존용으로만 남고 런타임에서 사용하지 않는다. 질문 버전은 question_versions/question_version_id 및 응답 JSON questionVersionId로 유지. 과거 migration 기록 보존. 운영은 사용자 명령어 적용, 최신 순서는 docs/questions-operations.md 마지막 절.
 
-
 - 질문지 본체/버전 통합(2026-10-02): `20261002055633_merge_questionnaire_tables.sql` 로컬 적용. 물리 저장은 `questionnaires` 하나이며 기존 버전 ID를 id로 보존한다. 부모 ID는 legacy_parent_id, 생성 시각은 owner_created_at으로 보존하고 private.questionnaire_owners는 security_invoker 호환 뷰다. public.questionnaire_versions/version_number 제거. API versionId/questionnaireId 및 하위 version_id 명칭은 호환용 유지, question_versions는 별도 응답 정의로 유지. 운영은 사용자가 명령어로 적용하며 에이전트는 쓰지 않는다. 세부 적용/중단 절차는 docs/questions-operations.md 마지막 절.
-
 
 - 응답 없는 배포 취소(2026-10-02): 로컬 `20261002054322_withdraw_unanswered_distribution.sql`. 배포본 작성자는 저장 이력이 없는 경우 같은 질문지 ID로 게시/수정 중 복귀 가능하며 기존 복사 초안 생성 분기를 대체한다. 임시저장/revision/last_save_id/자유응답/답변 행/이전 답변/완료가 있으면 차단한다. 단순 열람으로 생긴 빈 배포 세션은 보존하되 origin_version_id 연결만 해제하여 재배포 때 새 구성으로 시작한다. 게시 단계 가이드 응답은 보존·판정 제외. 다른 배포본(보관 포함)에 쓰는 원본은 잠금 유지, 마지막 배포 취소 시 잠금 해제. 응답 저장과 동일한 질문지 advisory lock 아래 검사한다. 운영 미적용. SQL questionnaire_distribution_withdrawal, 서버 8개·타입·린트·보안 통과. 실제 데이터 상태 변경/브라우저 테스트 없음.
 
-
 - 실제 배포·원본 잠금(2026-10-02, 조건만 검사 정책보다 우선): 로컬 `20261002053153_locked_questionnaire_distribution.sql`. 배포 확인 창에서 질문지·원본 질문·설명 수정/삭제 불가와 다른 질문지의 공유 원본 잠금을 안내한다. 상태 RPC로 실제 배포하며 DB 트리거가 미처리 검토를 재검사하고 questions.distribution_locked_at을 설정한다. 원본/설명 잠금은 관리자에도 적용되고 재사용 질문의 재배포는 허용한다. 컨설턴트 목록과 상세에서 원본 질문·공개 설명을 열람한다. 새 배치형 배포본은 이번 단계에서 열람만 제공하고 답변 저장 경로/자동 응답 생성은 아직 연결하지 않았다. 기존 구형 배포 응답은 유지한다. 운영 미적용, 실제 질문지 배포 없음. 브라우저는 요청에 따라 로컬 테스트 컨설턴트 로그인만 확인했다. 검증/운영 절차는 docs/questions-operations.md 최신 절 참고.
-
 
 - 배포 조건 점검 단계(2026-10-02): 게시 중인 본인 질문지의 배포 Select를 활성화했다. 미처리 원본 질문 검토 요청이 있으면 거절하고, 없으면 조건 충족만 안내하며 게시 상태를 유지한다. 읽음 여부·요청 출처와 무관하고 완료 요청은 제외한다. POST distribution/PATCH status(distributed)는 서버의 checkQuestionnaireDistribution으로 검사만 하며 컨설턴트 노출·응답 생성은 하지 않는다. DB migration 없음. 검증 scripts/verify-questionnaire-distribution-check.mjs 6개, 타입·린트 통과. 이후 실제 배포 구현 시 조건 재검사와 DB 원자적 처리가 필요하다.
 
 - 검토 요청 권한 최종 정책(2026-10-02): 20261002032804_source_owner_question_reviews.sql 로컬 적용. 요청 작성 차단·새 요청 수신은 원본 questions.created_by 기준이며 질문지 제작자 기준을 대체한다. 관리자가 타인의 질문을 배치한 질문지에서는 그 관리자가 요청 가능하고 알림은 원본 제작자에게 간다. 질문 관리에도 파란 새 요청 표시를 제공한다. 기존 거절로 남은 로컬 권한 차이는 이번 정책으로 해소했다. 독립 질문 조회/참조/배치는 비관리자 본인 원본만 허용하며 게시본 공유 조회는 별도 예외다. 운영 미적용.
 
-
 - 검토 요청 새 알림(2026-10-02): 로컬 20261002032203_question_review_read_notifications.sql. question_review_reads에 요청별/제작자별 읽음 기록, 화면에 보이는 카드의 ID만 확인 처리한다. 대시보드·질문지 목록의 파란 새 요청 표시는 읽으면 해제되고 미처리 개수는 유지한다. 운영 미적용. 이전 단계에서 거절된 로컬 원본 작성자 추가 차단 제거는 아직 미완료이며 새 migration에 해당 드리프트를 포함하지 않는다.
 
-
 - 질문 검토 요청(2026-10-02): 로컬 `20261002030732_question_review_requests.sql` 적용. 기존 빈 questionnaire_review_requests를 question_review_requests로 rename하며 question_id는 원본 questions.id다. origin_version_id는 nullable SET NULL이고 질문지 삭제가 검토 요청을 지우지 않는다. 게시 질문의 요청을 리드/관리자에게 공유하며 작성은 게시 중만, 처리는 원본 질문 작성자/관리자만 가능하다. 가이드 권한과 무관하다. 공통 QuestionReviews와 /api/question-reviews에서 처리하고 질문 목록에 미처리 개수를 표시한다. 기존 질문지 검토 RPC/API는 제거했다. 로컬 SQL 권한·중복·다중 질문지 공유·삭제 보존 및 응답 회귀, 타입/린트, schema diff 검증. 운영 미적용, 브라우저 실사용 미검증. 운영 순서는 docs/questions-operations.md 최신 절을 따른다.
-
 
 - 게시본 최신 구성 동기화(2026-10-01, 응답 시작 당시 구성 고정 정책보다 우선): 로컬 `20261001075311_live_published_response_layout.sql`. 가이드 지정 계정과 나머지 컨설턴트 리드 모두 최신 게시본 제목/섹션/질문 추가·제외·순서를 본다. 가이드 세션은 조회/저장 시 본인 세션만 동기화하며 기존 응답 ID·본문·행·이전 답변을 보존한다. 제외한 질문 응답은 삭제하지 않고 재배치 시 원본 질문 ID로 재연결한다. 현재 질문 구성만 조회·저장하며 definitionToken은 제목/구성도 포함해 오래된 저장을 차단한다. 작성 중 입력은 보존하며 제외된 질문의 로컬 입력은 복사용 영역에 남긴다. 상세 화면은 5초/포커스 복귀 조회를 사용한다. 실제 저장 권한은 가이드 지정 계정으로 유지하고, 일반 consultant 역할의 배포본 정책은 이번 범위가 아니다. 질문지 삭제 뒤에는 마지막 동기화 구성을 사용한다. 로컬 SQL 회귀 5개·입력 병합 3개·타입/린트·보안 advisor 통과, 운영 미적용. 운영 절차는 `docs/questions-operations.md` 최신 절 참고.
 
@@ -98,33 +100,23 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 서술형 답변 열은 `탐구활동 참조 권장` 체크박스로 `questions.fields[].explorationRecommended`를 설정한다. 기본 해제, 다른 유형 전환 시 제거하며 질문/질문지 미리보기 입력에 포커스할 때 파란 테두리와 참조 안내 말풍선을 표시한다. API/DB는 서술형 boolean만 허용한다. 로컬 migration `20261001034040_question_text_exploration_recommendation.sql`, 검증 `supabase/tests/question_exploration_recommendation.sql`·`scripts/verify-question-exploration.mjs`. 기존 데이터 변경 없음, 운영 적용 순서는 `docs/questions-operations.md`를 따른다.
 
-
 - 로컬 `20260929081236_questionnaire_placement_definitions.sql`: source_question_id가 있는 배치는 body/kind/options/scale_config/choice_style/choice_allow_text를 NULL로 유지하고 원본에서 읽는다. 해당 열은 이전 배포본 답변 검증이 사용하므로 삭제하지 않는다. 저장 RPC·DB 제약이 중복 정의를 차단하며 이전 행은 보존한다. 운영 미적용. 검증 `supabase/tests/questionnaire_legacy_response_compatibility.sql`, `questionnaire_published_sources.sql`.
-
 
 - 원본 설명 통일(로컬만): `20260929080341_questionnaire_source_details_only.sql`에서 빈 questionnaire_question_details·전용 RPC/UI/API를 제거했다. 설명은 원본 question_details/save_question으로 관리하며 검토 요청은 별도 유지한다. 이전 import 함수는 명시적 폐기 오류로 중단하고 대응 이력은 보존한다. 운영은 미적용이며 데이터가 있으면 새 migration은 중단한다.
 
-
 - 원본 참조 저장 통일(로컬만): `20260929075817_questionnaire_source_required.sql`. 모든 제작 저장에 sourceQuestionId가 필요하며 질문지 안 새 질문은 원본 저장 후 배치한다. 현재 운영의 이전 게시본을 같은 ID/상태로 전환하기 전에는 이 단계 앱/migration을 운영 배포하지 않는다. 테이블·열 제거 및 이전 설명 구조 정리는 후속 단계다.
-
 
 - DB 정리 범위(2026-09-29): 사용자는 질문·질문지 통합 후 미사용 **테이블 구조** 점검을 요청했다. 기존 게시본·전환본 데이터는 유지하며 테이블 점검을 데이터 삭제·보관 요청으로 해석하지 않는다. 오삭제했던 기존 게시본은 삭제 전 백업과 모든 열을 비교해 복원 완료했다. 자세한 기록은 `docs/questionnaire-storage-design.md`를 따른다.
 
-
 - 진행 상태(2026-09-29): 질문지 게시까지 구현했으며, 게시 후 검토 요청 흐름은 사용자가 아직 점검하지 않았다. 구현 완료와 사용자 점검 완료를 구분하고 검토 요청을 검증 완료로 간주하지 않는다.
-
 
 - 게시된 질문지는 작성자에게 편집기, 다른 리드·관리자에게 실제 질문지 미리보기 형태와 질문별 검토 요청을 제공한다. 게시본의 돌아가기는 질문 관리 대시보드로 연결한다. 설명 추가·수정·삭제는 질문지 작성자만 가능하며 이전 타인 설명 작성 권한을 대체한다. 게시 목록 제작자명은 게시본 범위 전용 RPC로 조회한다. migration: `20260929071720_questionnaire_published_review_permissions.sql`.
 
-
 - 질문지 상태 Select의 `게시`를 활성화했다. 타 리드의 게시본은 `read_published_question_sources` RPC로 해당 질문지의 원본 질문만 읽으며 독립 질문의 작성자 전용 RLS는 유지한다. 배포·보관은 UI 비활성 유지. migration `20260929063207_questionnaire_published_sources.sql`, 검증 `supabase/tests/questionnaire_published_sources.sql`, 운영 순서 `docs/questions-operations.md`.
-
 
 - 탐구활동은 관리자 사이드바에도 표시한다. 컨설턴트는 본인 확정 활동만, 리드·관리자는 전체 확정 활동을 조회한다. 타인 활동은 읽기 전용이며 수정·삭제는 작성자만 가능하다. 관리자 컨설턴트 미리보기는 API에서 본인 목록·첨부만 반환한다. 타인 파일은 활성 확정본에서 참조된 객체만 공유하며 임시저장은 본인 브라우저에만 남는다. migration `20260929050548_exploration_staff_read.sql`, 회귀 `supabase/tests/exploration_activity_storage.sql`, `scripts/verify-exploration-storage{,-local}.mjs`.
 
-
 - 질문 제작의 `minRows`(기본 1)·`rowLabels`(빈 이름은 순서 숫자)는 `questions.min_rows`·`row_labels`로 저장한다. 반복형 최소는 최대 이하이며 질문/질문지 미리보기에서 최소 행을 유지한다. 참조형 행 수는 원본 응답을 따른다. migration `20260928102529_question_row_settings.sql`, SQL 회귀 `supabase/tests/question_row_settings.sql`.
-
 
 - 질문지 제작은 QuestionnaireView의 페이지 편집기로 진행하며 숨긴 목록 상태를 유지한다. 질문 추가하기는 단일 Drawer에서 QuestionLibraryView의 embedded 제작 UI를 열고 저장된 질문 불러오기는 같은 Drawer 내부 선택 목록을 사용한다. 불러온 질문과 배치 카드의 질문 수정은 원본 ID로 PUT 저장하며 라이브러리 캐시를 갱신한다. 이미 배치된 질문의 완료는 중복 배치하지 않는다. Drawer와 Dialog를 중첩하지 않는다. 새 질문은 /api/questions에 독립 저장한 뒤 sourceQuestionId로 배치하며 저장 완료된 변경 없는 질문만 배치할 수 있다. 질문 추가 화면 전환 동안 질문지 제목·섹션과 새 질문 입력을 유지하고 돌아올 때 추가 버튼으로 포커스를 복원한다. 최초 변경 전 저장은 비활성화하고 바로 닫으며, 변경 후에는 닫기 확인을 제공하고 확인 중 자동 저장을 멈춘다. 제목 공백은 클라이언트·저장 API에서 차단하고 토스트로 안내한다. QuestionnaireStatusSelect의 게시·배포·보관 항목은 제작 단계 동안 비활성화한다. DB migration 없음. 검증 scripts/verify-questionnaire-drawer.mjs 및 scripts/verify-questionnaire-storage.mjs.
 
@@ -236,7 +228,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 탐구활동 목록은 내 활동/다른 사람의 활동을 분리한다. 컨설턴트는 내 활동만 표시하며 리드·관리자는 다른 사람의 활동에서 전체 보기/작성자 선택 사람별 보기를 사용한다. API는 기존 profiles RLS를 따르는 작성자 이름만 함께 조회하고, 이름을 볼 수 없으면 비공개 표시한다. 추가 DB migration 없음.
 
-
 - 리치 텍스트 탐구활동 명령어(2026-10-01): 모든 QuestionRichTextEditor에서 권장 설정과 무관하게 `@` 메뉴 → 입력 위 본인 탐구활동 목록/검색/새 활동 작성 Drawer를 제공한다. 확정 활동은 `explorationReference` mark(UUID)+활동명 text로 기존 답변에 저장한다. 읽기 화면은 기존 권한으로 상세 조회하며 DB migration 없음. 질문지 RichText/editor/renderer는 질문 공통 구현을 재수출한다. 회귀 `scripts/verify-questionnaire-rich-text.mjs`, `verify-questionnaire-storage.mjs` 22개와 예시 UI 검증 완료. 실제 계정 저장/재조회는 미검증. 새 배치형 배포는 미구현 유지.
 
 - 탐구활동 첨부 UI(2026-10-01): 목록은 입력 위 Portal 팝업으로 배치해 레이아웃을 밀지 않는다. 주제/학년/학기/기재 영역만 있는 카드 전체를 클릭해 첨부하고 hover/focus 시 첨부하기를 표시한다. 새 활동 추가는 목록 마지막 항목이다. 명령어는 아이콘과 설명을 표시하고 목록·권장 말풍선은 X로 닫는다. 이번 UI 수정은 브라우저 테스트 없이 검증한다.
@@ -244,13 +235,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 탐구활동 목록 캐시 수정(2026-10-01): QuestionExplorationInput과 @ 메뉴가 같은 URL 키에 각각 배열/객체를 저장하던 SWR 충돌을 제거했다. `useExplorationList`가 `{userId, activities}` 계약과 `exploration-list-v1`+URL 키를 공유하며 잘못된 응답 형식을 거부한다. 배열로 변환한 결과를 같은 키에 저장하지 않는다. 회귀 `scripts/verify-exploration-list-cache.mjs`는 빈 목록/활동 있는 목록/재검증/범위 분리/잘못된 응답을 검증한다. DB migration 없음, 앱 재배포 필요.
 
 - 진로 흐름 부분 제출(2026-10-02): 원본 `5f6064ad-1dd6-4e0d-95dd-611ccacbce92`는 활성 칸 하나의 유효 응답만으로 배포 답변 제출을 허용한다. 전체 공백은 거절하며 다른 질문의 모든 필드/최소 행 검사는 유지한다. `20261002083415_career_flow_partial_submission.sql` 로컬 적용·한 칸/빈 답변 롤백 검증·기존 배포 응답 회귀·보안 검사 통과. 운영은 사용자 적용 대기. 실제 브라우저 제출은 수행하지 않았다.
-
-- 학습법 관리·참조(2026-10-10): `study` 화면/API/테이블과 `study-reports` 버킷을 추가했다. 탐구활동과 같은 임시저장·확정·수정·삭제·첨부·작성자별 조회이며 사진의 시험 구분/과목/문제/전략/실천/진단 항목을 저장한다. 서술형 `studyRecommended`, `@학습법`의 `studyReference`, 특수 답변 `kind: study`를 지원한다. 가이드에서 실제 연결한 학습법·등록 첨부만 컨설턴트가 열람한다. `20261010055936_study_methods.sql` 로컬 적용·회귀·Storage·타입·변경 범위 lint·전체 migration 재생·보안 검증 완료. 운영 미적용, 브라우저 테스트 없음. 전체 lint 기존 스크립트 6개 import 정렬 오류 별도. Webpack 배포 빌드 통과(기본 Turbopack은 실행 환경 포트 제한). 계약·적용 명령은 `docs/study-methods.md`를 따른다.
-
-- 학습법 입력 구성 수정(2026-10-10): 예시 채우기·참고자료 UI 제거, 과목(국어/영어/수학/사회/과학/기타) 옆 과목명 선택 입력. 문제 상황은 self/student 출처 필수 선택이며 공통 문제 템플릿은 데이터 등록 전 비활성이다. 보고서 원문 대신 관련 자료 첨부로 안내한다. `20261010061957_study_problem_sources.sql` 로컬 적용·저장/가이드 회귀·타입/변경 범위 lint 통과. 기존 값·첨부는 보존하고 옛 직접 입력 과목은 기타로 읽는다. 운영 적용은 `docs/study-methods.md` 최신 순서를 따른다.
-
-- 학습법 문제 상황 템플릿(2026-10-10): 대표 문장 16개를 선택하여 문제 상황 본문에 직접 입력·수정한다. 제목은 저장하지 않는다. 출처 전환은 본문 유지, 다른 템플릿 선택은 본문만 교체. `20261010072805_study_problem_templates.sql` 로컬 적용, problemSource=self/student/template 허용. 저장/권한 SQL·템플릿 2개·기존 JS 19개·타입·린트·보안 검증, 운영 미적용. 운영 순서는 docs/study-methods.md 참고.
-
-- 학습법 선택 제목(2026-10-10): values.title 선택 입력(100자). 목록·참조·삭제 확인에 제목 우선, 비우면 기존 전략 표시. 기존 제목 없는 데이터 호환. `20261010083351_study_optional_title.sql` 로컬 적용·저장/권한 SQL·JS 22개·타입·린트·보안 검증, 운영 미적용. docs/study-methods.md 순서로 DB 먼저 적용 후 앱 배포.
 
 - 게시 질문지 공동 편집(2026-10-12): `20261012050042_published_questionnaire_collaboration.sql` 로컬 적용. 다른 리드·관리자도 활성 게시 질문지 제목·배치와 원본 내용/설정/설명을 수정한다. 작성자·상태/삭제 권한·비공개 초안·배포 원본 잠금·가이드 삭제 확인은 유지한다. 독립 목록은 작성자 필터 유지, 게시 출처는 편집기에서 병합한다. 로컬 리드 계정 생성은 `scripts/create-local-consultant.mjs --lead`, 비밀 파일 `.env.local-consultant-lead.json`. 타입/변경 파일 린트/공동 편집 및 가이드 SQL/security advisor 통과. 운영·브라우저 테스트 미수행. 운영 절차는 docs/questions-operations.md 마지막 절.
