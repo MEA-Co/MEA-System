@@ -1,9 +1,9 @@
 'use client';
 
-import { Eye, NotebookPen, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Eye, Plus, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { CollectionHeader } from '@/components/patterns/collection';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,19 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
 import { StudyActivityDetails } from './components/StudyActivityDetails';
 import { StudyExamplesDialog } from './components/StudyExamplesDialog';
 import { StudyFields } from './components/StudyFields';
+import { StudyList } from './components/StudyList';
 import { useStudyStorage } from './hooks/useStudyStorage';
 import { type Activity, studySummary, studyTitle } from './lib/fields';
 import { hasInput, missingFields } from './lib/storage-model';
@@ -155,32 +149,26 @@ export function StudyView({
         </Button>
       ) : (
         !onSelect && (
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              {!onSelect && <DashboardPageCategory view="study" />}
-              <h1
-                id="study-management-title"
-                className={
-                  onSelect
-                    ? 'mt-1 text-lg font-semibold'
-                    : 'mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl'
-                }
+          <CollectionHeader
+            id="study-management-title"
+            category={<DashboardPageCategory view="study" />}
+            title="학습법 관리"
+            description="나만의 학습 전략을 기록하고, 필요한 답변에 연결하세요."
+            action={
+              <Button
+                type="button"
+                variant="brand"
+                disabled={!ready || busy}
+                onClick={(event) => {
+                  opener.current = event.currentTarget;
+                  create();
+                }}
               >
-                {onSelect ? '첨부할 학습법 선택' : '학습법 관리'}
-              </h1>
-            </div>
-            <Button
-              type="button"
-              disabled={!ready || busy}
-              onClick={(event) => (
-                (opener.current = event.currentTarget),
-                create()
-              )}
-            >
-              <Plus aria-hidden="true" />
-              학습법 추가
-            </Button>
-          </div>
+                <Plus aria-hidden="true" />
+                학습법 추가
+              </Button>
+            }
+          />
         )
       )}
       {localError && (
@@ -404,218 +392,34 @@ export function StudyView({
           </ul>
         </div>
       ) : (
-        <div className="space-y-4">
-          {canViewOthers && (
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-label="학습법 구분"
-            >
-              <Button
-                type="button"
-                variant={scope === 'mine' ? 'secondary' : 'ghost'}
-                aria-pressed={scope === 'mine'}
-                onClick={() => {
-                  setScope('mine');
-                  setQuery('');
-                }}
-              >
-                내 학습법 <Badge variant="outline">{mine.length}</Badge>
-              </Button>
-              <Button
-                type="button"
-                variant={scope === 'others' ? 'secondary' : 'ghost'}
-                aria-pressed={scope === 'others'}
-                onClick={() => {
-                  setScope('others');
-                  setQuery('');
-                }}
-              >
-                다른 사람의 학습법{' '}
-                <Badge variant="outline">{others.length}</Badge>
-              </Button>
-            </div>
-          )}
-          {showOthers && (
-            <div className="flex flex-wrap items-center gap-3">
-              <div
-                className="flex gap-1 rounded-xl bg-muted/50 p-1"
-                role="group"
-                aria-label="다른 사람의 학습법 보기 방식"
-              >
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={otherMode === 'all' ? 'secondary' : 'ghost'}
-                  aria-pressed={otherMode === 'all'}
-                  onClick={() => setOtherMode('all')}
-                >
-                  전체 보기
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={otherMode === 'person' ? 'secondary' : 'ghost'}
-                  aria-pressed={otherMode === 'person'}
-                  onClick={() => setOtherMode('person')}
-                >
-                  사람별 보기
-                </Button>
-              </div>
-              {otherMode === 'person' && (
-                <Select
-                  value={owner || null}
-                  onValueChange={(value) => setOwner(value ?? '')}
-                >
-                  <SelectTrigger
-                    className="min-w-48"
-                    aria-label="학습법 작성자 선택"
-                  >
-                    <SelectValue placeholder="작성자를 선택해 주세요">
-                      {owner ? ownerLabel(owner) : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {people.map((person) => (
-                      <SelectItem key={person.id} value={person.id}>
-                        {person.label} (
-                        {
-                          others.filter(
-                            (activity) => activity.ownerId === person.id,
-                          ).length
-                        }
-                        개)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 font-semibold">
-              {showOthers
-                ? otherMode === 'person' && owner
-                  ? `${ownerLabel(owner)}님의 학습법`
-                  : '다른 사람의 학습법'
-                : '내 학습법'}{' '}
-              <Badge variant="secondary">{filtered.length}</Badge>
-            </h2>
-            <div className="relative w-full sm:w-72">
-              <Search
-                aria-hidden="true"
-                className="absolute top-2.5 left-3 size-4 text-muted-foreground"
-              />
-              <Input
-                aria-label="학습법 검색"
-                placeholder="과목, 문제 상황, 학습 전략 검색"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="rounded-xl pl-9"
-              />
-            </div>
-          </div>
-          {filtered.length ? (
-            <ul className="divide-y rounded-2xl border">
-              {filtered.map((activity) => (
-                <li
-                  key={activity.clientKey}
-                  className="flex flex-wrap items-center gap-4 p-5"
-                >
-                  <div className="min-w-0 flex-1 basis-60">
-                    <button
-                      type="button"
-                      disabled={busy || !ready}
-                      className="rounded-sm text-left font-semibold wrap-break-word hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                      onClick={(event) => {
-                        opener.current = event.currentTarget;
-                        open(activity);
-                      }}
-                    >
-                      {studyTitle(activity.values)}
-                    </button>
-                    <Badge
-                      variant={
-                        activity.status === 'draft' ? 'secondary' : 'outline'
-                      }
-                      className="ml-2"
-                    >
-                      {activity.status === 'draft'
-                        ? activity.revision > 0
-                          ? '수정 중 · 임시저장'
-                          : '임시저장'
-                        : '확정'}
-                    </Badge>
-                    {showOthers && (
-                      <p className="mt-2 text-sm font-medium">
-                        작성자: {ownerLabel(activity.ownerId)}
-                      </p>
-                    )}
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {studySummary(activity.values) || '기본 정보 미입력'}
-                    </p>
-                    {activity.values.problem && (
-                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                        {activity.values.problem}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={busy || !ready}
-                      title={
-                        !onSelect && canEdit(activity)
-                          ? '상세 · 수정'
-                          : '상세 보기'
-                      }
-                      aria-label={`${studyTitle(activity.values)} ${!onSelect && canEdit(activity) ? '상세 · 수정' : '상세 보기'}`}
-                      onClick={(event) => (
-                        (opener.current = event.currentTarget),
-                        open(activity)
-                      )}
-                    >
-                      {!onSelect && canEdit(activity) ? (
-                        <Pencil aria-hidden="true" />
-                      ) : (
-                        <Eye aria-hidden="true" />
-                      )}
-                    </Button>
-                    {!onSelect && canEdit(activity) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={busy}
-                        title="삭제"
-                        aria-label={`${studyTitle(activity.values)} 삭제`}
-                        onClick={() => setPendingDelete(activity)}
-                      >
-                        <Trash2 aria-hidden="true" />
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
-              <NotebookPen
-                aria-hidden="true"
-                className="mb-4 size-8 text-muted-foreground"
-              />
-              <h3 className="font-normal">
-                {showOthers && otherMode === 'person' && !owner
-                  ? '작성자를 선택해 주세요'
-                  : query.trim()
-                    ? '검색 결과가 없습니다'
-                    : '등록된 학습법이 없어요.'}
-              </h3>
-            </div>
-          )}
-        </div>
+        <StudyList
+          canViewOthers={canViewOthers}
+          scope={scope}
+          setScope={setScope}
+          query={query}
+          setQuery={setQuery}
+          mine={mine}
+          others={others}
+          showOthers={showOthers}
+          otherMode={otherMode}
+          setOtherMode={setOtherMode}
+          owner={owner}
+          setOwner={setOwner}
+          ownerLabel={ownerLabel}
+          people={people}
+          filtered={filtered}
+          busy={busy}
+          ready={ready}
+          isLoading={isLoading}
+          remoteError={remoteError}
+          localError={localError}
+          canEdit={canEdit}
+          onOpen={(activity, element) => {
+            opener.current = element;
+            open(activity);
+          }}
+          onDelete={setPendingDelete}
+        />
       )}
       <Dialog
         open={!!pendingDelete}

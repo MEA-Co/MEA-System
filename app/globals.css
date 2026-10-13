@@ -7,6 +7,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-pretendard);
@@ -51,6 +53,8 @@
 }
 
 :root {
+  --brand: #ffe233;
+  --brand-foreground: #151515;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -75,8 +79,8 @@
   --radius: 0.625rem;
   --sidebar: #f0f0ed;
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #ffe233;
-  --sidebar-primary-foreground: #151515;
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
   --sidebar-accent: #e5e5e0;
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: #d5d5cf;
@@ -111,8 +115,8 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #ffe233;
-  --sidebar-primary-foreground: #151515;
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
