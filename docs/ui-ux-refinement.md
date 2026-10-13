@@ -318,3 +318,18 @@
 - 타입·변경 파일 lint·입력 회귀 13개·diff 검사 통과. 실제 브라우저 검증 없음.
 
 - 2026-10-13: 사용자 요청으로 체크리스트 항목 추가 버튼을 outline의 흰 배경으로 변경했다. 전체 폭 추가 행 형태와 hover 표시는 유지한다. 변경 파일 lint·diff 검사 통과.
+
+## 작성 취소 확인 AlertDialog 전환
+
+- 2026-10-13: 공식 shadcn base-luma AlertDialog를 공통 컴포넌트로 추가하고 작성 화면 내부 안내를 확인 팝업으로 교체했다. 작은 모서리와 기존 Button variant를 사용한다.
+- React 트리에서 DrawerContent 안에 AlertDialog를 중첩해 Base UI 모달 계층을 유지한다. Portal은 Drawer z50 위의 backdrop z60 / popup z61이다. 설치된 Base UI 소스의 alert-dialog 강제 disablePointerDismissal을 확인했다. 배경 클릭은 버리기/닫기를 실행하지 않는다.
+- 최초 포커스는 계속 작성 버튼. Esc와 계속 작성은 confirmDiscard만 해제한다. 변경 내용 버리기만 confirmDiscard와 draft를 정리한다. 확인 중 Drawer의 returnToList 재실행을 차단한다.
+- 모달 포커스 복귀를 위해 확인 중 fieldset 자체를 disabled로 바꾸지 않고 모달의 배경 상호작용 차단을 사용한다. 저장 중 disabled는 유지한다.
+- 타입·변경 파일 lint·기존 목록/입력 회귀 19개·diff 검사 통과. 실제 중첩 모달의 클릭·Esc·포커스 복귀 브라우저 검증은 사용자 요청이 없어 미수행이다. DB 변경·배포 없음.
+
+## 중첩 확인창 배경 차단 수정
+
+- 2026-10-13: 사용자 확인에서 배경막 부재와 뒤쪽 클릭/스크롤/입력이 발견됐다. 설치된 Base UI DialogBackdrop은 nested일 때 forceRender 없이는 렌더링되지 않는 것을 소스로 확인했다. 이전 구현 완료는 실제 동작 검증 완료가 아니었다.
+- 공통 AlertDialogOverlay에 forceRender를 지정하고 검정40%·blur 배경막을 표시한다. overlay/popup에 pointer-events-auto를 명시하고 배경막 touch-none을 적용했다. 기존 z60/61 및 바깥 클릭 닫기 금지는 유지한다.
+- 확인 중 작성 form에 inert와 overflow hidden을 적용해 입력·포커스·내부 스크롤을 차단한다. 계속 작성/Esc로 해제하면 기존 값과 화면을 유지한다.
+- 타입·변경 파일 lint·diff 검사 통과. 실제 브라우저 클릭/스크롤/키보드 재검증은 미수행.

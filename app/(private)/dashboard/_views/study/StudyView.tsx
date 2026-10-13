@@ -1,9 +1,18 @@
 'use client';
-
 import { Eye, Plus, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { CollectionHeader } from '@/components/patterns/collection';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -73,6 +82,7 @@ export function StudyView({
   const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const continueWritingRef = useRef<HTMLButtonElement>(null);
   const readOnly =
     (!!draft?.ownerId && draft.ownerId !== userId) ||
     (!!onSelect && draft?.status === 'confirmed');
@@ -117,7 +127,7 @@ export function StudyView({
   );
 
   function returnToList() {
-    if (busy) return;
+    if (busy || confirmDiscard) return;
     if (dirty) setConfirmDiscard(true);
     else {
       setConfirmDiscard(false);
@@ -217,22 +227,19 @@ export function StudyView({
                 : '문제 상황부터 실천과 점검까지, 학습 전략을 구체적으로 기록하세요.'}
             </DrawerDescription>
           </DrawerHeader>
-          {confirmDiscard && (
-            <div role="alert" className="space-y-3 border-b bg-muted/50 p-6">
-              <p className="font-medium">작성을 취소할까요?</p>
-              <p className="text-sm text-muted-foreground">
-                저장하지 않은 변경 내용이 사라집니다.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setConfirmDiscard(false)}
-                >
+          <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+            <AlertDialogContent initialFocus={continueWritingRef}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>작성을 취소할까요?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  저장하지 않은 변경 내용이 사라집니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel ref={continueWritingRef}>
                   계속 작성
-                </Button>
-                <Button
-                  type="button"
+                </AlertDialogCancel>
+                <AlertDialogAction
                   variant="destructive"
                   onClick={() => {
                     setConfirmDiscard(false);
@@ -240,10 +247,10 @@ export function StudyView({
                   }}
                 >
                   변경 내용 버리기
-                </Button>
-              </div>
-            </div>
-          )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {draft && readOnly && (
             <StudyActivityDetails
               activity={draft}
@@ -258,16 +265,15 @@ export function StudyView({
           {draft && !readOnly && (
             <form
               noValidate
+              inert={confirmDiscard}
+              style={confirmDiscard ? { overflow: 'hidden' } : undefined}
               className="min-h-0 flex-1 overflow-y-auto bg-background px-4 pt-4 md:px-6 md:pt-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 confirm();
               }}
             >
-              <fieldset
-                disabled={busy || confirmDiscard}
-                className="min-w-0 space-y-4"
-              >
+              <fieldset disabled={busy} className="min-w-0 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
                     * 표시된 항목은 필수입니다.
