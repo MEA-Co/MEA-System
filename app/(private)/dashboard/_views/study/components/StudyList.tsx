@@ -255,7 +255,7 @@ export function StudyList({
       >
         <TabsTrigger
           type="button"
-          className="min-w-0 px-2 sm:px-4"
+          className="min-w-0 px-3 sm:flex-none sm:px-4"
           value="mine"
         >
           내 학습법{' '}
@@ -268,7 +268,7 @@ export function StudyList({
         </TabsTrigger>
         <TabsTrigger
           type="button"
-          className="min-w-0 px-2 sm:px-4"
+          className="min-w-0 px-3 sm:flex-none sm:px-4"
           aria-label="다른 사람의 학습법"
           value="others"
         >

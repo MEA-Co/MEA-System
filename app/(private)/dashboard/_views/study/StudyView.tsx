@@ -82,6 +82,7 @@ export function StudyView({
   const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [examplesOpen, setExamplesOpen] = useState(false);
   const continueWritingRef = useRef<HTMLButtonElement>(null);
   const readOnly =
     (!!draft?.ownerId && draft.ownerId !== userId) ||
@@ -127,7 +128,7 @@ export function StudyView({
   );
 
   function returnToList() {
-    if (busy || confirmDiscard) return;
+    if (busy || confirmDiscard || examplesOpen) return;
     if (dirty) setConfirmDiscard(true);
     else {
       setConfirmDiscard(false);
@@ -265,8 +266,12 @@ export function StudyView({
           {draft && !readOnly && (
             <form
               noValidate
-              inert={confirmDiscard}
-              style={confirmDiscard ? { overflow: 'hidden' } : undefined}
+              inert={confirmDiscard || examplesOpen}
+              style={
+                confirmDiscard || examplesOpen
+                  ? { overflow: 'hidden' }
+                  : undefined
+              }
               className="min-h-0 flex-1 overflow-y-auto bg-background px-4 pt-4 md:px-6 md:pt-5"
               onSubmit={(event) => {
                 event.preventDefault();
@@ -278,7 +283,7 @@ export function StudyView({
                   <p className="text-xs text-muted-foreground">
                     * 표시된 항목은 필수입니다.
                   </p>
-                  <StudyExamplesDialog />
+                  <StudyExamplesDialog onOpenChange={setExamplesOpen} />
                 </div>
                 <StudyFields
                   key={draft.clientKey}

@@ -17,25 +17,38 @@ import { studyExamples } from '../lib/examples';
 
 import { StudyActivityDetails } from './StudyActivityDetails';
 
-export function StudyExamplesDialog() {
+export function StudyExamplesDialog({
+  onOpenChange,
+}: {
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const example = studyExamples[index];
+  function changeOpen(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen} disablePointerDismissal>
       <DialogTrigger
         render={<Button type="button" variant="default" size="lg" />}
       >
         <BookOpen className="size-4" /> 학습법 예시 보기
       </DialogTrigger>
-      <DialogContent className="flex h-[90dvh] w-[96vw] max-w-[1200px] flex-col gap-3 rounded-lg p-4 sm:max-w-[1200px] md:p-6">
-        <DialogHeader className="shrink-0 pr-10">
-          <DialogTitle>학습법 작성 예시</DialogTitle>
+      <DialogContent
+        nested
+        className="flex h-[90dvh] w-[96vw] max-w-[1200px] flex-col gap-0 overflow-hidden rounded-lg p-0 sm:max-w-[1200px]"
+      >
+        <DialogHeader className="shrink-0 border-b px-4 py-4 pr-14 md:px-6 md:pr-14">
+          <DialogTitle className="text-xl font-extrabold">
+            학습법 작성 예시
+          </DialogTitle>
           <DialogDescription>
             예시를 참고해 문제 상황에 맞는 솔루션을 작성해 주세요.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b pb-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-muted px-4 py-3 md:px-6">
           <Button
             type="button"
             variant="outline"
@@ -47,8 +60,8 @@ export function StudyExamplesDialog() {
             <ChevronLeft />
           </Button>
           <div className="min-w-0 text-center" aria-live="polite">
-            <p className="font-semibold">{example.title}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="font-bold break-keep">{example.title}</p>
+            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
               {index + 1} / {studyExamples.length}
             </p>
           </div>
@@ -68,7 +81,7 @@ export function StudyExamplesDialog() {
           activity={example.activity}
           notice=""
           hideEmptyFields
-          onClose={() => setOpen(false)}
+          onClose={() => changeOpen(false)}
         />
       </DialogContent>
     </Dialog>

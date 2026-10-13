@@ -333,3 +333,21 @@
 - 공통 AlertDialogOverlay에 forceRender를 지정하고 검정40%·blur 배경막을 표시한다. overlay/popup에 pointer-events-auto를 명시하고 배경막 touch-none을 적용했다. 기존 z60/61 및 바깥 클릭 닫기 금지는 유지한다.
 - 확인 중 작성 form에 inert와 overflow hidden을 적용해 입력·포커스·내부 스크롤을 차단한다. 계속 작성/Esc로 해제하면 기존 값과 화면을 유지한다.
 - 타입·변경 파일 lint·diff 검사 통과. 실제 브라우저 클릭/스크롤/키보드 재검증은 미수행.
+
+## 학습법 예시 화면과 중첩 모달
+
+- 2026-10-13: 예시 Dialog의 제목·설명, 회색 예시 탐색 바, 스크롤 본문, 하단 닫기 영역을 구분했다. 중복 외곽 패딩을 제거하고 작은 모서리·굵은 제목·무채색 배색을 적용했다.
+- 공유 StudyActivityDetails를 Card size=sm / CardHeader emphasis로 전환해 흰 내용과 연한 노랑 제목을 작성 화면과 통일했다. 문제/솔루션 동일 폭·PC 동일 높이·모바일 내용 높이·화살표를 유지한다. 공유 읽기 전용 상세에도 적용되며 명칭/내용은 유지한다.
+- 공통 DialogContent에 nested 옵션을 추가했다. 중첩 시 forceRender 배경막(z60, 검정40%+블러, pointer-events-auto/touch-none)과 팝업(z61)을 사용한다. 기본 Dialog 사용처의 레이어는 그대로다.
+- 예시 Dialog는 disablePointerDismissal로 바깥 클릭에 닫히지 않는다. 닫기/X/Esc는 예시만 닫는다. 부모가 examplesOpen을 받아 작성 form inert·overflow hidden을 적용하고 Drawer 닫기 재실행을 차단한다. Portal 예시 내부는 스크롤 가능하며 본문 overscroll-contain 유지.
+- 타입·변경 파일 lint·기존 목록/입력 회귀 19개·diff 검사 통과. 실제 브라우저의 중첩 클릭·스크롤·포커스 복귀 시각 검증은 미수행이며 이 회귀 테스트가 모달 실사용 검증을 대체하지 않는다.
+
+## 읽기 전용 필드 라벨 가독성
+
+- 2026-10-13: 읽기 전용 상세에만 있던 StudyFieldIcon을 제거해 입력 화면과 아이콘 없는 라벨로 통일했다. 문제→솔루션 화살표와 동작 버튼 아이콘은 유지한다.
+- 필드 라벨과 구체적인 경험 라벨을 muted 회색에서 foreground·semibold로 변경했다. 본문은 기존 보통 굵기와 줄 간격을 유지해 명칭/값의 위계를 구분한다. 문구·저장값은 변경하지 않는다.
+- 공유 StudyActivityDetails를 사용하는 읽기 전용 상세·예시 보기에 함께 적용된다. 타입·변경 파일 lint·diff 검사 통과. 브라우저 시각 검증 없음.
+
+- 2026-10-13: 읽기 전용 분류의 내용 길이 기반 flex 배치를 grid로 변경했다. 입력 화면과 동일하게 sm 이상에서 적용 대상/교과는 같은 폭 두 칸, 세부 과목명은 다음 줄 전체 폭이다. 모바일은 한 열이며 긴 라벨은 줄바꿈한다. 예시 보기에도 적용. lint·diff 검사 통과.
+
+- 2026-10-13: 학습법 범위 탭의 긴 라벨이 가장자리에 붙는 현상을 보정했다. sm 이상에서 공통 Trigger의 flex-1을 flex-none으로 바꿔 내용 길이+좌우16px 기준으로 너비를 확보한다. 모바일 두 칸 배치는 유지하고 좌우 여백을 8px→12px로 늘렸다. lint·diff 검사 통과. 브라우저 검증 없음.
