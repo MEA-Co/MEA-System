@@ -24,16 +24,11 @@ export function StudyExamplesDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={
-          <Button
-            type="button"
-            className="bg-black text-white hover:bg-neutral-800"
-          />
-        }
+        render={<Button type="button" variant="default" size="lg" />}
       >
         <BookOpen className="size-4" /> 학습법 예시 보기
       </DialogTrigger>
-      <DialogContent className="flex h-[90dvh] w-[96vw] max-w-[1200px] flex-col gap-3 rounded-2xl p-4 sm:max-w-[1200px] md:p-6">
+      <DialogContent className="flex h-[90dvh] w-[96vw] max-w-[1200px] flex-col gap-3 rounded-lg p-4 sm:max-w-[1200px] md:p-6">
         <DialogHeader className="shrink-0 pr-10">
           <DialogTitle>학습법 작성 예시</DialogTitle>
           <DialogDescription>

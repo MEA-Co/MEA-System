@@ -13,7 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
@@ -197,14 +203,20 @@ export function StudyView({
           className="h-dvh max-h-dvh rounded-none md:w-[min(1200px,94vw)] md:max-w-none"
           finalFocus={() => opener.current}
         >
-          <DrawerTitle className="sr-only">
-            {readOnly
-              ? '학습법 상세'
-              : existing
-                ? '학습법 상세 · 수정'
-                : '학습법 추가'}
-          </DrawerTitle>
-          <div className="h-12 shrink-0" aria-hidden="true" />
+          <DrawerHeader className="shrink-0 border-b px-4 py-5 pr-14 md:px-6 md:pr-14">
+            <DrawerTitle className="text-xl font-extrabold">
+              {readOnly
+                ? '학습법 상세'
+                : existing
+                  ? '학습법 상세 · 수정'
+                  : '학습법 추가'}
+            </DrawerTitle>
+            <DrawerDescription>
+              {readOnly
+                ? '문제 상황과 학습 전략을 확인하세요.'
+                : '문제 상황부터 실천과 점검까지, 학습 전략을 구체적으로 기록하세요.'}
+            </DrawerDescription>
+          </DrawerHeader>
           {confirmDiscard && (
             <div role="alert" className="space-y-3 border-b bg-muted/50 p-6">
               <p className="font-medium">작성을 취소할까요?</p>
@@ -246,7 +258,7 @@ export function StudyView({
           {draft && !readOnly && (
             <form
               noValidate
-              className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pt-4 md:px-6 md:pt-6"
+              className="min-h-0 flex-1 overflow-y-auto bg-background px-4 pt-4 md:px-6 md:pt-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 confirm();
@@ -254,9 +266,12 @@ export function StudyView({
             >
               <fieldset
                 disabled={busy || confirmDiscard}
-                className="min-w-0 space-y-6"
+                className="min-w-0 space-y-4"
               >
-                <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    * 표시된 항목은 필수입니다.
+                  </p>
                   <StudyExamplesDialog />
                 </div>
                 <StudyFields
@@ -264,12 +279,12 @@ export function StudyView({
                   values={draft.values}
                   onChange={(values) => setDraft({ ...draft, values })}
                 />
-                <div className="sticky bottom-0 space-y-2 border-t bg-background py-4">
-                  <p className="text-xs text-muted-foreground">
+                <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t bg-background px-4 py-3 md:-mx-6 md:flex-row md:items-center md:justify-between md:px-6">
+                  <p className="max-w-lg text-xs leading-5 text-muted-foreground">
                     임시저장은 이 브라우저에 보관됩니다. 확정하면 계정에
                     저장되며 이후에도 수정할 수 있습니다.
                   </p>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
                     <Button
                       type="button"
                       variant="outline"

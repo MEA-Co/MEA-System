@@ -1,6 +1,8 @@
+import { ArrowRight, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -10,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 import {
@@ -36,27 +39,34 @@ function StudyPeriodField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="space-y-3 sm:col-span-3">
-      <div className="flex items-center gap-2">
-        <Checkbox
+    <div className="overflow-hidden rounded-md border sm:col-span-2">
+      <div className="flex items-center justify-between gap-4 px-4 py-3">
+        <Label htmlFor="study-period-enabled" className="cursor-pointer">
+          실천 기간 설정
+        </Label>
+        <Switch
           id="study-period-enabled"
           checked={enabled}
           onCheckedChange={onEnabledChange}
-          aria-controls="study-period-input"
+          aria-controls={enabled ? 'study-period-input' : undefined}
           aria-expanded={enabled}
         />
-        <Label htmlFor="study-period-enabled">실천 기간 설정</Label>
       </div>
       {enabled && (
-        <div id="study-period-input" className="space-y-2">
-          <Label htmlFor="study-practicePeriod">실천 기간</Label>
+        <div
+          id="study-period-input"
+          className="grid items-center gap-2 border-t p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-4"
+        >
+          <Label htmlFor="study-practicePeriod">
+            실천 기간 <StudyRequiredMark />
+          </Label>
           <Input
             id="study-practicePeriod"
             name="practicePeriod"
+            aria-required="true"
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder="예: 2주"
-            className="rounded-xl"
             maxLength={50000}
           />
         </div>
@@ -85,14 +95,25 @@ export function StudyFields({
   });
 
   return (
-    <div className="grid grid-cols-1 gap-y-3 lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] lg:gap-x-2 lg:gap-y-6">
-      {groups.flatMap((group) => [
-        <section
+    <div className="grid grid-cols-1 items-start gap-4 lg:items-stretch lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] lg:gap-x-2 lg:gap-y-5">
+      {groups.flatMap((group, index) => [
+        <Card
           key={group.title}
-          className={`min-w-0 space-y-5 rounded-2xl border p-5 md:p-6 ${group.title === '문제 상황' || group.title === '대응 솔루션' ? '' : 'lg:col-span-3'}`}
+          size="sm"
+          className={`min-w-0 ${group.title === '문제 상황' || group.title === '대응 솔루션' ? '' : 'lg:col-span-3'}`}
         >
-          <h2 className="font-semibold">{group.title}</h2>
-          <div className="grid gap-5 sm:grid-cols-3">
+          <CardHeader variant="emphasis">
+            <h2 className="flex items-center gap-3 text-base font-bold">
+              <span
+                aria-hidden="true"
+                className="text-sm tabular-nums text-muted-foreground"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              {group.title}
+            </h2>
+          </CardHeader>
+          <CardContent className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
             {group.fields.map((field) => {
               if (field.key === 'checklist') {
                 const items = values.checklist.split('\n');
@@ -101,7 +122,7 @@ export function StudyFields({
                 return (
                   <fieldset
                     key={field.key}
-                    className="min-w-0 space-y-3 sm:col-span-3"
+                    className="min-w-0 space-y-3 sm:col-span-2"
                   >
                     <legend className="text-sm font-medium">
                       {field.label} <StudyRequiredMark />
@@ -112,60 +133,69 @@ export function StudyFields({
                     >
                       {field.description}
                     </p>
-                    {items.map((item, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="text-sm text-muted-foreground"
+                    <div className="overflow-hidden rounded-md border">
+                      {items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 border-b p-2 sm:p-3"
                         >
-                          {index + 1}.
-                        </span>
-                        <Input
-                          aria-label={`체크리스트 항목 ${index + 1}`}
-                          aria-describedby="study-checklist-guide"
-                          value={item}
-                          placeholder={
-                            index === 0
-                              ? field.placeholder
-                              : '예: 자주 발생하는 오답 원인과 이를 피하는 방법을 설명할 수 있다.'
-                          }
-                          maxLength={Math.max(
-                            0,
-                            50000 - values.checklist.length + item.length,
-                          )}
-                          onChange={(event) =>
-                            updateItems(
-                              items.map((text, i) =>
-                                i === index ? event.target.value : text,
-                              ),
-                            )
-                          }
-                          className="min-w-0 flex-1 rounded-xl"
-                        />
-                        <button
-                          type="button"
-                          aria-label={`체크리스트 항목 ${index + 1} 삭제`}
-                          className="shrink-0 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted focus-visible:outline-2"
-                          onClick={() =>
-                            updateItems(
-                              items.length === 1
-                                ? ['']
-                                : items.filter((_, i) => i !== index),
-                            )
-                          }
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2 text-sm hover:bg-muted focus-visible:outline-2 disabled:opacity-50"
-                      disabled={values.checklist.length >= 50000}
-                      onClick={() => updateItems([...items, ''])}
-                    >
-                      + 항목 추가
-                    </button>
+                          <span
+                            aria-hidden="true"
+                            className="w-6 shrink-0 text-center text-sm tabular-nums text-muted-foreground"
+                          >
+                            {index + 1}
+                          </span>
+                          <Input
+                            aria-label={`체크리스트 항목 ${index + 1}`}
+                            aria-describedby="study-checklist-guide"
+                            value={item}
+                            placeholder={
+                              index === 0
+                                ? field.placeholder
+                                : '예: 자주 발생하는 오답 원인과 이를 피하는 방법을 설명할 수 있다.'
+                            }
+                            maxLength={Math.max(
+                              0,
+                              50000 - values.checklist.length + item.length,
+                            )}
+                            onChange={(event) =>
+                              updateItems(
+                                items.map((text, i) =>
+                                  i === index ? event.target.value : text,
+                                ),
+                              )
+                            }
+                            className="min-w-0 flex-1"
+                          />
+                          <Button
+                            type="button"
+                            aria-label={`체크리스트 항목 ${index + 1} 삭제`}
+                            variant="destructive"
+                            size="icon"
+                            onClick={() =>
+                              updateItems(
+                                items.length === 1
+                                  ? ['']
+                                  : items.filter((_, i) => i !== index),
+                              )
+                            }
+                          >
+                            <Minus aria-hidden="true" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full rounded-none border-0"
+                        aria-label="체크리스트 항목 추가"
+                        disabled={values.checklist.length >= 50000}
+                        onClick={() => updateItems([...items, ''])}
+                      >
+                        <Plus aria-hidden="true" />
+                        항목 추가
+                      </Button>
+                    </div>
                   </fieldset>
                 );
               }
@@ -225,7 +255,7 @@ export function StudyFields({
               return (
                 <div
                   key={field.key}
-                  className={`min-w-0 space-y-2 ${field.key === 'category' || field.key === 'subject' || field.key === 'customSubject' ? '' : 'sm:col-span-3'}`}
+                  className={`min-w-0 space-y-2 ${field.key === 'category' || field.key === 'subject' ? '' : 'sm:col-span-2'}`}
                 >
                   <Label htmlFor={id}>
                     {field.label}
@@ -269,9 +299,9 @@ export function StudyFields({
                       </SelectContent>
                     </Select>
                   ) : 'multiline' in field ? (
-                    <Textarea {...props} className="min-h-32 rounded-xl" />
+                    <Textarea {...props} className="min-h-32" />
                   ) : (
-                    <Input {...props} className="rounded-xl" />
+                    <Input {...props} />
                   )}
                   {field.key === 'problemSource' &&
                     values.problemSource === 'template' && (
@@ -302,7 +332,7 @@ export function StudyFields({
                         >
                           <SelectTrigger
                             id="study-problem-template"
-                            className={`min-h-9 w-full min-w-0 whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none ${selectedProblemTemplate.label ? 'data-placeholder:text-foreground' : ''}`}
+                            className={`min-h-10 w-full min-w-0 whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none ${selectedProblemTemplate.label ? 'data-placeholder:text-foreground' : ''}`}
                             title={selectedProblemTemplate.label || undefined}
                           >
                             <SelectValue
@@ -346,7 +376,7 @@ export function StudyFields({
                       </Label>
                       <Textarea
                         id="study-problem-experience"
-                        className="min-h-32 rounded-xl"
+                        className="min-h-32"
                         placeholder="직접 겪거나 학생을 지도하며 관찰한 상황, 당시 학습 수준 등의 실제 경험을 작성해 주세요."
                         value={values.problemExperience}
                         onChange={(event) =>
@@ -362,26 +392,16 @@ export function StudyFields({
                 </div>
               );
             })}
-          </div>
-        </section>,
+          </CardContent>
+        </Card>,
         group.title === '문제 상황' && (
-          <span
+          <div
             key="problem-solution-arrow"
             aria-hidden="true"
-            className="flex h-6 items-center justify-center self-center text-gray-400"
+            className="flex items-center justify-center self-center text-muted-foreground"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-5 rotate-90 lg:rotate-0"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </span>
+            <ArrowRight className="size-5 rotate-90 lg:rotate-0" />
+          </div>
         ),
       ])}
     </div>

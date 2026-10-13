@@ -28,6 +28,7 @@ const fields = load('lib/fields.ts');
 const templates = load('lib/problem-templates.ts');
 let hookFrame;
 const { StudyFields } = load('components/StudyFields.tsx', {
+  'lucide-react': { ArrowRight: 'svg', Minus: 'svg', Plus: 'svg' },
   react: {
     useState(initial) {
       const { states } = hookFrame;
@@ -46,6 +47,12 @@ const { StudyFields } = load('components/StudyFields.tsx', {
   },
   '../lib/fields': fields,
   '../lib/problem-templates': templates,
+  '@/components/ui/button': { Button: 'button' },
+  '@/components/ui/card': {
+    Card: 'section',
+    CardHeader: 'header',
+    CardContent: 'div',
+  },
   '@/components/ui/input': { Input: 'input' },
   '@/components/ui/label': { Label: 'label' },
   '@/components/ui/textarea': { Textarea: 'textarea' },
@@ -282,7 +289,10 @@ test('체크리스트 추가·수정·삭제와 경험 입력이 기존 본문�
       value = next;
     });
   draw()
-    .find((n) => n.type === 'button' && n.props.children === '+ 항목 추가')
+    .find(
+      (n) =>
+        n.type === 'button' && n.props['aria-label'] === '체크리스트 항목 추가',
+    )
     .props.onClick();
   assert.equal(value.checklist, '기존 기준\n');
   draw()
