@@ -40,8 +40,18 @@ export async function questionResponseCommand(
                 .object({
                   id: z.number().int().safe(),
                   answers: z.record(z.uuid(), z.string().max(20000)),
+                  flowIndex: z.number().int().min(1).max(20).optional(),
+                  flowAfter: z.number().int().min(1).max(20).optional(),
+                  label: z.string().max(100).optional(),
                 })
-                .strict(),
+                .strict()
+                .refine(
+                  (row) =>
+                    !(
+                      row.flowIndex !== undefined && row.flowAfter !== undefined
+                    ) &&
+                    (row.label === undefined || row.flowAfter !== undefined),
+                ),
             )
             .max(20),
         ),
@@ -82,7 +92,9 @@ export async function questionResponseCommand(
         : status === 409
           ? '질문 또는 답변이 변경됐어요. 최신 내용을 확인한 뒤 다시 저장해 주세요.'
           : status === 400
-            ? '열려 있는 질문의 답변과 행 수를 확인해 주세요.'
+            ? error.message === 'Name every answered inserted flow period'
+              ? '답변을 작성한 추가 시기의 이름을 입력해 주세요.'
+              : '열려 있는 질문의 답변과 행 수를 확인해 주세요.'
             : '답변을 저장하거나 불러오지 못했어요. 다시 시도해 주세요.',
     );
   }

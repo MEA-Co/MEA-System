@@ -38,6 +38,44 @@ export function snapshotRows(snapshot: QuestionResponseSnapshot) {
   );
 }
 
+// A creator can change the layout before another user's draft reaches the DB.
+// Keep that user's original flow visible instead of adopting an incompatible
+// layout and truncating or reinterpreting their unsaved periods.
+export function hasIncompatibleFlowDraft(
+  current: Record<string, PreviewAnswerRow[]>,
+  previous: QuestionResponseSnapshot,
+  next: QuestionResponseSnapshot,
+) {
+  return previous.questions.some((old) => {
+    if (old.definition.answer_layout !== 'flow') return false;
+    const changed = next.questions.find(
+      (question) =>
+        question.definition.id === old.definition.id &&
+        question.responseId === old.responseId,
+    );
+    if (!changed) return false;
+    const count = (question: QuestionResponseSnapshot['questions'][number]) =>
+      question.definition.row_mode === 'repeatable'
+        ? (question.definition.max_rows ?? 1)
+        : 1;
+    if (
+      changed.definition.answer_layout === 'flow' &&
+      count(changed) === count(old)
+    )
+      return false;
+    const local = current[old.definition.id] ?? [];
+    return (
+      JSON.stringify(local) !== JSON.stringify(old.rows) &&
+      local.some(
+        (row) =>
+          row.flowAfter !== undefined ||
+          !!row.label?.trim() ||
+          Object.values(row.answers).some((value) => value.trim()),
+      )
+    );
+  });
+}
+
 // Carry only still-existing fields with the same kind into the current guide layout.
 export function mergeGuideResponseRows(
   current: Record<string, PreviewAnswerRow[]>,
@@ -67,11 +105,14 @@ export function mergeGuideResponseRows(
           .map((field) => field.id),
       );
       const limit =
-        question.definition.row_mode === 'single'
-          ? 1
-          : question.definition.row_mode === 'repeatable'
-            ? (question.definition.max_rows ?? 20)
-            : 20;
+        question.definition.answer_layout === 'flow' ||
+        old.definition.answer_layout === 'flow'
+          ? 20
+          : question.definition.row_mode === 'single'
+            ? 1
+            : question.definition.row_mode === 'repeatable'
+              ? (question.definition.max_rows ?? 20)
+              : 20;
       return [
         question.definition.id,
         current[question.definition.id].slice(0, limit).map((row) => ({

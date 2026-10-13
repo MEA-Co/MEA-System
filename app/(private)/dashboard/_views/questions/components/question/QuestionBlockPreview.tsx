@@ -9,6 +9,13 @@ import { Button } from '@/components/ui/button';
 import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import { matchingChoiceRows } from '../../lib/choice-condition';
 import { questionFromField } from '../../lib/field-question';
+import {
+  flowRowLabel,
+  insertFlowRow,
+  isCustomFlowRow,
+  materializeFlowRows,
+  MAX_FLOW_ROWS,
+} from '../../lib/flow-rows';
 import type { GuideAnswer } from '../../lib/guide-answers';
 import type {
   QuestionBlockDocument,
@@ -28,6 +35,7 @@ import {
 import {
   answeredSourceRows,
   displayAnswerRows,
+  type PreviewAnswerRow,
   referenceAnswerRows,
 } from '../../lib/reference-rows';
 import { richTextPlainText } from '../../lib/rich-text';
@@ -68,7 +76,7 @@ import { RichTextContent } from './RichTextContent';
 import { StudyReferenceContent } from './StudyCommands';
 import { StudyRegistrationCard } from './StudyRegistrationCard';
 
-type PreviewRow = { id: number; answers: Record<string, string> };
+type PreviewRow = PreviewAnswerRow;
 
 export type QuestionBlockPreviewProps = {
   document: QuestionBlockDocument;
@@ -176,6 +184,7 @@ function QuestionBlockResponsePreview({
   const visibleRows = useMemo(() => {
     if (waiting) return [];
     if (reference) return referenceAnswerRows(matchedRows, rows);
+    if (flow) return materializeFlowRows(rows, maxRows);
     return displayAnswerRows(
       rows,
       {
@@ -189,6 +198,7 @@ function QuestionBlockResponsePreview({
   }, [
     waiting,
     reference,
+    flow,
     matchedRows,
     rows,
     maxRows,
@@ -218,7 +228,7 @@ function QuestionBlockResponsePreview({
   }, [rows, onStoredRowsChange]);
 
   function updateAnswer(rowId: number, fieldId: string, value: string) {
-    if (disabled) return;
+    if (disabled || waiting) return;
     if (!reference) {
       setRows(
         visibleRows.map((row) =>
@@ -247,6 +257,10 @@ function QuestionBlockResponsePreview({
     placeholder = '답변을 입력해 주세요',
   ) {
     const value = row.answers[field.id] ?? '';
+    const rowIndex = visibleRows.findIndex((item) => item.id === row.id);
+    const rowLabel = flow
+      ? flowRowLabel(row, document.rowLabels)
+      : document.rowLabels?.[rowIndex]?.trim() || `행 ${rowIndex + 1}`;
     if (grid && disabled) {
       if (!answerSummary(field, value))
         return <span className="text-sm text-muted-foreground">미입력</span>;
@@ -288,14 +302,14 @@ function QuestionBlockResponsePreview({
         onChange={(value) => updateAnswer(row.id, field.id, value)}
         placeholder={placeholder}
         placeholderTone="default"
-        ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || '항목'} · ${field.label || `답변 ${fieldIndex + 1}`}`}
+        ariaLabel={`${rowLabel} · ${field.label || `답변 ${fieldIndex + 1}`}`}
       />
     ) : (
       <QuestionChoiceInput
         question={question}
         disabled={disabled}
         compact={grid}
-        ariaLabel={`${document.rowLabels?.[visibleRows.findIndex((item) => item.id === row.id)] || `행 ${visibleRows.findIndex((item) => item.id === row.id) + 1}`} · ${field.label || `답변 ${fieldIndex + 1}`}`}
+        ariaLabel={`${rowLabel} · ${field.label || `답변 ${fieldIndex + 1}`}`}
         value={row.answers[field.id] ?? ''}
         onChange={(value) => updateAnswer(row.id, field.id, value)}
       />
@@ -484,8 +498,38 @@ function QuestionBlockResponsePreview({
               !flow && !reference && repeated && visibleRows.length < maxRows
             }
             canRemove={
-              !flow && !reference && repeated && visibleRows.length > minRows
+              flow
+                ? visibleRows.some(isCustomFlowRow)
+                : !reference && repeated && visibleRows.length > minRows
             }
+            onInsertFlow={(after) => {
+              if (
+                disabled ||
+                waiting ||
+                !flow ||
+                reference ||
+                !Number.isInteger(after) ||
+                after < 1 ||
+                after > maxRows ||
+                !document.flowInsertAfter?.includes(after) ||
+                visibleRows.length >= MAX_FLOW_ROWS
+              )
+                return;
+              const id = Math.max(Date.now(), nextRow.current++);
+              nextRow.current = id + 1;
+              setRows(insertFlowRow(visibleRows, maxRows, after, id));
+              return id;
+            }}
+            onFlowLabelChange={(id, label) => {
+              if (disabled || waiting || !flow) return;
+              setRows(
+                visibleRows.map((row) =>
+                  row.id === id && isCustomFlowRow(row)
+                    ? { ...row, label: label.slice(0, 100) }
+                    : row,
+                ),
+              );
+            }}
             onAdd={() => {
               if (
                 disabled ||
@@ -504,13 +548,14 @@ function QuestionBlockResponsePreview({
               setRows([...visibleRows, { id, answers: {} }]);
             }}
             onRemove={(id) => {
-              if (
-                disabled ||
-                flow ||
-                reference ||
-                visibleRows.length <= minRows
-              )
+              if (disabled || waiting || reference) return;
+              if (flow) {
+                const target = visibleRows.find((row) => row.id === id);
+                if (!target || !isCustomFlowRow(target)) return;
+                setRows(visibleRows.filter((row) => row.id !== id));
                 return;
+              }
+              if (visibleRows.length <= minRows) return;
               setDisplayOverride({
                 settings: displaySettings,
                 count: visibleRows.length - 1,

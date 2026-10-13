@@ -53,11 +53,16 @@ function mount({
         : undefined,
     fields: q.fields,
     rowMode: q.row_mode,
-    maxRows: null,
-    sourceBlockId: null,
-    sourceFieldId: null,
-    afterBlockId: null,
-    condition: null,
+    answerLayout: q.answer_layout ?? 'cards',
+    flowInsertAfter: q.flow_insert_after ?? [],
+    initialRows: q.initial_rows ?? 1,
+    minRows: q.min_rows ?? 1,
+    maxRows: q.max_rows,
+    rowLabels: q.row_labels ?? [],
+    sourceBlockId: q.source_block_id,
+    sourceFieldId: q.source_field_id,
+    afterBlockId: q.after_block_id,
+    condition: q.condition,
     details: q.details,
   });
   const setters = [];
@@ -230,6 +235,17 @@ function mount({
                 purpose: doc.purpose ?? 'response',
                 button_label: doc.buttonLabel ?? null,
                 fields: doc.fields,
+                row_mode: doc.rowMode,
+                answer_layout: doc.answerLayout ?? 'cards',
+                flow_insert_after: doc.flowInsertAfter ?? [],
+                initial_rows: doc.initialRows ?? 1,
+                min_rows: doc.minRows ?? 1,
+                max_rows: doc.maxRows,
+                row_labels: doc.rowLabels ?? [],
+                source_block_id: doc.sourceBlockId,
+                source_field_id: doc.sourceFieldId,
+                after_block_id: doc.afterBlockId,
+                condition: doc.condition,
                 revision: 2,
               },
             }),
@@ -332,7 +348,12 @@ function mount({
       return null;
     }
     if (typeof node !== 'object') return null;
-    if (node.type === type && predicate(node.props)) return node;
+    if (
+      (node.type === type ||
+        (typeof node.type === 'function' && node.type.name === type)) &&
+      predicate(node.props)
+    )
+      return node;
     return node.props?.children == null
       ? null
       : find(type, predicate, node.props.children);
@@ -901,4 +922,130 @@ test('saved response and registration card kinds remain immutable while card con
     assert.equal(app.saves[0].body.document.id, app.row.id);
     assert.equal(app.saves[0].method, 'PUT');
   }
+});
+
+test('flow insertion permissions follow fixed period indices and keep original field IDs', async () => {
+  const app = mount({ embedded: 'existing' });
+  app.row.fields = [{ id: randomUUID(), label: '성적', kind: 'text' }];
+  const fieldId = app.row.fields[0].id;
+  await app.flush();
+  app.find('Select', (p) => p.value === 'cards').props.onValueChange('flow');
+  await app.flush();
+  assert.equal(app.find('QuestionBlockFieldEditor').props.field.id, fieldId);
+  app
+    .find('Checkbox', (p) => p.id === 'flow-insert-after-6')
+    .props.onCheckedChange(true);
+  app
+    .find('Checkbox', (p) => p.id === 'flow-insert-after-2')
+    .props.onCheckedChange(true);
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-2').props.checked,
+    true,
+  );
+  app
+    .find('Input', (p) => p.id === 'row-label-1')
+    .props.onChange({ target: { value: '고1 겨울' } });
+  await app.flush();
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.deepEqual(app.saves[0].body.document.flowInsertAfter, [2, 6]);
+  assert.equal(app.saves[0].body.document.rowLabels[1], '고1 겨울');
+  assert.equal(app.saves[0].body.document.maxRows, 6);
+  assert.equal(app.saves[0].body.document.fields[0].id, fieldId);
+});
+
+test('reducing fixed periods removes only out-of-range insertion positions and switching to a table clears them', async () => {
+  const app = mount({ embedded: 'existing' });
+  app.row.answer_layout = 'flow';
+  app.row.row_mode = 'repeatable';
+  app.row.max_rows = 6;
+  app.row.flow_insert_after = [2, 6];
+  await app.flush();
+  app.find('MaxItemsInput').props.onChange(3);
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-2').props.checked,
+    true,
+  );
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-6'),
+    null,
+  );
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.deepEqual(app.saves[0].body.document.flowInsertAfter, [2]);
+  assert.equal(app.saves[0].body.document.maxRows, 3);
+  app.find('Select', (p) => p.value === 'flow').props.onValueChange('table');
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-2'),
+    null,
+  );
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.deepEqual(app.saves[1].body.document.flowInsertAfter, []);
+  assert.equal(app.saves[1].body.document.maxRows, 3);
+});
+
+test('registration role and full fixed-period capacity do not expose new insertion choices', async () => {
+  const app = mount({ embedded: true });
+  await app.flush();
+  app.find('Select', (p) => p.value === 'cards').props.onValueChange('flow');
+  await app.flush();
+  app
+    .find('Checkbox', (p) => p.id === 'flow-insert-after-2')
+    .props.onCheckedChange(true);
+  await app.flush();
+  app.find('MaxItemsInput').props.onChange(20);
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-2').props.checked,
+    false,
+  );
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-1').props.disabled,
+    true,
+  );
+  app
+    .find('Checkbox', (p) => p.id === 'flow-insert-after-1')
+    .props.onCheckedChange(true);
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id === 'flow-insert-after-1').props.checked,
+    false,
+  );
+  app
+    .find('Select', (p) => p.value === 'response')
+    .props.onValueChange('study_registration');
+  await app.flush();
+  assert.equal(
+    app.find('Checkbox', (p) => p.id?.startsWith('flow-insert-after-')),
+    null,
+  );
+  app.find('QuestionRichTextEditor').props.onChange('학습법을 등록해 주세요.');
+  await app.flush();
+  await app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('저장'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.deepEqual(app.saves[0].body.document.flowInsertAfter, []);
 });

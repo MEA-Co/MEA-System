@@ -157,3 +157,16 @@ test('immutable card kinds and registration dependency restrictions explain the 
     assert.match(result.error, expected);
   }
 });
+
+test('saved flow period protection remains a recoverable policy error with available edit guidance', async () => {
+  const response = await setup({
+    code: '55000',
+    message:
+      'Saved flow periods require their original layout and fixed period count',
+  }).save();
+  const result = await response.json();
+  assert.equal(response.status, 409);
+  assert.equal(result.code, 'question_edit_restricted');
+  assert.match(result.error, /표시 방식이나 기본 시기 수를 바꿀 수 없어요/);
+  assert.match(result.error, /시기 이름과 추가 허용 위치는 수정할 수/);
+});
