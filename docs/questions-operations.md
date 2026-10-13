@@ -225,3 +225,29 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --
 ```
 
 앱 배포 후 새 카드의 종류를 `학습법 등록 안내`로 선택해 제목·본문·버튼 이름을 저장하고 질문지의 원하는 위치에 배치한다. 버튼이 본인 학습법 등록 화면을 열고, 확정한 학습법이 학습법 관리에 저장되는지 확인한다. 등록 중 질문 답변 작성 상태가 바뀌지 않는지, 일반 답변 제출이 정상인지, 제출 열람의 등록 버튼이 비활성인지 확인한다. 특정 2주차 질문지나 실제 사용자 학습법 데이터는 이 작업에서 수정·생성하지 않았다.
+
+## 흐름표 중간 시기 추가 (2026-10-13)
+
+`20261013033907_question_flow_insertions.sql`을 운영 `epwlcallocdjkmgdmtlv`에 적용했다. 최신 이력에 같은 번호가 있으며 적용 후 dry-run 대기는 없다. 공통 제작기의 `flowInsertAfter`/DB `flow_insert_after`에 기본 시기 뒤 추가 허용 위치를 저장한다. 응답 행의 `flowIndex`/`flowAfter`/`label`로 기본·추가 시기 위치와 이름을 보존하고, 기본 시기와 추가 시기를 합쳐 20개로 제한한다. 기존 저장 ID·원본 작성자·RLS·배포 잠금·가이드 계정은 유지한다. 저장 metadata가 있는 원본은 기본 시기 수/표 형식 변경을 막고, 추가 허용 위치를 해제해도 이미 저장된 추가 시기를 편집·삭제할 수 있다.
+
+적용 전 함수 치환 기준 13개와 질문 테이블 직접 UPDATE 권한 부재·외부 호출 함수 부재를 확인했다. 임시 migration+신규 `question_flow_insertions.sql` 회귀를 한 트랜잭션으로 실행·롤백했고, 적용 후에도 회귀를 다시 실행·롤백했다. 두 검사 모두 기존 질문/응답/세션/제출/학습법 데이터 hash와 여섯 변경 함수의 소유자·ACL 보존을 확인했다. 운영 가이드 함수 해시 `607716af71009f7941df8fef56b2e443`는 전후 동일하다. 검증용으로 가이드 함수나 실제 사용자 프로필을 바꾸지 않았다. 보안 advisor는 기존 경고 4개로 같고 새 경고가 없다.
+
+타입 검사·변경 파일 린트·관련 JS 회귀 115개·Webpack 빌드가 통과했다. 실제 Preview/Grid 버튼·이름 입력·삭제 확인 콜백은 브라우저 없는 회귀로 검증했다. 아직 저장하지 않은 흐름표와 원격 기본 시기 수/표 형식 변경이 충돌하면 기존 화면과 입력을 유지하고 복사 후 다시 열도록 안내한다. main의 공동 편집 정책과 불일치하던 기존 로더 테스트 기대도 현행 정책으로 갱신했다. 로컬 DB 엔진 부재로 로컬 migration/SQL 검증은 미실행이며, **실제 브라우저 검증과 앱 배포는 수행하지 않았다.**
+
+`node scripts/prepare-flow-insertion-check.mjs`는 DB에 접속하지 않고 `/private/tmp/mea-flow-insertion-check`에 `preflight.sql`, `migration-trial.sql`, `regression.sql`, 파일 hash manifest를 만든다. 임시 migration은 미적용 환경에서만 실행하고, 적용 후에는 `regression.sql`만 실행한다. 회귀는 가상 계정·질문지·답변만 사용하며 모든 fixture를 롤백한다. 전체 SQL 파일을 한 요청/연결에서 실행해야 한다.
+
+적용 순서는 프로젝트 이동 → 운영 대상·이력 확인 → dry-run에서 예상 파일 확인 → 실제 적용 → 대기 없음 재확인 → 앱 배포 → 기능 확인이다. **이번 운영 DB 단계는 완료됐으므로 재적용할 필요가 없다.** 아래 적용 명령은 아직 적용하지 않은 별도 환경에서만 사용한다. 예상과 다른 migration이 나오면 실제 적용 전에 이력을 검토한다.
+
+```bash
+cd /Users/jwg/MEA-System
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 최초 적용 예상: 20261013033907_question_flow_insertions.sql 한 개
+# 현재 운영 예상: 대기 없음
+# 미적용 환경에서만 실제 적용
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+```
+
+이후 앱을 배포하고 제작 화면에서 기본 시기 다음의 `시기 추가 허용`을 설정한다. 응답 화면의 해당 +에서 이름 있는 시기를 추가한 뒤 저장·재열기·제출 시 기존 시기와 답변이 유지되는지 확인한다. 추가 시기 삭제 확인, 빈 이름의 작성 시기 제출 안내, 최소 작성 시기 수와 20개 제한도 확인한다. 이번 작업에서 실제 2주차 질문지의 내용이나 배포 상태를 바꾸지는 않았다.

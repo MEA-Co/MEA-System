@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
-import { type ReactNode, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
+import {
+  flowRowLabel,
+  isCustomFlowRow,
+  MAX_FLOW_ROWS,
+} from '../../lib/flow-rows';
 import type {
   QuestionBlockDocument,
   QuestionBlockField,
@@ -36,6 +42,8 @@ export type QuestionGridInputProps = {
   canRemove: boolean;
   onAdd: () => void;
   onRemove: (id: number) => void;
+  onInsertFlow?: (after: number) => number | undefined;
+  onFlowLabelChange?: (id: number, label: string) => void;
 };
 
 export function QuestionGridInput({
@@ -49,11 +57,15 @@ export function QuestionGridInput({
   canRemove,
   onAdd,
   onRemove,
+  onInsertFlow,
+  onFlowLabelChange,
 }: QuestionGridInputProps) {
   const gridId = useId();
   const gridRegion = useRef<HTMLDivElement>(null);
   const removalOpener = useRef<HTMLElement>(null);
   const cancelRemoval = useRef<HTMLButtonElement>(null);
+  const flowLabelInputs = useRef(new Map<number, HTMLInputElement>());
+  const pendingFlowFocus = useRef<number | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<{
     id: number;
     label: string;
@@ -65,11 +77,22 @@ export function QuestionGridInput({
   const headerClass =
     'border-r border-b px-3 py-3 text-left align-top font-medium whitespace-normal [overflow-wrap:anywhere] last:border-r-0';
 
+  useEffect(() => {
+    if (!editable) {
+      pendingFlowFocus.current = null;
+      return;
+    }
+    if (pendingFlowFocus.current === null) return;
+    const input = flowLabelInputs.current.get(pendingFlowFocus.current);
+    if (!input) return;
+    input.focus();
+    input.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    pendingFlowFocus.current = null;
+  }, [rows, editable]);
+
   function rowLabel(index: number) {
-    return (
-      document.rowLabels?.[index]?.trim() ||
-      (transposed ? `시기 ${index + 1}` : String(index + 1))
-    );
+    if (transposed) return flowRowLabel(rows[index], document.rowLabels);
+    return document.rowLabels?.[index]?.trim() || String(index + 1);
   }
 
   function fieldLabel(index: number) {
@@ -81,13 +104,15 @@ export function QuestionGridInput({
     index: number,
     opener: HTMLElement,
   ) {
-    if (!editable || !canRemove) return;
-    const hasInput = document.fields.some((field) => {
-      const value = row.answers[field.id] ?? '';
-      return !!(
-        field.kind === 'text' ? richTextPlainText(value) : value
-      ).trim();
-    });
+    if (!canRemoveRow(row)) return;
+    const hasInput =
+      !!row.label?.trim() ||
+      document.fields.some((field) => {
+        const value = row.answers[field.id] ?? '';
+        return !!(
+          field.kind === 'text' ? richTextPlainText(value) : value
+        ).trim();
+      });
     if (hasInput) {
       removalOpener.current = opener;
       setPendingRemoval({ id: row.id, label: rowLabel(index) });
@@ -97,8 +122,12 @@ export function QuestionGridInput({
     }
   }
 
+  function canRemoveRow(row: PreviewAnswerRow) {
+    return editable && canRemove && (!transposed || isCustomFlowRow(row));
+  }
+
   function removeButton(row: PreviewAnswerRow, index: number) {
-    if (!editable || !canRemove) return null;
+    if (!canRemoveRow(row)) return null;
     return (
       <Button
         type="button"
@@ -179,7 +208,51 @@ export function QuestionGridInput({
                           className={`${headerClass} bg-muted`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span>{rowLabel(rowIndex)}</span>
+                            {isCustomFlowRow(row) &&
+                            editable &&
+                            onFlowLabelChange ? (
+                              <Input
+                                ref={(input) => {
+                                  if (input)
+                                    flowLabelInputs.current.set(row.id, input);
+                                  else flowLabelInputs.current.delete(row.id);
+                                }}
+                                id={`${gridId}-flow-label-${row.id}`}
+                                value={row.label ?? ''}
+                                maxLength={100}
+                                placeholder="시기 이름"
+                                aria-label={`${document.rowLabels?.[(row.flowAfter ?? 1) - 1]?.trim() || `시기 ${row.flowAfter}`} 뒤 추가 시기 ${rows.filter((item) => item.flowAfter === row.flowAfter).findIndex((item) => item.id === row.id) + 1} 이름`}
+                                className="h-8 min-w-0 flex-1 rounded-lg text-sm"
+                                onChange={(event) =>
+                                  onFlowLabelChange(row.id, event.target.value)
+                                }
+                              />
+                            ) : (
+                              <span>{rowLabel(rowIndex)}</span>
+                            )}
+                            {editable &&
+                              !isCustomFlowRow(row) &&
+                              row.flowIndex !== undefined &&
+                              row.flowIndex <= (document.maxRows ?? 1) &&
+                              document.flowInsertAfter?.includes(
+                                row.flowIndex,
+                              ) &&
+                              onInsertFlow &&
+                              rows.length < MAX_FLOW_ROWS && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`${rowLabel(rowIndex)} 뒤 시기 추가`}
+                                  onClick={() => {
+                                    const id = onInsertFlow(row.flowIndex!);
+                                    if (id !== undefined)
+                                      pendingFlowFocus.current = id;
+                                  }}
+                                >
+                                  <Plus aria-hidden="true" />
+                                </Button>
+                              )}
                             {removeButton(row, rowIndex)}
                           </div>
                         </th>
@@ -255,9 +328,7 @@ export function QuestionGridInput({
       <Dialog
         open={
           pendingRemoval !== null &&
-          editable &&
-          canRemove &&
-          rows.some((row) => row.id === pendingRemoval.id)
+          rows.some((row) => row.id === pendingRemoval.id && canRemoveRow(row))
         }
         onOpenChange={(open) => {
           if (!open) setPendingRemoval(null);
@@ -294,9 +365,9 @@ export function QuestionGridInput({
               onClick={() => {
                 if (
                   pendingRemoval &&
-                  editable &&
-                  canRemove &&
-                  rows.some((row) => row.id === pendingRemoval.id)
+                  rows.some(
+                    (row) => row.id === pendingRemoval.id && canRemoveRow(row),
+                  )
                 )
                   onRemove(pendingRemoval.id);
                 setPendingRemoval(null);

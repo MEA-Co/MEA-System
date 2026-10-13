@@ -24,6 +24,7 @@ import {
 
 import { richTextPlainText } from '@/app/(private)/dashboard/_views/questions/lib/rich-text';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -641,6 +642,7 @@ export function QuestionLibraryView({
           : [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
       rowMode: 'single',
       answerLayout: 'cards',
+      flowInsertAfter: [],
       minRows: 1,
       initialRows: 1,
       maxRows: null,
@@ -655,7 +657,12 @@ export function QuestionLibraryView({
   function changeAnswerLayout(
     answerLayout: QuestionBlockDocument['answerLayout'],
   ) {
-    if (!draft || !answerLayout) return;
+    if (
+      !draft ||
+      !answerLayout ||
+      answerLayout === (draft.answerLayout ?? 'cards')
+    )
+      return;
     if (
       answerLayout === 'table' &&
       (draft.answerLayout ?? 'cards') === 'cards' &&
@@ -663,6 +670,7 @@ export function QuestionLibraryView({
     ) {
       updateDraft({
         answerLayout,
+        flowInsertAfter: [],
         rowMode: 'repeatable',
         maxRows: 20,
         minRows: 1,
@@ -671,6 +679,7 @@ export function QuestionLibraryView({
     } else if (answerLayout === 'flow' && draft.rowMode === 'single') {
       updateDraft({
         answerLayout,
+        flowInsertAfter: [],
         rowMode: 'repeatable',
         maxRows: 6,
         minRows: 1,
@@ -685,8 +694,33 @@ export function QuestionLibraryView({
         ],
       });
     } else {
-      updateDraft({ answerLayout });
+      updateDraft({
+        answerLayout,
+        flowInsertAfter:
+          answerLayout === 'flow' ? (draft.flowInsertAfter ?? []) : [],
+      });
     }
+  }
+
+  function changeFlowInsertAfter(position: number, allowed: boolean) {
+    setDraft((current) => {
+      if (!current || current.answerLayout !== 'flow') return current;
+      const basePeriodCount =
+        current.rowMode === 'repeatable' ? (current.maxRows ?? 1) : 1;
+      if (
+        position < 1 ||
+        position > basePeriodCount ||
+        (allowed && basePeriodCount >= 20)
+      )
+        return current;
+      const positions = new Set(current.flowInsertAfter ?? []);
+      if (allowed) positions.add(position);
+      else positions.delete(position);
+      return {
+        ...current,
+        flowInsertAfter: [...positions].sort((left, right) => left - right),
+      };
+    });
   }
 
   function updateField(fieldId: string, updated: QuestionBlockField) {
@@ -1320,7 +1354,7 @@ export function QuestionLibraryView({
                       </Select>
                       <p className="text-sm text-muted-foreground">
                         {draft.answerLayout === 'flow'
-                          ? '시기를 가로로, 답변 항목을 세로로 배치합니다. 해당하는 칸만 입력하며 응답자는 시기를 추가하거나 삭제하지 않습니다.'
+                          ? '기본 시기를 가로로, 답변 항목을 세로로 배치합니다. 시기 추가를 허용한 위치에서는 응답자가 이름을 정해 시기를 추가할 수 있습니다.'
                           : draft.answerLayout === 'table'
                             ? '열 제목 아래의 칸에 바로 입력합니다. 처음 표시할 행 수와 최소 작성 행 수를 따로 설정할 수 있습니다.'
                             : '항목별로 답변을 펼쳐 입력합니다.'}
@@ -1408,7 +1442,7 @@ export function QuestionLibraryView({
                             />
                             <Label htmlFor="max-rows">
                               {draft.answerLayout === 'flow'
-                                ? '시기 수'
+                                ? '기본 시기 수'
                                 : '최대 행 수'}
                             </Label>
                             <MaxItemsInput
@@ -1420,7 +1454,7 @@ export function QuestionLibraryView({
                               disabled={false}
                               ariaLabel={
                                 draft.answerLayout === 'flow'
-                                  ? '시기 수'
+                                  ? '기본 시기 수'
                                   : '최대 행 수'
                               }
                               onChange={(count) => {
@@ -1429,6 +1463,12 @@ export function QuestionLibraryView({
                                   rowMode: count > 1 ? 'repeatable' : 'single',
                                   maxRows: count > 1 ? count : null,
                                   minRows: Math.min(draft.minRows ?? 1, count),
+                                  flowInsertAfter:
+                                    draft.answerLayout === 'flow' && count < 20
+                                      ? (draft.flowInsertAfter ?? []).filter(
+                                          (position) => position <= count,
+                                        )
+                                      : [],
                                   initialRows:
                                     draft.answerLayout === 'flow'
                                       ? count
@@ -1479,7 +1519,7 @@ export function QuestionLibraryView({
                         {draft.rowMode === 'reference'
                           ? '행 개수는 참조한 질문의 응답을 따릅니다. 흐름표를 사용하려면 조건 설정에서 앞선 질문의 응답 참조를 꺼 주세요.'
                           : draft.answerLayout === 'flow'
-                            ? '모든 시기를 표시합니다. 최소 작성 시기 수만큼 한 칸 이상 입력해야 합니다.'
+                            ? '기본 시기는 항상 표시합니다. 아래에서 추가를 허용할 위치를 정할 수 있으며, 추가한 시기를 포함해 총 20개까지 작성할 수 있습니다. 최소 작성 시기 수만큼 한 칸 이상 입력해야 합니다.'
                             : draft.answerLayout === 'table'
                               ? '처음 표시된 빈 여분 행은 작성 필수가 아닙니다. 최소 작성 행 수만큼 입력하면 됩니다.'
                               : '최소 작성 행 수만큼 입력해야 하며 최대 행 수까지 추가할 수 있습니다.'}
@@ -1505,6 +1545,9 @@ export function QuestionLibraryView({
                                     ? '시기 이름 (가로)'
                                     : '행 이름'}
                                 </TableHead>
+                                {draft.answerLayout === 'flow' && (
+                                  <TableHead>시기 추가 허용</TableHead>
+                                )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1533,6 +1576,34 @@ export function QuestionLibraryView({
                                         }}
                                       />
                                     </TableCell>
+                                    {draft.answerLayout === 'flow' && (
+                                      <TableCell>
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`flow-insert-after-${index + 1}`}
+                                            aria-label={`${draft.rowLabels?.[index]?.trim() || `시기 ${index + 1}`} 다음에 시기 추가 허용`}
+                                            checked={(
+                                              draft.flowInsertAfter ?? []
+                                            ).includes(index + 1)}
+                                            disabled={
+                                              (draft.maxRows ?? 1) >= 20
+                                            }
+                                            onCheckedChange={(checked) => {
+                                              changeFlowInsertAfter(
+                                                index + 1,
+                                                checked,
+                                              );
+                                            }}
+                                          />
+                                          <Label
+                                            htmlFor={`flow-insert-after-${index + 1}`}
+                                            className="cursor-pointer text-xs"
+                                          >
+                                            이 시기 다음에 추가
+                                          </Label>
+                                        </div>
+                                      </TableCell>
+                                    )}
                                   </TableRow>
                                 ),
                               )}
@@ -1540,6 +1611,14 @@ export function QuestionLibraryView({
                           </Table>
                         </div>
                       )}
+                      {draft.answerLayout === 'flow' &&
+                        (draft.maxRows ?? 1) >= 20 && (
+                          <p className="text-xs text-muted-foreground">
+                            기본 시기가 20개이면 응답자가 추가할 공간이
+                            없습니다. 추가를 허용하려면 기본 시기 수를 줄여
+                            주세요.
+                          </p>
+                        )}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
                       <div>

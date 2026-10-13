@@ -139,6 +139,10 @@ export const questionBlockSchema = z
     fields: z.array(fieldSchema).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
     answerLayout: z.enum(['cards', 'table', 'flow']).optional(),
+    flowInsertAfter: z
+      .array(z.number().int().min(1).max(20))
+      .max(20)
+      .optional(),
     initialRows: z.number().int().min(1).max(20).optional(),
     minRows: z.number().int().min(1).max(20).optional(),
     rowLabels: z.array(z.string().trim().max(100)).max(20).optional(),
@@ -168,6 +172,7 @@ export const questionBlockSchema = z
         block.fields.length !== 0 ||
         block.rowMode !== 'single' ||
         (block.answerLayout ?? 'cards') !== 'cards' ||
+        !!block.flowInsertAfter?.length ||
         (block.minRows ?? 1) !== 1 ||
         (block.initialRows ?? 1) !== 1 ||
         block.maxRows !== null ||
@@ -212,6 +217,38 @@ export const questionBlockSchema = z
       context.addIssue({
         code: 'custom',
         message: '흐름표의 시기는 직접 설정해 주세요.',
+      });
+    }
+    const flowInsertAfter = block.flowInsertAfter ?? [];
+    if (new Set(flowInsertAfter).size !== flowInsertAfter.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['flowInsertAfter'],
+        message: '시기 추가 허용 위치가 중복됐어요.',
+      });
+    }
+    if (flowInsertAfter.length && block.answerLayout !== 'flow') {
+      context.addIssue({
+        code: 'custom',
+        path: ['flowInsertAfter'],
+        message: '시기 추가 허용은 흐름표에서만 설정할 수 있어요.',
+      });
+    }
+    const basePeriodCount =
+      block.rowMode === 'repeatable' ? (block.maxRows ?? 1) : 1;
+    if (flowInsertAfter.length && basePeriodCount >= 20) {
+      context.addIssue({
+        code: 'custom',
+        path: ['flowInsertAfter'],
+        message:
+          '기본 시기가 20개인 흐름표에서는 시기 추가를 허용할 수 없어요.',
+      });
+    }
+    if (flowInsertAfter.some((position) => position > basePeriodCount)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['flowInsertAfter'],
+        message: '시기 추가 허용 위치는 기본 시기 범위 안에서 정해 주세요.',
       });
     }
     const ids = block.fields.map((field) => field.id);
@@ -303,6 +340,7 @@ export type QuestionBlockRow = {
   fields: QuestionBlockField[];
   row_mode: QuestionBlockDocument['rowMode'];
   answer_layout?: QuestionBlockDocument['answerLayout'];
+  flow_insert_after?: number[];
   initial_rows?: number;
   max_rows: number | null;
   min_rows?: number;
@@ -349,6 +387,7 @@ export function documentFromRow(row: QuestionBlockRow): QuestionBlockDocument {
     fields: row.fields,
     rowMode: row.row_mode,
     answerLayout: row.answer_layout ?? 'cards',
+    flowInsertAfter: row.flow_insert_after ?? [],
     initialRows: row.initial_rows ?? 1,
     maxRows: row.max_rows,
     minRows: row.min_rows ?? 1,
@@ -370,6 +409,7 @@ export function emptyQuestionBlock(): QuestionBlockDocument {
     fields: [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
     rowMode: 'single',
     answerLayout: 'cards',
+    flowInsertAfter: [],
     initialRows: 1,
     maxRows: null,
     minRows: 1,

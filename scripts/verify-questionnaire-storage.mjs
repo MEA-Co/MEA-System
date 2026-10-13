@@ -368,7 +368,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
   }
 });
 
-test('questionnaire loader selects owner editing, reviewer reading, and safe consultant presentation', async () => {
+test('questionnaire loader permits published staff collaboration and keeps consultant presentation read-only', async () => {
   const ownerId = randomUUID();
   const otherId = randomUUID();
   const doc = document();
@@ -386,7 +386,15 @@ test('questionnaire loader selects owner editing, reviewer reading, and safe con
       visible: 'admin',
       user: otherId,
       status: 'published',
-      editable: false,
+      editable: true,
+      details: 0,
+    },
+    {
+      actual: 'consultant_lead',
+      visible: 'consultant_lead',
+      user: otherId,
+      status: 'published',
+      editable: true,
       details: 0,
     },
     {

@@ -1,4 +1,10 @@
-export type PreviewAnswerRow = { id: number; answers: Record<string, string> };
+export type PreviewAnswerRow = {
+  id: number;
+  answers: Record<string, string>;
+  flowIndex?: number;
+  flowAfter?: number;
+  label?: string;
+};
 
 /** Follow stable source row IDs, preserving answers even when another row disappears. */
 export function referenceAnswerRows(

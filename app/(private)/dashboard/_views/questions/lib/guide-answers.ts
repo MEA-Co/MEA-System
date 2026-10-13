@@ -1,3 +1,5 @@
+import type { PreviewAnswerRow } from './reference-rows';
+
 export type GuideAnswer = {
-  rows: { id: number; label: string; answers: Record<string, string> }[];
+  rows: (PreviewAnswerRow & { label: string })[];
 };

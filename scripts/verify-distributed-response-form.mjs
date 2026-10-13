@@ -6,9 +6,22 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
+const responseHelpers = {};
+vm.runInNewContext(
+  ts.transpileModule(
+    readFileSync(
+      'app/(private)/dashboard/_views/questions/lib/question-responses.ts',
+      'utf8',
+    ),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+  ).outputText,
+  { exports: responseHelpers },
+);
+
 function mount(distributed = true, empty = false, registration = false) {
   const calls = [];
   const state = [];
+  let effects = [];
   let cursor = 0;
   const react = {
     useState(initial) {
@@ -27,7 +40,9 @@ function mount(distributed = true, empty = false, registration = false) {
       const index = cursor++;
       return (state[index] ??= { current: initial });
     },
-    useEffect() {},
+    useEffect(fn, dependencies) {
+      if (!dependencies) effects.push(fn);
+    },
     useCallback(fn) {
       return fn;
     },
@@ -88,6 +103,7 @@ function mount(distributed = true, empty = false, registration = false) {
     },
     '../../lib/rich-text': { richTextPlainText: (value) => value },
     '../../lib/question-responses': {
+      hasIncompatibleFlowDraft: responseHelpers.hasIncompatibleFlowDraft,
       snapshotRows: (s) =>
         Object.fromEntries(s.questions.map((q) => [q.definition.id, q.rows])),
       mergeGuideResponseRows: (rows) => rows,
@@ -141,11 +157,14 @@ function mount(distributed = true, empty = false, registration = false) {
   );
   const render = () => {
     cursor = 0;
-    return exports.ResponseEditor({
+    effects = [];
+    const tree = exports.ResponseEditor({
       questionnaireId: 'questionnaire',
       initial,
       distributed,
     });
+    effects.forEach((fn) => fn());
+    return tree;
   };
   const nodes = (node) =>
     Array.isArray(node)
@@ -154,8 +173,11 @@ function mount(distributed = true, empty = false, registration = false) {
         ? [node, ...nodes(node.props.children)]
         : [];
   return {
+    initial,
     calls,
     render,
+    applyRemote: (next) =>
+      state.find((item) => typeof item?.current === 'function').current(next),
     find: (tree, type) => nodes(tree).filter((node) => node.type === type),
   };
 }
@@ -244,4 +266,75 @@ test('registration cards stay empty while ordinary answers continue to save and 
   await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(view.calls[0].body.answers.registration, []);
   assert.equal(view.calls[0].body.answers.q[0].answers.f, 'real answer');
+});
+
+test('an explicitly added flow period can be saved before its answers are filled', async () => {
+  const view = mount(true, true);
+  const preview = view.find(view.render(), 'Preview')[0];
+  const added = [
+    { id: 1, flowIndex: 1, answers: {} },
+    { id: 2, flowAfter: 1, label: '', answers: {} },
+  ];
+  preview.props.response.onChange('q', added);
+  let save = view
+    .find(view.render(), 'Button')
+    .find((node) => node.props.children === '저장');
+  assert.equal(save.props.disabled, false);
+  save.props.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(view.calls[0].body.answers.q, added);
+
+  view
+    .find(view.render(), 'Preview')[0]
+    .props.response.onChange('q', [added[0]]);
+  save = view
+    .find(view.render(), 'Button')
+    .find((node) => node.props.children === '저장');
+  assert.equal(save.props.disabled, false);
+  save.props.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(view.calls[1].body.answers.q, [added[0]]);
+});
+
+test('initializing empty fixed flow periods still does not enable save', () => {
+  const view = mount(true, true);
+  const preview = view.find(view.render(), 'Preview')[0];
+  preview.props.response.onChange('q', [
+    { id: 1, flowIndex: 1, answers: {} },
+    { id: -1, flowIndex: 2, answers: {} },
+  ]);
+  const save = view
+    .find(view.render(), 'Button')
+    .find((node) => node.props.children === '저장');
+  assert.equal(save.props.disabled, true);
+  assert.equal(view.calls.length, 0);
+});
+
+test('a changed flow layout locks and keeps the original unsaved table visible', () => {
+  const view = mount(false, true);
+  view.initial.questions[0].definition = {
+    id: 'q',
+    answer_layout: 'flow',
+    row_mode: 'repeatable',
+    max_rows: 2,
+    fields: [{ id: 'f', kind: 'text' }],
+  };
+  const rows = [
+    { id: 1, flowIndex: 1, answers: { f: 'first' } },
+    { id: 77, flowAfter: 1, label: '추가 시기', answers: { f: 'custom' } },
+    { id: 2, flowIndex: 2, answers: { f: 'last fixed answer' } },
+  ];
+  view.find(view.render(), 'Preview')[0].props.response.onChange('q', rows);
+  view.render();
+  const next = structuredClone(view.initial);
+  next.definitionToken = 'b'.repeat(32);
+  next.questions[0].definition.answer_layout = 'table';
+  view.applyRemote(next);
+  const tree = view.render();
+  const preview = view.find(tree, 'Preview')[0];
+  assert.deepEqual(preview.props.response.rows.q, rows);
+  assert.equal(preview.props.library[0].answer_layout, 'flow');
+  assert.equal(preview.props.response.disabled, true);
+  assert.equal(view.find(tree, 'Button')[0].props.disabled, true);
+  assert.equal(view.calls.length, 0);
 });

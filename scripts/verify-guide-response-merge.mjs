@@ -73,3 +73,69 @@ test('a re-created response cannot revive locally cached answers for the same so
   );
   assert.equal(JSON.stringify(merged), JSON.stringify({ q: [] }));
 });
+
+test('flow synchronization keeps inserted period identity and labels beyond the base count', () => {
+  const before = snap([{ id: 'a', kind: 'text' }]);
+  const after = snap([{ id: 'a', kind: 'text' }]);
+  for (const value of [before, after]) {
+    value.questions[0].definition.answer_layout = 'flow';
+    value.questions[0].definition.max_rows = 2;
+    value.questions[0].responseId = 'same-response';
+  }
+  const rows = [
+    { id: 90, flowIndex: 1, answers: { a: 'original first' } },
+    { id: 91, flowAfter: 1, label: '고2 여름', answers: { a: 'inserted' } },
+    { id: 92, flowAfter: 1, label: '고2 겨울', answers: {} },
+    { id: -1, flowIndex: 2, answers: { a: 'original second' } },
+  ];
+  const merged = exports.mergeGuideResponseRows({ q: rows }, before, after);
+  assert.equal(JSON.stringify(merged.q), JSON.stringify(rows));
+});
+
+test('an incompatible remote flow change preserves the unsaved periods before adoption', () => {
+  const before = snap([{ id: 'a', kind: 'text' }]);
+  before.questions[0].definition.answer_layout = 'flow';
+  before.questions[0].definition.max_rows = 2;
+  before.questions[0].responseId = 'same-response';
+  const rows = [
+    { id: 1, flowIndex: 1, answers: { a: 'first' } },
+    { id: 77, flowAfter: 1, label: '고2 여름', answers: { a: 'custom' } },
+    { id: 2, flowIndex: 2, answers: { a: 'last fixed answer' } },
+  ];
+  const next = structuredClone(before);
+  next.questions[0].definition.answer_layout = 'cards';
+  assert.equal(
+    exports.hasIncompatibleFlowDraft({ q: rows }, before, next),
+    true,
+  );
+  assert.equal(
+    JSON.stringify(exports.mergeGuideResponseRows({ q: rows }, before, next).q),
+    JSON.stringify(rows),
+  );
+  next.questions[0].definition.answer_layout = 'flow';
+  next.questions[0].definition.max_rows = 1;
+  assert.equal(
+    exports.hasIncompatibleFlowDraft({ q: rows }, before, next),
+    true,
+  );
+  next.questions[0].definition.max_rows = 2;
+  next.questions[0].definition.flow_insert_after = [];
+  assert.equal(
+    exports.hasIncompatibleFlowDraft({ q: rows }, before, next),
+    false,
+  );
+  next.questions[0].definition.answer_layout = 'table';
+  assert.equal(
+    exports.hasIncompatibleFlowDraft(
+      { q: before.questions[0].rows },
+      before,
+      next,
+    ),
+    false,
+  );
+  next.questions[0].responseId = 'new-response';
+  assert.equal(
+    exports.hasIncompatibleFlowDraft({ q: rows }, before, next),
+    false,
+  );
+});

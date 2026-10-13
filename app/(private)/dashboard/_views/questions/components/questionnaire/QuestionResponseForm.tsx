@@ -14,6 +14,7 @@ import { toast } from '@/components/ui/toast';
 
 import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import {
+  hasIncompatibleFlowDraft,
   mergeGuideResponseRows,
   type QuestionResponseSave,
   type QuestionResponseSnapshot,
@@ -140,10 +141,13 @@ function ResponseEditor({
   >(null);
   const hasContent = (answers: Record<string, PreviewAnswerRow[]>) =>
     Object.values(answers).some((items) =>
-      items.some((row) =>
-        Object.values(row.answers).some((value) =>
-          richTextPlainText(value).trim(),
-        ),
+      items.some(
+        (row) =>
+          row.flowAfter !== undefined ||
+          !!row.label?.trim() ||
+          Object.values(row.answers).some((value) =>
+            richTextPlainText(value).trim(),
+          ),
       ),
     );
   // Empty editor initialization is not an answer or a reason to autosave.
@@ -307,6 +311,13 @@ function ResponseEditor({
   });
   function applyRemote(next: QuestionResponseSnapshot) {
     if (next.definitionToken !== snapshot.definitionToken) {
+      if (hasIncompatibleFlowDraft(rows, snapshot, next)) {
+        setBlocked(true);
+        setError(
+          '작성 중인 흐름표의 기본 시기나 표 형식이 변경됐어요. 현재 입력은 이 화면에 유지됩니다. 입력을 복사한 뒤 질문지를 다시 열어 주세요.',
+        );
+        return;
+      }
       session.current.revision = next.revision;
       const remoteRows = snapshotRows(next);
       setSaved(JSON.stringify(remoteRows));
