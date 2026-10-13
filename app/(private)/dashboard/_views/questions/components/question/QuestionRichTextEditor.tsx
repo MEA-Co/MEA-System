@@ -7,9 +7,10 @@ import { Plugin } from '@tiptap/pm/state';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
-import { BookOpen, Compass, Highlighter, X } from 'lucide-react';
+import { Highlighter, X } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
+import { ExplorationIcon, StudyIcon } from '@/components/feature-icons';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import {
@@ -409,12 +410,12 @@ export function QuestionRichTextEditor({
                     onClick={() => openPicker(command.kind)}
                   >
                     {command.kind === 'study' ? (
-                      <BookOpen
+                      <StudyIcon
                         className="size-5 shrink-0 text-violet-600 dark:text-violet-400"
                         aria-hidden="true"
                       />
                     ) : (
-                      <Compass
+                      <ExplorationIcon
                         className="size-5 shrink-0 text-blue-600 dark:text-blue-400"
                         aria-hidden="true"
                       />

@@ -1,12 +1,9 @@
 'use client';
 
 import {
-  Blocks,
-  BookOpen,
   BriefcaseBusiness,
   GraduationCap,
   MessagesSquare,
-  NotebookPen,
   UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -17,6 +14,11 @@ import {
   getDashboardNavigation,
 } from '@/app/(private)/dashboard/_lib/dashboard-access';
 import {
+  ExplorationIcon,
+  QuestionsIcon,
+  StudyIcon,
+} from '@/components/feature-icons';
+import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -24,22 +26,20 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
 import type { MemberRole } from '@/lib/profile';
 
-import {
-  NewPublicationBadge,
-  usePublicationNotifications,
-} from '../_views/questions/components/questionnaire/PublicationNotifications';
+import { usePublicationNotifications } from '../_views/questions/components/questionnaire/PublicationNotifications';
 
 const icons = {
   profile: UserRound,
   students: GraduationCap,
   consultants: BriefcaseBusiness,
-  questions: Blocks,
-  exploration: NotebookPen,
-  study: BookOpen,
+  questions: QuestionsIcon,
+  exploration: ExplorationIcon,
+  study: StudyIcon,
   consulting: MessagesSquare,
 };
 
@@ -60,7 +60,7 @@ export function DashboardNavigation({
   const pages = getDashboardNavigation(role);
   const { unreadIds, hasUnreadReviews } = usePublicationNotifications();
   return (
-    <>
+    <nav aria-label="주 메뉴">
       {DASHBOARD_GROUPS.map((group) => {
         const items = pages.filter((page) => page.group === group.id);
         if (!items.length) return null;
@@ -85,28 +85,36 @@ export function DashboardNavigation({
                         render={
                           <Link
                             href={`/dashboard?view=${page.view}`}
+                            aria-current={
+                              view === page.view ? 'page' : undefined
+                            }
                             onClick={() => setOpenMobile(false)}
                           />
                         }
                         isActive={view === page.view}
                       >
                         <Icon />
-                        <span>{page.label}</span>
+                        <SidebarMenuLabel>{page.label}</SidebarMenuLabel>
                         {page.view === 'questions' && hasUnreadReviews && (
-                          <span
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-300"
+                          <SidebarMenuBadge
+                            tone="notification"
                             aria-label="새 검토 요청"
                           >
                             검토 요청
-                          </span>
+                          </SidebarMenuBadge>
                         )}
                         {page.view === 'questions' && unreadIds.length > 0 && (
-                          <NewPublicationBadge count={unreadIds.length} />
+                          <SidebarMenuBadge
+                            tone="notification"
+                            aria-label={`새 질문지 ${unreadIds.length}개`}
+                          >
+                            NEW {unreadIds.length}
+                          </SidebarMenuBadge>
                         )}
+                        {count !== undefined ? (
+                          <SidebarMenuBadge>{count}</SidebarMenuBadge>
+                        ) : null}
                       </SidebarMenuButton>
-                      {count !== undefined ? (
-                        <SidebarMenuBadge>{count}</SidebarMenuBadge>
-                      ) : null}
                     </SidebarMenuItem>
                   );
                 })}
@@ -115,6 +123,6 @@ export function DashboardNavigation({
           </SidebarGroup>
         );
       })}
-    </>
+    </nav>
   );
 }

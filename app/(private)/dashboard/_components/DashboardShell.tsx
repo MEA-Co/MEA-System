@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
@@ -38,18 +38,21 @@ export function DashboardShell({
     <SidebarProvider>
       {floatingControls}
       <Sidebar>
-        <SidebarHeader className="border-b p-4">
+        <SidebarHeader>
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-ring"
-            aria-label="MEA 컨설팅 홈"
+            className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-sidebar-ring"
+            aria-label="MEA 홈"
           >
-            <div className="flex size-8 items-center justify-center rounded-md bg-foreground text-background">
-              <LayoutDashboard className="size-4" />
-            </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">MEA</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="flex items-center gap-2 text-3xl font-black tracking-tighter">
+                MEA
+                <span
+                  aria-hidden="true"
+                  className="size-2 bg-sidebar-primary"
+                />
+              </p>
+              <p className="truncate text-xs text-sidebar-foreground/60">
                 {MEMBER_ROLE_LABELS[role]} 페이지
               </p>
             </div>
@@ -58,14 +61,16 @@ export function DashboardShell({
 
         <SidebarContent>{navigation}</SidebarContent>
 
-        <SidebarFooter className="border-t p-3">
+        <SidebarFooter>
           <div className="flex items-center gap-3 px-2 py-1">
             <Avatar size="sm">
-              <AvatarFallback>{name.trim().charAt(0)}</AvatarFallback>
+              <AvatarFallback className="rounded-md bg-sidebar-accent text-sidebar-foreground">
+                {name.trim().charAt(0)}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-sidebar-foreground/60">
                 {MEMBER_ROLE_LABELS[role]}
               </p>
             </div>
@@ -74,6 +79,7 @@ export function DashboardShell({
                 type="submit"
                 variant="ghost"
                 size="icon-sm"
+                className="rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 aria-label="로그아웃"
               >
                 <LogOut />

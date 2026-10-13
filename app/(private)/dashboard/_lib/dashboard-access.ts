@@ -3,8 +3,8 @@ import type { MemberRole } from '@/lib/profile';
 export const DASHBOARD_GROUPS = [
   { id: 'personal', label: null },
   { id: 'members', label: '구성원 관리' },
-  { id: 'operations', label: '운영 관리' },
   { id: 'data', label: '데이터 관리' },
+  { id: 'other', label: '기타' },
 ] as const;
 
 export const DASHBOARD_PAGES = {
@@ -14,7 +14,7 @@ export const DASHBOARD_PAGES = {
   questions: { label: '질문 관리', group: 'data' },
   exploration: { label: '탐구활동 관리', group: 'data' },
   study: { label: '학습법 관리', group: 'data' },
-  consulting: { label: '컨설팅 관리', group: 'operations' },
+  consulting: { label: '컨설팅 관리', group: 'other' },
 } as const;
 
 export type DashboardView = keyof typeof DASHBOARD_PAGES;

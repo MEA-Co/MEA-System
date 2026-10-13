@@ -1,5 +1,4 @@
-import { BookOpen, Compass } from 'lucide-react';
-
+import { ExplorationIcon, StudyIcon } from '@/components/feature-icons';
 import { cn } from '@/lib/utils';
 
 export function ReferenceRecommendations({
@@ -30,7 +29,7 @@ export function ReferenceRecommendations({
           )}
         >
           <p className="flex items-center gap-1.5 text-xs font-semibold">
-            <Compass className="size-4 shrink-0" aria-hidden="true" />
+            <ExplorationIcon className="size-4 shrink-0" aria-hidden="true" />
             탐구활동 참조 권장
           </p>
           <p className="mt-1 text-xs font-normal">
@@ -48,7 +47,7 @@ export function ReferenceRecommendations({
           )}
         >
           <p className="flex items-center gap-1.5 text-xs font-semibold">
-            <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+            <StudyIcon className="size-4 shrink-0" aria-hidden="true" />
             학습법 참조 권장
           </p>
           <p className="mt-1 text-xs font-normal">
