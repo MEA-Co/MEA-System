@@ -13,10 +13,13 @@ import {
 } from '../lib/api-client';
 import { type Activity, emptyValues } from '../lib/fields';
 import {
+  clearEditor,
   readDrafts,
+  readEditor,
   removeDraft,
   restoreFiles,
   saveDraft,
+  writeEditor,
 } from '../lib/local-drafts';
 import {
   activityFingerprint,
@@ -25,16 +28,24 @@ import {
   REPORT_BUCKET,
 } from '../lib/storage-model';
 
-export function useStudyStorage(userId: string) {
+export function useStudyStorage(
+  userId: string,
+  loadFullList = true,
+  persistCreation = false,
+) {
   const { mutate: mutateCache } = useSWRConfig();
   const refreshReferences = () =>
-    mutateCache((key) => Array.isArray(key) && key[0] === 'study-list-v1');
+    mutateCache(
+      (key) =>
+        Array.isArray(key) &&
+        ['study-list-v1', 'study-page', 'study-summary'].includes(key[0]),
+    );
   const {
     data: confirmed = [],
     error: remoteError,
     isLoading,
     mutate,
-  } = useSWR(['study', userId], loadActivities);
+  } = useSWR(loadFullList ? ['study', userId] : null, loadActivities);
   const [local, setLocal] = useState<Activity[]>([]);
   const [localError, setLocalError] = useState('');
   const [ready, setReady] = useState(false);
@@ -42,6 +53,7 @@ export function useStudyStorage(userId: string) {
   const [baseline, setBaseline] = useState<Activity | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
+  const creating = useRef(false);
   const attempt = useRef<{ fingerprint: string; saveId: string } | null>(null);
   const dirty =
     !!draft &&
@@ -62,10 +74,71 @@ export function useStudyStorage(userId: string) {
     setReady(true);
   }, [userId]);
   useEffect(() => {
-    Promise.resolve().then(refreshLocal);
+    let cancelled = false;
+    async function initialize() {
+      if (
+        persistCreation &&
+        new URL(window.location.href).searchParams.get('studyEditor') === 'new'
+      ) {
+        try {
+          const saved = readEditor(userId);
+          if (!cancelled) {
+            creating.current = true;
+            if (saved) {
+              setDraft(saved.draft);
+              setBaseline(saved.baseline);
+            } else {
+              const activity: Activity = {
+                clientKey: crypto.randomUUID(),
+                revision: 0,
+                status: 'draft',
+                updatedAt: new Date().toISOString(),
+                values: emptyValues(),
+                reports: [],
+              };
+              setDraft(activity);
+              setBaseline(activity);
+            }
+          }
+        } catch {
+          toast.add({
+            title:
+              '작성 내용을 복원하지 못했습니다. 브라우저 데이터를 지우지 말고 임시저장을 확인해 주세요.',
+            type: 'error',
+          });
+        }
+      }
+      if (!cancelled) refreshLocal();
+    }
+    void initialize();
     window.addEventListener('storage', refreshLocal);
-    return () => window.removeEventListener('storage', refreshLocal);
-  }, [refreshLocal]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('storage', refreshLocal);
+    };
+  }, [refreshLocal, persistCreation, userId]);
+
+  useEffect(() => {
+    if (!persistCreation || !ready || !creating.current) return;
+    const url = new URL(window.location.href);
+    try {
+      if (draft && draft.revision === 0 && baseline) {
+        writeEditor(userId, draft, baseline);
+        url.searchParams.set('studyEditor', 'new');
+      } else {
+        clearEditor(userId);
+        creating.current = false;
+        url.searchParams.delete('studyEditor');
+      }
+      window.history.replaceState(null, '', url);
+    } catch {
+      toast.add({
+        title:
+          '새로고침 복원용 저장에 실패했습니다. 현재 화면을 유지하고 임시저장을 시도해 주세요.',
+        type: 'error',
+      });
+    }
+  }, [draft, baseline, persistCreation, ready, userId]);
   useEffect(() => {
     if (!dirty && !busy) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -96,6 +169,7 @@ export function useStudyStorage(userId: string) {
     }
   }
   function create() {
+    creating.current = persistCreation;
     const activity: Activity = {
       clientKey: crypto.randomUUID(),
       revision: 0,
@@ -166,7 +240,9 @@ export function useStudyStorage(userId: string) {
         localCleanupFailed = true;
       }
       const oldPaths = (
-        confirmed.find((a) => a.clientKey === draft.clientKey)?.reports ?? []
+        confirmed.find((a) => a.clientKey === draft.clientKey)?.reports ??
+        baseline?.reports ??
+        []
       ).flatMap((r) =>
         r.path && !saved.reports?.some((next) => next.path === r.path)
           ? [r.path]

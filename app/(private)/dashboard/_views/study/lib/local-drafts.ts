@@ -142,3 +142,39 @@ export async function removeDraft(userId: string, activity: Activity) {
     );
   });
 }
+
+const editorKey = (userId: string) => `mea:study-editor:${scope(userId)}`;
+const editorSchema = localActivitySchema.extend({
+  localVersion: localActivitySchema.shape.localVersion.optional(),
+});
+export function readEditor(userId: string) {
+  const raw = sessionStorage.getItem(editorKey(userId));
+  if (!raw) return null;
+  const data = JSON.parse(raw);
+  return {
+    draft: editorSchema.parse(data.draft),
+    baseline: editorSchema.parse(data.baseline),
+  };
+}
+export function writeEditor(
+  userId: string,
+  draft: Activity,
+  baseline: Activity,
+) {
+  const serialize = (activity: Activity) => ({
+    ...activity,
+    reports: (activity.reports ?? []).map(
+      ({ file: _file, ...report }) => report,
+    ),
+  });
+  sessionStorage.setItem(
+    editorKey(userId),
+    JSON.stringify({
+      draft: serialize(draft),
+      baseline: serialize(baseline),
+    }),
+  );
+}
+export function clearEditor(userId: string) {
+  sessionStorage.removeItem(editorKey(userId));
+}

@@ -36,7 +36,7 @@ import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 import { StudyActivityDetails } from './components/StudyActivityDetails';
 import { StudyExamplesDialog } from './components/StudyExamplesDialog';
 import { StudyFields } from './components/StudyFields';
-import { StudyList } from './components/StudyList';
+import { StudyTable } from './components/StudyTable';
 import { useStudyStorage } from './hooks/useStudyStorage';
 import { type Activity, studySummary, studyTitle } from './lib/fields';
 import { hasInput, missingFields } from './lib/storage-model';
@@ -73,14 +73,13 @@ export function StudyView({
     saveLocal,
     confirm,
     remove,
-  } = useStudyStorage(userId);
+  } = useStudyStorage(userId, !!onSelect, !onSelect && !registrationOnly);
   useEffect(() => {
     onEditorOpenChange?.(!!draft);
   }, [draft, onEditorOpenChange]);
   const [query, setQuery] = useState('');
-  const [scope, setScope] = useState<'mine' | 'others'>('mine');
-  const [owner, setOwner] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const continueWritingRef = useRef<HTMLButtonElement>(null);
@@ -90,35 +89,7 @@ export function StudyView({
   const canEdit = (activity: Activity) =>
     !activity.ownerId || activity.ownerId === userId;
   const existing = draft && draft.revision > 0;
-  const showOthers = canViewOthers && scope === 'others';
-  const mine = activities.filter(canEdit);
-  const others = canViewOthers
-    ? activities.filter((activity) => !canEdit(activity))
-    : [];
-  const people = Array.from(
-    new Map(
-      others.map((activity) => [
-        activity.ownerId!,
-        activity.ownerName?.trim() || '이름 비공개',
-      ]),
-    ).entries(),
-  )
-    .sort(
-      ([idA, nameA], [idB, nameB]) =>
-        nameA.localeCompare(nameB, 'ko') || idA.localeCompare(idB),
-    )
-    .map(([id, name], index, entries) => ({
-      id,
-      label:
-        entries.filter(([, value]) => value === name).length > 1
-          ? `${name} (${index + 1})`
-          : name,
-    }));
-  const ownerLabel = (id?: string) =>
-    people.find((person) => person.id === id)?.label ?? '이름 비공개';
-  const scoped = showOthers
-    ? others.filter((activity) => !owner || activity.ownerId === owner)
-    : mine;
+  const scoped = activities.filter(canEdit);
   const filtered = scoped.filter((activity) =>
     Object.values(activity.values)
       .filter((value): value is string => typeof value === 'string')
@@ -411,37 +382,27 @@ export function StudyView({
           </ul>
         </div>
       ) : (
-        <StudyList
+        <StudyTable
+          userId={userId}
           canViewOthers={canViewOthers}
-          scope={scope}
-          setScope={setScope}
-          query={query}
-          setQuery={setQuery}
-          mine={mine}
-          others={others}
-          showOthers={showOthers}
-          owner={owner}
-          setOwner={setOwner}
-          ownerLabel={ownerLabel}
-          people={people}
-          filtered={filtered}
-          busy={busy}
+          local={activities.filter((activity) => activity.status === 'draft')}
           ready={ready}
-          isLoading={isLoading}
-          remoteError={remoteError}
+          busy={busy}
           localError={localError}
-          canEdit={canEdit}
           onOpen={(activity, element) => {
             opener.current = element;
             open(activity);
           }}
-          onDelete={setPendingDelete}
+          onDelete={(activity) => {
+            setPendingDelete(activity);
+            setDeleteOpen(true);
+          }}
         />
       )}
       <Dialog
-        open={!!pendingDelete}
+        open={deleteOpen}
         onOpenChange={(open) => {
-          if (!open && !busy) setPendingDelete(null);
+          if (!open && !busy) setDeleteOpen(false);
         }}
       >
         <DialogContent>
@@ -457,7 +418,11 @@ export function StudyView({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => setDeleteOpen(false)}
+            >
               취소
             </Button>
             <Button
@@ -466,7 +431,7 @@ export function StudyView({
               disabled={busy}
               onClick={async () => {
                 if (pendingDelete && (await remove(pendingDelete)))
-                  setPendingDelete(null);
+                  setDeleteOpen(false);
               }}
             >
               삭제

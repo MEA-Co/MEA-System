@@ -10,6 +10,8 @@ import { getViewRole } from '@/lib/admin';
 import { getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
+import { readStudyPage, readStudySummary } from '../list-page';
+
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) =>
   Response.json(body, {
@@ -48,7 +50,33 @@ async function handle(request: Request, context: Context) {
   const id = path[0];
   if (id && !z.uuid().safeParse(id).success)
     return json({ error: '잘못된 경로입니다.' }, 404);
+  if (
+    request.method === 'POST' &&
+    !id &&
+    new URL(request.url).searchParams.get('mode') === 'table'
+  ) {
+    const result = await readStudyPage(
+      client,
+      new URL(request.url).searchParams,
+      access.user.id,
+      ownOnly,
+      await request.json().catch(() => null),
+    );
+    return json(result.body, result.status);
+  }
   if (request.method === 'GET' && !id) {
+    const params = new URL(request.url).searchParams;
+    if (params.get('mode') === 'table') {
+      const result = await readStudyPage(
+        client,
+        params,
+        access.user.id,
+        ownOnly,
+      );
+      return json(result.body, result.status);
+    }
+    if (params.get('mode') === 'summary')
+      return json(await readStudySummary(client, access.user.id, ownOnly));
     const activities: ActivityRow[] = [];
     for (let offset = 0; ; offset += 500) {
       let query = client
@@ -179,4 +207,4 @@ async function route(request: Request, context: Context) {
     );
   }
 }
-export { route as DELETE, route as GET, route as PUT };
+export { route as DELETE, route as GET, route as POST,route as PUT };
