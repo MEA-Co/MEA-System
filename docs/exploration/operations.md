@@ -64,3 +64,14 @@ docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=
 - 로컬 이력 복구의 과거 repair 명령은 재실행하지 않는다. [로컬 환경](../local-supabase.md)과 실제 이력을 먼저 확인한다.
 - 실패한 확정에서 남은 원격 파일은 비공개일 수 있다. 활성 reports에 없는 오래된 객체를 검토한 후 Storage API로만 정리한다. storage.objects 직접 DELETE/일괄 브라우저 초기화는 하지 않는다.
 - 배포 후 큰 본문 거절/입력 유지, 첨부 임시저장 후 제거·삭제, 타 탭 충돌, 기존 초안 복원, 파일 다운로드, 권한별 목록/수정·삭제 차단을 확인한다.
+
+## 신규 작성 새로고침 복원 (2026-10-14)
+
+앱 코드와 브라우저 저장만 변경했다. DB/API/migration 변경 및 운영 반영 없음. `scripts/verify-exploration-editor-session.mjs`는 URL 유지/해제, 신규 창 복원, dirty 기준 보존, 첨부 복구, 계정/환경 분리, 저장 공간 실패, 손상 정보 보존, 늦은 파일 쓰기/닫기 순서, 질문 첨부 선택 제외를 검증한다.
+
+```bash
+node --test scripts/verify-exploration-editor-session.mjs scripts/verify-exploration-save-refresh.mjs scripts/verify-exploration-storage.mjs
+npm run typecheck
+```
+
+새로고침 복원·기존 저장/파일 회귀 32개, 타입 검사·변경 파일 린트 통과. 실제 브라우저 테스트와 운영 반영은 수행하지 않았다.

@@ -70,7 +70,7 @@ export function ExplorationView({
     saveLocal,
     confirm,
     remove,
-  } = useExplorationStorage(userId);
+  } = useExplorationStorage(userId, !onSelect);
   useEffect(() => {
     onEditorOpenChange?.(!!draft);
   }, [draft, onEditorOpenChange]);

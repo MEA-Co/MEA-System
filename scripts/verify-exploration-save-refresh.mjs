@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import vm from 'node:vm';
+
 import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
@@ -70,6 +71,7 @@ test('saving a local edit reads only its confirmed row for removed files and ref
       }),
     },
     '@/lib/exploration/fields': {},
+    '../lib/editor-session': {},
     '../lib/local-drafts': {
       removeDraft: async () => {},
       readDrafts: () => [],

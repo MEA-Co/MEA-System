@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
 
 import { toast } from '@/components/ui/toast';
-import { emptyValues,type Exploration } from '@/lib/exploration/fields';
+import { emptyValues, type Exploration } from '@/lib/exploration/fields';
 import {
   explorationFingerprint,
   type ExplorationRow,
@@ -19,6 +19,7 @@ import {
   deleteExploration,
   request,
 } from '../lib/api-client';
+import { clearEditor, readEditor, writeEditor } from '../lib/editor-session';
 import {
   readDrafts,
   removeDraft,
@@ -26,7 +27,7 @@ import {
   saveDraft,
 } from '../lib/local-drafts';
 
-export function useExplorationStorage(userId: string) {
+export function useExplorationStorage(userId: string, persistCreation = false) {
   const { mutate } = useSWRConfig();
   const refreshReferences = () =>
     mutate(
@@ -45,6 +46,8 @@ export function useExplorationStorage(userId: string) {
   const [baseline, setBaseline] = useState<Exploration | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
+  const creating = useRef(false);
+  const recoveryWarning = useRef(false);
   const attempt = useRef<{ fingerprint: string; saveId: string } | null>(null);
   const dirty =
     !!draft &&
@@ -65,10 +68,90 @@ export function useExplorationStorage(userId: string) {
     setReady(true);
   }, [userId]);
   useEffect(() => {
-    Promise.resolve().then(refreshLocal);
+    let cancelled = false;
+    async function initialize() {
+      if (
+        persistCreation &&
+        new URL(window.location.href).searchParams.get('explorationEditor') ===
+          'new'
+      ) {
+        try {
+          const saved = await readEditor(userId);
+          const activity: Exploration = saved?.draft ?? {
+            clientKey: crypto.randomUUID(),
+            revision: 0,
+            status: 'draft',
+            updatedAt: new Date().toISOString(),
+            values: emptyValues(),
+            reports: [],
+          };
+          // Explicitly saved attachments are a fallback if the session copy was unavailable.
+          const restored = await restoreFiles(userId, activity).catch(
+            () => activity,
+          );
+          if (!cancelled) {
+            creating.current = true;
+            setDraft(restored);
+            setBaseline(saved?.baseline ?? restored);
+            if (
+              restored.reports?.some((report) => !report.path && !report.file)
+            )
+              toast.add({
+                title:
+                  '복원할 수 없는 첨부 파일이 있습니다. 본문은 복원했습니다. 파일을 다시 첨부해 주세요.',
+                type: 'error',
+              });
+          }
+        } catch {
+          if (!cancelled)
+            toast.add({
+              title:
+                '작성 내용을 복원하지 못했습니다. 브라우저 데이터를 지우지 말고 임시저장을 확인해 주세요.',
+              type: 'error',
+            });
+        }
+      }
+      if (!cancelled) refreshLocal();
+    }
+    void initialize();
     window.addEventListener('storage', refreshLocal);
-    return () => window.removeEventListener('storage', refreshLocal);
-  }, [refreshLocal]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('storage', refreshLocal);
+    };
+  }, [refreshLocal, persistCreation, userId]);
+
+  useEffect(() => {
+    if (!persistCreation || !ready || !creating.current) return;
+    let cancelled = false;
+    const warn = () => {
+      if (cancelled || recoveryWarning.current) return;
+      recoveryWarning.current = true;
+      toast.add({
+        title:
+          '새로고침 복원용 저장에 실패했습니다. 현재 화면을 유지하고 임시저장을 시도해 주세요.',
+        type: 'error',
+      });
+    };
+    const url = new URL(window.location.href);
+    try {
+      if (draft && draft.revision === 0 && baseline) {
+        url.searchParams.set('explorationEditor', 'new');
+        window.history.replaceState(null, '', url);
+        void writeEditor(userId, draft, baseline).catch(warn);
+      } else {
+        creating.current = false;
+        url.searchParams.delete('explorationEditor');
+        window.history.replaceState(null, '', url);
+        void clearEditor(userId).catch(warn);
+      }
+    } catch {
+      warn();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [draft, baseline, persistCreation, ready, userId]);
   useEffect(() => {
     if (!dirty && !busy) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -99,6 +182,8 @@ export function useExplorationStorage(userId: string) {
     }
   }
   function create() {
+    creating.current = persistCreation;
+    recoveryWarning.current = false;
     const activity: Exploration = {
       clientKey: crypto.randomUUID(),
       revision: 0,

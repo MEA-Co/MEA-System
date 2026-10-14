@@ -9,11 +9,16 @@ API 이름은 탐구활동 저장 `/api/exploration`, 기존 AI 탐구 코치 `/
 | 대상 | 저장 위치 | 계약 |
 | --- | --- | --- |
 | 확정본 | public.exploration | 역할별 공유, 수정·삭제는 작성자만 |
+| 새 활동 새로고침 복원 | sessionStorage + 별도 IndexedDB | 같은 탭·계정·환경의 신규 작성만, 명시적 저장 아님 |
 | 명시적 임시저장 | localStorage | 계정·Supabase URL별 분리, 자동 저장 아님 |
 | 임시 첨부 원문 | IndexedDB mea-exploration-files / files | 서버 업로드 전 브라우저 보관 |
 | 확정 첨부 | 비공개 exploration-reports | 본인 또는 활성 확정본의 열람 권한으로 다운로드 |
 
-학습법의 sessionStorage/URL 새로고침 복원은 탐구활동에 도입하지 않았다. 미저장 입력은 React 상태이며 명시적 임시저장 후에만 복원할 수 있다.
+관리 화면의 신규 작성은 `explorationEditor=new`와 탭별 sessionStorage로 새로고침 복원을 지원한다. sessionStorage 키는 `mea:exploration-editor:v1:<Supabase URL>:<user ID>`이며 draft/baseline과 첨부 사본 키를 저장한다. 이 복원 사본은 명시적 임시저장 목록과 분리되며 기존 활동 편집/읽기 전용/질문 첨부 선택에는 적용하지 않는다.
+
+첨부 사본은 별도 IndexedDB `mea-exploration-editor-files`의 `files` store에 계정·환경·복원 세션별로 보관한다. 본문은 동기 기록하고 파일 작업은 순차 처리해 늦은 쓰기가 닫기 이후 사본을 되살리지 않도록 한다. 파일 객체가 달라질 때만 쓰며 키 입력마다 원문을 다시 쓰지 않는다. 복원 시 명시적 임시저장의 파일 원문도 fallback으로 사용할 수 있다. 파일 복원 실패는 본문을 유지하고 재첨부를 안내한다.
+
+닫기·변경 내용 버리기·확정 성공 시 복원 본문과 첨부 사본을 제거한다. 명시적 임시저장과 그 파일은 별도 기존 규칙을 따른다. 강제 탭 종료로 sessionStorage가 없어지거나 파일 삭제에 실패하면 IndexedDB 사본이 남을 수 있으며 자동 정리 작업은 없다. 이 사본으로 다른 탭/기기에서 복원하는 기능은 제공하지 않는다. 손상된 복원 정보는 임의로 삭제/덮어쓰지 않고 오류로 알린다.
 
 | DB 열 | 타입 | 의미 |
 | --- | --- | --- |
@@ -80,6 +85,7 @@ ID 기준 advisory lock과 행 잠금 아래 revision/save_id/삭제 여부를 �
 | 화면 ExplorationView.tsx | Drawer·대화상자·저장 흐름 조합 |
 | 화면 components | 입력/상세/표/선택 UI, 공통 shadcn 조합 |
 | 화면 hooks | 편집 상태·저장·조회 캐시 |
+| 화면 lib/editor-session.ts | 신규 작성의 탭별 복원 본문·첨부 사본 |
 | 화면 lib/local-drafts.ts | localStorage/IndexedDB·잠금·파일 정리 |
 | 화면 lib/api-client.ts | confirmExploration/deleteExploration·HTTP·Storage |
 | 화면 lib/list-model.ts / example-exploration.ts | 표시명·입력 예시 |
