@@ -1,7 +1,15 @@
+import type { Exploration } from '@/lib/exploration/fields';
+import {
+  EXPLORATION_SIZE_ERROR,
+  explorationValuesBytes,
+  MAX_EXPLORATION_VALUES_BYTES,
+} from '@/lib/exploration/payload-size';
+import {
+  type ExplorationRow,
+  fromRow,
+  REPORT_BUCKET,
+} from '@/lib/exploration/storage-model';
 import { createClient } from '@/lib/supabase/client';
-
-import type { Activity } from './fields';
-import { type ActivityRow, fromRow, REPORT_BUCKET } from './storage-model';
 
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -16,17 +24,13 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
     );
   return body as T;
 }
-export async function loadActivities() {
-  const { activities } = await request<{ activities: ActivityRow[] }>(
-    '/api/exploration',
-  );
-  return activities.map(fromRow);
-}
-export async function confirmActivity(
+export async function confirmExploration(
   userId: string,
-  activity: Activity,
+  activity: Exploration,
   saveId: string,
 ) {
+  if (explorationValuesBytes(activity.values) > MAX_EXPLORATION_VALUES_BYTES)
+    throw new Error(EXPLORATION_SIZE_ERROR);
   const client = createClient();
   const reports = [];
   for (const report of activity.reports ?? []) {
@@ -57,7 +61,7 @@ export async function confirmActivity(
     }
     reports.push({ ...metadata, path });
   }
-  const { activity: row } = await request<{ activity: ActivityRow }>(
+  const { activity: row } = await request<{ activity: ExplorationRow }>(
     `/api/exploration/${activity.clientKey}`,
     {
       method: 'PUT',
@@ -72,7 +76,7 @@ export async function confirmActivity(
   );
   return fromRow(row);
 }
-export async function deleteActivity(activity: Activity) {
+export async function deleteExploration(activity: Exploration) {
   return request<{ ok: boolean; cleanupPending: boolean }>(
     `/api/exploration/${activity.clientKey}`,
     {

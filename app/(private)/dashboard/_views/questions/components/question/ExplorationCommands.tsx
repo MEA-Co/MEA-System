@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 
-import { ExplorationActivityDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationActivityDetails';
+import { ExplorationDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationDetails';
 import { ExplorationView } from '@/app/(private)/dashboard/_views/exploration/ExplorationView';
 import { useExplorationList } from '@/app/(private)/dashboard/_views/exploration/hooks/useExplorationList';
-import { fromRow } from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { fromRow } from '@/lib/exploration/storage-model';
 
 export function ExplorationPicker({
   onSelect,
@@ -16,7 +16,9 @@ export function ExplorationPicker({
   onSelect: (id: string, title: string) => void;
   onEditorOpenChange?: (open: boolean) => void;
 }) {
-  const { data, error, mutate } = useExplorationList('own');
+  const { data, error, mutate } = useExplorationList('own', true, undefined, {
+    identityOnly: true,
+  });
   if (error)
     return (
       <div role="alert">
@@ -72,7 +74,7 @@ export function ExplorationReferenceContent({
               불러오는 중이에요.
             </p>
           ) : activity ? (
-            <ExplorationActivityDetails
+            <ExplorationDetails
               activity={fromRow(activity)}
               onClose={() => setOpen(false)}
             />

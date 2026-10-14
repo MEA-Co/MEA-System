@@ -6,16 +6,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
 import {
-  type Activity,
   creativeActivityOptions,
+  type Exploration,
   gradeOptions,
   recordTypeOptions,
   semesterOptions,
-} from '../lib/fields';
+} from '@/lib/exploration/fields';
 
-import { ExplorationFieldIcon } from './ExplorationFieldIcon';
 import { ExplorationRequiredMark } from './ExplorationRequiredMark';
 
 function RecordSelect({
@@ -38,7 +36,7 @@ function RecordSelect({
       value={value || null}
       onValueChange={(next) => onChange(next ?? '')}
     >
-      <SelectTrigger aria-label={label} className="min-w-20 rounded-xl">
+      <SelectTrigger aria-label={label} className="min-w-20">
         <SelectValue placeholder="선택" />
       </SelectTrigger>
       <SelectContent>
@@ -58,14 +56,13 @@ export function ExplorationRecordFields({
   onChange,
 }: {
   section: 'grade' | 'recordType';
-  values: Activity['values'];
-  onChange: (values: Activity['values']) => void;
+  values: Exploration['values'];
+  onChange: (values: Exploration['values']) => void;
 }) {
   return (
     <fieldset className="min-w-0 space-y-2">
       <legend className="text-sm font-medium">
-        <span className="flex min-h-5 items-center gap-2">
-          <ExplorationFieldIcon field={section} />
+        <span className="flex min-h-8 items-center gap-2">
           <span>
             {section === 'grade'
               ? '기재 영역 · 학년 및 학기'
@@ -134,7 +131,7 @@ export function ExplorationRecordFields({
                 onChange={(event) =>
                   onChange({ ...values, recordArea: event.target.value })
                 }
-                className="min-w-40 flex-1 rounded-xl"
+                className="min-w-0 w-full sm:w-auto sm:min-w-40 sm:flex-1"
               />
             )}
           </>

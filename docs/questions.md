@@ -104,7 +104,7 @@
 
 첨부 참조 삭제: Backspace/Delete 및 모바일의 같은 삭제 입력은 `@활동명` 전체를 한 번에 지운다. 일부 글자만 선택한 경우에도 참조 전체로 삭제 범위를 확장하며, 참조 바깥의 일반 텍스트는 기존 삭제 동작을 유지한다. 기존 mark 저장 형식은 유지한다.
 
-탐구활동 목록 캐시: 기존 탐구활동 유형 입력과 @ 메뉴·상세 조회는 `useExplorationList`의 `{userId, activities}` 응답 계약을 공유한다. 캐시 키는 `exploration-list-v1`과 요청 URL의 조합으로, 이전 URL 키의 배열 데이터와 충돌하지 않는다. 빈 목록은 정상 결과이며 잘못된 응답 형태는 오류 안내로 처리한다. 회귀 `scripts/verify-exploration-list-cache.mjs` 3개 통과. DB migration 없이 앱 재배포로 반영한다.
+탐구활동 조회: `useExplorationList`의 객체 응답과 `exploration-list-v1`+요청 URL 캐시를 사용한다. 첨부 입력/선택기는 서버 검색·10개 페이지를 사용하고, 선택된 ID는 별도 단건 조회로 유지한다. @ 메뉴의 작성 진입은 context만 읽으며 열람 참조는 reference 경로로 0~1건을 읽는다. 신규 조회 함수 `20261013094552_exploration_query_contract.sql`을 앱 배포 전에 적용해야 한다. 권한·요청 계약·검증·최신 적용 순서는 [탐구활동 문서](exploration/data-api.md#서버-검색페이지-api-2026-10-13)를 따른다.
 
 
 ## 진로 흐름 스레드 입력 (2026-10-04)

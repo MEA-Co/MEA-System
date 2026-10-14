@@ -1,6 +1,6 @@
-import type { Activity } from './fields';
+import type { Exploration } from '@/lib/exploration/fields';
 
-export const exampleActivityValues = {
+export const exampleExplorationValues = {
   grade: '1',
   semester: '2',
   recordType: '세특',
@@ -29,4 +29,4 @@ export const exampleActivityValues = {
 데이터를 그래프로 나타내보니 모든 조건에서 처음 몇 분 동안 농도가 빠르게 감소한 뒤 감소폭이 점차 작아지는 형태가 나타났으며, 특히 창문과 출입문을 동시에 열어 공기가 서로 다른 방향으로 이동할 수 있도록 한 조건에서 감소 속도가 상대적으로 크게 나타나는 경향을 확인하였다.`,
   result: `환기 방식별 이산화탄소 농도 변화를 표와 그래프로 정리하여 탐구 보고서를 작성하였다. 단순히 창문을 많이 여는 것보다 공기가 들어오고 나갈 수 있는 통로를 함께 확보하는 것이 중요할 수 있다는 점을 결과를 통해 설명하였다.
 또한 실제 학교에서는 날씨, 외부 미세먼지, 교실 인원 등 여러 조건이 달라질 수 있으므로 이번 결과를 모든 상황에 그대로 적용하기 어렵다는 한계를 함께 제시하였다. 후속 탐구로는 교실 인원수나 선풍기 사용 여부와 같은 변인을 추가해 환기 효율이 어떻게 달라지는지 비교해보고 싶다고 제안하였다.`,
-} satisfies Partial<Activity['values']>;
+} satisfies Partial<Exploration['values']>;

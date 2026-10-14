@@ -1,10 +1,11 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 import { CollectionSearch } from '@/components/patterns/collection';
+import { CollectionPagination } from '@/components/patterns/collection-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type Study, studyTitle } from '@/lib/study/fields';
 import { matchesStudySearch, STUDY_PAGE_SIZE } from '@/lib/study/list-query';
-import { fromRow,type StudyRow } from '@/lib/study/storage-model';
+import { fromRow, type StudyRow } from '@/lib/study/storage-model';
 
 import { request } from '../lib/api-client';
 
@@ -255,38 +256,15 @@ export function StudyTable({
         owner={scope === 'others' ? owner : ''}
         drafts={drafts}
       />
-      <nav
-        aria-label="학습법 페이지"
-        className="flex items-center justify-between gap-3"
-      >
-        <p aria-live="polite" className="text-sm text-muted-foreground">
-          {loading
-            ? '불러오는 중'
-            : error
-              ? '조회 실패'
-              : `${total}개 · ${currentPage} / ${pages} 페이지`}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="이전 페이지"
-            disabled={loading || !!error || currentPage <= 1}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="다음 페이지"
-            disabled={loading || !!error || currentPage >= pages}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
-      </nav>
+      <CollectionPagination
+        label="학습법 페이지"
+        total={total}
+        page={currentPage}
+        pages={pages}
+        loading={loading}
+        error={error}
+        onPageChange={setPage}
+      />
     </div>
   );
   if (!canViewOthers) return content;
@@ -428,7 +406,7 @@ export function StudyTableRows({
                     onOpen(target, event.currentTarget);
                   }}
                 >
-                  <TableCell>
+                  <TableCell className="py-2 sm:py-3">
                     <button
                       type="button"
                       className="block w-full cursor-pointer truncate text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"

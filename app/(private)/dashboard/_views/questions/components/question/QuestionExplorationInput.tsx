@@ -2,11 +2,14 @@
 
 import { Menu } from '@base-ui/react/menu';
 import { Check, Eye, Paperclip, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { ExplorationActivityDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationActivityDetails';
+import { ExplorationDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationDetails';
 import { useExplorationList } from '@/app/(private)/dashboard/_views/exploration/hooks/useExplorationList';
-import { fromRow } from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
+import {
+  explorationSummary,
+  explorationTitle,
+} from '@/app/(private)/dashboard/_views/exploration/lib/list-model';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -15,6 +18,10 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
+import { fromRow } from '@/lib/exploration/storage-model';
+
+import { ExplorationReferenceContent } from './ExplorationCommands';
 
 export function QuestionExplorationInput({
   value = '',
@@ -26,12 +33,39 @@ export function QuestionExplorationInput({
   disabled?: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
   const { data, error, isLoading, mutate } = useExplorationList(
     'own',
     !disabled,
+    undefined,
+    { query: search, page },
   );
+  const selectedResult = useExplorationList(
+    'own',
+    !disabled && !!value,
+    value || undefined,
+  );
+  const current = data?.page ?? page;
+  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / 10));
   const activities = data?.activities;
-  const selected = activities?.find((activity) => activity.id === value);
+  const selected = selectedResult.data?.activities.find(
+    (activity) => activity.id === value,
+  );
+  if (disabled && value)
+    return (
+      <ExplorationReferenceContent id={value}>
+        첨부한 탐구활동 보기
+      </ExplorationReferenceContent>
+    );
   if (disabled)
     return (
       <Button variant="outline" disabled>
@@ -40,22 +74,7 @@ export function QuestionExplorationInput({
     );
   return (
     <div className="space-y-3">
-      {error ? (
-        <div role="alert" className="text-sm text-destructive">
-          탐구활동을 불러오지 못했어요.
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            다시 시도
-          </Button>
-        </div>
-      ) : isLoading ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          탐구활동을 불러오는 중이에요.
-        </p>
-      ) : !activities?.length ? (
-        <p className="text-sm text-muted-foreground">
-          첨부할 활동이 없어요. 탐구활동 관리에서 활동을 확정해 주세요.
-        </p>
-      ) : (
+      {
         // Keep the trigger's conditional focus guards outside the parent spacing layout.
         <div>
           <Menu.Root>
@@ -66,16 +85,46 @@ export function QuestionExplorationInput({
             <Menu.Portal>
               <Menu.Positioner align="start" sideOffset={6} className="z-50">
                 <Menu.Popup className="max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+                  <div className="space-y-2 p-2">
+                    <Input
+                      value={query}
+                      maxLength={200}
+                      aria-label="탐구활동 검색"
+                      placeholder="탐구활동 검색"
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Escape' && event.key !== 'Tab')
+                          event.stopPropagation();
+                      }}
+                    />
+                    {error ? (
+                      <div role="alert">
+                        불러오지 못했어요.{' '}
+                        <Button size="sm" onClick={() => void mutate()}>
+                          다시 시도
+                        </Button>
+                      </div>
+                    ) : isLoading || query.trim() !== search ? (
+                      <p role="status">불러오는 중이에요.</p>
+                    ) : !activities?.length ? (
+                      <p className="text-sm text-muted-foreground">
+                        검색 결과가 없어요.
+                      </p>
+                    ) : null}
+                  </div>
                   <Menu.RadioGroup
                     value={selected?.id ?? ''}
                     onValueChange={(id) => onChange?.(id)}
                     aria-label="첨부할 탐구활동"
                   >
-                    {activities.map((activity) => (
+                    {(!isLoading && query.trim() === search
+                      ? (activities ?? [])
+                      : []
+                    ).map((activity) => (
                       <Menu.RadioItem
                         key={activity.id}
                         value={activity.id}
-                        label={activity.values.topic}
+                        label={explorationTitle(fromRow(activity))}
                         closeOnClick
                         className="flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                       >
@@ -86,32 +135,50 @@ export function QuestionExplorationInput({
                         </span>
                         <span className="min-w-0">
                           <span className="block wrap-break-word">
-                            {activity.values.topic}
+                            {explorationTitle(fromRow(activity))}
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {activity.values.grade}학년 ·{' '}
-                            {activity.values.semester}학기 ·{' '}
-                            {activity.values.recordArea}
+                            {explorationSummary(fromRow(activity))}
                           </span>
                         </span>
                       </Menu.RadioItem>
                     ))}
                   </Menu.RadioGroup>
+                  <div className="flex items-center justify-between gap-2 border-t p-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading || !!error || current <= 1}
+                      onClick={() => setPage(current - 1)}
+                    >
+                      이전
+                    </Button>
+                    <span className="text-xs">
+                      {current} / {pages}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading || !!error || current >= pages}
+                      onClick={() => setPage(current + 1)}
+                    >
+                      다음
+                    </Button>
+                  </div>
                 </Menu.Popup>
               </Menu.Positioner>
             </Menu.Portal>
           </Menu.Root>
         </div>
-      )}
+      }
       {selected && (
         <div className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
           <div className="min-w-0">
             <p className="wrap-break-word font-medium">
-              {selected.values.topic}
+              {explorationTitle(fromRow(selected))}
             </p>
             <p className="text-muted-foreground">
-              {selected.values.grade}학년 · {selected.values.semester}학기 ·{' '}
-              {selected.values.recordArea}
+              {explorationSummary(fromRow(selected))}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -133,7 +200,7 @@ export function QuestionExplorationInput({
                 <DrawerHeader>
                   <DrawerTitle>탐구활동 자세히 보기</DrawerTitle>
                 </DrawerHeader>
-                <ExplorationActivityDetails
+                <ExplorationDetails
                   activity={fromRow(selected)}
                   notice="첨부한 탐구활동입니다. 읽기 전용으로 표시됩니다."
                   onClose={() => setDetailsOpen(false)}
@@ -156,10 +223,10 @@ export function QuestionExplorationInput({
           </div>
         </div>
       )}
-      {value && !selected && !isLoading && (
+      {value && !selected && !selectedResult.isLoading && (
         <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
           <p role="alert" className="text-sm text-destructive">
-            {error
+            {selectedResult.error
               ? '선택한 활동을 확인하지 못했어요.'
               : '선택한 활동을 찾을 수 없어요. 다시 선택해 주세요.'}
           </p>

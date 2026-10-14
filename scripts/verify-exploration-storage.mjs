@@ -42,8 +42,8 @@ function load(path, imports = {}, globals = {}) {
   );
   return exports;
 }
-const domain = studyMode ? 'lib/study/' : base;
-const payload = studyMode ? load(domain + 'payload-size.ts') : {};
+const domain = `lib/${block}/`;
+const payload = load(domain + 'payload-size.ts');
 const model = load(domain + 'storage-model.ts', { './payload-size': payload });
 const { emptyValues } = load(domain + 'fields.ts');
 const make = () => ({
@@ -54,7 +54,10 @@ const make = () => ({
   values: emptyValues(),
   reports: [],
 });
-function storageHarness() {
+function storageHarness({
+  locks = true,
+  environment = 'http://local.test',
+} = {}) {
   const data = new Map();
   let fail = false;
   const storage = {
@@ -78,8 +81,30 @@ function storageHarness() {
         request.result = {
           close() {},
           transaction: () => {
+            let scanning = false;
             const tx = {
               objectStore: () => ({
+                openKeyCursor(range) {
+                  scanning = true;
+                  const request = {};
+                  const keys = [...files.keys()]
+                    .filter((key) => key >= range.lower && key <= range.upper)
+                    .sort();
+                  let index = 0;
+                  function step() {
+                    queueMicrotask(() => {
+                      request.result =
+                        index < keys.length
+                          ? { key: keys[index++], continue: step }
+                          : null;
+                      request.onsuccess();
+                      if (!request.result)
+                        queueMicrotask(() => tx.oncomplete());
+                    });
+                  }
+                  step();
+                  return request;
+                },
                 put(value, key) {
                   const r = { result: key };
                   queueMicrotask(() => {
@@ -97,7 +122,7 @@ function storageHarness() {
                   const r = {};
                   queueMicrotask(() => {
                     files.delete(key);
-                    tx.oncomplete();
+                    if (!scanning) tx.oncomplete();
                   });
                   return r;
                 },
@@ -111,11 +136,31 @@ function storageHarness() {
       return request;
     },
   };
+  const lockTails = new Map();
+  const navigator = locks
+    ? {
+        locks: {
+          request: (name, run) => {
+            const next = (lockTails.get(name) ?? Promise.resolve())
+              .catch(() => {})
+              .then(run);
+            lockTails.set(name, next);
+            return next;
+          },
+        },
+      }
+    : {};
   return {
     api: load(
       base + 'local-drafts.ts',
-      { [studyMode ? '@/lib/study/storage-model' : './storage-model']: model },
-      { localStorage: storage, navigator: {}, indexedDB },
+      { [`@/lib/${block}/storage-model`]: model },
+      {
+        localStorage: storage,
+        navigator,
+        indexedDB,
+        IDBKeyRange: { bound: (lower, upper) => ({ lower, upper }) },
+        process: { env: { NEXT_PUBLIC_SUPABASE_URL: environment } },
+      },
     ),
     data,
     files,
@@ -295,7 +340,8 @@ test('첨부 파일 업로드 후 확정 실패 시 파일을 삭제하지 않�
   const api = load(
     base + 'api-client.ts',
     {
-      [studyMode ? '@/lib/study/storage-model' : './storage-model']: model,
+      [`@/lib/${block}/storage-model`]: model,
+      [`@/lib/${block}/payload-size`]: payload,
       '@/lib/supabase/client': { createClient: () => client },
     },
     {
@@ -309,10 +355,10 @@ test('첨부 파일 업로드 후 확정 실패 시 파일을 삭제하지 않�
   );
   const saveId = randomUUID();
   await assert.rejects(
-    api[studyMode ? 'confirmStudy' : 'confirmActivity']('A', d, saveId),
+    api[studyMode ? 'confirmStudy' : 'confirmExploration']('A', d, saveId),
     /offline/,
   );
-  await api[studyMode ? 'confirmStudy' : 'confirmActivity']('A', d, saveId);
+  await api[studyMode ? 'confirmStudy' : 'confirmExploration']('A', d, saveId);
   assert.equal(paths[0], paths[1]);
   assert.equal(bodies[0].saveId, bodies[1].saveId);
 });
@@ -355,7 +401,7 @@ function apiHarness({
     from: () => query,
     rpc: async (name, params) => {
       rpcCalls++;
-      if (name === 'read_study_page') {
+      if (name === `read_${block}_page`) {
         lastQuery = params;
         if (params.p_scope === 'own') filters.push(['owner_id', userId]);
         return {
@@ -374,17 +420,13 @@ function apiHarness({
   const api = load(
     `app/api/${block}/[[...path]]/route.ts`,
     {
-      '../list-page': studyMode
-        ? load('app/api/study/list-page.ts', {
-            '@/lib/study/list-query': load(domain + 'list-query.ts'),
-          })
-        : {},
+      '../list-page': load(`app/api/${block}/list-page.ts`, {
+        [`@/lib/${block}/list-query`]: load(`lib/${block}/list-query.ts`),
+      }),
       'next/headers': { cookies: async () => ({}) },
       zod: require('zod'),
-      [studyMode
-        ? '@/lib/study/storage-model'
-        : `@/app/(private)/dashboard/_views/${block}/lib/storage-model`]: model,
-      '@/lib/study/payload-size': payload,
+      [`@/lib/${block}/storage-model`]: model,
+      [`@/lib/${block}/payload-size`]: payload,
       '@/lib/admin': { getViewRole: async () => viewRole },
       '@/lib/auth': {
         getUserAccess: async () => ({
@@ -442,11 +484,11 @@ test('API 목록은 도메인별 조회 계약과 본인 필터를 유지', asyn
   const r = await h.api.GET(new Request(`http://localhost/api/${block}`), {
     params: Promise.resolve({}),
   });
-  assert.equal((await r.json()).activities.length, studyMode ? 10 : 501);
+  assert.equal((await r.json()).activities.length, 10);
   assert.equal(
     h.filters.filter(([key, value]) => key === 'owner_id' && value === userId)
       .length,
-    studyMode ? 1 : 2,
+    1,
   );
 });
 test('API 필수 입력 누락은 RPC 호출 전에 거절하고 DB 충돌은 409로 반환', async () => {
@@ -489,12 +531,7 @@ test('리드·관리자는 전체 조회, 관리자 컨설턴트 미리보기는
       { params: Promise.resolve({}) },
     );
     assert.equal(response.status, 200);
-    assert.equal(
-      studyMode
-        ? h.lastQuery.p_own_only
-        : h.filters.some(([key]) => key === 'owner_id'),
-      ownOnly,
-    );
+    assert.equal(h.lastQuery.p_own_only, ownOnly);
   }
 });
 
@@ -648,5 +685,229 @@ if (studyMode) {
     assert.equal(response.status, 400);
     assert.equal((await response.json()).error, payload.STUDY_SIZE_ERROR);
     assert.equal(h.rpcCalls, 0);
+  });
+}
+
+test('context lookup does not fetch bodies; reference lookup remains one scoped row', async () => {
+  const id = randomUUID();
+  const h = apiHarness({ role: 'consultant' });
+  const read = (params) =>
+    h.api.GET(new Request(`http://localhost/api/${block}?${params}`), {
+      params: Promise.resolve({}),
+    });
+  assert.equal((await read('mode=context')).status, 200);
+  assert.equal(h.rpcCalls, 0);
+  assert.equal(h.filters.length, 0);
+  assert.equal((await read(`reference=${id}`)).status, 200);
+  assert.ok(h.filters.some(([key, value]) => key === 'id' && value === id));
+  assert.ok(!h.filters.some(([key]) => key === 'owner_id'));
+  assert.equal((await read(`reference=${id}&scope=own`)).status, 200);
+  assert.ok(h.filters.some(([key]) => key === 'owner_id'));
+  assert.equal(h.rpcCalls, 0);
+});
+test('table POST rejects cross-origin requests before calling the query RPC', async () => {
+  const h = apiHarness();
+  const response = await h.api.POST(
+    new Request(`http://localhost/api/${block}?mode=table`, {
+      method: 'POST',
+      headers: { origin: 'https://other.test' },
+      body: '{}',
+    }),
+    { params: Promise.resolve({}) },
+  );
+  assert.equal(response.status, 403);
+  assert.equal(h.rpcCalls, 0);
+});
+
+if (!studyMode) {
+  const validValues = () => {
+    const values = emptyValues();
+    for (const key of Object.keys(model.requiredFields)) values[key] = '작성';
+    return Object.assign(values, schoolValues);
+  };
+  const oversizedValues = () => ({
+    ...validValues(),
+    references: Array.from({ length: 6 }, () => ({
+      clientKey: randomUUID(),
+      title: '가'.repeat(50000),
+      selection: '나'.repeat(50000),
+      usage: '다'.repeat(50000),
+    })),
+  });
+  const report = () => ({
+    clientKey: randomUUID(),
+    name: '첨부.pdf',
+    size: 10,
+    type: 'application/pdf',
+    lastModified: 1,
+    file: { name: '첨부.pdf', size: 10 },
+  });
+  const prefix = (id, user = 'A', env = 'http://local.test') =>
+    `mea:exploration:v1:${env}:${user}:${id}:`;
+
+  test('탐구 본문 JSONB UTF-8 크기와 정확한 제한 경계를 검사한다', () => {
+    assert.equal(
+      payload.explorationValuesBytes({ a: '가\n"\\', b: ['나', true] }),
+      Buffer.byteLength('{"a": "가\\n\\"\\\\", "b": ["나", true]}'),
+    );
+    const values = validValues();
+    values.references = Array.from({ length: 20 }, () => ({
+      clientKey: randomUUID(),
+      title: '',
+      selection: '',
+      usage: '',
+    }));
+    let remaining =
+      payload.MAX_EXPLORATION_VALUES_BYTES -
+      payload.explorationValuesBytes(values);
+    for (const reference of values.references)
+      for (const key of ['title', 'selection', 'usage']) {
+        const count = Math.min(remaining, 50000);
+        reference[key] = 'a'.repeat(count);
+        remaining -= count;
+      }
+    const request = {
+      id: randomUUID(),
+      saveId: randomUUID(),
+      expectedRevision: 0,
+      values,
+      reports: [],
+    };
+    assert.equal(remaining, 0);
+    assert.equal(
+      payload.explorationValuesBytes(values),
+      payload.MAX_EXPLORATION_VALUES_BYTES,
+    );
+    assert.equal(model.confirmRequestSchema.safeParse(request).success, true);
+    values.references.at(-1).usage += 'a';
+    assert.equal(model.confirmRequestSchema.safeParse(request).success, false);
+  });
+  test('초과 본문은 API에서 RPC 전에 구체적인 크기 오류로 거절한다', async () => {
+    const h = apiHarness();
+    const id = randomUUID();
+    const values = oversizedValues();
+    assert.equal(model.valuesSchema.safeParse(values).success, true);
+    const response = await h.api.PUT(
+      new Request(`http://localhost/api/exploration/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          id,
+          saveId: randomUUID(),
+          expectedRevision: 0,
+          values,
+          reports: [],
+        }),
+      }),
+      { params: Promise.resolve({ path: [id] }) },
+    );
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error, payload.EXPLORATION_SIZE_ERROR);
+    assert.equal(h.rpcCalls, 0);
+  });
+  test('초과 본문은 파일 업로드와 HTTP 요청 전에 거절하고 입력을 보존한다', async () => {
+    let connections = 0,
+      requests = 0;
+    const api = load(
+      base + 'api-client.ts',
+      {
+        '@/lib/exploration/storage-model': model,
+        '@/lib/exploration/payload-size': payload,
+        '@/lib/supabase/client': {
+          createClient: () => {
+            connections++;
+            throw new Error('unexpected upload');
+          },
+        },
+      },
+      {
+        fetch: () => {
+          requests++;
+          throw new Error('unexpected request');
+        },
+      },
+    );
+    const activity = {
+      ...make(),
+      values: oversizedValues(),
+      reports: [report()],
+    };
+    const before = JSON.stringify(activity);
+    await assert.rejects(api.confirmExploration('A', activity, randomUUID()), {
+      message: payload.EXPLORATION_SIZE_ERROR,
+    });
+    assert.equal(connections, 0);
+    assert.equal(requests, 0);
+    assert.equal(JSON.stringify(activity), before);
+  });
+  test('제거된 첨부와 과거 고아 파일을 정리하되 계정·환경·활동 범위를 보존한다', async () => {
+    const h = storageHarness();
+    const a = { ...make(), reports: [report(), report()] };
+    a.values.topic = '첨부 검사';
+    const saved = await h.api.saveDraft('A', a);
+    const p = prefix(a.clientKey);
+    const keptKey = p + a.reports[1].clientKey;
+    h.files.set(p + 'orphan', {});
+    const protectedKeys = [
+      prefix(a.clientKey, 'B') + 'other',
+      prefix(a.clientKey, 'A', 'http://other.test') + 'other',
+      prefix(randomUUID()) + 'other',
+    ];
+    for (const key of protectedKeys) h.files.set(key, {});
+    const next = await h.api.saveDraft('A', {
+      ...saved,
+      reports: [a.reports[1]],
+    });
+    assert.equal(h.files.has(p + a.reports[0].clientKey), false);
+    assert.equal(h.files.has(p + 'orphan'), false);
+    assert.equal(h.files.has(keptKey), true);
+    h.files.set(p + 'old-unlisted', {});
+    await h.api.removeDraft('A', next);
+    assert.equal(h.data.size, 0);
+    assert.deepEqual([...h.files.keys()].sort(), protectedKeys.sort());
+  });
+  test('본문 저장 실패 시 이전 첨부와 초안은 유지하고 실패한 신규 파일만 정리한다', async () => {
+    const h = storageHarness();
+    const original = { ...make(), reports: [report()] };
+    const saved = await h.api.saveDraft('A', original);
+    const before = [...h.data];
+    h.fail();
+    await assert.rejects(
+      h.api.saveDraft('A', { ...saved, reports: [report()] }),
+      /저장 공간/,
+    );
+    assert.deepEqual([...h.data], before);
+    assert.deepEqual(
+      [...h.files.keys()],
+      [prefix(original.clientKey) + original.reports[0].clientKey],
+    );
+    assert.equal(
+      (await h.api.restoreFiles('A', saved)).reports[0].file,
+      original.reports[0].file,
+    );
+  });
+  test('다른 탭의 저장이 먼저 끝나면 오래된 수정/삭제가 최신 파일을 지우지 않는다', async () => {
+    const h = storageHarness();
+    const a = { ...make(), reports: [report()] };
+    const saved = await h.api.saveDraft('A', a);
+    const replacement = report();
+    const outcomes = await Promise.allSettled([
+      h.api.saveDraft('A', { ...saved, reports: [replacement] }),
+      h.api.removeDraft('A', saved),
+    ]);
+    assert.equal(outcomes[0].status, 'fulfilled');
+    assert.equal(outcomes[1].status, 'rejected');
+    await assert.rejects(h.api.saveDraft('A', saved), /다른 탭/);
+    assert.deepEqual(
+      [...h.files.keys()],
+      [prefix(a.clientKey) + replacement.clientKey],
+    );
+  });
+  test('Web Locks 없는 환경은 경쟁 중인 파일을 추측해 삭제하지 않는다', async () => {
+    const h = storageHarness({ locks: false });
+    const a = { ...make(), reports: [report()] };
+    const saved = await h.api.saveDraft('A', a);
+    h.files.set(prefix(a.clientKey) + 'in-flight', {});
+    await h.api.removeDraft('A', saved);
+    assert.equal(h.files.size, 2);
   });
 }

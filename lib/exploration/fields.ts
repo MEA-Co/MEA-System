@@ -1,10 +1,10 @@
 import type {
-  ContentReference as ActivityReference,
-  ReportAttachment as ActivityReport,
+  ContentReference,
+  ReportAttachment,
 } from '@/lib/content/attachments';
 export type {
-  ContentReference as ActivityReference,
-  ReportAttachment as ActivityReport,
+  ContentReference,
+  ReportAttachment,
 } from '@/lib/content/attachments';
 
 export const gradeOptions = ['1', '2', '3'];
@@ -180,7 +180,7 @@ export const groups = [
 }[];
 
 type FieldKey = (typeof groups)[number]['fields'][number]['key'];
-export type Activity = {
+export type Exploration = {
   ownerId?: string;
   ownerName?: string;
   clientKey: string;
@@ -188,12 +188,12 @@ export type Activity = {
   status: 'draft' | 'confirmed';
   updatedAt: string;
   localVersion?: string;
-  reports?: ActivityReport[];
+  reports?: ReportAttachment[];
   values: Record<FieldKey, string> & {
-    references: ActivityReference[];
+    references: ContentReference[];
   };
 };
-export const emptyValues = (): Activity['values'] => ({
+export const emptyValues = (): Exploration['values'] => ({
   grade: '',
   semester: '',
   recordType: '',

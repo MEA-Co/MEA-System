@@ -1,14 +1,17 @@
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
-import {
-  type ActivityRow,
-  confirmRequestSchema,
-  REPORT_BUCKET,
-} from '@/app/(private)/dashboard/_views/exploration/lib/storage-model';
 import { getViewRole } from '@/lib/admin';
 import { getUserAccess } from '@/lib/auth';
+import { EXPLORATION_SIZE_ERROR } from '@/lib/exploration/payload-size';
+import {
+  confirmRequestSchema,
+  type ExplorationRow,
+  REPORT_BUCKET,
+} from '@/lib/exploration/storage-model';
 import { createClient } from '@/lib/supabase/server';
+
+import { readExplorationPage, readExplorationSummary } from '../list-page';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) =>
@@ -48,32 +51,57 @@ async function handle(request: Request, context: Context) {
   const id = path[0];
   if (id && !z.uuid().safeParse(id).success)
     return json({ error: '잘못된 경로입니다.' }, 404);
+  if (
+    request.method === 'POST' &&
+    !id &&
+    new URL(request.url).searchParams.get('mode') === 'table'
+  ) {
+    const result = await readExplorationPage(
+      client,
+      new URL(request.url).searchParams,
+      access.user.id,
+      ownOnly,
+      await request.json().catch(() => null),
+    );
+    return json(result.body, result.status);
+  }
   if (request.method === 'GET' && !id) {
-    const activities: ActivityRow[] = [];
-    for (let offset = 0; ; offset += 500) {
+    const params = new URL(request.url).searchParams;
+    if (params.get('mode') === 'table') {
+      const result = await readExplorationPage(
+        client,
+        params,
+        access.user.id,
+        ownOnly,
+      );
+      return json(result.body, result.status);
+    }
+    if (params.get('mode') === 'summary')
+      return json(
+        await readExplorationSummary(client, access.user.id, ownOnly),
+      );
+    if (params.get('mode') === 'context')
+      return json({ userId: access.user.id, activities: [] });
+    if (referenceId) {
       let query = client
         .from('exploration')
         .select('*, owner:profiles!owner_id(name)')
         .is('deleted_at', null)
-        .order('updated_at', { ascending: false })
-        .order('id')
-        .range(offset, offset + 499);
-      if (referenceId) query = query.eq('id', referenceId);
+        .eq('id', referenceId);
       if (ownOnly && !referenceRead)
         query = query.eq('owner_id', access.user.id);
-      const { data, error } = await query;
-      if (error)
-        return json(
-          {
-            error:
-              '확정된 탐구활동을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-          },
-          503,
-        );
-      activities.push(...(data as ActivityRow[]));
-      if (data.length < 500) break;
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      return json({ userId: access.user.id, activities: data ? [data] : [] });
     }
-    return json({ activities, userId: access.user.id });
+    // Default/reference pickers are bounded too; callers must follow page metadata.
+    const result = await readExplorationPage(
+      client,
+      params,
+      access.user.id,
+      ownOnly,
+    );
+    return json(result.body, result.status);
   }
   if (request.method === 'GET' && path.length === 3 && path[1] === 'files') {
     let query = client
@@ -85,9 +113,9 @@ async function handle(request: Request, context: Context) {
       query = query.eq('owner_id', access.user.id);
     const { data, error } = await query.maybeSingle();
     if (error) return json({ error: '파일을 불러오지 못했습니다.' }, 503);
-    const report = (data?.reports as ActivityRow['reports'] | undefined)?.find(
-      (r) => r.clientKey === path[2],
-    );
+    const report = (
+      data?.reports as ExplorationRow['reports'] | undefined
+    )?.find((r) => r.clientKey === path[2]);
     if (!report?.path)
       return json({ error: '첨부 파일을 찾을 수 없습니다.' }, 404);
     const result = await client.storage
@@ -103,7 +131,18 @@ async function handle(request: Request, context: Context) {
   if (request.method === 'PUT') {
     const parsed = confirmRequestSchema.safeParse(body);
     if (!parsed.success || parsed.data.id !== id)
-      return json({ error: '필수 항목과 첨부 파일을 확인해 주세요.' }, 400);
+      return json(
+        {
+          error:
+            !parsed.success &&
+            parsed.error.issues.some(
+              (issue) => issue.message === EXPLORATION_SIZE_ERROR,
+            )
+              ? EXPLORATION_SIZE_ERROR
+              : '필수 항목과 첨부 파일을 확인해 주세요.',
+        },
+        400,
+      );
     const d = parsed.data;
     const { data, error } = await client.rpc('save_exploration', {
       p_id: id,
@@ -159,9 +198,9 @@ async function handle(request: Request, context: Context) {
         },
         error.code === '40001' ? 409 : 403,
       );
-    const paths = ((before?.reports ?? []) as ActivityRow['reports']).flatMap(
-      (r) => (r.path ? [r.path] : []),
-    );
+    const paths = (
+      (before?.reports ?? []) as ExplorationRow['reports']
+    ).flatMap((r) => (r.path ? [r.path] : []));
     const cleanup = paths.length
       ? await client.storage.from(REPORT_BUCKET).remove(paths)
       : null;
@@ -179,4 +218,4 @@ async function route(request: Request, context: Context) {
     );
   }
 }
-export { route as DELETE, route as GET, route as PUT };
+export { route as DELETE, route as GET, route as POST, route as PUT };

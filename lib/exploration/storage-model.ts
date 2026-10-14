@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import type { Activity } from './fields';
+import type { Exploration } from './fields';
+import {
+  EXPLORATION_SIZE_ERROR,
+  explorationValuesBytes,
+  MAX_EXPLORATION_VALUES_BYTES,
+} from './payload-size';
 
 export const REPORT_BUCKET = 'exploration-reports';
 export const MAX_REPORT_SIZE = 20 * 1024 * 1024;
@@ -43,7 +48,7 @@ export const reportSchema = z
     path: z.string().max(300).optional(),
   })
   .strict();
-export const localActivitySchema = z
+export const localExplorationSchema = z
   .object({
     clientKey: z.uuid(),
     revision: z.number().int().nonnegative(),
@@ -69,12 +74,12 @@ export const requiredFields = {
   story: '수행',
   result: '결과',
 } as const;
-export function missingFields(values: Activity['values']) {
+export function missingFields(values: Exploration['values']) {
   return Object.entries(requiredFields).filter(
     ([key]) => !values[key as keyof typeof requiredFields].trim(),
   );
 }
-export function hasInput(activity: Activity) {
+export function hasInput(activity: Exploration) {
   return (
     Object.entries(activity.values).some(([key, value]) =>
       key === 'references'
@@ -85,7 +90,7 @@ export function hasInput(activity: Activity) {
     ) || !!activity.reports?.length
   );
 }
-export function activityFingerprint(activity: Activity) {
+export function explorationFingerprint(activity: Exploration) {
   return JSON.stringify({
     values: activity.values,
     reports: (activity.reports ?? []).map(
@@ -105,6 +110,12 @@ export const confirmRequestSchema = z
   })
   .strict()
   .superRefine(({ values, reports }, ctx) => {
+    if (explorationValuesBytes(values) > MAX_EXPLORATION_VALUES_BYTES)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['values'],
+        message: EXPLORATION_SIZE_ERROR,
+      });
     for (const [key, label] of missingFields(values))
       ctx.addIssue({
         code: 'custom',
@@ -127,18 +138,18 @@ export const confirmRequestSchema = z
         message: '첨부 파일이 중복되었습니다.',
       });
   });
-export type ActivityRow = {
+export type ExplorationRow = {
   id: string;
   owner_id: string;
   owner?: { name: string } | null;
-  values: Activity['values'];
+  values: Exploration['values'];
   reports: z.infer<typeof reportSchema>[];
   revision: number;
   updated_at: string;
   save_id: string;
   deleted_at: string | null;
 };
-export function fromRow(row: ActivityRow): Activity {
+export function fromRow(row: ExplorationRow): Exploration {
   return {
     clientKey: row.id,
     ownerId: row.owner_id,

@@ -18,10 +18,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | 범주 | 먼저 읽을 기준 문서 | 보조 문서 |
 | --- | --- | --- |
 | 학습법 | [데이터·API·권한](docs/study/data-api.md) | [입력/UI](docs/study/ui.md), [운영](docs/study/operations.md) |
-| 탐구활동 | [저장 구조](docs/exploration-activity-storage.md) | 기존 참조·파일 권한 계약 유지 |
+| 탐구활동 | [데이터·API·권한](docs/exploration/data-api.md) | [입력/UI](docs/exploration/ui.md), [운영](docs/exploration/operations.md) |
 | 질문·질문지·응답 | [기능 계약](docs/questions.md), [저장 구조](docs/questionnaire-storage-design.md) | [운영](docs/questions-operations.md) |
 
 학습법 관련 작업은 [문서 목록](docs/study/README.md)을 먼저 확인하고, 변경한 내용에 맞춰 `docs/study/`의 관련 문서를 같은 작업에서 반드시 수정·조정한다. UI·사용 흐름은 `ui.md`, 데이터·API·권한·코드 구조는 `data-api.md`, migration·검증·배포 상태와 절차는 `operations.md`에 반영한다. 질문 참조·등록 등 다른 도메인과 연결된 계약은 해당 도메인 문서도 함께 갱신한다. 상세 구현·작업 이력·적용 상태를 AGENTS.md에 중복 기록하지 않으며, 이곳에는 문서 매핑과 작업 규칙만 유지한다.
+
+탐구활동 관련 작업은 [문서 목록](docs/exploration/README.md)을 먼저 확인하고, 변경 범위에 따라 `docs/exploration/`의 `ui.md`, `data-api.md`, `operations.md`를 같은 작업에서 반드시 수정·조정한다. 질문 참조·등록 계약은 질문 문서도 함께 갱신한다. 상세 구현·작업 이력은 AGENTS.md에 중복 기록하지 않는다.
 
 ## 검증 방식
 
@@ -114,7 +116,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 질문지 상태 Select의 `게시`를 활성화했다. 타 리드의 게시본은 `read_published_question_sources` RPC로 해당 질문지의 원본 질문만 읽으며 독립 질문의 작성자 전용 RLS는 유지한다. 배포·보관은 UI 비활성 유지. migration `20260929063207_questionnaire_published_sources.sql`, 검증 `supabase/tests/questionnaire_published_sources.sql`, 운영 순서 `docs/questions-operations.md`.
 
-- 탐구활동은 관리자 사이드바에도 표시한다. 컨설턴트는 본인 확정 활동만, 리드·관리자는 전체 확정 활동을 조회한다. 타인 활동은 읽기 전용이며 수정·삭제는 작성자만 가능하다. 관리자 컨설턴트 미리보기는 API에서 본인 목록·첨부만 반환한다. 타인 파일은 활성 확정본에서 참조된 객체만 공유하며 임시저장은 본인 브라우저에만 남는다. migration `20260929050548_exploration_staff_read.sql`, 회귀 `supabase/tests/exploration_activity_storage.sql`, `scripts/verify-exploration-storage{,-local}.mjs`.
 
 - 질문 제작의 `minRows`(기본 1)·`rowLabels`(빈 이름은 순서 숫자)는 `questions.min_rows`·`row_labels`로 저장한다. 반복형 최소는 최대 이하이며 질문/질문지 미리보기에서 최소 행을 유지한다. 참조형 행 수는 원본 응답을 따른다. migration `20260928102529_question_row_settings.sql`, SQL 회귀 `supabase/tests/question_row_settings.sql`.
 
@@ -157,13 +158,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 학생 관리(`StudentsView`)와 컨설턴트 관리(`ConsultantsView`)는 각 화면의 `components/StudentManagementTable.tsx`, `components/ConsultantManagementTable.tsx`를 독립적으로 사용한다. 도메인 목록 컴포넌트를 공유하지 않으며 기본 UI 컴포넌트만 재사용한다.
 
-- 대시보드 화면은 `_views/{profile,students,consultants,consulting,questions,exploration}/`별로 모으고 각 화면 폴더 바로 아래에 `ProfileView.tsx`, `StudentsView.tsx`, `ConsultantsView.tsx`, `ConsultingView.tsx`, `QuestionsView.tsx`, `ExplorationView.tsx`를 진입 컴포넌트로 둔다. 보조 컴포넌트는 `components/`, 전용 코드는 `lib/`, `hooks/`, `actions/`에 둔다. 역할 공통 `Dashboard`의 레이아웃·사이드바·역할 전환은 `_components/`, 공통 페이지 접근 설정은 `_lib/`에 둔다. 탐구활동 입력 항목 정의는 `_views/exploration/lib/fields.ts`에 둔다.
+- 대시보드 화면은 `_views/{profile,students,consultants,consulting,questions,exploration}/`별로 모으고 각 화면 폴더 바로 아래에 `ProfileView.tsx`, `StudentsView.tsx`, `ConsultantsView.tsx`, `ConsultingView.tsx`, `QuestionsView.tsx`, `ExplorationView.tsx`를 진입 컴포넌트로 둔다. 보조 컴포넌트는 `components/`, 전용 코드는 `lib/`, `hooks/`, `actions/`에 둔다. 역할 공통 `Dashboard`의 레이아웃·사이드바·역할 전환은 `_components/`, 공통 페이지 접근 설정은 `_lib/`에 둔다.
 
 - 대시보드 역할별 접근 페이지·사이드바 노출 여부(`DASHBOARD_ROLES`)와 메뉴명·그룹(`DASHBOARD_PAGES`)은 `app/(private)/dashboard/_lib/dashboard-access.ts`에서 관리한다. `page.tsx`는 서버 전용 `_lib/render-dashboard.tsx`의 `renderDashboard`만 호출한다. 이 함수가 인증·표시 역할·조회·공통 Dashboard 조립을 담당하고 `_lib/dashboard-views.tsx`의 `renderDashboardView`가 역할 접근 검사 후 뷰 컴포넌트를 반환한다. `resolveDashboardView`를 페이지 진입/본문 렌더링에, `getDashboardNavigation`을 사이드바에 사용한다. view가 없거나 허용되지 않으면 `DASHBOARD_DEFAULT_VIEWS`의 역할별 기본 화면으로 처리한다(학생: 컨설팅, 컨설턴트: 질문지 관리, 리드·관리자: 컨설턴트 관리). 표시 역할에 따른 UI 정책이며 서버 액션/DB는 실제 계정 권한을 별도로 검증한다.
 
 - 관리자 공통 함수(`getViewRole`, `setAdminView`, `updateConsultantRole`)와 관련 타입은 서버 전용 `lib/admin.ts`에 모은다. 대시보드 공통 `_actions/`와 화면별 `_views/<화면>/actions/`는 클라이언트에서 호출할 수 있는 얇은 서버 액션 연결층이다.
 - `consultant_lead`는 컨설턴트 기능과 컨설턴트 관리 목록 조회 권한을 가진다. 리드는 학생·관리자 프로필을 조회하거나 회원 유형을 변경할 수 없다.
-- 모든 역할은 `DashboardShell`의 사이드바·사용자 정보·로그아웃·모바일 메뉴와 `DashboardNavigation`을 공유한다. view가 없는 대시보드는 학생에게 컨설팅 목록, 컨설턴트에게 질문지 관리, 리드·관리자에게 컨설턴트 관리를 표시한다. 모든 역할은 공통 `Dashboard`를 사용하며 학생·컨설턴트는 사이드바에 내 정보를 표시한다. 컨설턴트와 컨설턴트 리드는 데이터 관리 아래 탐구활동 관리(`?view=exploration`)도 표시하며 탐구활동 목록·검색·추가·상세/수정·삭제 화면을 제공한다. `_views/exploration/ExplorationView.tsx`의 Drawer에서 탐구활동을 제작한다. 임시저장은 입력 하나 이상이면 가능하며 계정·프로젝트별 localStorage에 본문/메타데이터, IndexedDB에 첨부 원문을 보관한다. 확정은 필수 항목 전체를 검증하여 `/api/exploration`와 `save_exploration` RPC로 본인 DB 행에 저장한다. 확정 후 수정도 허용하고 수정 임시저장은 확정본을 유지한다. UUID·revision·saveId로 충돌/재시도를 보호한다. 파일은 확정 시 비공개 `exploration-reports` 버킷에 업로드한다. DB 테이블은 `public.exploration`이며 기존 AI 코치 API는 `/api/exploration-coach`다. migration은 `20260928100109_exploration_activity_storage.sql` 다음 `20260928101208_rename_exploration_activity_storage.sql`을 적용한다. 정책·운영 설정은 `docs/exploration-activity-storage.md`, 검증은 `scripts/verify-exploration-storage.mjs`, `scripts/verify-exploration-storage-local.mjs`, `supabase/tests/exploration_activity_storage.sql`이다. 삭제와 미저장 편집 취소는 확인 창을 제공한다. 컨설턴트 기본 화면은 질문지 관리이며 컨설팅 목록의 대시보드 접근은 제거했다. 내 정보는 `?view=profile`에서 이름·회원 유형·학생 학년/학기를 보여주고 컨설팅 목록과 분리한다. 사이드바 MEA 로고는 기본 대시보드로 연결한다. 리드도 같은 `Dashboard`를 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
+- 모든 역할은 `DashboardShell`의 사이드바·사용자 정보·로그아웃·모바일 메뉴와 `DashboardNavigation`을 공유한다. view가 없는 대시보드는 학생에게 컨설팅 목록, 컨설턴트에게 질문지 관리, 리드·관리자에게 컨설턴트 관리를 표시한다. 모든 역할은 공통 `Dashboard`를 사용하며 학생·컨설턴트는 사이드바에 내 정보를 표시한다. 컨설턴트 기본 화면은 질문지 관리이며 컨설팅 목록의 대시보드 접근은 제거했다. 내 정보는 `?view=profile`에서 이름·회원 유형·학생 학년/학기를 보여주고 컨설팅 목록과 분리한다. 사이드바 MEA 로고는 기본 대시보드로 연결한다. 리드도 같은 `Dashboard`를 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
 - 질문지 제작은 `questions/components/questionnaire/QuestionnaireComposer.tsx`의 페이지 편집기와 질문 추가 Drawer를 사용한다. 다른 제작자의 게시본은 실제 질문지 형태로 읽고 검토 요청만 추가한다. 설명 권한과 현재 UI는 `docs/questions.md`를 따른다. 기존 배포본·답변 호환 코드는 유지하며 배치형 배포와 열/행 응답 저장은 미구현이다.
 - 질문지 저장·HTTP·SWR·Realtime·응답 호환 계약은 `docs/questionnaire-storage-design.md`와 `questions/lib/questionnaire/`, `questions/hooks/questionnaire/`를 참고한다. 10초 자동 저장·동일 요청 재시도·revision 충돌 보호·완료 잠금·실제 계정 권한 검증을 유지한다. API `/api/questionnaires` 및 DB 이력은 통합 전 잔재가 아니며 삭제하지 않는다.
 - 가입 화면에서는 학생·컨설턴트만 선택한다. 관리자는 대시보드의 컨설턴트 관리 화면에서 컨설턴트와 컨설턴트 리드 사이를 변경할 수 있다.
@@ -226,13 +227,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - 새 게시 표시는 `questionnaire_publication_reads`의 사용자·버전별 확인 기록으로 관리한다. 본인 게시·초안·배포본·보관본은 제외하고 미확인 게시본만 사이드바/게시 탭에 NEW 개수, 목록 항목에 NEW와 연한 파란 배경을 표시한다. `PublicationNotifications`가 상태를 공유하며 상세 화면의 `PublicationReadMarker`가 마운트된 뒤 REST API로 확인 처리한다. 프리패치·목록 방문은 확인 처리하지 않고 편집기를 새로고침하지 않는다. 수정/자동 저장은 확인 여부를 초기화하지 않는다. 기존 미확인 게시본도 새 게시로 표시하며 SWR로 열린 화면에서 60초마다 최신 목록을 조회한다. 컨설턴트 표시 역할에서는 게시 대신 새 배포 알림을 조회하고 응답 행 생성으로 확인 처리한다. 검증은 `supabase/tests/questionnaire_publication_reads.sql`.
 
-- 탐구활동 목록은 내 활동/다른 사람의 활동을 분리한다. 컨설턴트는 내 활동만 표시하며 리드·관리자는 다른 사람의 활동에서 전체 보기/작성자 선택 사람별 보기를 사용한다. API는 기존 profiles RLS를 따르는 작성자 이름만 함께 조회하고, 이름을 볼 수 없으면 비공개 표시한다. 추가 DB migration 없음.
 
-- 리치 텍스트 탐구활동 명령어(2026-10-01): 모든 QuestionRichTextEditor에서 권장 설정과 무관하게 `@` 메뉴 → 입력 위 본인 탐구활동 목록/검색/새 활동 작성 Drawer를 제공한다. 확정 활동은 `explorationReference` mark(UUID)+활동명 text로 기존 답변에 저장한다. 읽기 화면은 기존 권한으로 상세 조회하며 DB migration 없음. 질문지 RichText/editor/renderer는 질문 공통 구현을 재수출한다. 회귀 `scripts/verify-questionnaire-rich-text.mjs`, `verify-questionnaire-storage.mjs` 22개와 예시 UI 검증 완료. 실제 계정 저장/재조회는 미검증. 새 배치형 배포는 미구현 유지.
 
-- 탐구활동 첨부 UI(2026-10-01): 목록은 입력 위 Portal 팝업으로 배치해 레이아웃을 밀지 않는다. 주제/학년/학기/기재 영역만 있는 카드 전체를 클릭해 첨부하고 hover/focus 시 첨부하기를 표시한다. 새 활동 추가는 목록 마지막 항목이다. 명령어는 아이콘과 설명을 표시하고 목록·권장 말풍선은 X로 닫는다. 이번 UI 수정은 브라우저 테스트 없이 검증한다.
 
-- 탐구활동 목록 캐시 수정(2026-10-01): QuestionExplorationInput과 @ 메뉴가 같은 URL 키에 각각 배열/객체를 저장하던 SWR 충돌을 제거했다. `useExplorationList`가 `{userId, activities}` 계약과 `exploration-list-v1`+URL 키를 공유하며 잘못된 응답 형식을 거부한다. 배열로 변환한 결과를 같은 키에 저장하지 않는다. 회귀 `scripts/verify-exploration-list-cache.mjs`는 빈 목록/활동 있는 목록/재검증/범위 분리/잘못된 응답을 검증한다. DB migration 없음, 앱 재배포 필요.
 
 - 진로 흐름 부분 제출(2026-10-02): 원본 `5f6064ad-1dd6-4e0d-95dd-611ccacbce92`는 활성 칸 하나의 유효 응답만으로 배포 답변 제출을 허용한다. 전체 공백은 거절하며 다른 질문의 모든 필드/최소 행 검사는 유지한다. `20261002083415_career_flow_partial_submission.sql` 로컬 적용·한 칸/빈 답변 롤백 검증·기존 배포 응답 회귀·보안 검사 통과. 운영은 사용자 적용 대기. 실제 브라우저 제출은 수행하지 않았다.
 

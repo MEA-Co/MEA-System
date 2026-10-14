@@ -155,6 +155,7 @@ DB는 ID 기준 advisory lock과 행 잠금 아래 작성자·삭제·revision·
 | --- | --- |
 | StudyView.tsx | Drawer·등록/관리 맥락·대화상자 조합 |
 | components/StudyTable.tsx | 관리 필터·페이지·표 표시 |
+| components/patterns/collection-pagination.tsx (루트) | 학습법·탐구활동 공통 페이지 이동 표시 |
 | components/StudySelectList.tsx | 참조 선택용 검색·페이지 목록 |
 | hooks/useStudyStorage.ts | 작성·로컬 초안·복원·확정/삭제 동작. 전체 목록 조회 없음 |
 | hooks/useStudyList.ts | 페이지·단건·계정 context 조회와 캐시 |
@@ -172,7 +173,7 @@ DB는 ID 기준 advisory lock과 행 잠금 아래 작성자·삭제·revision·
 화면 조합·훅·브라우저 저장·HTTP/첨부 업로드는 기존 `app/(private)/dashboard/_views/study/`에 둔다.
 학습법 타입은 `Study`·`StudyRow`, 저장 함수는 `confirmStudy`·`deleteStudy`, 상세 컴포넌트는 `StudyDetails`로 통일한다.
 탐구활동과 공유하는 `ContentReference`·`ReportAttachment`는 `lib/content/attachments.ts`에 두며 학습법이 탐구활동 코드를 import하지 않는다.
-탐구활동의 기존 ActivityReference/ActivityReport 이름은 그 도메인에서 호환 별칭으로 유지한다.
+탐구활동도 ContentReference/ReportAttachment 공용 타입 이름을 그대로 사용한다.
 API/DB 응답 키 `activity`·`activities`는 이전 클라이언트와의 호환을 위해 유지한다. 내부 학습법 타입명이 아니며 새 내부 코드에는 Study 명칭을 사용한다.
 DB 테이블/JSON 필드·localStorage/sessionStorage/IndexedDB 키와 저장 데이터 모양은 변경하지 않았다. 이 구조 정리에는 새 migration이 필요 없다.
 공통 CRUD 프레임워크는 각 데이터의 권한·참조 정책이 달라 도입하지 않는다.

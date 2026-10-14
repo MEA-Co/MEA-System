@@ -1,42 +1,48 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { useSWRConfig } from 'swr';
 
 import { toast } from '@/components/ui/toast';
+import { emptyValues,type Exploration } from '@/lib/exploration/fields';
+import {
+  explorationFingerprint,
+  type ExplorationRow,
+  hasInput,
+  missingFields,
+  REPORT_BUCKET,
+} from '@/lib/exploration/storage-model';
 import { createClient } from '@/lib/supabase/client';
 
 import {
-  confirmActivity,
-  deleteActivity,
-  loadActivities,
+  confirmExploration,
+  deleteExploration,
+  request,
 } from '../lib/api-client';
-import { type Activity, emptyValues } from '../lib/fields';
 import {
   readDrafts,
   removeDraft,
   restoreFiles,
   saveDraft,
 } from '../lib/local-drafts';
-import {
-  activityFingerprint,
-  hasInput,
-  missingFields,
-  REPORT_BUCKET,
-} from '../lib/storage-model';
 
 export function useExplorationStorage(userId: string) {
-  const {
-    data: confirmed = [],
-    error: remoteError,
-    isLoading,
-    mutate,
-  } = useSWR(['exploration', userId], loadActivities);
-  const [local, setLocal] = useState<Activity[]>([]);
+  const { mutate } = useSWRConfig();
+  const refreshReferences = () =>
+    mutate(
+      (key) =>
+        Array.isArray(key) &&
+        [
+          'exploration-list-v1',
+          'exploration-page',
+          'exploration-summary',
+        ].includes(key[0]),
+    );
+  const [local, setLocal] = useState<Exploration[]>([]);
   const [localError, setLocalError] = useState('');
   const [ready, setReady] = useState(false);
-  const [draft, setDraft] = useState<Activity | null>(null);
-  const [baseline, setBaseline] = useState<Activity | null>(null);
+  const [draft, setDraft] = useState<Exploration | null>(null);
+  const [baseline, setBaseline] = useState<Exploration | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const attempt = useRef<{ fingerprint: string; saveId: string } | null>(null);
@@ -44,7 +50,7 @@ export function useExplorationStorage(userId: string) {
     !!draft &&
     (!baseline
       ? hasInput(draft)
-      : activityFingerprint(draft) !== activityFingerprint(baseline));
+      : explorationFingerprint(draft) !== explorationFingerprint(baseline));
   const refreshLocal = useCallback(() => {
     try {
       setLocal(readDrafts(userId));
@@ -93,7 +99,7 @@ export function useExplorationStorage(userId: string) {
     }
   }
   function create() {
-    const activity: Activity = {
+    const activity: Exploration = {
       clientKey: crypto.randomUUID(),
       revision: 0,
       status: 'draft',
@@ -105,7 +111,7 @@ export function useExplorationStorage(userId: string) {
     setBaseline(activity);
     attempt.current = null;
   }
-  function open(activity: Activity) {
+  function open(activity: Exploration) {
     void run(async () => {
       const restored =
         activity.status === 'draft'
@@ -148,10 +154,18 @@ export function useExplorationStorage(userId: string) {
       return;
     }
     void run(async () => {
-      const fingerprint = activityFingerprint(draft);
+      const fingerprint = explorationFingerprint(draft);
       if (attempt.current?.fingerprint !== fingerprint)
         attempt.current = { fingerprint, saveId: crypto.randomUUID() };
-      const saved = await confirmActivity(
+      // A saved local edit may already omit an old attachment; read only this
+      // confirmed row so cleanup is not based on the local edit's baseline.
+      const previous =
+        draft.revision > 0
+          ? await request<{ activities: ExplorationRow[] }>(
+              `/api/exploration?scope=own&reference=${draft.clientKey}`,
+            )
+          : { activities: [] };
+      const saved = await confirmExploration(
         userId,
         draft,
         attempt.current.saveId,
@@ -162,9 +176,7 @@ export function useExplorationStorage(userId: string) {
       } catch {
         localCleanupFailed = true;
       }
-      const oldPaths = (
-        confirmed.find((a) => a.clientKey === draft.clientKey)?.reports ?? []
-      ).flatMap((r) =>
+      const oldPaths = (previous.activities[0]?.reports ?? []).flatMap((r) =>
         r.path && !saved.reports?.some((next) => next.path === r.path)
           ? [r.path]
           : [],
@@ -179,13 +191,7 @@ export function useExplorationStorage(userId: string) {
       setBaseline(saved);
       attempt.current = null;
       refreshLocal();
-      await mutate(
-        (current = []) => [
-          saved,
-          ...current.filter((a) => a.clientKey !== saved.clientKey),
-        ],
-        { revalidate: false },
-      );
+      void refreshReferences();
       toast.add({
         title: localCleanupFailed
           ? 'DB에 확정했습니다. 다른 탭의 임시저장은 보존했습니다. 목록에서 확인해 주세요.'
@@ -194,7 +200,7 @@ export function useExplorationStorage(userId: string) {
       });
     });
   }
-  async function remove(activity: Activity) {
+  async function remove(activity: Exploration) {
     if (activity.ownerId && activity.ownerId !== userId) return false;
     let success = false;
     await run(async () => {
@@ -202,12 +208,8 @@ export function useExplorationStorage(userId: string) {
         await removeDraft(userId, activity);
         refreshLocal();
       } else {
-        const result = await deleteActivity(activity);
-        await mutate(
-          (current = []) =>
-            current.filter((a) => a.clientKey !== activity.clientKey),
-          { revalidate: false },
-        );
+        const result = await deleteExploration(activity);
+        void refreshReferences();
         if (result.cleanupPending)
           toast.add({
             title: '탐구활동은 삭제했지만 일부 파일 정리가 지연되고 있습니다.',
@@ -225,23 +227,14 @@ export function useExplorationStorage(userId: string) {
     });
     return success;
   }
-  const activities = [
-    ...local,
-    ...confirmed.filter(
-      (activity) => !local.some((d) => d.clientKey === activity.clientKey),
-    ),
-  ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return {
-    activities,
+    local,
     draft,
     setDraft,
     busy,
     dirty,
     ready,
     localError,
-    remoteError,
-    isLoading,
-    refresh: mutate,
     create,
     open,
     saveLocal,

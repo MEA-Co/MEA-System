@@ -16,9 +16,9 @@ export function ExplorationWritingGuide({
         render={
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5 rounded-full px-3 text-xs"
+            className="shrink-0 gap-1.5 px-2.5 text-xs"
           />
         }
         aria-label={`${title} 작성 가이드`}
@@ -28,7 +28,7 @@ export function ExplorationWritingGuide({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-[60]">
-          <Popover.Popup className="max-h-[min(70dvh,var(--available-height))] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border bg-popover p-5 text-popover-foreground shadow-lg outline-none">
+          <Popover.Popup className="max-h-[min(70dvh,var(--available-height))] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-lg outline-none">
             <div className="mb-3 flex items-start justify-between gap-3">
               <Popover.Title className="flex items-center gap-2 text-sm font-semibold">
                 <CircleHelp aria-hidden="true" className="size-4 shrink-0" />

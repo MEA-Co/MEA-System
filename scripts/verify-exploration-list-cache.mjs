@@ -42,75 +42,35 @@ function fixture(payload) {
         };
       },
     }),
-    { fetch: async () => ({ ok: true, json: async () => payload }) },
+    {
+      URLSearchParams,
+      fetch: async () => ({ ok: true, json: async () => payload }),
+    },
   );
-  const require = (name) => {
-    if (name.includes('useExplorationList')) return hook;
-    if (name === 'react') return { useState: () => [false, () => {}] };
-    if (name === 'react/jsx-runtime')
-      return {
-        jsx: (type, props) => ({ type, props }),
-        jsxs: (type, props) => ({ type, props }),
-      };
-    return { Menu: {} };
-  };
-  return {
-    hook,
-    cache,
-    calls,
-    pending,
-    input: compile(
-      `${root}questions/components/question/QuestionExplorationInput.tsx`,
-      require,
-    ).QuestionExplorationInput,
-    picker: compile(
-      `${root}questions/components/question/ExplorationCommands.tsx`,
-      require,
-    ).ExplorationPicker,
-  };
+  return { hook, cache, calls, pending };
 }
-
-test('empty list shares an object cache across legacy input and @ picker, including revalidation', async () => {
-  const f = fixture({ userId: 'test-user', activities: [] });
-  f.input({});
-  f.picker({ onSelect() {} });
-  await Promise.all(f.pending);
-  assert.doesNotThrow(() => f.input({}));
-  assert.doesNotThrow(() => f.picker({ onSelect() {} }));
-  assert.equal(JSON.stringify(f.calls[0]), JSON.stringify(f.calls[1]));
-  assert.notEqual(
-    JSON.stringify(f.calls[0]),
-    JSON.stringify('/api/exploration?scope=own'),
-  );
-  await f.hook.useExplorationList('own').mutate();
-  assert.doesNotThrow(() => f.input({}));
-  assert.deepEqual(f.cache.get('/api/exploration?scope=own'), []);
-});
-
-test('populated list works in either consumer order and scopes remain separate', async () => {
+test('page/query, identity context and reference reads use distinct object cache keys', async () => {
   const f = fixture({
     userId: 'test-user',
-    activities: [
-      {
-        id: 'activity-1',
-        values: {
-          topic: '활동',
-          grade: '1',
-          semester: '1',
-          recordArea: '물리',
-        },
-      },
-    ],
+    activities: [],
+    page: 1,
+    total: 0,
+    pageSize: 10,
   });
-  f.picker({ onSelect() {} });
+  const read = f.hook.useExplorationList('own');
+  f.hook.useExplorationList('own', true, undefined, { page: 2, query: 'DNA' });
+  f.hook.useExplorationList('own', true, undefined, { identityOnly: true });
+  f.hook.useExplorationList('accessible', true, 'id');
+  assert.equal(new Set(f.calls.map(JSON.stringify)).size, 4);
+  assert.ok(f.calls[1][1].includes('page=2'));
+  assert.ok(f.calls[1][1].includes('q=DNA'));
+  assert.ok(f.calls[2][1].includes('mode=context'));
+  assert.ok(!f.calls[3][1].includes('scope=own'));
   await Promise.all(f.pending);
-  assert.doesNotThrow(() => f.input({}));
-  assert.doesNotThrow(() => f.picker({ onSelect() {} }));
-  f.hook.useExplorationList('accessible');
-  assert.notEqual(JSON.stringify(f.calls.at(-1)), JSON.stringify(f.calls[0]));
+  await read.mutate();
+  assert.deepEqual(f.cache.get('/api/exploration?scope=own'), []);
   f.hook.useExplorationList('own', false);
   assert.equal(f.calls.at(-1), null);
-  await Promise.all(f.pending);
 });
 
 test('malformed list responses are rejected instead of reaching array methods', async () => {

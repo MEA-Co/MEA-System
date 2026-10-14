@@ -2,9 +2,15 @@
 
 import useSWR from 'swr';
 
-import type { ActivityRow } from '../lib/storage-model';
+import type { ExplorationRow } from '@/lib/exploration/storage-model';
 
-export type ExplorationList = { userId: string; activities: ActivityRow[] };
+export type ExplorationList = {
+  userId: string;
+  activities: ExplorationRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+};
 
 export async function fetchExplorationList(
   url: string,
@@ -28,13 +34,19 @@ export function useExplorationList(
   scope: 'own' | 'accessible',
   enabled = true,
   referenceId?: string,
+  options: { query?: string; page?: number; identityOnly?: boolean } = {},
 ) {
-  const url =
-    scope === 'own'
-      ? '/api/exploration?scope=own'
-      : referenceId
-        ? `/api/exploration?reference=${encodeURIComponent(referenceId)}`
-        : '/api/exploration';
+  const params = new URLSearchParams({
+    scope: 'own',
+    page: String(options.page ?? 1),
+    q: options.query?.trim() ?? '',
+  });
+  if (options.identityOnly) params.set('mode', 'context');
+  if (referenceId) {
+    params.set('reference', referenceId);
+    if (scope === 'accessible') params.delete('scope');
+  }
+  const url = `/api/exploration?${params}`;
   // Version the response contract so old array-shaped URL caches cannot be reused.
   return useSWR(
     enabled ? ['exploration-list-v1', url] : null,
