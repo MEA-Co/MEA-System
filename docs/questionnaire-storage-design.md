@@ -67,3 +67,19 @@
 `questions.purpose`는 `response`(기존 기본값) 또는 `study_registration`이며, `button_label`은 1~100자의 버튼 이름이다. API는 `purpose`·`buttonLabel`을 사용한다. 안내는 `fields=[]`, 단일/card 표시, 최소·초기 1/최대 NULL, 빈 행 이름과 NULL 조건·참조·선행 연결을 강제한다. 일반 질문은 답변 열 한 개 이상을 계속 요구한다. 저장된 purpose 전환은 기존 응답·가이드 삭제 우회를 막기 위해 금지한다. 안내를 조건이나 답변 참조 대상으로 삼는 것도 DB에서 차단한다.
 
 기존 `question_responses` 식별 행과 제출 metadata는 배치 표시를 위해 유지하지만 안내의 `rows=[]`, `active_row_ids=[]`, `body=''`만 허용한다. 카드에는 답변 입력과 완료 검사가 없으며 악성/누락 입력을 거절한다. 안내만 있는 질문지의 완료는 허용하지 않아 빈 제출을 집계하지 않는다. 기존 원본/배치/응답 ID, RLS, 게시 가이드 권한과 배포 잠금을 유지하며 학습법은 기존 `study` 저장 경로에만 저장한다.
+
+- 배포본 작성자 이름 누락 수정: 기존 published_questionnaire_authors RPC가 활성 게시·배포본의 created_by 이름을 반환한다. 관리자/리드만 호출 가능하며 초안·보관본은 제외한다. 서버도 배포본만 있을 때 RPC를 호출한다. 기존 RPC 이름/응답 계약 유지. 20261014064007_distributed_questionnaire_authors.sql 로컬 적용 및 SQL 회귀 통과(가상 데이터 롤백), 운영 미적용.
+
+### 이름 있는 비흐름표의 제출 투영
+
+`20261014075610_submitted_named_row_labels.sql`부터 원본 `answer_layout != flow`이고 `row_labels`가 있으면 제출 스냅샷의 활성 `rows[]`에 원래 배열 순서에서 계산한 `label`을 추가한다. 빈 이름이나 설정 범위 밖 항목은 원래 순서의 `항목 N`을 사용한다. 비활성 행을 제외하기 **전**의 순서를 사용하므로 중간 빈 행 때문에 이름이 이동하지 않는다. 이 메타데이터는 제출 조회 전용이며 카드·일반 표의 작성 요청과 `question_responses.rows`에는 계속 허용하지 않는다. 기존 흐름표의 `flowIndex`·`flowAfter`·`label` 계약은 유지한다.
+
+기존 제출본 보정은 저장 RPC와 동일한 세션 행 잠금을 획득한 뒤 다시 조회한다. 제출 revision과 작업 세션 revision이 같고, responseId·questionId·활성 ID·전체 활성 행 투영이 일치할 때만 이름을 보정한다. 후속 비공개 편집이 있거나 내용·순서가 일치하지 않으면 손대지 않는다. 답변 값·제출 시각·revision은 변경하지 않는다. 복원할 수 없는 구형 압축 행은 UI/PDF에 이름 미확인으로 표시하며 ID를 순서로 해석하지 않는다. 서버가 이미 제공한 가이드 행 이름은 행 ID에 연결해 표시하고 같은 label끼리 병합하지 않는다.
+
+## 독립 첨부형 전환 계약 (2026-10-14)
+
+필드 kind는 `text|scale|single|multiple`만 허용한다. `20261014082243_convert_question_attachments_to_mentions.sql`은 기존 질문 필드를 동일 ID/라벨/필수 여부의 text로 바꾸고 해당 참조 권장을 켠다. 질문 revision을 증가시키고 재시도 식별자를 갱신하여 오래된 정의 저장을 차단한다. 행 ID·label·flow metadata·다른 답변은 보존한다. `question_responses.rows`, `response_submissions.answers`, `response_sessions.last_payload.answers`를 각각 원본 UUID로 변환하며 작성 중 내용을 제출본에 복사하지 않는다. 최종 제출 시각/revision·응답 생성/수정 시각·본문 요약은 유지하고 실제 상세 본문은 변환한 rows를 사용한다.
+
+전환은 명시적 단일 트랜잭션·5초 잠금 대기 제한·대상 테이블 독점 잠금 아래 수행한다. 질문 검증/배포 잠금/가이드 정리 트리거만 잠시 중지한 뒤 같은 트랜잭션에서 복구한다. 일반 수정·배포 잠금 정책은 유지한다. 원본 없는 구형 정의/이전 정의에 폐기 유형이 있거나 첨부 UUID를 비교하는 조건, 잘못된 UUID가 발견되면 전체 롤백하고 별도 검토한다. 현재 로컬·운영 사전 조회에서는 해당 사례가 없었다.
+
+참조 제목은 개인정보를 복제하지 않는 `첨부한 탐구활동`/`첨부한 학습법`이며 mark의 UUID만 유지한다. 참조 대상·파일은 기존 인증/RLS로 조회한다. 학습법 가이드 권한 함수의 독립 UUID 분기를 제거하고 기존 본문 mark 조회만 사용한다. public 권한·RLS·함수 ACL은 바꾸지 않는다.

@@ -19,7 +19,6 @@ import type {
 import { choiceAnswerValue, scaleAnswer } from '../../lib/question-types';
 
 import { RichTextContent } from './RichTextContent';
-import { StudyReferenceContent } from './StudyCommands';
 
 export function QuestionGuideAnswerTable({
   document,
@@ -30,12 +29,6 @@ export function QuestionGuideAnswerTable({
   answer: GuideAnswer;
   summary: (field: QuestionBlockField, value: string) => string;
 }) {
-  // The guide API omits empty rows; use its display labels, never internal IDs.
-  const labels = document.rowLabels?.length
-    ? document.rowLabels.map(
-        (label, index) => label.trim() || String(index + 1),
-      )
-    : answer.rows.map((row) => row.label);
   return (
     <Dialog>
       <DialogTrigger className="w-full cursor-pointer rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring">
@@ -44,8 +37,8 @@ export function QuestionGuideAnswerTable({
         </span>
         가이드 답변
       </DialogTrigger>
-      <DialogContent className="flex h-[94dvh] w-[96vw] max-w-none flex-col gap-4 rounded-2xl p-4 sm:max-w-none sm:p-6">
-        <DialogHeader className="shrink-0 pr-10">
+      <DialogContent className="flex h-[94dvh] w-[96vw] max-w-none flex-col gap-4 rounded-lg p-4 sm:max-w-none sm:p-6">
+        <DialogHeader className="shrink-0 border-b pb-4 pr-10">
           <DialogTitle>
             {document.title || '진로 흐름'} · 가이드 답변
           </DialogTitle>
@@ -54,7 +47,7 @@ export function QuestionGuideAnswerTable({
           </DialogDescription>
         </DialogHeader>
         <div
-          className="min-h-0 flex-1 overflow-auto rounded-lg border"
+          className="min-h-0 flex-1 overflow-auto rounded-lg border border-t-2 border-t-brand"
           tabIndex={0}
           role="region"
           aria-label="진로 흐름 가이드 답변 표"
@@ -84,10 +77,10 @@ export function QuestionGuideAnswerTable({
               </tr>
             </thead>
             <tbody>
-              {labels.map((label, index) => {
-                const row = answer.rows.find((item) => item.label === label);
+              {answer.rows.map((row) => {
+                const label = row.label;
                 return (
-                  <tr key={index}>
+                  <tr key={row.id}>
                     <th
                       scope="row"
                       className="sticky left-0 z-10 border-r border-b bg-background p-4 align-top font-medium [overflow-wrap:anywhere]"
@@ -95,7 +88,7 @@ export function QuestionGuideAnswerTable({
                       {label}
                     </th>
                     {document.fields.map((field) => {
-                      const value = row?.answers[field.id] ?? '';
+                      const value = row.answers[field.id] ?? '';
                       const extra =
                         field.kind === 'scale'
                           ? scaleAnswer(value).text
@@ -114,10 +107,6 @@ export function QuestionGuideAnswerTable({
                             <span className="text-muted-foreground">—</span>
                           ) : field.kind === 'text' ? (
                             <RichTextContent value={value} />
-                          ) : field.kind === 'study' ? (
-                            <StudyReferenceContent id={value}>
-                              첨부한 학습법 보기
-                            </StudyReferenceContent>
                           ) : (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
                               {summary(field, value)}

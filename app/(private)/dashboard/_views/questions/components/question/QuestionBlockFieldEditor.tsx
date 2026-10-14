@@ -2,10 +2,10 @@
 
 import { Trash2 } from 'lucide-react';
 
-import { questionStyles } from '@/app/(private)/dashboard/_views/questions/components/question/question-styles';
 import { QuestionTypeEditor } from '@/app/(private)/dashboard/_views/questions/components/question/QuestionTypeEditor';
 import type { Question } from '@/app/(private)/dashboard/_views/questions/lib/types';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent,CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,12 +23,7 @@ function asField(
   const kind = question.kind ?? 'text';
   return {
     id: field.id,
-    label:
-      (kind === 'exploration' || kind === 'study') && field.kind !== kind
-        ? kind === 'study'
-          ? '학습법'
-          : '탐구활동'
-        : field.label,
+    label: field.label,
     kind,
     required: field.required,
     explorationRecommended:
@@ -71,8 +66,8 @@ export function QuestionBlockFieldEditor({
   const compactChoices = answerLayout === 'table' || flow;
 
   return (
-    <div className={questionStyles.questionCard}>
-      <div className="flex items-center justify-between gap-3">
+    <Card className="pt-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b bg-muted py-3 [.border-b]:pb-3">
         <QuestionTypeEditor
           part="header"
           question={question}
@@ -89,43 +84,47 @@ export function QuestionBlockFieldEditor({
         >
           <Trash2 aria-hidden="true" />
         </Button>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`answer-label-${field.id}`}>
-          {flow ? '답변 항목 이름 (세로)' : '열 제목'}
-        </Label>
-        <Input
-          id={`answer-label-${field.id}`}
-          value={field.label}
-          maxLength={100}
-          placeholder={`답변 ${index + 1}`}
-          className={questionStyles.input}
-          onChange={(event) =>
-            onChange({ ...asField(field, question), label: event.target.value })
-          }
-        />
-      </div>
-      {!flow && (
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id={`answer-required-${field.id}`}
-            checked={field.required !== false}
-            onCheckedChange={(required) => onChange({ ...field, required })}
-          />
-          <Label
-            htmlFor={`answer-required-${field.id}`}
-            className="cursor-pointer"
-          >
-            필수 입력
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor={`answer-label-${field.id}`}>
+            {flow ? '답변 항목 이름 (세로)' : '열 제목'}
           </Label>
+          <Input
+            id={`answer-label-${field.id}`}
+            value={field.label}
+            maxLength={100}
+            placeholder={`답변 ${index + 1}`}
+            onChange={(event) =>
+              onChange({
+                ...asField(field, question),
+                label: event.target.value,
+              })
+            }
+          />
         </div>
-      )}
-      <QuestionTypeEditor
-        question={question}
-        onChange={changeQuestion}
-        disabled={false}
-        compactChoices={compactChoices}
-      />
-    </div>
+        {!flow && (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`answer-required-${field.id}`}
+              checked={field.required !== false}
+              onCheckedChange={(required) => onChange({ ...field, required })}
+            />
+            <Label
+              htmlFor={`answer-required-${field.id}`}
+              className="cursor-pointer"
+            >
+              필수 입력
+            </Label>
+          </div>
+        )}
+        <QuestionTypeEditor
+          question={question}
+          onChange={changeQuestion}
+          disabled={false}
+          compactChoices={compactChoices}
+        />
+      </CardContent>
+    </Card>
   );
 }

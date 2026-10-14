@@ -349,7 +349,7 @@ export function QuestionnaireComposer({
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <div className="space-y-5">
         <header className="flex flex-wrap items-end justify-end gap-4">
           <div className="flex items-center gap-3">

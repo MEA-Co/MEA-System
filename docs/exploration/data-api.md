@@ -121,8 +121,12 @@ DB는 활성 행의 ID/updated_at과 검색 조건으로 개수를 구한 뒤 `u
 ### 호출부와 캐시
 
 - 관리 `ExplorationTable`: summary와 페이지를 분리해 조회. `exploration-page`/`exploration-summary` 키에 사용자·표시 권한·검색/페이지·로컬 ID/개수를 포함한다.
-- `ExplorationSelectList`와 질문 `QuestionExplorationInput`: 본인 확정본의 서버 검색·10개 페이지 선택. 선택한 기존 ID는 별도 단건 조회하므로 페이지/검색 변경으로 표시가 사라지지 않는다.
+- `ExplorationSelectList`와 질문 본문 `ExplorationCommands`: 본인 확정본의 서버 검색·10개 페이지 선택. 본문 참조 ID의 상세는 별도 단건 조회한다. 독립 첨부형 입력 컴포넌트는 제거했다.
 - `ExplorationCommands`의 신규 작성 진입은 context만 조회한다. 상세 참조는 reference 단건 경로를 사용한다.
 - 기존 확정본 수정 시 파일 정리에 필요한 이전 reports는 해당 본인 ID만 단건 조회한다. 로컬에 이미 저장한 수정본에서 파일을 제거했어도 이전 확정 첨부의 정리 대상을 놓치지 않으며 전체 목록 조회는 하지 않는다.
 - `useExplorationList`: `exploration-list-v1` + 전체 요청 URL로 목록·참조·context를 구분한다. 확정/삭제 후 저장 훅이 페이지·집계·참조 캐시를 함께 재검증한다.
 
+
+## 질문 참조 계약
+
+독립 `kind: exploration` 대신 서술형 `text`의 `explorationReference` mark로 탐구활동 UUID를 저장한다. 기존 첨부형 질문·작성/가이드/제출 답변도 같은 형식으로 변환한다. 탐구활동 원본·파일·API·RLS는 유지하며 가이드 예외는 표시 가능한 본문 참조 범위로 제한한다. 이전 절차와 검증은 [질문 운영 문서](../questions-operations.md#독립-첨부형-제거와-본문-참조-전환-2026-10-14)를 따른다.

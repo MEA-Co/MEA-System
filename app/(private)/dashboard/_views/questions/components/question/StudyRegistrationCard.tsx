@@ -9,6 +9,12 @@ import { Button } from '@/components/ui/button';
 
 import type { QuestionBlockDocument } from '../../lib/question-blocks';
 
+import {
+  questionExplanationClass,
+  questionNumberClass,
+  questionPromptClass,
+  questionSurfaceClass,
+} from './question-styles';
 import { RichTextContent } from './RichTextContent';
 
 function StudyRegistrationAction({ label }: { label: string }) {
@@ -62,11 +68,9 @@ export function StudyRegistrationCard({
 }) {
   const buttonLabel = document.buttonLabel?.trim() || '학습법 추가';
   return (
-    <div className="min-w-0 max-w-full space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
-      <div className="flex items-start gap-3">
-        <span className="w-6 shrink-0 text-sm font-semibold">
-          {questionNumber}
-        </span>
+    <div className={questionSurfaceClass}>
+      <div className={questionPromptClass}>
+        <span className={questionNumberClass}>{questionNumber}</span>
         <div className="min-w-0 flex-1 space-y-3">
           {document.title.trim() && (
             <h3 className="font-semibold whitespace-pre-wrap wrap-anywhere">
@@ -82,10 +86,7 @@ export function StudyRegistrationCard({
       {(document.details ?? [])
         .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
         .map((detail) => (
-          <div
-            key={detail.id}
-            className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4"
-          >
+          <div key={detail.id} className={questionExplanationClass}>
             <div className="mb-2 flex items-start justify-between gap-3">
               <h4 className="min-w-0 flex-1 text-sm font-semibold wrap-anywhere">
                 {detail.title}

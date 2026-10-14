@@ -7,6 +7,7 @@ import {
   scaleAnswer,
   scaleLabel,
 } from './question-types';
+import { submittedRowLabel } from './submitted-row-label';
 
 export type SubmittedResponse = Pick<
   QuestionResponseSnapshot,
@@ -33,8 +34,6 @@ export function submittedAnswerText(
 ): string {
   if (!value.trim()) return '미응답';
   if (field.kind === 'text') return value;
-  if (field.kind === 'exploration' || field.kind === 'study')
-    return `${field.kind === 'study' ? '학습법' : '탐구활동'} 첨부됨 (상세 내용은 서비스에서 확인)`;
   if (field.kind === 'scale') {
     const answer = scaleAnswer(value);
     const config = field.scaleConfig ?? {
@@ -48,7 +47,7 @@ export function submittedAnswerText(
     return [
       answer.score === null
         ? '미응답'
-        : `${answer.score} / ${config.max}점${label ? ` · ${label}` : ''}`,
+        : `${answer.score}점 / ${config.max}점 만점${label ? ` · ${label}` : ''}`,
       answer.text,
     ]
       .filter(Boolean)
@@ -102,6 +101,18 @@ export function submittedResponseSections(submission: SubmittedResponse) {
           id: placement.id,
           title: definition.title,
           prompt: definition.prompt,
+          recommendations: [
+            ...(definition.fields.some(
+              (field) => field.kind === 'text' && field.explorationRecommended,
+            )
+              ? ['탐구활동 참조 권장']
+              : []),
+            ...(definition.fields.some(
+              (field) => field.kind === 'text' && field.studyRecommended,
+            )
+              ? ['학습법 참조 권장']
+              : []),
+          ],
           rows: rows.flatMap((row, index) =>
             active.has(row.id)
               ? [
@@ -109,9 +120,14 @@ export function submittedResponseSections(submission: SubmittedResponse) {
                     id: row.id,
                     label: flow
                       ? flowRowLabel(row, definition.row_labels)
-                      : row.label?.trim() ||
-                        definition.row_labels?.[index]?.trim() ||
-                        (rows.length > 1 ? `항목 ${index + 1}` : ''),
+                      : definition.row_mode !== 'single' || rows.length > 1
+                        ? submittedRowLabel(
+                            row,
+                            index,
+                            rows.length,
+                            definition.row_labels,
+                          )
+                        : '',
                     fields: definition.fields.map((field) => ({
                       id: field.id,
                       label: field.label,

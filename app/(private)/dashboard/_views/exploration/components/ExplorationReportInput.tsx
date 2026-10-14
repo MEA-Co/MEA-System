@@ -73,7 +73,7 @@ export function ExplorationReportInput({
   }
 
   return (
-    <Card size="sm" aria-labelledby="activity-report-heading">
+    <Card variant="accent" size="sm" aria-labelledby="activity-report-heading">
       <CardHeader variant="emphasis">
         <h2
           id="activity-report-heading"

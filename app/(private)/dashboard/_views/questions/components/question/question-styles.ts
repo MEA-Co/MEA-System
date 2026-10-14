@@ -17,3 +17,14 @@ export const questionStyles = {
   input:
     'border-0 bg-neutral-100 shadow-none focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 dark:bg-neutral-800',
 } as const;
+
+/** Shared by the authoring surface and the actual questionnaire renderer. */
+export const questionSurfaceClass =
+  'min-w-0 max-w-full space-y-4 rounded-lg border border-border border-t-2 border-t-brand bg-background p-3 sm:space-y-6 sm:p-6';
+export const questionPromptClass =
+  'flex flex-wrap items-start gap-2 border-b border-border pb-3 text-base font-semibold leading-7 sm:gap-3 sm:pb-5';
+
+export const questionNumberClass =
+  'inline-flex min-w-4 shrink-0 items-center justify-start text-sm font-bold leading-7 text-muted-foreground tabular-nums';
+export const questionExplanationClass =
+  'rounded-r-lg border-l-2 border-neutral-300 bg-neutral-50 px-4 py-3 text-sm leading-7 dark:border-neutral-600 dark:bg-neutral-800/50';

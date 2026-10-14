@@ -167,7 +167,7 @@ test('choices preserve duplicate direct entries, scale comments and rich text', 
   );
   assert.equal(
     submittedAnswerText(fields[2], '{"score":3,"text":"보충 설명"}'),
-    '3 / 5점\n보충 설명',
+    '3점 / 5점 만점\n보충 설명',
   );
   assert.equal(submittedAnswerText(fields[0], rich), rich);
   assert.equal(submittedAnswerText(fields[0], ''), '미응답');
@@ -205,3 +205,28 @@ if (process.env.SUBMISSION_PDF_SAMPLE) {
     process.env.SUBMISSION_PDF_SAMPLE,
   );
 }
+
+test('PDF named non-flow rows use submitted names after an empty row is omitted', () => {
+  const copy = structuredClone(submission);
+  const question = copy.questions[0];
+  question.definition.answer_layout = 'table';
+  question.definition.row_labels = ['첫 항목', '둘째 항목', '셋째 항목'];
+  question.rows = [
+    { id: 500, label: '첫 항목', answers: { text: '첫째 답변' } },
+    { id: -17, label: '셋째 항목', answers: { text: '셋째 답변' } },
+  ];
+  question.activeRowIds = [500, -17];
+  assert.deepEqual(
+    submittedResponseSections(copy)[0].questions[0].rows.map(
+      (row) => row.label,
+    ),
+    ['첫 항목', '셋째 항목'],
+  );
+  question.rows.forEach((row) => delete row.label);
+  assert.deepEqual(
+    submittedResponseSections(copy)[0].questions[0].rows.map(
+      (row) => row.label,
+    ),
+    ['항목 1 · 원래 이름 미확인', '항목 2 · 원래 이름 미확인'],
+  );
+});

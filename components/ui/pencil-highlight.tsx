@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 
 import styles from './pencil-highlight.module.css';
 
+export const pencilHighlightClassName = styles.highlight;
+
 /** Short editorial emphasis, not a selected, warning, or saved state. */
 export function PencilHighlight({
   variant = 'marker',
@@ -14,7 +16,7 @@ export function PencilHighlight({
     <mark
       data-slot="pencil-highlight"
       data-variant={variant}
-      className={cn(styles.highlight, className)}
+      className={cn(pencilHighlightClassName, className)}
       {...props}
     />
   );

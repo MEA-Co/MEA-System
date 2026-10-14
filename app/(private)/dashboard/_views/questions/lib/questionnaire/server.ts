@@ -145,7 +145,12 @@ export async function loadQuestionnaireView(
       submissionCounts.set(item.questionnaire_id, Number(item.count));
   }
   const authors = new Map<string, string>();
-  if (staff && rows.some((row) => row.status === 'published')) {
+  if (
+    staff &&
+    rows.some(
+      (row) => row.status === 'published' || row.status === 'distributed',
+    )
+  ) {
     const result = await client.rpc('published_questionnaire_authors');
     if (result.error)
       throw new Error('제작자 이름을 불러오지 못했어요.', {

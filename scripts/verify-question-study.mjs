@@ -29,44 +29,15 @@ const types = load(base + 'lib/question-types.ts');
 const blocks = load(base + 'lib/question-blocks.ts', {
   './rich-text': { richTextPlainText: (s) => s },
 });
-test('study column round trips alongside text and repeated rows', () => {
+test('retired study field and stored UUID answer are rejected', () => {
   const document = blocks.emptyQuestionBlock();
-  document.prompt = '활동을 첨부해 주세요';
-  document.fields.unshift({
-    id: randomUUID(),
-    label: '학습법',
-    kind: 'study',
-  });
-  document.rowMode = 'repeatable';
-  document.minRows = 2;
-  document.maxRows = 5;
-  const parsed = blocks.questionBlockSchema.parse(document);
-  assert.equal(parsed.fields[0].kind, 'study');
-  assert.equal(parsed.fields[1].kind, 'text');
-  assert.equal(parsed.minRows, 2);
-  assert.equal(
-    blocks.fieldSchema.safeParse({ ...parsed.fields[0], kind: 'unknown' })
-      .success,
-    false,
-  );
-});
-test('study answers require an activity UUID and complete requires selection', () => {
-  const question = { kind: 'study' };
-  assert.equal(types.validTypedAnswer(question, randomUUID(), true), true);
-  for (const value of [
-    'topic',
-    '[]',
-    '{}',
-    JSON.stringify({ id: randomUUID() }),
-  ]) {
-    assert.equal(types.validTypedAnswer(question, value, true), false);
+  document.prompt = '참조는 서술형 본문으로 작성';
+  document.fields[0].kind = 'study';
+  assert.equal(blocks.questionBlockSchema.safeParse(document).success, false);
+  for (const value of ['', randomUUID(), '본문']) {
+    assert.equal(types.validTypedAnswer({ kind: 'study' }, value, false), false);
   }
-  assert.equal(types.validTypedAnswer(question, '', false), true);
-  assert.equal(types.validTypedAnswer(question, '', true), false);
-  assert.equal(
-    types.validTypedAnswer({ kind: 'text' }, '기존 답변', true),
-    true,
-  );
+  assert.equal(types.validTypedAnswer({ kind: 'text' }, '기존 답변', true), true);
 });
 
 const fieldQuestions = load(base + 'lib/field-question.ts', {

@@ -1,15 +1,10 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-import { CollectionHeader } from '@/components/patterns/collection';
 import type { MemberRole } from '@/lib/profile';
 
-import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
-
-import { QuestionsDashboard } from './components/dashboard/QuestionsDashboard';
 import { QuestionLibraryView } from './components/question/QuestionLibraryView';
 import { QuestionnaireView } from './components/questionnaire/QuestionnaireView';
 import { QuestionResponseForm } from './components/questionnaire/QuestionResponseForm';
@@ -26,40 +21,22 @@ export function QuestionsView({
   const questionnaire =
     !staff ||
     Boolean(params.get('draft')) ||
-    params.get('tab') === 'questionnaires';
-
+    (!params.get('question') && params.get('tab') !== 'questions');
   const responseId = staff ? params.get('response') : null;
-  const overview =
-    staff &&
-    !responseId &&
-    !questionnaire &&
-    !params.get('question') &&
-    params.get('tab') !== 'questions';
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      {overview && (
-        <CollectionHeader
-          id="questions-dashboard-title"
-          category={<DashboardPageCategory view="questions" />}
-          title="질문 관리"
-          description="질문과 질문지를 관리하고, 다른 사람이 공유한 질문지를 살펴보세요."
-        />
-      )}
-      {staff && !overview && !params.get('draft') && (
+      {responseId && (
         <Link
-          href="/dashboard?view=questions"
+          href="/dashboard?view=questions&tab=questionnaires"
           prefetch={false}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          className="text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" />
-          질문 관리 대시보드
+          질문지 목록으로
         </Link>
       )}
       {responseId ? (
         <QuestionResponseForm key={responseId} questionnaireId={responseId} />
-      ) : overview ? (
-        <QuestionsDashboard />
       ) : questionnaire ? (
         <QuestionnaireView requestedId={requestedId} />
       ) : (

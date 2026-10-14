@@ -43,8 +43,8 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
   const homes = {
     student: 'consulting',
     consultant: 'questions',
-    consultant_lead: 'consultants',
-    admin: 'consultants',
+    consultant_lead: 'questions',
+    admin: 'questions',
   };
   for (const [role, views] of Object.entries(expected)) {
     assert.deepEqual(

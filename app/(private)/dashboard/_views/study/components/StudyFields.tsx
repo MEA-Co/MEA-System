@@ -97,6 +97,7 @@ export function StudyFields({
     <div className="grid grid-cols-1 items-start gap-4 lg:items-stretch lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] lg:gap-x-2 lg:gap-y-5">
       {groups.flatMap((group, index) => [
         <Card
+          variant="accent"
           key={group.title}
           size="sm"
           className={`min-w-0 ${group.title === '문제 상황' || group.title === '대응 솔루션' ? '' : 'lg:col-span-3'}`}

@@ -19,8 +19,6 @@ import type { Question } from '../../lib/types';
 
 import { questionStyles } from './question-styles';
 import { QuestionChoiceDropdownInput } from './QuestionChoiceDropdownInput';
-import { QuestionExplorationInput } from './QuestionExplorationInput';
-import { QuestionStudyInput } from './QuestionStudyInput';
 
 export function QuestionChoiceInput({
   question,
@@ -49,24 +47,6 @@ export function QuestionChoiceInput({
         onChange={onChange}
         disabled={disabled}
         ariaLabel={ariaLabel}
-      />
-    );
-  }
-  if (question.kind === 'exploration') {
-    return (
-      <QuestionExplorationInput
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    );
-  }
-  if (question.kind === 'study') {
-    return (
-      <QuestionStudyInput
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
       />
     );
   }

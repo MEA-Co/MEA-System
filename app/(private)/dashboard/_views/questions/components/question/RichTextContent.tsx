@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { PencilHighlight } from '@/components/ui/pencil-highlight';
 import { cn } from '@/lib/utils';
 
 import { type RichTextNode, toEditorDocument } from '../../lib/rich-text';
@@ -9,7 +10,7 @@ import { StudyReferenceContent } from './StudyCommands';
 
 import styles from './RichTextContent.module.css';
 
-export const richTextClasses = `${styles.content} whitespace-pre-wrap break-words [&_p]:min-h-[1.5em] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:pl-1 [&_mark]:rounded-sm [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:text-inherit dark:[&_mark]:bg-yellow-400/35`;
+export const richTextClasses = `${styles.content} whitespace-pre-wrap break-words [&_p]:min-h-[1.5em] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:pl-1 [&_mark:not([data-slot=pencil-highlight])]:rounded-sm [&_mark:not([data-slot=pencil-highlight])]:bg-yellow-200 [&_mark:not([data-slot=pencil-highlight])]:px-0.5 [&_mark:not([data-slot=pencil-highlight])]:text-inherit dark:[&_mark:not([data-slot=pencil-highlight])]:bg-yellow-400/35`;
 
 function renderNode(node: RichTextNode, key: number): ReactNode {
   const content = node.content?.map(renderNode);
@@ -21,7 +22,7 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
           mark.type === 'studyReference',
       );
       const text = node.marks?.some((mark) => mark.type === 'highlight') ? (
-        <mark>{node.text}</mark>
+        <PencilHighlight>{node.text}</PencilHighlight>
       ) : (
         node.text
       );

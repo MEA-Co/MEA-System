@@ -13,7 +13,7 @@ export function ExplorationSectionCard({
 }) {
   const headingId = useId();
   return (
-    <Card size="sm" aria-labelledby={headingId}>
+    <Card variant="accent" size="sm" aria-labelledby={headingId}>
       <CardHeader variant="emphasis">
         <h2
           id={headingId}

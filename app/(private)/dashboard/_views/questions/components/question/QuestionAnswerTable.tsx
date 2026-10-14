@@ -4,6 +4,7 @@ import { Popover } from '@base-ui/react/popover';
 import { Plus, Table2, Trash2 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +21,7 @@ import type {
   QuestionBlockField,
 } from '../../lib/question-blocks';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
+import { submittedRowLabel } from '../../lib/submitted-row-label';
 
 import { CareerFlowExampleTable } from './CareerFlowExampleTable';
 import { RichTextContent } from './RichTextContent';
@@ -35,6 +37,7 @@ export type QuestionAnswerTableProps = {
     field: QuestionBlockField,
     index: number,
     placeholder?: string,
+    autoFocus?: boolean,
   ) => ReactNode;
   summary: (field: QuestionBlockField, value: string) => string;
   canAdd: boolean;
@@ -92,7 +95,7 @@ export function QuestionAnswerTable({
         group: string;
         field?: QuestionBlockField;
       }[] = visible.map((field) => ({ key: field.id, group, field }));
-      if (visible.length < fields.length)
+      if (!disabled && visible.length < fields.length)
         result.push({ key: `add-${group}`, group });
       return result;
     });
@@ -119,46 +122,45 @@ export function QuestionAnswerTable({
     >
       <div className="flex flex-wrap items-center gap-3">
         <DialogTrigger
-          render={<Button type="button" variant="outline" disabled={waiting} />}
+          render={<Button type="button" variant="default" disabled={waiting} />}
         >
           <Table2 aria-hidden="true" />
           {triggerLabel ?? (disabled ? '답변 보기' : '응답하기')}
         </DialogTrigger>
       </div>
-      <DialogContent className="flex h-[94dvh] w-[96vw] max-w-none flex-col gap-4 rounded-2xl bg-neutral-100 p-4 sm:max-w-none sm:p-6 dark:bg-neutral-950">
-        <DialogHeader className="shrink-0 pr-10">
+      <DialogContent className="flex h-[94dvh] w-[96vw] max-w-none flex-col gap-4 rounded-lg bg-background p-4 sm:max-w-none sm:p-6">
+        <DialogHeader className="shrink-0 border-b border-border pb-4 pr-10">
           <DialogTitle>{document.title || '진로 흐름'}</DialogTitle>
           <DialogDescription>
-            진로 희망이 처음 생긴 때 · 바뀐 때 · 확정된 때, 그리고 기억에 남는
-            대응이 있었던 칸만 채워주세요.
+            {disabled
+              ? '표를 좌우로 스크롤해 제출된 진로 흐름 답변을 확인하세요.'
+              : '진로 희망이 처음 생긴 때 · 바뀐 때 · 확정된 때, 그리고 기억에 남는 대응이 있었던 칸만 채워주세요.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="shrink-0 rounded-2xl border bg-background p-4 text-sm leading-7">
-          <div className="flex flex-wrap gap-x-6 gap-y-1">
-            <p>
-              <strong>1　모든 칸을 채울 필요 없어요.</strong> 고교 입학 전과
-              수시 원서 접수 시기는 꼭 작성해주세요.
-            </p>
-            <p>
-              <strong>2　학기의 추가하기를 누르면</strong> 중간고사 전·중간기말
-              사이·기말고사 후 중 필요한 시기를 고를 수 있어요.
-            </p>
-            <p>
-              <strong>3　비워둔 칸은 ‘이전과 동일’</strong>로 봐요.
-            </p>
+        {!disabled && (
+          <div className="shrink-0 rounded-md bg-muted px-4 py-3 text-sm leading-6">
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              <p>
+                <strong>1　모든 칸을 채울 필요 없어요.</strong> 고교 입학 전과
+                수시 원서 접수 시기는 꼭 작성해주세요.
+              </p>
+              <p>
+                <strong>2　학기의 추가하기를 누르면</strong> 중간고사
+                전·중간기말 사이·기말고사 후 중 필요한 시기를 고를 수 있어요.
+              </p>
+              <p>
+                <strong>3　비워둔 칸은 ‘이전과 동일’</strong>로 봐요.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2 text-sm">
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700">
-              필수 {completed}/2
-            </span>
-            <span className="rounded-full border bg-background px-3 py-2">
-              작성한 시기 {answered}개
-            </span>
+            <Badge variant="secondary">필수 {completed}/2</Badge>
+            <Badge variant="secondary">작성한 시기 {answered}개</Badge>
           </div>
           <div className="flex flex-wrap gap-2">
-            <CareerFlowExampleTable document={document} />
+            {!disabled && <CareerFlowExampleTable document={document} />}
             <Button
               type="button"
               variant="outline"
@@ -176,23 +178,18 @@ export function QuestionAnswerTable({
             </Button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border">
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-t-2 border-t-brand">
           <table
-            className="w-full table-fixed border-separate border-spacing-0 text-left text-sm"
+            className="w-full table-fixed border-separate border-spacing-0 text-left text-sm [--row-label-width:10rem] sm:[--row-label-width:15rem]"
             style={{
-              minWidth:
-                240 +
-                columns.reduce(
-                  (width, column) => width + (column.field ? 280 : 116),
-                  0,
-                ),
+              minWidth: `calc(var(--row-label-width) + ${columns.reduce((width, column) => width + (column.field ? 280 : 116), 0)}px)`,
             }}
           >
             <caption className="sr-only">
               {document.title} 행별·열별 답변 입력
             </caption>
             <colgroup>
-              <col style={{ width: 240 }} />
+              <col style={{ width: 'var(--row-label-width)' }} />
               {columns.map((column) => (
                 <col
                   key={column.key}
@@ -200,7 +197,7 @@ export function QuestionAnswerTable({
                 />
               ))}
             </colgroup>
-            <thead className="sticky top-0 z-20">
+            <thead className="sticky top-0 z-20 bg-background">
               <tr>
                 <th
                   className="sticky left-0 z-30 border-r border-b bg-muted"
@@ -240,7 +237,7 @@ export function QuestionAnswerTable({
                       {isStart && (
                         <div className="flex flex-wrap items-center justify-center gap-2">
                           <span>고교 입학 전</span>
-                          <span className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-normal text-amber-700">
+                          <span className="rounded border border-brand/40 bg-brand/15 px-2 py-1 text-xs font-normal text-foreground">
                             두 시기 중 하나 입력 필수
                           </span>
                         </div>
@@ -252,7 +249,7 @@ export function QuestionAnswerTable({
               <tr>
                 <th
                   scope="col"
-                  className="sticky left-0 z-30 w-60 border-r border-b bg-muted p-4"
+                  className="sticky left-0 z-30 border-r border-b bg-muted p-4"
                 >
                   항목
                 </th>
@@ -261,7 +258,7 @@ export function QuestionAnswerTable({
                     key={key}
                     scope="col"
                     style={{ width: field ? 280 : 116 }}
-                    className="border-r border-b bg-background p-3 align-top whitespace-normal [overflow-wrap:anywhere]"
+                    className={`border-r border-b p-3 align-top whitespace-normal [overflow-wrap:anywhere] ${!disabled && field && (startIds.includes(field.id) || field.id === admissionId) ? 'bg-[color-mix(in_srgb,var(--brand)_10%,var(--background))]' : 'bg-background'}`}
                   >
                     <div className="min-h-12 font-semibold">
                       {field?.label || group}
@@ -270,7 +267,7 @@ export function QuestionAnswerTable({
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-normal">
                         {startIds.includes(field.id) ? null : field.id ===
                           admissionId ? (
-                          <span className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
+                          <span className="rounded border border-brand/40 bg-brand/15 px-2 py-1 text-foreground">
                             필수
                           </span>
                         ) : (
@@ -339,7 +336,7 @@ export function QuestionAnswerTable({
                                     <button
                                       key={item.id}
                                       type="button"
-                                      className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-left text-sm font-normal hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                                      className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-left text-sm font-normal hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
                                       onClick={() => {
                                         setExpanded((current) => [
                                           ...current,
@@ -367,22 +364,28 @@ export function QuestionAnswerTable({
             </thead>
             <tbody>
               {rows.map((row, rowIndex) => {
-                const label =
-                  document.rowLabels?.[rowIndex]?.trim() ||
-                  String(rowIndex + 1);
+                const label = disabled
+                  ? submittedRowLabel(
+                      row,
+                      rowIndex,
+                      rows.length,
+                      document.rowLabels,
+                    )
+                  : document.rowLabels?.[rowIndex]?.trim() ||
+                    String(rowIndex + 1);
                 return (
                   <tr key={row.id}>
                     <th
                       scope="row"
-                      className={`sticky left-0 z-10 border-r border-b bg-background p-4 align-top font-medium [overflow-wrap:anywhere] ${rowIndex >= 3 ? 'text-muted-foreground' : ''}`}
+                      className={`sticky left-0 z-10 border-r border-b bg-background p-4 align-top font-medium [overflow-wrap:anywhere] ${!disabled && rowIndex >= 3 ? 'text-muted-foreground' : ''}`}
                     >
                       {label}
-                      {rowIndex >= 3 && (
+                      {!disabled && rowIndex >= 3 && (
                         <span className="mt-1 block text-xs font-normal text-muted-foreground">
                           (선택)
                         </span>
                       )}
-                      {canRemove && (
+                      {canRemove && !disabled && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -419,10 +422,15 @@ export function QuestionAnswerTable({
                       const key = `${row.id}:${field.id}`;
                       const value = row.answers[field.id] ?? '';
                       const text = summary(field, value);
+                      const requiredPeriod =
+                        !disabled &&
+                        rowIndex < 3 &&
+                        (startIds.includes(field.id) ||
+                          field.id === admissionId);
                       return (
                         <td
                           key={field.id}
-                          className={`border-r border-b p-3 align-top ${startIds.includes(field.id) || field.id === admissionId ? 'bg-amber-50/60 dark:bg-amber-950/20' : 'bg-background'}`}
+                          className={`border-r border-b p-3 align-top ${requiredPeriod ? 'bg-[color-mix(in_srgb,var(--brand)_10%,var(--background))]' : 'bg-background'}`}
                         >
                           {disabled ? (
                             <div className="min-h-32 w-full p-2 text-left">
@@ -446,12 +454,13 @@ export function QuestionAnswerTable({
                               field,
                               fieldIndex,
                               '답변을 입력해주세요',
+                              true,
                             )
                           ) : (
                             <button
                               type="button"
                               disabled={disabled}
-                              className="min-h-32 w-full rounded-lg p-2 text-left hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
+                              className="min-h-32 w-full rounded-md bg-muted p-3 text-left hover:bg-muted/80 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
                               aria-label={`${label} · ${field.label || `답변 ${fieldIndex + 1}`} 답변 입력`}
                               onClick={() => setActiveCell(key)}
                             >
@@ -479,15 +488,17 @@ export function QuestionAnswerTable({
             </tbody>
           </table>
         </div>
-        <div className="flex shrink-0 items-center justify-between gap-3">
-          <span className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-            <strong>@탐구활동</strong>을 입력해 탐구활동을 언급할 수 있어요.
-            <span className="mt-1 block text-xs">
-              닫아도 입력 내용은 유지됩니다.
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+          {!disabled && (
+            <span className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+              <strong>@탐구활동</strong>을 입력해 탐구활동을 언급할 수 있어요.
+              <span className="mt-1 block text-xs">
+                닫아도 입력 내용은 유지됩니다.
+              </span>
             </span>
-          </span>
-          <div className="flex gap-2">
-            {canAdd && (
+          )}
+          <div className="ml-auto flex gap-2">
+            {canAdd && !disabled && (
               <Button
                 type="button"
                 variant="outline"
@@ -498,7 +509,9 @@ export function QuestionAnswerTable({
                 항목 추가
               </Button>
             )}
-            <DialogClose render={<Button type="button" />}>닫기</DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>
+              닫기
+            </DialogClose>
           </div>
         </div>
       </DialogContent>

@@ -3,6 +3,8 @@ import { Fragment } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DetailLabel } from '@/components/ui/detail-label';
+import { DetailValue } from '@/components/ui/detail-value';
 import { type Exploration, groups } from '@/lib/exploration/fields';
 
 import { ExplorationReportInput } from './ExplorationReportInput';
@@ -75,16 +77,14 @@ export function ExplorationDetails({
                           : `min-w-0 space-y-2 ${fullWidth ? 'md:col-span-2' : ''}`
                       }
                     >
-                      <dt className="text-sm font-semibold leading-5">
-                        {label}
-                      </dt>
-                      <dd className="whitespace-pre-wrap wrap-break-word text-sm leading-7">
+                      <DetailLabel>{label}</DetailLabel>
+                      <DetailValue>
                         {content || (
                           <span className="text-muted-foreground">
                             입력하지 않음
                           </span>
                         )}
-                      </dd>
+                      </DetailValue>
                     </dl>
                   </Fragment>
                 );
@@ -99,7 +99,7 @@ export function ExplorationDetails({
         onChange={() => {}}
         readOnly
       />
-      <Card size="sm">
+      <Card variant="accent" size="sm">
         <CardHeader variant="emphasis">
           <h2 className="text-base font-semibold">참고 자료</h2>
         </CardHeader>
@@ -120,14 +120,14 @@ export function ExplorationDetails({
                     ] as const
                   ).map(([key, label]) => (
                     <dl key={key} className="min-w-0 space-y-2">
-                      <dt className="text-sm font-semibold">{label}</dt>
-                      <dd className="whitespace-pre-wrap wrap-break-word text-sm leading-7">
+                      <DetailLabel>{label}</DetailLabel>
+                      <DetailValue>
                         {reference[key] || (
                           <span className="text-muted-foreground">
                             입력하지 않음
                           </span>
                         )}
-                      </dd>
+                      </DetailValue>
                     </dl>
                   ))}
                 </div>

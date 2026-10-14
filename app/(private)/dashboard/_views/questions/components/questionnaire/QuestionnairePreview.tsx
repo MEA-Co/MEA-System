@@ -32,6 +32,7 @@ export function QuestionnairePreview({
   showPrivateDetails = false,
   showGuideAnswers = false,
   response,
+  submittedView = false,
 }: {
   reviewQuestionnaireId?: string;
   title: string;
@@ -40,6 +41,7 @@ export function QuestionnairePreview({
   renderQuestionFooter?: (questionId: string) => ReactNode;
   /** Only the retained distributed-response screen renders inline questions. */
   legacyResponsePreview?: boolean;
+  submittedView?: boolean;
   showPrivateDetails?: boolean;
   showGuideAnswers?: boolean;
   response?: {
@@ -81,21 +83,23 @@ export function QuestionnairePreview({
     }),
   );
   return (
-    <div className="min-w-0 max-w-full space-y-8 rounded-2xl bg-neutral-100 p-5 sm:p-10 dark:bg-neutral-950">
-      <h2 className="whitespace-pre-wrap wrap-break-word text-3xl font-semibold">
-        {title || '제목 없는 질문지'}
-      </h2>
-      {!response && placedLibrary.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          미리보기 답변은 저장되지 않습니다.
-        </p>
-      )}
+    <div className="min-w-0 max-w-full space-y-5 rounded-lg bg-muted p-4 sm:space-y-8 sm:p-8">
+      <header className="space-y-3 border-b-2 border-foreground pb-4 sm:pb-5">
+        <h2 className="text-xl font-extrabold leading-tight whitespace-pre-wrap wrap-break-word sm:text-3xl">
+          {title || '제목 없는 질문지'}
+        </h2>
+        {!response && placedLibrary.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            미리보기 답변은 저장되지 않습니다.
+          </p>
+        )}
+      </header>
       {sections.map((section, sectionIndex) => (
-        <section key={section.id} className="space-y-5">
+        <section key={section.id} className="space-y-3 sm:space-y-5">
           <h3
             className={cn(
               questionnaireStyles.sectionHeading,
-              'bg-transparent px-0 dark:bg-transparent',
+              'bg-transparent px-0 py-1 text-base sm:py-3 sm:text-xl dark:bg-transparent',
             )}
           >
             <span className={questionnaireStyles.sectionNumber}>
@@ -117,6 +121,7 @@ export function QuestionnairePreview({
                   onRows={onRows}
                   showPrivateDetails={showPrivateDetails}
                   response={response}
+                  submittedView={submittedView}
                 />
                 {reviewQuestionnaireId && (
                   <QuestionReviews
@@ -175,7 +180,9 @@ function PlacedPreview({
   onRows,
   showPrivateDetails,
   response,
+  submittedView = false,
 }: {
+  submittedView?: boolean;
   showPrivateDetails: boolean;
   guideAnswer?: GuideAnswer;
   response?: {
@@ -218,6 +225,7 @@ function PlacedPreview({
       initialRows={response?.rows[sourceId]}
       onStoredRowsChange={response ? store : undefined}
       disabled={response?.disabled}
+      submittedView={submittedView}
     />
   );
 }

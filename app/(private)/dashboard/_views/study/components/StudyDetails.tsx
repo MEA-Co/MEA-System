@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DetailLabel } from '@/components/ui/detail-label';
+import { DetailValue } from '@/components/ui/detail-value';
 import {
   groups,
   problemSourceDisplayValue,
@@ -31,6 +33,7 @@ export function StudyDetails({
             )
             .flatMap((group) => [
               <Card
+                variant="accent"
                 size="sm"
                 key={group.title}
                 className={`min-w-0 ${group.title === '문제 상황' || group.title === '대응 솔루션' ? '' : 'lg:col-span-3'}`}
@@ -50,10 +53,10 @@ export function StudyDetails({
                           key={field.key}
                           className={`min-w-0 ${field.key === 'category' || field.key === 'subject' ? '' : 'sm:col-span-2'}`}
                         >
-                          <dt className="text-sm font-semibold text-foreground">
+                          <DetailLabel>
                             <span>{field.label}</span>
-                          </dt>
-                          <dd className="mt-2 whitespace-pre-wrap wrap-break-word break-keep text-sm leading-relaxed">
+                          </DetailLabel>
+                          <DetailValue className="mt-2 break-keep">
                             {field.key === 'checklist' ? (
                               <ul className="list-disc space-y-2 pl-5">
                                 {study.values.checklist
@@ -77,16 +80,16 @@ export function StudyDetails({
                                   )?.label
                                 : study.values[field.key]) || '입력하지 않음'
                             )}
-                          </dd>
+                          </DetailValue>
                           {field.key === 'problem' &&
                             study.values.problemExperience && (
                               <>
-                                <dt className="mt-5 border-t pt-4 text-sm font-semibold text-foreground">
+                                <DetailLabel className="mt-5 border-t pt-4">
                                   문제 상황에 대한 구체적인 경험
-                                </dt>
-                                <dd className="mt-2 whitespace-pre-wrap wrap-break-word break-keep text-sm leading-relaxed">
+                                </DetailLabel>
+                                <DetailValue className="mt-2 break-keep">
                                   {study.values.problemExperience}
-                                </dd>
+                                </DetailValue>
                               </>
                             )}
                         </div>

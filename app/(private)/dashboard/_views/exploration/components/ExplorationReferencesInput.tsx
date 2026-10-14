@@ -28,7 +28,11 @@ export function ExplorationReferencesInput({
   }
 
   return (
-    <Card size="sm" aria-labelledby="activity-references-heading">
+    <Card
+      variant="accent"
+      size="sm"
+      aria-labelledby="activity-references-heading"
+    >
       <CardHeader variant="emphasis">
         <h2
           id="activity-references-heading"

@@ -1,17 +1,38 @@
 'use client';
 
-import { Download } from 'lucide-react';
+import { ArrowLeft, Download, Eye, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
+import {
+  closeSubmittedResponse,
+  openSubmittedResponse,
+  SUBMITTED_RESPONSE_PARAM,
+} from '../../lib/questionnaire/submitted-navigation';
 import type { SubmittedResponse } from '../../lib/submitted-response-export';
 
 import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnairePreview } from './QuestionnairePreview';
 
 const readOnly = () => {};
+const submittedDate = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Seoul',
+});
 
 export function SubmittedQuestionnaireResponses({
   questionnaireId,
@@ -21,7 +42,7 @@ export function SubmittedQuestionnaireResponses({
   const { data, error } = useQuestionnaireResource<SubmittedResponse[]>(
     `/${questionnaireId}/submitted-responses`,
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = useSearchParams().get(SUBMITTED_RESPONSE_PARAM);
   const downloading = useRef(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -47,11 +68,6 @@ export function SubmittedQuestionnaireResponses({
   }
   const downloadStatus = (
     <>
-      {progress && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {progress}
-        </p>
-      )}
       {downloadError && (
         <p role="alert" className="text-sm text-destructive">
           {downloadError}
@@ -65,27 +81,35 @@ export function SubmittedQuestionnaireResponses({
   if (selected)
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => setSelectedId(null)}>
-          제출 목록으로
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!!progress}
-          onClick={() => void download([selected], false)}
-        >
-          <Download /> PDF 다운로드
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button variant="ghost" size="sm" onClick={closeSubmittedResponse}>
+            <ArrowLeft aria-hidden="true" /> 제출 목록으로
+          </Button>
+          <Button
+            className="w-48"
+            aria-busy={!!progress}
+            disabled={!!progress}
+            onClick={() => void download([selected], false)}
+          >
+            {progress ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <Download aria-hidden="true" />
+            )}
+            <span aria-live="polite">{progress || 'PDF 다운로드'}</span>
+          </Button>
+        </div>
         {downloadStatus}
-        <div>
+        <div className="space-y-2 rounded-lg border bg-background p-4 sm:p-5">
           <h2 className="text-lg font-semibold">
             {selected.respondentName || '이름 없음'}의 답변
           </h2>
           <p className="text-sm text-muted-foreground">
-            {new Date(selected.submittedAt).toLocaleString('ko-KR')} 제출 ·
-            마지막 제출 내용입니다.
+            {submittedDate.format(new Date(selected.submittedAt))} 최종 제출
           </p>
         </div>
         <QuestionnairePreview
+          submittedView
           key={`${selected.id}:${selected.submittedAt}`}
           title={selected.title}
           sections={selected.sections}
@@ -102,48 +126,86 @@ export function SubmittedQuestionnaireResponses({
     );
   return (
     <section className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        제출한 답변만 표시됩니다. 작성 중이거나 저장만 한 내용은 공개되지
-        않습니다.
-      </p>
-      <Button
-        variant="outline"
-        disabled={!data.length || !!progress}
-        onClick={() => void download(data, true)}
-      >
-        <Download /> 사람별 PDF 일괄 다운로드
-        {data.length ? ` (${data.length}명)` : ''}
-      </Button>
-      <p className="text-xs text-muted-foreground">
-        사람마다 PDF 한 개를 만들어 ZIP 파일로 내려받습니다. 첨부한
-        탐구활동·학습법의 상세 내용은 서비스에서 확인할 수 있습니다.
-      </p>
-      {downloadStatus}
-      {data.length ? (
-        <ul className="divide-y rounded-xl border bg-background">
-          {data.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-muted/50"
-                onClick={() => setSelectedId(item.id)}
-              >
-                <span className="font-medium">
-                  {item.respondentName || '이름 없음'}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(item.submittedAt).toLocaleString('ko-KR')} · 답변
-                  보기
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
-          아직 제출된 답변이 없어요.
+      <div className="space-y-3 rounded-lg border bg-background p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            제출된 답변 <Badge variant="count">{data.length}</Badge>
+          </h2>
+          <Button
+            className="w-48"
+            aria-busy={!!progress}
+            disabled={!data.length || !!progress}
+            onClick={() => void download(data, true)}
+          >
+            {progress ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <Download aria-hidden="true" />
+            )}
+            <span aria-live="polite">{progress || '전체 PDF 다운로드'}</span>
+          </Button>
+        </div>
+        <p className="text-sm leading-6 text-muted-foreground">
+          제출한 답변만 표시됩니다. 작성 중이거나 저장만 한 내용은 공개되지
+          않습니다.
         </p>
-      )}
+      </div>
+      {downloadStatus}
+      <div className="overflow-hidden rounded-lg border bg-background">
+        <Table className="table-fixed">
+          <TableHeader>
+            <TableRow className="bg-muted hover:bg-muted">
+              <TableHead className="pl-4">응답자 · 제출일</TableHead>
+              <TableHead className="w-16 pr-4 text-center">보기</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((item) => (
+              <TableRow
+                key={item.id}
+                className="cursor-pointer"
+                onClick={() => openSubmittedResponse(item.id)}
+              >
+                <TableCell className="whitespace-normal py-4 pl-4">
+                  <button
+                    type="button"
+                    className="max-w-full cursor-pointer text-left font-semibold wrap-anywhere hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openSubmittedResponse(item.id);
+                    }}
+                  >
+                    {item.respondentName || '이름 없음'}
+                  </button>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {submittedDate.format(new Date(item.submittedAt))} 제출
+                  </p>
+                </TableCell>
+                <TableCell className="pr-4 text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${item.respondentName || '이름 없음'}의 답변 보기`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openSubmittedResponse(item.id);
+                    }}
+                  >
+                    <Eye aria-hidden="true" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!data.length && (
+              <CollectionTableState
+                colSpan={2}
+                title="아직 제출된 답변이 없습니다"
+                description="응답자가 질문지를 제출하면 이곳에서 확인할 수 있습니다."
+              />
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   );
 }

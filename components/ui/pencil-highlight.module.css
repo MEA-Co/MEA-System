@@ -3,8 +3,8 @@
   padding-inline: 0.12em;
   color: inherit;
   background-color: transparent;
-  /* Keep the strokes behind the text so its contrast stays intact. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23ffe233' stroke-linecap='round'%3E%3Cpath d='M-5 37 10 3 M2 39 18 1 M10 36 25 4 M17 39 33 2 M25 36 40 3 M32 39 48 1' stroke-width='1.7'/%3E%3Cpath d='M-2 33 11 5 M6 37 21 2 M14 38 28 6 M22 35 36 3 M30 38 44 4' stroke-width='.7' opacity='.65'/%3E%3C/g%3E%3C/svg%3E");
+  /* Dense pencil strokes provide emphasis without a solid background block. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23ffe233' stroke-linecap='round'%3E%3Cpath d='M-5 37 10 3 M2 39 18 1 M10 36 25 4 M17 39 33 2 M25 36 40 3 M32 39 48 1' stroke-width='3.6'/%3E%3Cpath d='M-2 33 11 5 M6 37 21 2 M14 38 28 6 M22 35 36 3 M30 38 44 4' stroke-width='2' opacity='.9'/%3E%3C/g%3E%3C/svg%3E");
   background-repeat: repeat-x;
   background-position: left 75%;
   background-size: 1em 0.9em;

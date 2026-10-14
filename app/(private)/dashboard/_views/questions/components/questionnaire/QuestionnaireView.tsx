@@ -31,12 +31,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import { DashboardPageCategory } from '../../../../_components/DashboardPageCategory';
 import {
   type QuestionnaireApiError,
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
 import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
+import { questionnaireDetailHref } from '../../lib/questionnaire/list-model';
+import {
+  closeSubmittedResponse,
+  SUBMITTED_RESPONSE_PARAM,
+} from '../../lib/questionnaire/submitted-navigation';
 import type { QuestionnaireViewData } from '../../lib/questionnaire/types';
+import { QuestionsNavigation } from '../QuestionsNavigation';
 
 import { PublicationReadMarker } from './PublicationNotifications';
 import { PublishedQuestionnaire } from './PublishedQuestionnaire';
@@ -54,7 +61,6 @@ export type QuestionnaireEditorState = {
 export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
   const searchParams = useSearchParams();
   const requested = searchParams.get('draft') ?? undefined;
-  const returnToDashboard = searchParams.get('return') === 'dashboard';
   const [active, setActive] = useState(requested ?? requestedId);
   const [confirm, setConfirm] = useState(false);
   const [emptyTitle, setEmptyTitle] = useState(false);
@@ -71,11 +77,11 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
     if (id) url.searchParams.set('draft', id);
     else {
       url.searchParams.delete('draft');
-      if (returnToDashboard) {
-        url.searchParams.delete('tab');
-        url.searchParams.delete('return');
-        url.searchParams.set('view', 'questions');
-      }
+      url.searchParams.set('tab', 'questionnaires');
+      url.searchParams.delete('return');
+      url.searchParams.delete('questionnairePanel');
+      url.searchParams.delete(SUBMITTED_RESPONSE_PARAM);
+      url.searchParams.set('view', 'questions');
     }
     window.history.replaceState(null, '', url);
   }
@@ -86,6 +92,10 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
     navigate();
   }
   function requestClose() {
+    if (searchParams.get(SUBMITTED_RESPONSE_PARAM)) {
+      closeSubmittedResponse();
+      return;
+    }
     if (editor.current.saving) return;
     if (editor.current.childEditorOpen) {
       if (
@@ -128,10 +138,17 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
         <QuestionnairePanel />
       </div>
       {active && (
-        <div className="mx-auto max-w-5xl space-y-5">
-          <Button variant="ghost" onClick={requestClose}>
+        <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={requestClose}
+          >
             <ArrowLeft />
-            {returnToDashboard ? '질문 관리 대시보드로' : '질문지 목록으로'}
+            {searchParams.get(SUBMITTED_RESPONSE_PARAM)
+              ? '제출 목록으로'
+              : '질문지 목록으로'}
           </Button>
           <QuestionnairePanel
             id={active}
@@ -215,7 +232,7 @@ function QuestionnairePanel({
         </div>
       );
     return (
-      <div className="mx-auto max-w-4xl space-y-3 p-6" role="alert">
+      <div className="mx-auto max-w-6xl space-y-3 p-6" role="alert">
         <p>{error.message}</p>
         <Button variant="outline" onClick={() => void mutate()}>
           다시 시도
@@ -251,6 +268,7 @@ function QuestionnaireContent({
   data: QuestionnaireViewData;
   error?: QuestionnaireApiError;
 }) {
+  const searchParams = useSearchParams();
   const [openedDraft] = useState(data.initialDraft);
   const reportEditor = onEditorState;
   const {
@@ -292,7 +310,7 @@ function QuestionnaireContent({
         {error && (
           <p
             role="alert"
-            className="mx-auto mb-4 max-w-4xl rounded-lg bg-destructive/10 p-4 text-sm"
+            className="mx-auto mb-4 max-w-6xl rounded-lg bg-destructive/10 p-4 text-sm"
           >
             {error.message}
           </p>
@@ -307,14 +325,14 @@ function QuestionnaireContent({
         {reviewContext?.isOwner && pendingReviewCount > 0 && (
           <div
             role="status"
-            className="mx-auto mb-4 max-w-4xl rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-200"
+            className="mx-auto mb-4 max-w-6xl rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-200"
           >
             처리하지 않은 검토 요청이 {pendingReviewCount}개 있어요. 각 질문
             아래에서 확인해 주세요.
           </div>
         )}
         {reviewContext && unlinkedReviews.length > 0 && (
-          <div className="mx-auto mb-6 max-w-4xl">
+          <div className="mx-auto mb-6 max-w-6xl">
             <QuestionnaireReviews
               {...reviewContext}
               initialReviews={unlinkedReviews}
@@ -322,7 +340,7 @@ function QuestionnaireContent({
           </div>
         )}
         {initialDraft && selected?.status === 'published' && (
-          <p className="mx-auto mb-4 max-w-4xl rounded-lg bg-muted p-4 text-sm">
+          <p className="mx-auto mb-4 max-w-6xl rounded-lg bg-muted p-4 text-sm">
             게시 중인 질문지입니다. 저장한 수정 내용은 다른 리드와 관리자에게도
             반영됩니다.
           </p>
@@ -340,6 +358,7 @@ function QuestionnaireContent({
           />
         ) : publishedDocument && !error ? (
           <PublishedQuestionnaire
+            submittedResponseCount={selected?.submittedResponseCount}
             onEditorState={reportEditor}
             document={publishedDocument}
             sources={data.publishedSources}
@@ -363,10 +382,11 @@ function QuestionnaireContent({
       )}
       <CollectionHeader
         id="questionnaire-management-title"
+        category={<DashboardPageCategory view="questions" />}
         title={staff ? '질문지 관리' : '질문지'}
         description={
           staff
-            ? '내 질문지를 만들고 게시·배포 상태를 관리하세요.'
+            ? '질문지의 작성·게시·배포와 제출 응답을 한곳에서 관리하세요.'
             : '배포된 질문지에 답변하고 제출한 내용을 확인하세요.'
         }
         action={
@@ -374,7 +394,7 @@ function QuestionnaireContent({
             <Button
               render={
                 <Link
-                  href="/dashboard?view=questions&tab=questionnaires&draft=new"
+                  href={questionnaireDetailHref(searchParams, 'new')}
                   prefetch={false}
                   scroll={false}
                 />
@@ -388,6 +408,7 @@ function QuestionnaireContent({
           ) : undefined
         }
       />
+      {staff && <QuestionsNavigation questionnaire />}
       <QuestionnaireList
         drafts={drafts}
         published={published}

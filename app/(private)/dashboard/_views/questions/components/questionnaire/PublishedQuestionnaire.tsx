@@ -1,9 +1,10 @@
 'use client';
 
-import { Tabs } from '@base-ui/react/tabs';
 import { Eye, FileText, MessageSquare } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import type { QuestionBlockRow } from '../../lib/question-blocks';
 import type {
@@ -27,6 +28,7 @@ export function PublishedQuestionnaire({
   document,
   sources = [],
   distributed = false,
+  submittedResponseCount,
   staff = true,
   reviewContext,
   onEditorState,
@@ -34,10 +36,12 @@ export function PublishedQuestionnaire({
   document: QuestionnaireDraft;
   sources?: QuestionBlockRow[];
   distributed?: boolean;
+  submittedResponseCount?: number;
   staff?: boolean;
   reviewContext?: QuestionnaireReviewContext;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
+  const params = useSearchParams();
   const placements = document.sections.some((section) =>
     section.questions.some((question) => question.sourceQuestionId),
   );
@@ -59,7 +63,7 @@ export function PublishedQuestionnaire({
       />
     );
   const content = (
-    <article className="mx-auto w-full min-w-0 max-w-4xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
+    <article className="mx-auto w-full min-w-0 max-w-6xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
         <Badge variant="secondary">
           {distributed ? '배포된 질문지' : '게시된 질문지'}
@@ -139,16 +143,34 @@ export function PublishedQuestionnaire({
       </QuestionnaireAnswers>
     );
   return (
-    <Tabs.Root
-      defaultValue="detail"
-      className="mx-auto w-full min-w-0 max-w-4xl"
+    <Tabs
+      value={
+        params.get('questionnairePanel') === 'preview'
+          ? 'preview'
+          : distributed &&
+              placements &&
+              params.get('questionnairePanel') === 'responses'
+            ? 'responses'
+            : distributed
+              ? 'preview'
+              : 'detail'
+      }
+      onValueChange={(value) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('questionnairePanel', String(value));
+        url.searchParams.delete('submittedResponse');
+        window.history.replaceState(null, '', url);
+      }}
+      className="mx-auto w-full min-w-0 max-w-6xl"
     >
-      <Tabs.List
-        className="mb-4 inline-flex max-w-full gap-1 rounded-xl bg-muted p-1"
+      <TabsList
+        className="h-auto! max-w-full flex-wrap"
         aria-label="질문지 보기 방식"
       >
         {[
-          { value: 'detail', label: '질문지 상세', icon: FileText },
+          ...(!distributed
+            ? [{ value: 'detail', label: '질문지 상세', icon: FileText }]
+            : []),
           { value: 'preview', label: '미리보기', icon: Eye },
           ...(distributed && placements
             ? [
@@ -160,28 +182,44 @@ export function PublishedQuestionnaire({
               ]
             : []),
         ].map(({ value, label, icon: Icon }) => (
-          <Tabs.Tab
+          <TabsTrigger
             key={value}
             value={value}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring data-active:bg-background data-active:text-foreground data-active:shadow-sm"
+            className={
+              value === 'responses' ? 'relative gap-2 pl-3 pr-9' : 'gap-2 px-3'
+            }
           >
             <Icon className="size-4" aria-hidden="true" />
             {label}
-          </Tabs.Tab>
+            {value === 'responses' && (
+              <span
+                className="absolute right-1.5 top-1 min-w-4 rounded bg-foreground/10 px-1 text-center text-[10px] font-semibold leading-4 tabular-nums"
+                aria-label={
+                  submittedResponseCount === undefined
+                    ? '제출 인원 확인 중'
+                    : `제출 ${submittedResponseCount}명`
+                }
+              >
+                {submittedResponseCount ?? '–'}
+              </span>
+            )}
+          </TabsTrigger>
         ))}
-      </Tabs.List>
-      <Tabs.Panel value="detail" keepMounted className="data-hidden:hidden">
-        {content}
-      </Tabs.Panel>
+      </TabsList>
+      {!distributed && (
+        <TabsContent value="detail" keepMounted className="data-hidden:hidden">
+          {content}
+        </TabsContent>
+      )}
       {distributed && placements && (
-        <Tabs.Panel value="responses">
+        <TabsContent value="responses">
           <SubmittedQuestionnaireResponses
             key={document.questionnaireId}
             questionnaireId={document.questionnaireId}
           />
-        </Tabs.Panel>
+        </TabsContent>
       )}
-      <Tabs.Panel value="preview" className="rounded-xl border bg-background">
+      <TabsContent value="preview" className="rounded-xl border bg-background">
         <QuestionnairePreview
           title={document.title}
           sections={document.sections}
@@ -189,7 +227,7 @@ export function PublishedQuestionnaire({
           legacyResponsePreview={distributed}
           showGuideAnswers={distributed}
         />
-      </Tabs.Panel>
-    </Tabs.Root>
+      </TabsContent>
+    </Tabs>
   );
 }

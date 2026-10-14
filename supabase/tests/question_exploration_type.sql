@@ -1,3 +1,4 @@
+-- Attachment kind retired: roundtrip reference-recommended text fields.
 begin;
 create temporary table exploration_question_user as select gen_random_uuid() id;
 insert into auth.users(id) select id from exploration_question_user;
@@ -7,7 +8,7 @@ set local role authenticated;
 do $$
 declare d jsonb; r jsonb; sid uuid := gen_random_uuid(); fid uuid := gen_random_uuid();
 begin
- d := jsonb_build_object('id',gen_random_uuid(),'title','탐구활동 참조','prompt','활동을 첨부해 주세요','fields',jsonb_build_array(jsonb_build_object('id',fid,'label','탐구활동','kind','exploration'),jsonb_build_object('id',gen_random_uuid(),'label','설명','kind','text')),'rowMode','repeatable','maxRows',5,'minRows',2,'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
+ d := jsonb_build_object('id',gen_random_uuid(),'title','탐구활동 참조','prompt','활동을 첨부해 주세요','fields',jsonb_build_array(jsonb_build_object('id',fid,'label','탐구활동','kind','text','explorationRecommended',true),jsonb_build_object('id',gen_random_uuid(),'label','설명','kind','text')),'rowMode','repeatable','maxRows',5,'minRows',2,'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  r := public.save_question(d,0,sid);
  if r->'fields' <> d->'fields' then raise exception 'Exploration field not preserved'; end if;
  if (select fields from public.questions where id=(d->>'id')::uuid) <> d->'fields' then raise exception 'Readback failed'; end if;

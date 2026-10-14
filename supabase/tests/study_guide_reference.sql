@@ -10,13 +10,13 @@ select set_config('request.jwt.claim.sub',(select id::text from study_guide_user
 set local role authenticated;
 do $$ declare q jsonb; d jsonb; x jsonb; payload jsonb; sid uuid:=gen_random_uuid(); begin
  perform public.save_study(sid,jsonb_build_object('category','내신','problemSource','self','subject','수학','customSubject','','problem','시간 부족','strategy','오답 분석','practiceGuide','다시 풀이','practicePeriod','2주','checklist','오답률 확인','followup','추가 연습','resultDiagnosis','','references','[]'::jsonb),'[]',0,gen_random_uuid());
- q:=jsonb_build_object('id',gen_random_uuid(),'title','학습법 참조','prompt','학습법을 첨부하세요','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','학습법','kind','study')),'rowMode','single','sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
+ q:=jsonb_build_object('id',gen_random_uuid(),'title','학습법 참조','prompt','학습법을 첨부하세요','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','학습법','kind','text','studyRecommended',true)),'rowMode','single','sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null);
  perform public.save_question(q,0,gen_random_uuid());
  d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','학습법 가이드','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','학습법','details','[]'::jsonb)))));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
  x:=public.open_question_response_session((d->>'questionnaireId')::uuid);
- payload:=jsonb_build_object(x#>>'{questions,0,questionId}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}',sid::text))));
+ payload:=jsonb_build_object(x#>>'{questions,0,questionId}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','::mea-rich-text:v1::'||jsonb_build_object('type','doc','content',jsonb_build_array(jsonb_build_object('type','paragraph','content',jsonb_build_array(jsonb_build_object('type','text','text','첨부한 학습법','marks',jsonb_build_array(jsonb_build_object('type','studyReference','attrs',jsonb_build_object('id',sid))))))))::text))));
  perform public.save_question_response_session((d->>'questionnaireId')::uuid,payload,0,gen_random_uuid(),false,x->>'definitionToken');
  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,2,'published',null,'distributed',gen_random_uuid());
  insert into study_guide_doc values((q->>'id')::uuid,(d->>'questionnaireId')::uuid,sid);
@@ -25,7 +25,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from study_guide_users where role='consultant'),true);
 set local role authenticated;
 do $$ declare x jsonb; begin
- if not exists(select 1 from public.study where id=(select study_id from study_guide_doc)) then raise exception 'Study UUID guide not readable'; end if;
+ if not exists(select 1 from public.study where id=(select study_id from study_guide_doc)) then raise exception 'Study mention guide not readable'; end if;
  x:=public.open_distributed_question_response_session((select sid from study_guide_doc));
  -- Direct typed-answer validation is also exercised by saving the guide above.
 end $$;

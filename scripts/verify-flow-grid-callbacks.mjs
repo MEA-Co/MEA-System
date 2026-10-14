@@ -155,6 +155,13 @@ function createHarness({
       'react/jsx-runtime': jsx,
       'lucide-react': icons,
       '@/components/ui/badge': { Badge: 'badge' },
+      '@/components/ui/detail-value': { DetailValue: 'dd' },
+      '../../lib/submitted-row-label': loadSource(
+        directory + 'lib/submitted-row-label.ts',
+      ),
+      './question-styles': loadSource(
+        `${directory}components/question/question-styles.ts`,
+      ),
       '@/components/ui/button': { Button: 'button' },
       '../../lib/career-flow-placeholders': {
         CAREER_FLOW_QUESTION_ID: 'legacy-career',

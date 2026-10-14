@@ -251,3 +251,83 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --ski
 ```
 
 이후 앱을 배포하고 제작 화면에서 기본 시기 다음의 `시기 추가 허용`을 설정한다. 응답 화면의 해당 +에서 이름 있는 시기를 추가한 뒤 저장·재열기·제출 시 기존 시기와 답변이 유지되는지 확인한다. 추가 시기 삭제 확인, 빈 이름의 작성 시기 제출 안내, 최소 작성 시기 수와 20개 제한도 확인한다. 이번 작업에서 실제 2주차 질문지의 내용이나 배포 상태를 바꾸지는 않았다.
+
+
+## 배포본 작성자 이름 (2026-10-14)
+
+`20261014064007_distributed_questionnaire_authors.sql` 로컬 적용 완료. `supabase/tests/questionnaire_author_names.sql`은 관리자/리드 조회, 게시·배포 포함, 초안·보관 제외, 컨설턴트/미인증 거절을 검증하고 가상 데이터를 롤백한다. 운영 미적용. 전체 개선 완료 후 아래 순서로 진행한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+이번 작업의 추가 파일은 `20261014064007_distributed_questionnaire_authors.sql` 하나다. 다른 대기 파일이 있으면 기존 개선 작업의 적용 계획과 이력을 먼저 검토하고, 예상 목록을 확인한 뒤 진행한다.
+
+```bash
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음 확인 후 기존 앱 배포 절차로 배포하고 다른 작성자의 배포 질문지 이름이 표시되는지 확인한다. 지금은 운영 적용·앱 배포를 실행하지 않는다.
+
+## 진로 흐름·제출 항목 이름 보존 (2026-10-14)
+
+`20261014075610_submitted_named_row_labels.sql` 로컬 적용 완료. 제출 함수의 투영만 좁게 교체하고 소유자·ACL·RLS·작성 요청 검증을 유지한다. 이름 있는 비흐름표의 제출 label을 보존하며 안전 조건을 충족하는 기존 제출본만 이름을 보정한다. 운영 적용·앱 배포·실제 브라우저 테스트는 수행하지 않았다.
+
+검증: 타입 검사, 변경 파일 린트, `verify-question-row-labels.mjs`(중복 이름/추가 이름/음수 ID/압축된 구형 행/읽기 조작), `verify-submitted-response-export.mjs`(PDF 이름), 기존 흐름표 관련 JS. SQL은 `submitted_named_row_labels.sql`, `distributed_response_submissions.sql`, `question_answer_layouts.sql`, `question_flow_insertions.sql` 4개를 로컬에서 통과했으며 가상 테스트 데이터는 전부 롤백했다. 새 회귀는 제출 이름·빈 행 제외·작성 행 격리·기존 제출 시각 보존·후속 비공개 수정이 있는 제출본의 미보정을 검사한다.
+
+### 로컬 가이드 참조 비교 예시
+
+질문지 ID `083b8553-9dff-4479-90f4-c22859d5c70b`, 제목 `[로컬 UI 확인] 모든 답변 유형`의 첫 번째 서술형/일곱 번째 탐구활동 참조형에 가이드 답변 두 개를 추가했다. 같은 `[로컬 예시] 교실 환기 방식에 따른 이산화탄소 농도 변화` 활동을 참조한다. 일반 컨설턴트 또는 리드의 미리보기에서 가이드 답변을 펼쳐 본문 링크는 상세를 열 수 있지만 참조형은 문구만 표시하는 문제를 비교한다. 실제 UI 클릭 확인은 사용자가 진행한다. DB 가이드 조회에서 두 답변과 참조 ID가 반환되는 것은 확인했다.
+
+위 비교 예시는 당시 로컬에서 생성했다. 이후 사용자 확인에 따라 두 독립 첨부형을 제거하고 기존 예시 질문/가이드/제출본도 본문 참조로 전환했다. 폐기 유형을 다시 만드는 일회성 예시 스크립트는 제거했다.
+
+### 전체 개선 완료 후 운영 적용 순서
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 이번 관련 예상 파일:
+# 20261014064007_distributed_questionnaire_authors.sql
+# 20261014075610_submitted_named_row_labels.sql
+# 다른 대기 파일이 보이면 적용 전에 전체 개선 계획 및 이력과 대조한다.
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+연결 대상이 운영 `epwlcallocdjkmgdmtlv`인지 먼저 확인하고 예상과 다른 이력이면 중단하여 검토한다. 대기 없음 확인 후 기존 절차로 앱 배포 → 진로 흐름 작성·새로 열기·제출 → 중간 빈 항목의 이름과 PDF 일치 → 같은 이름의 가이드 두 행이 다른 내용을 유지하는지 확인한다. 안전하게 보정할 수 없는 옛 제출본은 이름 미확인 표시가 남을 수 있다. 전체 개선 완료 전에는 운영 적용하지 않는다.
+
+## 독립 첨부형 제거와 본문 참조 전환 (2026-10-14)
+
+- `20261014081939_retire_question_attachment_types.sql`: 새 첨부형 생성 금지의 중간 단계.
+- `20261014082243_convert_question_attachments_to_mentions.sql`: 기존 필드·답변을 text/본문 mark로 전환하고 중간 호환 트리거를 제거, 검증기를 네 유형으로 제한한다. 두 파일 모두 로컬 적용 완료. 운영 적용·앱 배포·실제 브라우저 검증은 미수행이다.
+- 운영/로컬 `2주차: 학습전략`에 첨부형 없음 확인. 로컬 전환 대상 질문 3개, 작성/가이드 응답 3개, 제출 사본 1개, 재시도 payload 1개. 각 원본 UUID·행 이름/ID·다른 내용·제출 시각 보존을 롤백 시험으로 확인했다. 실제 전환 뒤 폐기 필드 0개다. 운영에는 미배치 탐구활동 첨부형 원본 1개를 읽기 전용으로 확인했으며 쓰지 않았다.
+- 전환 회귀는 **전환 직전 스키마**에서만 실행한다. `node scripts/question-attachment-conversion-test-sql.mjs`가 migration의 begin/commit을 제거하여 `supabase/tests/question_attachment_conversion.sql`의 rollback-only 트랜잭션에 삽입한 SQL을 출력한다. 출력 SQL을 로컬 psql에서 실행한다. 이미 적용된 환경에서 재적용하지 않는다. 잘못된 UUID는 중단하며 원본을 임의 삭제하지 않는다.
+- 적용 후 SQL: `question_attachment_retirement.sql`, `study_guide_reference.sql`, `question_exploration_type.sql`, `question_study_type.sql`, `distributed_response_submissions.sql`, `question_answer_layouts.sql`, `question_flow_insertions.sql` 로컬 통과. 가상 데이터 전부 롤백. 기존 type 회귀 두 개는 참조 권장 text의 저장/재시도 회귀로 갱신했다. 본문 학습법 가이드 접근·삭제 후 권한 회수·익명 차단을 확인했다. 보안 advisor 경고/오류 없음.
+
+전체 개선 완료 후 실행 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 이번 관련 예상 파일 4개:
+# 20261014064007_distributed_questionnaire_authors.sql
+# 20261014075610_submitted_named_row_labels.sql
+# 20261014081939_retire_question_attachment_types.sql
+# 20261014082243_convert_question_attachments_to_mentions.sql
+npx supabase db push --linked
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+운영 대상 `epwlcallocdjkmgdmtlv` 및 이전 이력을 확인한다. 예상과 다른 대기가 있으면 적용 전에 검토하며 include-all/reset/repair로 우회하지 않는다. 변환 실패 시 트랜잭션 전체 롤백 후 원인을 확인한다. DB 적용 완료·대기 없음 확인 → 앱 배포 → 기존 가이드/제출의 참조 링크 및 권한, 새 질문의 네 유형, 진로 흐름 필수 입력 배경 확인 순서다. 이전 앱을 계속 사용하지 않도록 전환 시 작성 화면을 닫고 배포 후 새로 고침한다.
+
+최종 앱 검증: 타입 검사·변경 파일 린트·관련 JS 31개·Webpack 프로덕션 빌드 통과. 브라우저 테스트는 요청에 따라 실행하지 않았다.

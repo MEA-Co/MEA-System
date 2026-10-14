@@ -258,7 +258,7 @@ function AnswerSession({
         change,
       }}
     >
-      <div className="mx-auto mb-4 flex max-w-4xl flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
+      <div className="mx-auto mb-4 flex max-w-6xl flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
         <p className="text-sm text-muted-foreground">
           {status === 'submitted'
             ? '답변 완료 · 더 이상 수정할 수 없어요.'
@@ -288,7 +288,7 @@ function AnswerSession({
       {(error || unavailable) && (
         <p
           role="alert"
-          className="mx-auto mb-4 max-w-4xl text-sm text-destructive"
+          className="mx-auto mb-4 max-w-6xl text-sm text-destructive"
         >
           {error || '질문지 상태를 확인하지 못했어요. 연결을 확인해 주세요.'}
         </p>

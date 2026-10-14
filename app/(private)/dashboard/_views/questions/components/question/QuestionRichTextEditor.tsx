@@ -12,6 +12,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { ExplorationIcon, StudyIcon } from '@/components/feature-icons';
 import { Button } from '@/components/ui/button';
+import { pencilHighlightClassName } from '@/components/ui/pencil-highlight';
 import { toast } from '@/components/ui/toast';
 import {
   Tooltip,
@@ -52,6 +53,7 @@ export function QuestionRichTextEditor({
   required = false,
   maxLength = 20000,
   compact = false,
+  autoFocus = false,
   className,
   ariaLabel,
   ariaLabelledBy,
@@ -67,6 +69,7 @@ export function QuestionRichTextEditor({
   required?: boolean;
   maxLength?: number;
   compact?: boolean;
+  autoFocus?: boolean;
   className?: string;
   ariaLabel?: string;
   ariaLabelledBy?: string;
@@ -134,6 +137,7 @@ export function QuestionRichTextEditor({
   );
   const editor = useEditor({
     immediatelyRender: false,
+    autofocus: autoFocus && !disabled ? 'end' : false,
     extensions: [
       StarterKit.configure({
         bold: false,
@@ -149,7 +153,14 @@ export function QuestionRichTextEditor({
         link: false,
         trailingNode: false,
       }),
-      Highlight.configure({ multicolor: false }),
+      Highlight.configure({
+        multicolor: false,
+        HTMLAttributes: {
+          class: pencilHighlightClassName,
+          'data-slot': 'pencil-highlight',
+          'data-variant': 'marker',
+        },
+      }),
       QuestionList,
       ExplorationReference,
       StudyReference,

@@ -54,8 +54,8 @@ export const DASHBOARD_ROLES = {
 export const DASHBOARD_DEFAULT_VIEWS = {
   student: 'consulting',
   consultant: 'questions',
-  consultant_lead: 'consultants',
-  admin: 'consultants',
+  consultant_lead: 'questions',
+  admin: 'questions',
 } as const satisfies {
   [Role in MemberRole]: keyof (typeof DASHBOARD_ROLES)[Role];
 };

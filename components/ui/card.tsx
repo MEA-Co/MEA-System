@@ -5,16 +5,20 @@ import { cn } from '@/lib/utils';
 function Card({
   className,
   size = 'default',
+  variant = 'default',
   ...props
 }: React.ComponentProps<'div'> & {
   size?: 'default' | 'sm';
+  variant?: 'default' | 'accent';
 }) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-variant={variant}
       className={cn(
         'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg bg-card py-(--card-spacing) text-sm text-card-foreground border [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 has-[>[data-slot=card-header][data-variant=emphasis]]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg',
+        variant === 'accent' && 'border-t-2 border-t-brand',
         className,
       )}
       {...props}
@@ -34,7 +38,7 @@ function CardHeader({
       className={cn(
         'group/card-header @container/card-header grid auto-rows-min items-start gap-1.5 rounded-t-lg px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)',
         variant === 'emphasis' &&
-          'border-b border-border bg-brand/15 py-3 text-foreground [.border-b]:pb-3',
+          'mx-(--card-spacing) border-b border-border bg-card px-0 py-3 text-foreground [.border-b]:pb-3',
         className,
       )}
       {...props}

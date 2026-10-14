@@ -182,3 +182,7 @@ DB 함수를 먼저 적용해야 새 앱의 목록 RPC 호출이 성공한다.
 docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/tests/study_queries.sql
 node scripts/verify-study-pagination.mjs --local
 ```
+
+## 질문 독립 첨부형 제거 (2026-10-14)
+
+질문 유형 폐기 및 기존 답변의 본문 참조 전환 migration 두 개를 로컬에 적용했다. 도메인 원본·파일은 삭제하지 않는다. 운영 미적용이며 전체 개선 완료 후 [질문 운영 문서](../questions-operations.md#독립-첨부형-제거와-본문-참조-전환-2026-10-14)의 사전 점검·적용·앱 배포 순서를 따른다.

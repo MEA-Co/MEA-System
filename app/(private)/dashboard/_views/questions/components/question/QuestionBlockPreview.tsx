@@ -5,6 +5,7 @@ import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DetailValue } from '@/components/ui/detail-value';
 
 import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import { matchingChoiceRows } from '../../lib/choice-condition';
@@ -39,17 +40,17 @@ import {
   referenceAnswerRows,
 } from '../../lib/reference-rows';
 import { richTextPlainText } from '../../lib/rich-text';
+import { submittedRowLabel } from '../../lib/submitted-row-label';
 
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';
-  if (field.kind === 'exploration') return '탐구활동 첨부됨';
-  if (field.kind === 'study') return '학습법 첨부됨';
   if (field.kind === 'text') return richTextPlainText(value).trim();
   if (field.kind === 'scale') {
     const { score } = scaleAnswer(value);
     if (score === null) return '';
-    const label = scaleLabel(scaleConfig(questionFromField(field)), score);
-    return `${score}점${label ? ` · ${label}` : ''}`;
+    const config = scaleConfig(questionFromField(field));
+    const label = scaleLabel(config, score);
+    return `${score}점 / ${config.max}점 만점${label ? ` · ${label}` : ''}`;
   }
   const answers = choiceAnswerValue(value, field.kind === 'multiple').choices;
   return orderedChoiceOptions(field.options ?? [])
@@ -65,7 +66,12 @@ function answerSummary(field: QuestionBlockField, value: string): string {
     .join(', ');
 }
 
-import { ExplorationReferenceContent } from './ExplorationCommands';
+import {
+  questionExplanationClass,
+  questionNumberClass,
+  questionPromptClass,
+  questionSurfaceClass,
+} from './question-styles';
 import { QuestionAnswerTable } from './QuestionAnswerTable';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionGridInput } from './QuestionGridInput';
@@ -73,7 +79,6 @@ import { QuestionGuideAnswerTable } from './QuestionGuideAnswerTable';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 import { ReferenceRecommendations } from './ReferenceRecommendations';
 import { RichTextContent } from './RichTextContent';
-import { StudyReferenceContent } from './StudyCommands';
 import { StudyRegistrationCard } from './StudyRegistrationCard';
 
 type PreviewRow = PreviewAnswerRow;
@@ -90,9 +95,12 @@ export type QuestionBlockPreviewProps = {
   initialRows?: PreviewRow[];
   onStoredRowsChange?: (rows: PreviewRow[]) => void;
   disabled?: boolean;
+  submittedView?: boolean;
 };
 
 export function QuestionBlockPreview(props: QuestionBlockPreviewProps) {
+  if (props.document.purpose === 'study_registration' && props.submittedView)
+    return null;
   if (props.document.purpose === 'study_registration')
     return (
       <StudyRegistrationCard
@@ -117,6 +125,7 @@ function QuestionBlockResponsePreview({
   initialRows,
   onStoredRowsChange,
   disabled = false,
+  submittedView = false,
 }: QuestionBlockPreviewProps) {
   const nextRow = useRef(
     Math.max(1, ...(initialRows ?? []).map((row) => row.id)) + 1,
@@ -182,6 +191,13 @@ function QuestionBlockResponsePreview({
   const matchedRows = runtime?.matchedRows ?? localMatchedRows;
   const waiting = runtime?.waiting ?? (!!sourceId && matchedRows.length === 0);
   const visibleRows = useMemo(() => {
+    if (submittedView) {
+      if (!flow) return rows;
+      const savedIds = new Set(rows.map((row) => row.id));
+      return materializeFlowRows(rows, maxRows).filter((row) =>
+        savedIds.has(row.id),
+      );
+    }
     if (waiting) return [];
     if (reference) return referenceAnswerRows(matchedRows, rows);
     if (flow) return materializeFlowRows(rows, maxRows);
@@ -196,6 +212,7 @@ function QuestionBlockResponsePreview({
       displayCount,
     );
   }, [
+    submittedView,
     waiting,
     reference,
     flow,
@@ -255,28 +272,17 @@ function QuestionBlockResponsePreview({
     field: QuestionBlockField,
     fieldIndex: number,
     placeholder = '답변을 입력해 주세요',
+    autoFocus = false,
   ) {
     const value = row.answers[field.id] ?? '';
     const rowIndex = visibleRows.findIndex((item) => item.id === row.id);
     const rowLabel = flow
       ? flowRowLabel(row, document.rowLabels)
       : document.rowLabels?.[rowIndex]?.trim() || `행 ${rowIndex + 1}`;
-    if (grid && disabled) {
+    if (submittedView || (grid && disabled)) {
       if (!answerSummary(field, value))
         return <span className="text-sm text-muted-foreground">미입력</span>;
       if (field.kind === 'text') return <RichTextContent value={value} />;
-      if (field.kind === 'study')
-        return (
-          <StudyReferenceContent id={value}>
-            첨부한 학습법 보기
-          </StudyReferenceContent>
-        );
-      if (field.kind === 'exploration')
-        return (
-          <ExplorationReferenceContent id={value}>
-            첨부한 탐구활동 보기
-          </ExplorationReferenceContent>
-        );
       const extra =
         field.kind === 'scale'
           ? scaleAnswer(value).text
@@ -295,6 +301,7 @@ function QuestionBlockResponsePreview({
         id={question.id}
         disabled={disabled}
         compact={grid}
+        autoFocus={autoFocus}
         required={!flow && field.required !== false}
         explorationRecommended={field.explorationRecommended}
         studyRecommended={field.studyRecommended}
@@ -324,7 +331,7 @@ function QuestionBlockResponsePreview({
             <p className="text-sm font-medium">
               {field.label || `답변 ${fieldIndex + 1}`}
               {field.required === false && (
-                <span className="ml-2 inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="ml-2 inline-flex rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
                   (선택)
                 </span>
               )}
@@ -356,11 +363,9 @@ function QuestionBlockResponsePreview({
           />
         </div>
       )}
-      <div className="min-w-0 max-w-full space-y-6 rounded-2xl border border-neutral-200 bg-background p-5 sm:p-8 dark:border-neutral-700">
-        <div className="flex flex-wrap items-start gap-3 font-medium">
-          <span className="w-6 shrink-0 text-sm font-semibold">
-            {questionNumber}
-          </span>
+      <div className={questionSurfaceClass}>
+        <div className={questionPromptClass}>
+          <span className={questionNumberClass}>{questionNumber}</span>
           <RichTextContent
             value={document.prompt || '질문을 입력하세요'}
             className="min-w-0 flex-1"
@@ -377,13 +382,10 @@ function QuestionBlockResponsePreview({
             />
           </aside>
         </div>
-        {(document.details ?? [])
+        {(submittedView ? [] : (document.details ?? []))
           .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
           .map((detail) => (
-            <div
-              key={detail.id}
-              className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4"
-            >
+            <div key={detail.id} className={questionExplanationClass}>
               <div className="mb-2 flex items-start justify-between gap-3">
                 <h3 className="min-w-0 flex-1 text-sm font-semibold wrap-anywhere">
                   {detail.title}
@@ -405,7 +407,7 @@ function QuestionBlockResponsePreview({
               <RichTextContent value={detail.text} />
             </div>
           ))}
-        {guideAnswer?.rows?.length ? (
+        {!submittedView && guideAnswer?.rows?.length ? (
           document.id === CAREER_FLOW_QUESTION_ID ? (
             <QuestionGuideAnswerTable
               document={document}
@@ -413,19 +415,26 @@ function QuestionBlockResponsePreview({
               summary={answerSummary}
             />
           ) : (
-            <details className="rounded-lg border-l-2 border-neutral-300 bg-muted/40 p-4">
-              <summary className="cursor-pointer text-sm font-semibold">
+            <details className="group/guide overflow-hidden rounded-lg border border-border bg-muted/40">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring">
                 가이드 답변
               </summary>
-              <div className="mt-3 space-y-4">
+              <div className="space-y-6 border-t border-border p-3 sm:p-4">
                 {guideAnswer.rows.map((row) => (
-                  <div key={row.id} className="space-y-2">
+                  <div
+                    key={row.id}
+                    className="overflow-hidden rounded-lg border border-border bg-background"
+                  >
                     {(document.rowMode !== 'single' ||
                       guideAnswer.rows.length > 1) && (
-                      <h4 className="text-sm font-semibold">{row.label}</h4>
+                      <h4 className="border-b border-border bg-muted px-4 py-3 text-sm font-bold text-foreground">
+                        {/^\d+$/.test(row.label)
+                          ? `항목 ${row.label}`
+                          : row.label}
+                      </h4>
                     )}
-                    <dl className="space-y-3">
-                      {document.fields.map((field) => {
+                    <dl className="space-y-4 p-4">
+                      {document.fields.map((field, fieldIndex) => {
                         const value = row.answers[field.id] ?? '';
                         if (!value.trim()) return null;
                         const extra =
@@ -439,17 +448,16 @@ function QuestionBlockResponsePreview({
                                 ).text
                               : '';
                         return (
-                          <div key={field.id} className="min-w-0">
-                            <dt className="text-xs text-muted-foreground">
-                              {field.label}
+                          <div
+                            key={field.id}
+                            className={`grid min-w-0 items-start gap-2 ${document.fields.length > 1 ? 'sm:grid-cols-[minmax(10rem,28%)_minmax(0,1fr)] sm:gap-6' : ''}`}
+                          >
+                            <dt className="text-sm font-semibold break-keep wrap-anywhere">
+                              {field.label || `답변 ${fieldIndex + 1}`}
                             </dt>
-                            <dd className="mt-1 text-sm">
+                            <DetailValue className="px-4 py-3 wrap-anywhere">
                               {field.kind === 'text' ? (
                                 <RichTextContent value={value} />
-                              ) : field.kind === 'study' ? (
-                                <StudyReferenceContent id={value}>
-                                  첨부한 학습법 보기
-                                </StudyReferenceContent>
                               ) : (
                                 <p className="whitespace-pre-wrap wrap-break-word">
                                   {answerSummary(field, value)}
@@ -460,7 +468,7 @@ function QuestionBlockResponsePreview({
                                   {extra}
                                 </p>
                               )}
-                            </dd>
+                            </DetailValue>
                           </div>
                         );
                       })}
@@ -476,17 +484,61 @@ function QuestionBlockResponsePreview({
             앞선 질문을 불러올 수 없어요. 조건 설정을 확인해 주세요.
           </p>
         )}
-        {waiting && (
+        {!submittedView && waiting && (
           <p className="text-sm text-muted-foreground">
             앞선 질문의 조건에 맞는 응답이 있으면 답변을 입력할 수 있어요.
           </p>
         )}
-        {reference && !waiting && (
+        {!submittedView && reference && !waiting && (
           <p className="text-xs text-muted-foreground">
             조건에 맞는 앞선 응답 {matchedRows.length}개에 맞춰 입력합니다.
           </p>
         )}
-        {grid ? (
+        {submittedView && document.id !== CAREER_FLOW_QUESTION_ID ? (
+          visibleRows.length ? (
+            <div className="space-y-6">
+              {visibleRows.map((row, index) => (
+                <section
+                  key={row.id}
+                  className="overflow-hidden rounded-lg border border-border bg-background"
+                >
+                  {(repeated || visibleRows.length > 1) && (
+                    <h4 className="border-b border-border bg-muted px-4 py-3 text-sm font-bold text-foreground">
+                      {flow
+                        ? flowRowLabel(row, document.rowLabels)
+                        : submittedRowLabel(
+                            row,
+                            index,
+                            visibleRows.length,
+                            document.rowLabels,
+                          )}
+                    </h4>
+                  )}
+                  <dl className="space-y-4 p-4">
+                    {document.fields.map((field, fieldIndex) => (
+                      <div
+                        key={field.id}
+                        className={`grid min-w-0 items-start gap-2 ${document.fields.length > 1 ? 'sm:grid-cols-[minmax(10rem,28%)_minmax(0,1fr)] sm:gap-6' : ''}`}
+                      >
+                        <dt className="text-sm font-semibold break-keep wrap-anywhere">
+                          {field.label || `답변 ${fieldIndex + 1}`}
+                        </dt>
+                        <DetailValue className="px-4 py-3 wrap-anywhere">
+                          {renderField(row, field, fieldIndex)}
+                        </DetailValue>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              제출된 답변이 없습니다.
+            </p>
+          )
+        ) : grid &&
+          !(submittedView && document.id === CAREER_FLOW_QUESTION_ID) ? (
           <QuestionGridInput
             document={document}
             rows={visibleRows}
@@ -567,7 +619,7 @@ function QuestionBlockResponsePreview({
           <QuestionAnswerTable
             document={document}
             rows={visibleRows}
-            waiting={waiting}
+            waiting={submittedView ? false : waiting}
             disabled={disabled}
             renderField={renderField}
             summary={answerSummary}
