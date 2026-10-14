@@ -18,14 +18,10 @@ export const questionnaireStyles = {
     'border-0 bg-neutral-100 shadow-none focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 dark:bg-neutral-800',
 } as const;
 
-/** Shared status colors for filters and status controls. */
+/** Status is always named; color only supports its visual hierarchy. */
 export const questionnaireStatusColors = {
-  draft:
-    'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
-  published:
-    'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
-  distributed:
-    'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-  archived:
-    'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
+  draft: 'border-border bg-muted text-foreground',
+  published: 'border-brand/40 bg-brand/15 text-foreground',
+  distributed: 'border-brand-foreground bg-brand-foreground text-brand',
+  archived: 'border-border bg-background text-muted-foreground',
 } as const;

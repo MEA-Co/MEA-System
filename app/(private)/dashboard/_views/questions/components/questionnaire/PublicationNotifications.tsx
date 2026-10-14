@@ -11,6 +11,8 @@ import {
 } from 'react';
 import { SWRConfig } from 'swr';
 
+import { Badge } from '@/components/ui/badge';
+
 import {
   type QuestionnaireRealtimeAudience,
   useQuestionnaireRealtime,
@@ -121,11 +123,12 @@ export function PublicationReadMarker({
 
 export function NewPublicationBadge({ count }: { count?: number }) {
   return (
-    <span
-      className="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-950 dark:text-blue-300"
+    <Badge
+      variant="secondary"
+      className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
       aria-label={count ? `새 질문지 ${count}개` : '새 질문지'}
     >
       {count ? `NEW ${count}` : 'NEW'}
-    </span>
+    </Badge>
   );
 }

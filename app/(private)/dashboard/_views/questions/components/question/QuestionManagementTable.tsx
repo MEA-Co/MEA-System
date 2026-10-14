@@ -3,6 +3,8 @@
 import { Files, Link2, Trash2 } from 'lucide-react';
 import useSWR from 'swr';
 
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -22,6 +24,10 @@ import {
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
 import { questionnaireFetcher } from '../../lib/questionnaire/api-client';
 import { richTextPlainText } from '../../lib/rich-text';
+import {
+  NewReviewBadge,
+  ReviewRequestBadge,
+} from '../questionnaire/ReviewRequestBadge';
 
 const usageStatusLabels = {
   draft: '수정 중',
@@ -46,7 +52,7 @@ function QuestionUsageList({ question }: { question: QuestionBlockRow }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger
-          className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 focus-visible:outline-2 focus-visible:outline-ring dark:bg-blue-950 dark:text-blue-200"
+          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           onClick={(event) => event.stopPropagation()}
           aria-label={`사용 중인 질문지 ${usages.length}개`}
         >
@@ -89,7 +95,7 @@ function QuestionReferenceList({ question }: { question: QuestionBlockRow }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger
-          className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 focus-visible:outline-2 focus-visible:outline-ring dark:bg-violet-950 dark:text-violet-200"
+          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           onClick={(event) => event.stopPropagation()}
           aria-label={`참조 중인 질문 ${references.length}개`}
         >
@@ -170,8 +176,16 @@ export function QuestionManagementTable({
   showCreator = false,
   onOpen,
   onArchive,
+  loading = false,
+  error = false,
+  filtered = false,
+  onRetry,
 }: {
   questions: QuestionBlockRow[];
+  loading?: boolean;
+  error?: boolean;
+  filtered?: boolean;
+  onRetry?: () => void;
   showCreator?: boolean;
   canManage: (q: QuestionBlockRow) => boolean;
   onOpen: (q: QuestionBlockRow) => void;
@@ -188,101 +202,146 @@ export function QuestionManagementTable({
     { refreshInterval: 10000 },
   );
   return (
-    <div className="overflow-hidden rounded-xl border bg-background">
-      <Table className="min-w-[940px] table-fixed">
+    <div className="min-h-84 overflow-hidden rounded-lg border bg-background">
+      <Table className="table-fixed">
         <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableRow className="bg-muted hover:bg-muted">
             <TableHead
-              className={showCreator ? 'w-[30%] pl-5' : 'w-[43%] pl-5'}
+              className={showCreator ? 'pl-4 lg:w-[35%]' : 'pl-4 lg:w-[43%]'}
             >
               질문
             </TableHead>
-            <TableHead className="w-[22%]">참조 중인 질문</TableHead>
-            <TableHead className="w-[23%]">사용 중인 질문지</TableHead>
-            {showCreator && <TableHead className="w-[13%]">제작자</TableHead>}
-            <TableHead className="w-[12%] text-right pr-5">
+            <TableHead className="hidden w-[22%] lg:table-cell">
+              참조 중인 질문
+            </TableHead>
+            <TableHead className="hidden w-[23%] lg:table-cell">
+              사용 중인 질문지
+            </TableHead>
+            {showCreator && (
+              <TableHead className="hidden w-[13%] lg:table-cell">
+                제작자
+              </TableHead>
+            )}
+            <TableHead className="w-16 text-right pr-4">
               <span className="inline-block w-8 text-center">관리</span>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {questions.map((q) => (
-            <TableRow
-              key={q.id}
-              className={`${canManage(q) ? 'cursor-pointer' : ''} ${reviewCounts?.unreadCounts[q.id] ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30' : ''}`}
-              onClick={() => {
-                if (canManage(q)) onOpen(q);
-              }}
-            >
-              <TableCell className="whitespace-normal py-4 pl-5 align-top">
-                {canManage(q) ? (
-                  <button
-                    type="button"
-                    className="max-w-full cursor-pointer text-left font-medium hover:underline focus-visible:outline-ring"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpen(q);
-                    }}
-                    title={questionName(q)}
-                  >
-                    <span className="line-clamp-2 break-words">
+          {loading || error || !questions.length ? (
+            <CollectionTableState
+              colSpan={showCreator ? 5 : 4}
+              loading={loading}
+              title={
+                loading
+                  ? '질문을 불러오는 중입니다'
+                  : error
+                    ? '질문 목록을 불러오지 못했습니다'
+                    : filtered
+                      ? '검색 결과가 없습니다'
+                      : '등록된 질문이 없습니다'
+              }
+              description={
+                error
+                  ? '잠시 후 다시 시도해 주세요.'
+                  : filtered
+                    ? '다른 이름이나 내용으로 검색해 보세요.'
+                    : '새 질문 만들기 버튼으로 질문을 등록하세요.'
+              }
+              action={
+                error && onRetry ? (
+                  <Button variant="outline" onClick={onRetry}>
+                    다시 불러오기
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            questions.map((q) => (
+              <TableRow
+                key={q.id}
+                className={`${canManage(q) ? 'cursor-pointer' : ''} ${reviewCounts?.unreadCounts[q.id] ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30' : ''}`}
+                onClick={() => {
+                  if (canManage(q)) onOpen(q);
+                }}
+              >
+                <TableCell className="whitespace-normal py-4 pl-4 align-top">
+                  {canManage(q) ? (
+                    <button
+                      type="button"
+                      className="max-w-full cursor-pointer text-left font-semibold hover:underline focus-visible:outline-ring"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpen(q);
+                      }}
+                      title={questionName(q)}
+                    >
+                      <span className="line-clamp-2 break-words">
+                        {questionName(q)}
+                      </span>
+                    </button>
+                  ) : (
+                    <span
+                      className="line-clamp-2 font-medium"
+                      title={questionName(q)}
+                    >
                       {questionName(q)}
                     </span>
-                  </button>
-                ) : (
-                  <span
-                    className="line-clamp-2 font-medium"
-                    title={questionName(q)}
-                  >
-                    {questionName(q)}
-                  </span>
-                )}
-                <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                  {richTextPlainText(q.prompt)}
-                </p>
-                {q.purpose === 'study_registration' && (
-                  <span className="mt-2 inline-block rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                    학습법 등록 안내
-                  </span>
-                )}
-                {(reviewCounts?.unreadCounts[q.id] ?? 0) > 0 && (
-                  <span className="mt-2 mr-2 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
-                    <span className="size-2 rounded-full bg-blue-500" />새 검토
-                    요청 {reviewCounts?.unreadCounts[q.id]}
-                  </span>
-                )}
-                {reviewCounts?.counts[q.id] ? (
-                  <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
-                    검토 요청 {reviewCounts.counts[q.id]}
-                  </span>
-                ) : reviewError ? (
-                  <span className="text-xs text-muted-foreground">
-                    검토 요청 확인 불가
-                  </span>
-                ) : null}
-              </TableCell>
-              <TableCell className="whitespace-normal py-4 align-top">
-                <QuestionReferenceList question={q} />
-              </TableCell>
-              <TableCell className="whitespace-normal py-4 align-top">
-                <QuestionUsageList question={q} />
-              </TableCell>
-              {showCreator && (
-                <TableCell className="whitespace-normal break-words py-4 align-top">
-                  {q.creator_name?.trim() || '이름 없음'}
+                  )}
+                  <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
+                    {richTextPlainText(q.prompt)}
+                  </p>
+                  {q.purpose === 'study_registration' && (
+                    <Badge variant="subtle" className="mt-2">
+                      학습법 등록 안내
+                    </Badge>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-2 empty:hidden">
+                    <NewReviewBadge
+                      count={reviewCounts?.unreadCounts[q.id] ?? 0}
+                    />
+                    <ReviewRequestBadge
+                      count={reviewCounts?.counts[q.id] ?? 0}
+                    />
+                    {reviewError && (
+                      <span className="text-xs text-muted-foreground">
+                        검토 요청 확인 불가
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 lg:hidden">
+                    <QuestionReferenceList question={q} />
+                    <QuestionUsageList question={q} />
+                    {showCreator && (
+                      <span className="text-xs text-muted-foreground">
+                        제작자 · {q.creator_name?.trim() || '이름 없음'}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
-              )}
-              <TableCell className="py-4 pr-5 text-right align-top">
-                {canManage(q) ? (
-                  <DeleteQuestionButton question={q} onArchive={onArchive} />
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    읽기 전용
-                  </span>
+                <TableCell className="hidden whitespace-normal py-4 align-top lg:table-cell">
+                  <QuestionReferenceList question={q} />
+                </TableCell>
+                <TableCell className="hidden whitespace-normal py-4 align-top lg:table-cell">
+                  <QuestionUsageList question={q} />
+                </TableCell>
+                {showCreator && (
+                  <TableCell className="hidden whitespace-normal break-words py-4 align-top lg:table-cell">
+                    {q.creator_name?.trim() || '이름 없음'}
+                  </TableCell>
                 )}
-              </TableCell>
-            </TableRow>
-          ))}
+                <TableCell className="py-4 pr-4 text-right align-top">
+                  {canManage(q) ? (
+                    <DeleteQuestionButton question={q} onArchive={onArchive} />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      읽기 전용
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

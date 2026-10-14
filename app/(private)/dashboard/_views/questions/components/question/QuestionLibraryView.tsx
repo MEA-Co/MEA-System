@@ -2,14 +2,12 @@
 
 import { Tabs } from '@base-ui/react/tabs';
 import {
-  Blocks,
   Eye,
   LoaderCircle,
   Network,
   PencilLine,
   Plus,
   Save,
-  Search,
   Table2,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -23,6 +21,13 @@ import {
 } from 'react';
 
 import { richTextPlainText } from '@/app/(private)/dashboard/_views/questions/lib/rich-text';
+import {
+  CollectionEmptyState,
+  CollectionHeader,
+  CollectionLoadingState,
+  CollectionSearch,
+} from '@/components/patterns/collection';
+import { CollectionPagination } from '@/components/patterns/collection-pagination';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -57,6 +62,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tabs as CollectionTabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
 
 import { useQuestionEditorData } from '../../hooks/useQuestionEditorData';
@@ -342,7 +353,6 @@ export function QuestionLibraryView({
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const pageStart = (currentPage - 1) * pageSize;
   const pageQuestions = blocks;
   const localSession =
     requestedId && userId ? readLocalDraft(userId, requestedId) : null;
@@ -1682,149 +1692,124 @@ export function QuestionLibraryView({
     >
       {!embedded && (
         <>
-          <div className="flex flex-wrap items-end justify-end gap-4">
-            <h2
-              ref={listHeading}
-              tabIndex={-1}
-              id="question-management-title"
-              className="sr-only"
-            >
-              질문
-            </h2>
-            <Button
-              disabled={loading || loadError}
-              onClick={() => openEditor()}
-            >
-              <Plus aria-hidden="true" /> 새 질문 만들기
-            </Button>
-          </div>
+          <CollectionHeader
+            id="question-management-title"
+            titleRef={listHeading}
+            title="질문 관리"
+            description="질문을 만들고, 질문 간 참조와 사용 중인 질문지를 확인하세요."
+            action={
+              <Button
+                disabled={loading || loadError}
+                onClick={() => openEditor()}
+              >
+                <Plus aria-hidden="true" />
+                <span className="hidden sm:inline">새 질문 만들기</span>
+                <span className="sm:hidden">추가</span>
+              </Button>
+            }
+          />
           <div aria-busy={fetching}>
-            <div className="space-y-5">
+            <CollectionTabs
+              value={listMode}
+              onValueChange={(value) => {
+                if (value === 'table' || value === 'graph') setListMode(value);
+              }}
+              className="gap-4"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="relative w-full max-w-md">
-                  <Search
-                    aria-hidden="true"
-                    className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                  />
-                  <Input
-                    aria-label="질문 검색"
-                    maxLength={200}
-                    className="pl-9"
-                    value={query}
-                    onChange={(event) => {
-                      setQuery(event.target.value);
-                      setPage(1);
-                    }}
-                    placeholder="이름이나 질문 내용으로 검색"
-                  />
-                </div>
-                <div
-                  className="inline-flex gap-1 rounded-full bg-muted p-1"
-                  role="group"
+                <CollectionSearch
+                  aria-label="질문 검색"
+                  maxLength={200}
+                  value={query}
+                  containerClassName="sm:w-auto sm:flex-1"
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="이름이나 질문 내용으로 검색"
+                />
+                <TabsList
                   aria-label="질문 목록 보기 방식"
+                  className="w-full sm:w-auto"
                 >
-                  {(
-                    [
-                      { value: 'table', label: '테이블', icon: Table2 },
-                      { value: 'graph', label: '그래프(Beta)', icon: Network },
-                    ] as const
-                  ).map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={listMode === value}
-                      onClick={() => setListMode(value)}
-                      className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring ${listMode === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      <Icon className="size-4" aria-hidden="true" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                  <TabsTrigger value="table">
+                    <Table2 aria-hidden="true" />
+                    테이블
+                  </TabsTrigger>
+                  <TabsTrigger value="graph">
+                    <Network aria-hidden="true" />
+                    그래프(Beta)
+                  </TabsTrigger>
+                </TabsList>
               </div>
-              {loading ? (
-                <p className="py-12 text-center text-sm text-muted-foreground">
-                  질문을 불러오고 있어요…
-                </p>
-              ) : loadError ? (
-                <div className="rounded-2xl border p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    질문 목록을 불러오지 못했어요.
-                  </p>
-                  <Button
-                    className="mt-4"
-                    variant="outline"
-                    onClick={() => void loadBlocks()}
+              <TabsContent value={listMode}>
+                {listMode === 'table' ? (
+                  <div className="space-y-4">
+                    <QuestionManagementTable
+                      showCreator={(displayRole ?? role) === 'admin'}
+                      questions={pageQuestions}
+                      loading={loading || fetching}
+                      error={loadError}
+                      filtered={!!query}
+                      onRetry={() => void loadBlocks()}
+                      canManage={(q) =>
+                        role === 'admin' || q.created_by === userId
+                      }
+                      onOpen={openEditor}
+                      onArchive={setPendingArchive}
+                    />
+                    <CollectionPagination
+                      label="질문 목록 페이지"
+                      total={total}
+                      page={currentPage}
+                      pages={pageCount}
+                      loading={loading || fetching}
+                      error={loadError}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                ) : loading ? (
+                  <CollectionLoadingState label="질문을 불러오는 중입니다" />
+                ) : loadError ? (
+                  <div
+                    role="alert"
+                    className="rounded-lg border p-8 text-center"
                   >
-                    다시 시도
-                  </Button>
-                </div>
-              ) : (
-                  listMode === 'table'
-                    ? blocks.length === 0
-                    : filtered.length === 0
-                ) ? (
-                <div className="flex flex-col items-center gap-4 rounded-2xl border bg-background p-10 text-center text-sm text-muted-foreground">
-                  <Blocks
-                    className="size-8 text-muted-foreground"
-                    aria-hidden="true"
+                    <p className="text-sm text-muted-foreground">
+                      질문 목록을 불러오지 못했습니다.
+                    </p>
+                    <Button
+                      className="mt-4"
+                      variant="outline"
+                      onClick={() => void loadBlocks()}
+                    >
+                      다시 시도
+                    </Button>
+                  </div>
+                ) : !filtered.length ? (
+                  <CollectionEmptyState
+                    icon={<Network />}
+                    title={
+                      query ? '검색 결과가 없습니다' : '등록된 질문이 없습니다'
+                    }
+                    description={
+                      query
+                        ? '다른 이름이나 내용으로 검색해 보세요.'
+                        : '새 질문 만들기 버튼으로 질문을 등록하세요.'
+                    }
                   />
-                  {query ? '검색 결과가 없어요.' : '아직 만든 질문이 없어요.'}
-                </div>
-              ) : listMode === 'table' ? (
-                <div className="space-y-4">
-                  <QuestionManagementTable
-                    showCreator={(displayRole ?? role) === 'admin'}
-                    questions={pageQuestions}
+                ) : (
+                  <QuestionRelationshipGraph
+                    questions={blocks}
+                    matchedQuestions={filtered}
                     canManage={(q) =>
                       role === 'admin' || q.created_by === userId
                     }
                     onOpen={openEditor}
-                    onArchive={setPendingArchive}
                   />
-                  <nav
-                    aria-label="질문 목록 페이지"
-                    className="flex flex-wrap items-center justify-between gap-3"
-                  >
-                    <p
-                      className="text-sm text-muted-foreground"
-                      aria-live="polite"
-                    >
-                      전체 {total}개 중 {pageStart + 1}–
-                      {Math.min(pageStart + pageSize, total)}개
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === 1}
-                        onClick={() => setPage(currentPage - 1)}
-                      >
-                        이전
-                      </Button>
-                      <span className="text-sm tabular-nums">
-                        {currentPage} / {pageCount}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === pageCount}
-                        onClick={() => setPage(currentPage + 1)}
-                      >
-                        다음
-                      </Button>
-                    </div>
-                  </nav>
-                </div>
-              ) : (
-                <QuestionRelationshipGraph
-                  questions={blocks}
-                  matchedQuestions={filtered}
-                  canManage={(q) => role === 'admin' || q.created_by === userId}
-                  onOpen={openEditor}
-                />
-              )}
-            </div>
+                )}
+              </TabsContent>
+            </CollectionTabs>
           </div>
         </>
       )}

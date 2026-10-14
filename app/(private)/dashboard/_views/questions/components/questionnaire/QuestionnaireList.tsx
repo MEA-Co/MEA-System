@@ -1,10 +1,12 @@
 'use client';
-import { FileText } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import { CollectionSearch } from '@/components/patterns/collection';
+import { CollectionPagination } from '@/components/patterns/collection-pagination';
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -79,8 +81,8 @@ export function QuestionnaireList({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          className="max-w-md"
+        <CollectionSearch
+          containerClassName="sm:flex-1 sm:w-auto"
           aria-label="질문지 검색"
           placeholder="질문지 제목으로 검색"
           value={query}
@@ -95,8 +97,10 @@ export function QuestionnaireList({
           className="flex flex-wrap gap-2"
         >
           {Object.entries(questionnaireStatusLabels).map(([value, label]) => (
-            <button
+            <Button
               key={value}
+              variant="outline"
+              size="sm"
               type="button"
               aria-pressed={statuses.includes(value)}
               onClick={() => {
@@ -107,23 +111,33 @@ export function QuestionnaireList({
                 );
                 setPage(1);
               }}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statuses.includes(value) ? questionnaireStatusColors[value as keyof typeof questionnaireStatusColors] : 'border-border bg-background text-muted-foreground hover:bg-muted'}`}
+              className={`${statuses.includes(value) ? questionnaireStatusColors[value as keyof typeof questionnaireStatusColors] : 'border-border bg-background text-muted-foreground hover:bg-muted'}`}
             >
+              <Check
+                aria-hidden="true"
+                className={
+                  statuses.includes(value) ? 'size-3.5' : 'invisible size-3.5'
+                }
+              />
               {label}
-            </button>
+            </Button>
           ))}
         </div>
         <p className="text-sm text-muted-foreground">{items.length}개</p>
       </div>
-      <div className="overflow-hidden rounded-xl border bg-background">
-        <Table className="min-w-[800px]">
+      <div className="min-h-84 overflow-hidden rounded-lg border bg-background">
+        <Table className="table-fixed">
           <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="w-[40%] pl-5">질문지</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>최근 수정</TableHead>
-              <TableHead>배포일</TableHead>
-              <TableHead className="text-right pr-5">
+            <TableRow className="bg-muted hover:bg-muted">
+              <TableHead className="pl-4">질문지</TableHead>
+              <TableHead className="w-28 sm:w-32">상태</TableHead>
+              <TableHead className="hidden w-40 lg:table-cell">
+                최근 수정
+              </TableHead>
+              <TableHead className="hidden w-40 xl:table-cell">
+                배포일
+              </TableHead>
+              <TableHead className="w-14 text-right pr-4">
                 <span className="inline-block w-8 text-center">관리</span>
               </TableHead>
             </TableRow>
@@ -140,7 +154,7 @@ export function QuestionnaireList({
                     : undefined
                 }
               >
-                <TableCell className="pl-5">
+                <TableCell className="whitespace-normal break-words py-4 pl-4">
                   <div className="flex flex-wrap items-center gap-2">
                     {item.archivedAt ? (
                       <span className="font-medium text-muted-foreground">
@@ -151,7 +165,7 @@ export function QuestionnaireList({
                         scroll={false}
                         prefetch={false}
                         href={`/dashboard?view=questions&tab=questionnaires&draft=${item.id}${item.status === 'published' ? '&return=dashboard' : ''}`}
-                        className="font-medium hover:underline"
+                        className="line-clamp-2 font-semibold hover:underline focus-visible:outline-ring"
                       >
                         {item.title || '제목 없는 질문지'}
                       </Link>
@@ -166,6 +180,9 @@ export function QuestionnaireList({
                       </>
                     )}
                   </div>
+                  <p className="mt-1 text-xs text-muted-foreground lg:hidden">
+                    최근 수정 · {date.format(new Date(item.updatedAt))}
+                  </p>
                   {item.archivedAt && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       복원 후 내용을 열 수 있어요.
@@ -175,15 +192,15 @@ export function QuestionnaireList({
                 <TableCell>
                   <QuestionnaireStatusSelect item={item} />
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                <TableCell className="hidden text-xs text-muted-foreground whitespace-nowrap lg:table-cell">
                   {date.format(new Date(item.updatedAt))}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                <TableCell className="hidden text-xs text-muted-foreground whitespace-nowrap xl:table-cell">
                   {item.distributedAt
                     ? date.format(new Date(item.distributedAt))
                     : '—'}
                 </TableCell>
-                <TableCell className="pr-5 text-right">
+                <TableCell className="pr-4 text-right">
                   {item.canDelete &&
                     !item.hasDistributed &&
                     !item.archivedAt && (
@@ -198,59 +215,35 @@ export function QuestionnaireList({
               </TableRow>
             ))}
             {!items.length && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-32 text-center text-muted-foreground"
-                >
-                  <div className="flex flex-col items-center gap-4 py-10 text-sm text-muted-foreground">
-                    <FileText className="size-8" aria-hidden="true" />
-                    <p>
-                      {query ||
-                      statuses.length !== 3 ||
-                      statuses.includes('archived')
-                        ? '조건에 맞는 질문지가 없어요.'
-                        : '아직 만든 질문지가 없어요.'}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <CollectionTableState
+                colSpan={5}
+                title={
+                  query ||
+                  statuses.length !== 3 ||
+                  statuses.includes('archived')
+                    ? '조건에 맞는 질문지가 없습니다'
+                    : '등록된 질문지가 없습니다'
+                }
+                description={
+                  query ||
+                  statuses.length !== 3 ||
+                  statuses.includes('archived')
+                    ? '검색어나 상태 필터를 바꿔 보세요.'
+                    : '새 질문지 만들기 버튼으로 질문지를 등록하세요.'
+                }
+              />
             )}
           </TableBody>
         </Table>
       </div>
-      {items.length > 0 && (
-        <nav
-          aria-label="질문지 목록 페이지"
-          className="flex flex-wrap items-center justify-between gap-3"
-        >
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            전체 {items.length}개 중 {pageStart + 1}–
-            {Math.min(pageStart + 10, items.length)}개
-          </p>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              이전
-            </Button>
-            <span className="text-sm tabular-nums">
-              {currentPage} / {pageCount}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === pageCount}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              다음
-            </Button>
-          </div>
-        </nav>
-      )}
+      <CollectionPagination
+        label="질문지 목록 페이지"
+        total={items.length}
+        page={currentPage}
+        pages={pageCount}
+        loading={false}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

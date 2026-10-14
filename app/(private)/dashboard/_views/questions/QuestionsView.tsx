@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+import { CollectionHeader } from '@/components/patterns/collection';
 import type { MemberRole } from '@/lib/profile';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
@@ -38,15 +39,12 @@ export function QuestionsView({
   return (
     <div className="min-w-0 max-w-full space-y-6">
       {overview && (
-        <header>
-          <DashboardPageCategory view="questions" />
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
-            질문 관리
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            질문과 질문지를 관리하고, 다른 사람이 공유한 질문지를 살펴보세요.
-          </p>
-        </header>
+        <CollectionHeader
+          id="questions-dashboard-title"
+          category={<DashboardPageCategory view="questions" />}
+          title="질문 관리"
+          description="질문과 질문지를 관리하고, 다른 사람이 공유한 질문지를 살펴보세요."
+        />
       )}
       {staff && !overview && !params.get('draft') && (
         <Link

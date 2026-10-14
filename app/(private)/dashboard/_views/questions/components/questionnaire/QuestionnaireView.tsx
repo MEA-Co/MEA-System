@@ -11,6 +11,8 @@ import {
   useState,
 } from 'react';
 
+import { CollectionHeader } from '@/components/patterns/collection';
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import {
   type QuestionnaireApiError,
@@ -176,7 +186,34 @@ function QuestionnairePanel({
       id && id !== 'new' ? 5_000 : undefined,
     );
   if (!data || (id === 'new' && isLoading)) {
-    if (!error) return <QuestionnaireLoading />;
+    if (!error)
+      return id ? (
+        <QuestionnaireLoading />
+      ) : (
+        <div className="space-y-6" aria-busy="true">
+          <div aria-hidden="true" className="space-y-3 border-b pb-5">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-6 w-2/3" />
+          </div>
+          <Skeleton aria-hidden="true" className="h-10 w-full" />
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted hover:bg-muted">
+                  <TableHead>질문지</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <CollectionTableState
+                  colSpan={1}
+                  loading
+                  title="질문지를 불러오는 중입니다"
+                />
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      );
     return (
       <div className="mx-auto max-w-4xl space-y-3 p-6" role="alert">
         <p>{error.message}</p>
@@ -316,7 +353,7 @@ function QuestionnaireContent({
   }
   return (
     <section
-      className="w-full"
+      className="w-full space-y-6"
       aria-labelledby="questionnaire-management-title"
     >
       {error && (
@@ -324,27 +361,33 @@ function QuestionnaireContent({
           {error.message}
         </p>
       )}
-      <div className="mb-8 flex flex-wrap items-center justify-end gap-4">
-        <div className="sr-only">
-          <h2 id="questionnaire-management-title" className="sr-only">
-            질문지
-          </h2>
-        </div>
-        {staff && (
-          <Button
-            render={
-              <Link
-                href="/dashboard?view=questions&tab=questionnaires&draft=new"
-                prefetch={false}
-                scroll={false}
-              />
-            }
-            nativeButton={false}
-          >
-            <Plus aria-hidden="true" />새 질문지 만들기
-          </Button>
-        )}
-      </div>
+      <CollectionHeader
+        id="questionnaire-management-title"
+        title={staff ? '질문지 관리' : '질문지'}
+        description={
+          staff
+            ? '내 질문지를 만들고 게시·배포 상태를 관리하세요.'
+            : '배포된 질문지에 답변하고 제출한 내용을 확인하세요.'
+        }
+        action={
+          staff ? (
+            <Button
+              render={
+                <Link
+                  href="/dashboard?view=questions&tab=questionnaires&draft=new"
+                  prefetch={false}
+                  scroll={false}
+                />
+              }
+              nativeButton={false}
+            >
+              <Plus aria-hidden="true" />
+              <span className="hidden sm:inline">새 질문지 만들기</span>
+              <span className="sm:hidden">추가</span>
+            </Button>
+          ) : undefined
+        }
+      />
       <QuestionnaireList
         drafts={drafts}
         published={published}

@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, ReactNode, Ref } from 'react';
 
 import {
   Empty,
@@ -15,12 +15,14 @@ import { cn } from '@/lib/utils';
 export function CollectionHeader({
   id,
   category,
+  titleRef,
   title,
   description,
   action,
 }: {
   id: string;
   category?: ReactNode;
+  titleRef?: Ref<HTMLHeadingElement>;
   title: string;
   description?: ReactNode;
   action?: ReactNode;
@@ -30,6 +32,8 @@ export function CollectionHeader({
       {category && <div className="col-span-2">{category}</div>}
       <h1
         id={id}
+        ref={titleRef}
+        tabIndex={titleRef ? -1 : undefined}
         className="min-w-0 text-2xl font-extrabold tracking-tight md:text-3xl"
       >
         {title}

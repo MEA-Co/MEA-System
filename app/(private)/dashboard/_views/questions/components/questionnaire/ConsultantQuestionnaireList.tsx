@@ -1,7 +1,13 @@
 'use client';
-import { Tabs } from '@base-ui/react/tabs';
 import { ArrowRight, FileText } from 'lucide-react';
 import Link from 'next/link';
+
+import {
+  CollectionEmptyState,
+  CollectionLoadingState,
+} from '@/components/patterns/collection';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
 import type { QuestionnaireListItem } from '../../lib/questionnaire/types';
@@ -10,7 +16,6 @@ import {
   NewPublicationBadge,
   usePublicationNotifications,
 } from './PublicationNotifications';
-import { QuestionnaireLoading } from './QuestionnaireLoading';
 export function ConsultantQuestionnaireList({
   items,
 }: {
@@ -25,7 +30,7 @@ export function ConsultantQuestionnaireList({
     return error ? (
       <p role="alert">{error.message}</p>
     ) : (
-      <QuestionnaireLoading />
+      <CollectionLoadingState label="질문지 답변 상태를 불러오는 중입니다" />
     );
   const complete = new Set(
     data.filter((r) => r.status === 'submitted').map((r) => r.questionnaire_id),
@@ -48,18 +53,11 @@ export function ConsultantQuestionnaireList({
     },
   ];
   return (
-    <Tabs.Root defaultValue="pending">
-      <Tabs.List
-        aria-label="답변 상태"
-        className="mb-6 flex gap-1 rounded-lg bg-muted p-1"
-      >
+    <Tabs defaultValue="pending">
+      <TabsList aria-label="답변 상태" className="w-full sm:w-fit">
         {groups.map((group) => (
-          <Tabs.Tab
-            key={group.id}
-            value={group.id}
-            className="flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm data-active:bg-background data-active:shadow-sm"
-          >
-            {group.label} ({group.items.length})
+          <TabsTrigger key={group.id} value={group.id}>
+            {group.label} <Badge variant="count">{group.items.length}</Badge>
             {group.id === 'pending' &&
               group.items.some((i) => unreadIds.includes(i.id)) && (
                 <NewPublicationBadge
@@ -68,13 +66,13 @@ export function ConsultantQuestionnaireList({
                   }
                 />
               )}
-          </Tabs.Tab>
+          </TabsTrigger>
         ))}
-      </Tabs.List>
+      </TabsList>
       {groups.map((group) => (
-        <Tabs.Panel key={group.id} value={group.id}>
+        <TabsContent key={group.id} value={group.id}>
           {group.items.length ? (
-            <ul className="divide-y overflow-hidden rounded-xl border bg-background">
+            <ul className="divide-y overflow-hidden rounded-lg border bg-background">
               {group.items.map((item) => (
                 <li
                   key={item.id}
@@ -97,9 +95,7 @@ export function ConsultantQuestionnaireList({
                         </span>
                         {unreadIds.includes(item.id) && <NewPublicationBadge />}
                         {saved.has(item.id) && (
-                          <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-                            저장된 답변 있음
-                          </span>
+                          <Badge variant="highlight">저장된 답변 있음</Badge>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -116,17 +112,22 @@ export function ConsultantQuestionnaireList({
               ))}
             </ul>
           ) : (
-            <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-              <FileText className="size-8" aria-hidden="true" />
-              <p>
-                {group.id === 'pending'
-                  ? '답변할 질문지가 없어요.'
-                  : '아직 제출한 질문지가 없어요.'}
-              </p>
-            </div>
+            <CollectionEmptyState
+              icon={<FileText />}
+              title={
+                group.id === 'pending'
+                  ? '답변할 질문지가 없습니다'
+                  : '아직 제출한 질문지가 없습니다'
+              }
+              description={
+                group.id === 'pending'
+                  ? '새로 배포된 질문지는 이곳에서 확인할 수 있습니다.'
+                  : '답변을 제출하면 이곳에서 다시 확인하고 수정할 수 있습니다.'
+              }
+            />
           )}
-        </Tabs.Panel>
+        </TabsContent>
       ))}
-    </Tabs.Root>
+    </Tabs>
   );
 }

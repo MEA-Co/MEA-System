@@ -123,7 +123,7 @@ export function QuestionnaireStatusSelect({
       >
         <SelectTrigger
           size="sm"
-          className={`min-w-28 ${questionnaireStatusColors[current]}`}
+          className={`w-full min-w-0 ${questionnaireStatusColors[current]}`}
           aria-label={`${item.title || '제목 없는 질문지'} 상태`}
         >
           <SelectValue>{questionnaireStatusLabels[current]}</SelectValue>
