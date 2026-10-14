@@ -38,7 +38,7 @@ export function QuestionsView({
       {responseId ? (
         <QuestionResponseForm key={responseId} questionnaireId={responseId} />
       ) : questionnaire ? (
-        <QuestionnaireView requestedId={requestedId} />
+        <QuestionnaireView requestedId={requestedId} staff={staff} />
       ) : (
         <QuestionLibraryView displayRole={role} />
       )}

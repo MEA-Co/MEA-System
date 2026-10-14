@@ -12,7 +12,6 @@ import {
 } from 'react';
 
 import { CollectionHeader } from '@/components/patterns/collection';
-import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,14 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 import { DashboardPageCategory } from '../../../../_components/DashboardPageCategory';
 import {
@@ -58,7 +49,13 @@ export type QuestionnaireEditorState = {
   emptyTitle: boolean;
   childEditorOpen?: boolean;
 };
-export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
+export function QuestionnaireView({
+  requestedId,
+  staff,
+}: {
+  requestedId?: string;
+  staff: boolean;
+}) {
   const searchParams = useSearchParams();
   const requested = searchParams.get('draft') ?? undefined;
   const [active, setActive] = useState(requested ?? requestedId);
@@ -135,7 +132,7 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
   return (
     <>
       <div hidden={!!active}>
-        <QuestionnairePanel />
+        <QuestionnairePanel staff={staff} />
       </div>
       {active && (
         <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
@@ -151,6 +148,7 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
               : '질문지 목록으로'}
           </Button>
           <QuestionnairePanel
+            staff={staff}
             id={active}
             onEditorState={report}
             paused={confirm}
@@ -181,10 +179,12 @@ export function QuestionnaireView({ requestedId }: { requestedId?: string }) {
   );
 }
 function QuestionnairePanel({
+  staff,
   id,
   onEditorState,
   paused = false,
 }: {
+  staff: boolean;
   id?: string;
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
@@ -202,37 +202,30 @@ function QuestionnairePanel({
       path,
       id && id !== 'new' ? 5_000 : undefined,
     );
-  if (!data || (id === 'new' && isLoading)) {
-    if (!error)
-      return id ? (
-        <QuestionnaireLoading />
-      ) : (
-        <div className="space-y-6" aria-busy="true">
-          <div aria-hidden="true" className="space-y-3 border-b pb-5">
-            <Skeleton className="h-9 w-40" />
-            <Skeleton className="h-6 w-2/3" />
-          </div>
-          <Skeleton aria-hidden="true" className="h-10 w-full" />
-          <div className="overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted">
-                  <TableHead>질문지</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <CollectionTableState
-                  colSpan={1}
-                  loading
-                  title="질문지를 불러오는 중입니다"
-                />
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      );
+  if (!data && !id) {
     return (
-      <div className="mx-auto max-w-6xl space-y-3 p-6" role="alert">
+      <QuestionnaireContent
+        key="list"
+        loading={!error}
+        onRetry={() => void mutate()}
+        data={{
+          staff,
+          drafts: [],
+          published: [],
+          distributed: [],
+          selected: null,
+          reviews: [],
+          initialDraft: null,
+          publishedDocument: null,
+        }}
+        error={error}
+      />
+    );
+  }
+  if (!data || (id === 'new' && isLoading)) {
+    if (!error) return <QuestionnaireLoading />;
+    return (
+      <div role="alert" className="space-y-3">
         <p>{error.message}</p>
         <Button variant="outline" onClick={() => void mutate()}>
           다시 시도
@@ -258,6 +251,8 @@ function QuestionnairePanel({
   );
 }
 function QuestionnaireContent({
+  onRetry,
+  loading = false,
   data,
   error,
   onEditorState,
@@ -265,6 +260,8 @@ function QuestionnaireContent({
 }: {
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
+  onRetry?: () => void;
+  loading?: boolean;
   data: QuestionnaireViewData;
   error?: QuestionnaireApiError;
 }) {
@@ -373,12 +370,14 @@ function QuestionnaireContent({
   return (
     <section
       className="w-full space-y-6"
+      aria-busy={loading}
       aria-labelledby="questionnaire-management-title"
     >
       {error && (
-        <p role="alert" className="mb-4 text-sm text-destructive">
-          {error.message}
-        </p>
+        <div role="alert" className="space-y-2 text-sm text-destructive">
+          <p>{error.message}</p>
+          {onRetry && <Button variant="outline" onClick={onRetry}>다시 시도</Button>}
+        </div>
       )}
       <CollectionHeader
         id="questionnaire-management-title"
@@ -410,6 +409,7 @@ function QuestionnaireContent({
       />
       {staff && <QuestionsNavigation questionnaire />}
       <QuestionnaireList
+        loading={loading}
         drafts={drafts}
         published={published}
         distributed={distributed}

@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -59,11 +60,15 @@ export function QuestionnaireList(props: {
   distributed: Item[];
   archived?: Item[];
   staff: boolean;
+  loading?: boolean;
 }) {
   return props.staff ? (
     <StaffQuestionnaireList {...props} />
   ) : (
-    <ConsultantQuestionnaireList items={props.distributed} />
+    <ConsultantQuestionnaireList
+      items={props.distributed}
+      loading={props.loading}
+    />
   );
 }
 function StaffQuestionnaireList(props: {
@@ -71,6 +76,7 @@ function StaffQuestionnaireList(props: {
   published: Item[];
   distributed: Item[];
   archived?: Item[];
+  loading?: boolean;
 }) {
   const params = useSearchParams();
   const options = readQuestionnaireListOptions(params);
@@ -119,7 +125,7 @@ function StaffQuestionnaireList(props: {
       <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
         <span aria-live="polite">
           {options.query.trim() ? '검색 결과' : '열람 가능한 질문지'}{' '}
-          {model.total}개
+          {props.loading ? '–' : model.total}개
         </span>
         {options.status !== 'all' && (
           <span>
@@ -180,7 +186,9 @@ function StaffQuestionnaireList(props: {
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span className="font-semibold">
                             {questionnaireStatusLabels[group.status]}{' '}
-                            <Badge variant="count">{group.total}</Badge>
+                            <Badge variant="count">
+                              {props.loading ? '–' : group.total}
+                            </Badge>
                           </span>
                         </div>
                         {options.status === 'all' && group.total > 0 && (
@@ -209,12 +217,26 @@ function StaffQuestionnaireList(props: {
                       unread={unreadIds.includes(item.id)}
                     />
                   ))}
-                  {!group.items.length &&
+                  {props.loading && (
+                    <TableRow
+                      className="block hover:bg-transparent sm:table-row"
+                      aria-hidden="true"
+                    >
+                      <TableCell colSpan={3} className="h-32 px-4 py-4 sm:h-20">
+                        <div className="space-y-3">
+                          <Skeleton className="h-4 w-48 max-w-full" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!props.loading &&
+                    !group.items.length &&
                     (options.status === 'all' ? (
                       <TableRow className="block hover:bg-transparent sm:table-row">
                         <TableCell
                           colSpan={3}
-                          className="whitespace-normal px-4 py-4 text-sm text-muted-foreground sm:py-6"
+                          className="h-32 whitespace-normal px-4 py-4 text-sm text-muted-foreground sm:h-20 sm:py-6"
                         >
                           {options.query || options.owner === 'mine'
                             ? '조건에 맞는 질문지가 없습니다.'
@@ -239,7 +261,7 @@ function StaffQuestionnaireList(props: {
             total={model.total}
             page={model.page}
             pages={model.pages}
-            loading={false}
+            loading={!!props.loading}
             onPageChange={(page) => update({ qPage: String(page) })}
           />
         )}

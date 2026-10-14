@@ -2,11 +2,9 @@
 import { ArrowRight, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-import {
-  CollectionEmptyState,
-  CollectionLoadingState,
-} from '@/components/patterns/collection';
+import { CollectionEmptyState } from '@/components/patterns/collection';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
@@ -18,25 +16,24 @@ import {
 } from './PublicationNotifications';
 export function ConsultantQuestionnaireList({
   items,
+  loading = false,
 }: {
   items: QuestionnaireListItem[];
+  loading?: boolean;
 }) {
   const { data, error } =
     useQuestionnaireResource<{ questionnaire_id: string; status: string }[]>(
       '/responses',
     );
   const { unreadIds } = usePublicationNotifications();
-  if (!data)
-    return error ? (
-      <p role="alert">{error.message}</p>
-    ) : (
-      <CollectionLoadingState label="질문지 답변 상태를 불러오는 중입니다" />
-    );
+  const pending = loading || (!data && !error);
   const complete = new Set(
-    data.filter((r) => r.status === 'submitted').map((r) => r.questionnaire_id),
+    (data ?? [])
+      .filter((r) => r.status === 'submitted')
+      .map((r) => r.questionnaire_id),
   );
   const saved = new Set(
-    data
+    (data ?? [])
       .filter((r) => r.status === 'in_progress')
       .map((r) => r.questionnaire_id),
   );
@@ -57,7 +54,8 @@ export function ConsultantQuestionnaireList({
       <TabsList aria-label="답변 상태" className="w-full sm:w-fit">
         {groups.map((group) => (
           <TabsTrigger key={group.id} value={group.id}>
-            {group.label} <Badge variant="count">{group.items.length}</Badge>
+            {group.label}{' '}
+            <Badge variant="count">{pending ? '–' : group.items.length}</Badge>
             {group.id === 'pending' &&
               group.items.some((i) => unreadIds.includes(i.id)) && (
                 <NewPublicationBadge
@@ -71,7 +69,17 @@ export function ConsultantQuestionnaireList({
       </TabsList>
       {groups.map((group) => (
         <TabsContent key={group.id} value={group.id}>
-          {group.items.length ? (
+          {pending ? (
+            <div className="space-y-4 rounded-lg border p-5" role="status">
+              <span className="sr-only">
+                질문지 답변 상태를 불러오는 중입니다
+              </span>
+              <Skeleton className="h-4 w-48 max-w-full" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ) : error ? (
+            <p role="alert">{error.message}</p>
+          ) : group.items.length ? (
             <ul className="divide-y overflow-hidden rounded-lg border bg-background">
               {group.items.map((item) => (
                 <li
