@@ -80,6 +80,8 @@ do $$ declare qid uuid; vid uuid; begin
  begin update public.questions set distribution_locked_at=null where id=qid; raise exception 'Question unlocked'; exception when object_not_in_prerequisite_state then null; end;
  begin delete from public.questions where id=qid; raise exception 'Question deleted'; exception when object_not_in_prerequisite_state then null; end;
  begin update public.question_details set body='changed' where question_id=qid; raise exception 'Detail mutated'; exception when object_not_in_prerequisite_state then null; end;
+ begin update public.question_details set visible_to_consultants=not visible_to_consultants where question_id=qid; raise exception 'Locked visibility changed'; exception when object_not_in_prerequisite_state then null; end;
+ begin update public.question_details set position=19-position where question_id=qid; raise exception 'Locked detail order changed'; exception when object_not_in_prerequisite_state then null; end;
  begin delete from public.question_details where question_id=qid; raise exception 'Detail deleted'; exception when object_not_in_prerequisite_state then null; end;
  begin update public.questionnaires set title='changed' where id=vid; raise exception 'Version mutated'; exception when object_not_in_prerequisite_state then null; end;
 end $$;

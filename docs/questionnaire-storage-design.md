@@ -96,3 +96,7 @@
 - `questions_active_condition_idx`: 활성 질문의 `condition`에 대한 `GIN(jsonb_path_ops)` 인덱스. 원본 `condition` JSONB와 source/after 열이 계속 관계의 단일 저장 원본이며 관계 복제 테이블을 만들지 않는다.
 
 질문·설명 원자적 저장, revision/saveId, 가이드 응답 삭제 확인, 배포 잠금, 응답 행 ID와 제출 스냅샷에는 변경이 없다. 앱 저장 schema에서 설명 항목 ID 중복을 추가 검사하며 기존 DB 검사와 일치시킨다. 제출 검증 변경은 별도 후속 작업이다.
+
+### 설명 항목 계약 정리 (2026-10-15)
+
+설명의 저장 원본은 `question_details`이며 별도 API/독립 revision을 추가하지 않는다. 설명 타입·현재 검증 제한은 `lib/question-details.ts`를 공유한다. 구형 로컬 질문지 초안의 넓은 설명 제한은 `savedDraftSchema`의 읽기 호환 경로에만 남긴다. 빈 설명의 숨김은 표시 단계에서만 수행하며 ID·본문·공개 여부·표시 순서와 저장 데이터는 변경하지 않는다. 기존 DB 스키마/권한 변경 및 데이터 이전은 없다.

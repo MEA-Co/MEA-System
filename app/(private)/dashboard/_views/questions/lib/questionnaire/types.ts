@@ -1,4 +1,5 @@
 import type { QuestionBlockRow } from '../question-blocks';
+import type { QuestionDetail } from '../question-details';
 
 import type { QuestionKind } from './question-types';
 
@@ -10,12 +11,7 @@ export type ScaleConfig = {
   allowText: boolean;
 };
 
-export type QuestionDetail = {
-  id: string;
-  title: string;
-  text: string;
-  visibleToConsultants: boolean;
-};
+export type { QuestionDetail } from '../question-details';
 
 export type Question = {
   sourceQuestionId?: string;

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import {
+  QUESTION_DETAIL_LIMITS,
+  type QuestionDetail,
+  questionDetailSchema,
+} from './question-details';
 import { richTextPlainText } from './rich-text';
 
 const optionSchema = z.object({
@@ -119,15 +124,8 @@ export const questionBlockSchema = z
     purpose: z.enum(['response', 'study_registration']).optional(),
     buttonLabel: z.string().trim().min(1).max(100).optional(),
     details: z
-      .array(
-        z.object({
-          id: z.uuid(),
-          title: z.string().max(200),
-          text: z.string().max(10000),
-          visibleToConsultants: z.boolean(),
-        }),
-      )
-      .max(20)
+      .array(questionDetailSchema)
+      .max(QUESTION_DETAIL_LIMITS.count)
       .optional(),
     fields: z.array(fieldSchema).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
@@ -331,13 +329,7 @@ export type QuestionBlockRow = {
   prompt: string;
   purpose?: QuestionBlockDocument['purpose'];
   button_label?: string | null;
-  details?: {
-    id: string;
-    title: string;
-    text: string;
-    visibleToConsultants: boolean;
-    position?: number;
-  }[];
+  details?: (QuestionDetail & { position?: number })[];
   fields: QuestionBlockField[];
   row_mode: QuestionBlockDocument['rowMode'];
   answer_layout?: QuestionBlockDocument['answerLayout'];

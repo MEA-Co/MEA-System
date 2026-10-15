@@ -82,6 +82,30 @@ do $$ declare r jsonb; begin
  r := public.save_question((select doc from detail_docs),4,gen_random_uuid());
 end $$;
 reset role;
+-- Reorder and visibility changes share the parent revision and retry contract.
+select set_config('request.jwt.claim.sub',(select id::text from detail_users where role='consultant_lead'),true);
+set local role authenticated;
+do $$ declare d jsonb; r jsonb; sid uuid := gen_random_uuid(); begin
+ select doc into d from detail_docs;
+ d := jsonb_set(d,'{details}',jsonb_build_array(
+   jsonb_set(d->'details'->1,'{visibleToConsultants}','true'),
+   jsonb_set(d->'details'->0,'{visibleToConsultants}','false')));
+ r := public.save_question(d,5,sid);
+ if r->'details' <> d->'details' then raise exception 'Order/visibility round trip failed'; end if;
+ if public.save_question(d,5,sid) <> r then raise exception 'Detail retry changed result'; end if;
+ begin
+   perform public.save_question(jsonb_set(d,'{prompt}','"stale parent"') ||
+     jsonb_build_object('details','[]'::jsonb),5,gen_random_uuid());
+   raise exception 'Stale detail update accepted';
+ exception when serialization_failure then null; end;
+ if (select revision from public.questions where id=(d->>'id')::uuid)<>6
+   or (select prompt from public.questions where id=(d->>'id')::uuid)<>'원문 질문'
+   or (select jsonb_agg(jsonb_build_object('id',id,'title',title,'text',body,
+       'visibleToConsultants',visible_to_consultants) order by position)
+       from public.question_details where question_id=(d->>'id')::uuid) <> d->'details'
+ then raise exception 'Conflict partially changed parent/details'; end if;
+end $$;
+reset role;
 delete from public.questions where id=(select (doc->>'id')::uuid from detail_docs);
 do $$ begin
  if exists(select from public.question_details where question_id=(select (doc->>'id')::uuid from detail_docs)) then raise exception 'Cascade failed'; end if;

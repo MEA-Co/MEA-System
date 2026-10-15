@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import type { QuestionBlockDocument } from '../../lib/question-blocks';
+import { hasQuestionDetailContent } from '../../lib/question-details';
 
 import {
   questionExplanationClass,
@@ -45,7 +46,11 @@ export function StudyRegistrationCard({
         </div>
       </div>
       {(document.details ?? [])
-        .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
+        .filter(
+          (detail) =>
+            hasQuestionDetailContent(detail) &&
+            (showPrivateDetails || detail.visibleToConsultants),
+        )
         .map((detail) => (
           <div key={detail.id} className={questionExplanationClass}>
             <div className="mb-2 flex items-start justify-between gap-3">

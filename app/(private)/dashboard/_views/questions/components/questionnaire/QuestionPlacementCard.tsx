@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
+import { hasQuestionDetailContent } from '../../lib/question-details';
 import { rowLimitLabel } from '../../lib/question-list';
 import { RichTextContent } from '../question/RichTextContent';
 
@@ -64,7 +65,11 @@ export function QuestionPlacementCard({
         {question.condition && <Badge variant="outline">조건부 질문</Badge>}
       </div>
       {(question.details ?? [])
-        .filter((detail) => showPrivate || detail.visibleToConsultants)
+        .filter(
+          (detail) =>
+            hasQuestionDetailContent(detail) &&
+            (showPrivate || detail.visibleToConsultants),
+        )
         .map((detail) => (
           <div key={detail.id} className="rounded-lg bg-muted/40 p-3 text-sm">
             <div className="mb-2 flex items-center gap-2">

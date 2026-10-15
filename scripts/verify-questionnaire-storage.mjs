@@ -33,6 +33,10 @@ function load(path, imports = {}, globals = {}) {
           return load(
             'app/(private)/dashboard/_views/questions/lib/rich-text.ts',
           );
+        if (name === '../question-details')
+          return load(
+            'app/(private)/dashboard/_views/questions/lib/question-details.ts',
+          );
         if (name === './schema')
           return load(
             'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
@@ -668,9 +672,25 @@ test('start notice survives reads but cannot be overwritten by ordinary question
   const { savedDraftSchema, questionnaireDocumentSchema } = load(
     'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
   );
-  const startNotice = { title: '학습법 등록', body: '서식 원문', buttonLabel: '학습법 추가' };
-  const document = { questionnaireId: randomUUID(), title: '질문지', sections: [], startNotice };
-  const read = savedDraftSchema.parse({ ...document, revision: 1, savedAt: '2026-10-15T00:00:00Z' });
+  const startNotice = {
+    title: '학습법 등록',
+    body: '서식 원문',
+    buttonLabel: '학습법 추가',
+  };
+  const document = {
+    questionnaireId: randomUUID(),
+    title: '질문지',
+    sections: [],
+    startNotice,
+  };
+  const read = savedDraftSchema.parse({
+    ...document,
+    revision: 1,
+    savedAt: '2026-10-15T00:00:00Z',
+  });
   assert.deepEqual(read.startNotice, startNotice);
-  assert.equal('startNotice' in questionnaireDocumentSchema.parse(document), false);
+  assert.equal(
+    'startNotice' in questionnaireDocumentSchema.parse(document),
+    false,
+  );
 });

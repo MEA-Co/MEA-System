@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
+import {
+  QUESTION_DETAIL_LIMITS,
+  questionDetailSchema,
+} from '../question-details';
+
 import { normalizeRichTextValue } from './rich-text';
 
-const detailSchema = z.object({
+// Read-only compatibility for older local questionnaire drafts.
+const legacyDetailSchema = z.object({
   id: z.uuid(),
   title: z.string().max(500),
   text: z.string().max(20000).transform(normalizeRichTextValue),
@@ -43,7 +49,7 @@ const questionSchema = z
     id: z.uuid(),
     logicalKey: z.uuid(),
     text: z.string().max(20000).transform(normalizeRichTextValue),
-    details: z.array(detailSchema).max(30),
+    details: z.array(questionDetailSchema).max(QUESTION_DETAIL_LIMITS.count),
   })
   .refine(
     (question) =>
@@ -117,6 +123,21 @@ export const saveQuestionnaireSchema = z.object({
   saveId: z.uuid(),
 });
 export const savedDraftSchema = questionnaireDocumentSchema
+  .safeExtend({
+    sections: z
+      .array(
+        sectionSchema.extend({
+          questions: z
+            .array(
+              questionSchema.safeExtend({
+                details: z.array(legacyDetailSchema).max(30),
+              }),
+            )
+            .max(100),
+        }),
+      )
+      .max(50),
+  })
   .and(
     z.object({
       startNotice: z

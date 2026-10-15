@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
+import { QUESTION_DETAIL_LIMITS } from '../../lib/question-details';
+
 import { questionExplanationClass } from './question-styles';
 import { QuestionAnnotationEditor } from './QuestionAnnotationEditor';
 
@@ -32,8 +34,8 @@ export function QuestionDetailsEditor({
           key={detail.id}
           id={`detail-${detail.id}`}
           label={`설명 항목 ${index + 1}`}
-          titleMaxLength={200}
-          textMaxLength={10000}
+          titleMaxLength={QUESTION_DETAIL_LIMITS.title}
+          textMaxLength={QUESTION_DETAIL_LIMITS.text}
           authoring
           title={detail.title}
           text={detail.text}
@@ -79,7 +81,7 @@ export function QuestionDetailsEditor({
         type="button"
         variant="ghost"
         className={`${questionExplanationClass} h-auto min-h-12 w-full justify-start rounded-l-none border-y-0 border-r-0 hover:bg-neutral-100 dark:hover:bg-neutral-800`}
-        disabled={details.length >= 20}
+        disabled={details.length >= QUESTION_DETAIL_LIMITS.count}
         onClick={() =>
           onChange([
             ...details,

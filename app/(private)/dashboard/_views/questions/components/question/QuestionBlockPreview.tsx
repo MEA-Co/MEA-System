@@ -24,6 +24,7 @@ import type {
   QuestionBlockRow,
 } from '../../lib/question-blocks';
 import { documentFromRow } from '../../lib/question-blocks';
+import { hasQuestionDetailContent } from '../../lib/question-details';
 import {
   choiceAnswerId,
   choiceAnswerValue,
@@ -385,7 +386,11 @@ function QuestionBlockResponsePreview({
           </aside>
         </div>
         {(submittedView ? [] : (document.details ?? []))
-          .filter((detail) => showPrivateDetails || detail.visibleToConsultants)
+          .filter(
+            (detail) =>
+              hasQuestionDetailContent(detail) &&
+              (showPrivateDetails || detail.visibleToConsultants),
+          )
           .map((detail) => (
             <div key={detail.id} className={questionExplanationClass}>
               <div className="mb-2 flex items-start justify-between gap-3">
