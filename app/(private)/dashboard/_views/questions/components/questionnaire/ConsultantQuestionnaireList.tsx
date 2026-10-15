@@ -1,69 +1,67 @@
 'use client';
 import { ArrowRight, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { CollectionEmptyState } from '@/components/patterns/collection';
+import { CollectionPagination } from '@/components/patterns/collection-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
-import type { QuestionnaireListItem } from '../../lib/questionnaire/types';
+import {
+  emptyQuestionnaireList,
+  questionnaireDetailHref,
+  readQuestionnaireListOptions,
+} from '../../lib/questionnaire/list-model';
+import type { QuestionnaireListPage } from '../../lib/questionnaire/types';
 
 import {
   NewQuestionnaireBadge,
   useQuestionnaireNotifications,
 } from './QuestionnaireNotifications';
 export function ConsultantQuestionnaireList({
-  items,
+  model,
   loading = false,
 }: {
-  items: QuestionnaireListItem[];
+  model?: QuestionnaireListPage;
   loading?: boolean;
 }) {
-  const { data, error } =
-    useQuestionnaireResource<{ questionnaire_id: string; status: string }[]>(
-      '/responses',
-    );
+  const params = useSearchParams();
+  const options = readQuestionnaireListOptions(params);
+  const page = model ?? emptyQuestionnaireList();
   const { unreadIds } = useQuestionnaireNotifications();
-  const pending = loading || (!data && !error);
-  const complete = new Set(
-    (data ?? [])
-      .filter((r) => r.status === 'submitted')
-      .map((r) => r.questionnaire_id),
-  );
-  const saved = new Set(
-    (data ?? [])
-      .filter((r) => r.status === 'in_progress')
-      .map((r) => r.questionnaire_id),
-  );
+  const pending = loading;
+  function update(values: Record<string, string>) {
+    const url = new URL(window.location.href);
+    Object.entries(values).forEach(([key, value]) =>
+      value ? url.searchParams.set(key, value) : url.searchParams.delete(key),
+    );
+    window.history.replaceState(null, '', url);
+  }
   const groups = [
-    {
-      id: 'pending',
-      label: '제출 전',
-      items: items.filter((i) => !complete.has(i.id)),
-    },
-    {
-      id: 'complete',
-      label: '제출 완료',
-      items: items.filter((i) => complete.has(i.id)),
-    },
-  ];
+    { id: 'pending' as const, label: '제출 전' },
+    { id: 'complete' as const, label: '제출 완료' },
+  ].map((group) => ({
+    ...group,
+    total: page.responseCounts?.[group.id] ?? 0,
+    items: options.response === group.id ? page.items : [],
+  }));
   return (
-    <Tabs defaultValue="pending">
+    <Tabs
+      value={options.response}
+      onValueChange={(value) =>
+        update({ qResponse: value === 'complete' ? 'complete' : '', qPage: '' })
+      }
+    >
       <TabsList aria-label="답변 상태" className="w-full sm:w-fit">
         {groups.map((group) => (
           <TabsTrigger key={group.id} value={group.id}>
             {group.label}{' '}
-            <Badge variant="count">{pending ? '–' : group.items.length}</Badge>
-            {group.id === 'pending' &&
-              group.items.some((i) => unreadIds.includes(i.id)) && (
-                <NewQuestionnaireBadge
-                  count={
-                    group.items.filter((i) => unreadIds.includes(i.id)).length
-                  }
-                />
-              )}
+            <Badge variant="count">{pending ? '–' : group.total}</Badge>
+            {group.id === 'pending' && unreadIds.length > 0 && (
+              <NewQuestionnaireBadge count={unreadIds.length} />
+            )}
           </TabsTrigger>
         ))}
       </TabsList>
@@ -77,8 +75,6 @@ export function ConsultantQuestionnaireList({
               <Skeleton className="h-4 w-48 max-w-full" />
               <Skeleton className="h-3 w-32" />
             </div>
-          ) : error ? (
-            <p role="alert">{error.message}</p>
           ) : group.items.length ? (
             <ul className="divide-y overflow-hidden rounded-lg border bg-background">
               {group.items.map((item) => (
@@ -91,7 +87,7 @@ export function ConsultantQuestionnaireList({
                   }
                 >
                   <Link
-                    href={`/dashboard?view=questions&tab=questionnaires&draft=${item.id}`}
+                    href={questionnaireDetailHref(params, item.id)}
                     prefetch={false}
                     className="flex items-center gap-4 p-5 hover:bg-muted/50"
                   >
@@ -101,15 +97,17 @@ export function ConsultantQuestionnaireList({
                         <span className="truncate font-medium">
                           {item.title}
                         </span>
-                        {unreadIds.includes(item.id) && <NewQuestionnaireBadge />}
-                        {saved.has(item.id) && (
+                        {unreadIds.includes(item.id) && (
+                          <NewQuestionnaireBadge />
+                        )}
+                        {item.responseStatus === 'in_progress' && (
                           <Badge variant="highlight">저장된 답변 있음</Badge>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {complete.has(item.id)
+                        {item.responseStatus === 'submitted'
                           ? '제출한 답변 보기 · 수정 가능'
-                          : saved.has(item.id)
+                          : item.responseStatus === 'in_progress'
                             ? '아직 제출하지 않았어요 · 이어서 답변하기'
                             : '답변하기'}
                       </p>
@@ -134,6 +132,14 @@ export function ConsultantQuestionnaireList({
               }
             />
           )}
+          <CollectionPagination
+            label="질문지 페이지"
+            total={page.total}
+            page={page.page}
+            pages={page.pages}
+            loading={loading}
+            onPageChange={(value) => update({ qPage: String(value) })}
+          />
         </TabsContent>
       ))}
     </Tabs>

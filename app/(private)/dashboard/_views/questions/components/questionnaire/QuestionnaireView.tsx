@@ -28,7 +28,10 @@ import {
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
 import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
-import { questionnaireDetailHref } from '../../lib/questionnaire/list-model';
+import {
+  questionnaireDetailHref,
+  questionnaireListPath,
+} from '../../lib/questionnaire/list-model';
 import {
   closeSubmittedResponse,
   SUBMITTED_RESPONSE_PARAM,
@@ -210,12 +213,19 @@ function QuestionnairePanel({
   }));
   if (creation.id !== id)
     setCreation({ id, key: id === 'new' ? crypto.randomUUID() : creation.key });
+  const searchParams = useSearchParams();
   const newKey = creation.key;
-  const path = id === 'new' ? `/new?instance=${newKey}` : id ? `/${id}` : '';
+  const path =
+    id === 'new'
+      ? `/new?instance=${newKey}`
+      : id
+        ? `/${id}`
+        : questionnaireListPath(searchParams, staff);
   const { data, error, mutate, isLoading } =
     useQuestionnaireResource<QuestionnaireViewData>(
       path,
       id && id !== 'new' ? 5_000 : undefined,
+      !!id,
     );
   if (!data && !id) {
     return (
@@ -225,9 +235,6 @@ function QuestionnairePanel({
         onRetry={() => void mutate()}
         data={{
           staff,
-          drafts: [],
-          inReview: [],
-          published: [],
           selected: null,
           reviews: [],
           initialDraft: null,
@@ -259,6 +266,8 @@ function QuestionnairePanel({
     <QuestionnaireContent
       key={document?.questionnaireId ?? 'list'}
       data={data}
+      loading={!id && isLoading}
+      onRetry={() => void mutate()}
       error={error}
       onEditorState={onEditorState}
       paused={paused}
@@ -286,16 +295,7 @@ function QuestionnaireContent({
   const searchParams = useSearchParams();
   const [openedDraft] = useState(data.initialDraft);
   const reportEditor = onEditorState;
-  const {
-    initialDraft,
-    drafts,
-    inReview,
-    published,
-    staff,
-    selected,
-    reviews,
-    sharedDocument,
-  } = data;
+  const { initialDraft, staff, selected, reviews, sharedDocument } = data;
   const editorDraft = initialDraft ?? openedDraft;
   const editUnavailable =
     error?.status === 404 ||
@@ -430,14 +430,7 @@ function QuestionnaireContent({
         }
       />
       {staff && <QuestionsNavigation questionnaire />}
-      <QuestionnaireList
-        loading={loading}
-        drafts={drafts}
-        inReview={inReview}
-        published={published}
-        staff={staff}
-        archived={data.archived ?? []}
-      />
+      <QuestionnaireList loading={loading} model={data.list} staff={staff} />
     </section>
   );
 }

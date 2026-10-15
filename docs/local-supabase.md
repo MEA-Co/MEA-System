@@ -2,7 +2,7 @@
 
 개발 앱은 로컬 Supabase, 운영 앱은 운영 Supabase를 사용한다. CLI의 link는 배포 대상을 지정할 뿐 앱의 연결 주소를 바꾸지 않는다.
 
-2026-10-02 사용자가 `20261002071428_direct_question_responses.sql`까지 운영 적용 완료를 알렸다. 이번 문서 정리에서 운영 DB를 재조회하지 않았다. 실제 적용 상태는 migration 이력으로 확인한다. 운영 절차는 [운영 안내](questions-operations.md)를 따른다.
+2026-10-02 사용자가 `20261002071428_direct_question_responses.sql`까지 운영 적용 완료를 알렸다. 이번 문서 정리에서 운영 DB를 재조회하지 않았다. 실제 적용 상태는 migration 이력으로 확인한다. 운영 절차는 [운영 안내](questions/operations.md)를 따른다.
 
 이전 전공 검색·가치관 구조의 운영 이력 보완은 완료된 작업이다. 이후 예상 밖 이력 차이가 생기면 객체 정의와 이력의 동등성을 먼저 확인하며 원격 reset이나 migration repair로 임의 해결하지 않는다.
 
@@ -50,4 +50,4 @@ Google OAuth는 `config.toml`에 provider, site URL, 앱 callback 허용 목록�
 
 ## 검증
 
-현재 스키마용 SQL 회귀 목록은 [운영 안내](questions-operations.md)를 따른다. 과거 테스트에는 이미 제거된 테이블을 사용하는 파일이 있으므로 `supabase/tests/*.sql` 전체를 무조건 실행하지 않는다. 각 현행 SQL 테스트는 트랜잭션을 롤백한다. 브라우저 검증은 사용자 요청이 있을 때만 수행한다.
+현재 스키마용 SQL 회귀 목록은 [운영 안내](questions/operations.md)를 따른다. 과거 테스트에는 이미 제거된 테이블을 사용하는 파일이 있으므로 `supabase/tests/*.sql` 전체를 무조건 실행하지 않는다. 각 현행 SQL 테스트는 트랜잭션을 롤백한다. 브라우저 검증은 사용자 요청이 있을 때만 수행한다.

@@ -1,12 +1,12 @@
 # 질문·질문지 운영과 검증
 
-기능은 [질문·질문지 관리](questions.md), 데이터 구조는 [저장 구조](questionnaire-storage-design.md), 개발 환경은 [로컬 Supabase](local-supabase.md)를 참고한다.
+기능은 [질문·질문지 관리](ui.md), 데이터 구조는 [저장 구조](data-api.md), 개발 환경은 [로컬 Supabase](../local-supabase.md)를 참고한다.
 
 ## 현재 적용 상태
 
-2026-10-15 로컬 최신 이력은 `20261015075725_questionnaire_review_publication_workflow.sql`이다. 상태·명칭 전환과 데이터 보존 검사를 로컬에 적용했다. 운영 조회/적용·앱 배포·실제 브라우저 검증은 수행하지 않았다. **이번 전환은 아래 최신 ‘검토·배포 명칭 전환’ 절의 점검 시간 확보·구형 앱 차단·배포 순서를 우선한다.**
+2026-10-15 로컬 최신 이력은 `20261015105318_questionnaire_paged_list_reads.sql`이다. 목록 조회 분리까지 적용했으며 기존 질문·질문지·응답 데이터는 변경하지 않았다. 상태·명칭 전환과 데이터 보존 검사를 로컬에 적용했다. 운영 조회/적용·앱 배포·실제 브라우저 검증은 수행하지 않았다. **이번 전환은 아래 최신 ‘검토·배포 명칭 전환’ 절의 점검 시간 확보·구형 앱 차단·배포 순서를 우선한다.**
 
-운영의 마지막 확인된 선행 기록은 AGENTS.md에 기록된 `20261013033907_question_flow_insertions.sql` 적용이다. 현재 운영 상태를 다시 조회한 것은 아니므로 실제 적용 시 연결 대상·이력을 확인한다. 이전 published/distributed라는 표현은 당시 의미를 유지하며 현행 상태는 검토 중(in_review)/배포(published)다.
+운영의 마지막 확인된 선행 기록은 [이전 작업 기록](history.md)에 기록된 `20261013033907_question_flow_insertions.sql` 적용이다. 현재 운영 상태를 다시 조회한 것은 아니므로 실제 적용 시 연결 대상·이력을 확인한다. 이전 published/distributed라는 표현은 당시 의미를 유지하며 현행 상태는 검토 중(in_review)/배포(published)다.
 
 ### 과거 운영 확인 기록
 
@@ -105,13 +105,13 @@ npm run build
 
 ## 학습법 관리·질문 참조 (2026-10-10)
 
-`20261010055936_study_methods.sql` 로컬 적용·검증 완료, 운영 미적용. `study` 테이블과 저장/삭제 RPC, `study-reports` 비공개 버킷, 역할·가이드 참조 RLS, 질문의 `studyRecommended` 및 `kind: study` 검증을 추가한다. 기존 데이터는 변경하지 않는다. 기존 migration을 모두 적용했다면 예상 대기는 이 파일 하나다. 실행 명령·확인 순서는 [학습법 운영 적용](study/operations.md)을 따른다.
+`20261010055936_study_methods.sql` 로컬 적용·검증 완료, 운영 미적용. `study` 테이블과 저장/삭제 RPC, `study-reports` 비공개 버킷, 역할·가이드 참조 RLS, 질문의 `studyRecommended` 및 `kind: study` 검증을 추가한다. 기존 데이터는 변경하지 않는다. 기존 migration을 모두 적용했다면 예상 대기는 이 파일 하나다. 실행 명령·확인 순서는 [학습법 운영 적용](../study/operations.md)을 따른다.
 
-학습법 입력 구성 후속 수정: `20261010061957_study_problem_sources.sql` 로컬 적용. 과목 분류의 기타·선택 과목명, 필수 문제 상황 출처(self/student)를 저장한다. 이전 학습법 migration 이후 적용하며 기존 데이터는 삭제하지 않는다. 최신 적용 순서는 [학습법 운영 적용](study/operations.md)을 따른다.
+학습법 입력 구성 후속 수정: `20261010061957_study_problem_sources.sql` 로컬 적용. 과목 분류의 기타·선택 과목명, 필수 문제 상황 출처(self/student)를 저장한다. 이전 학습법 migration 이후 적용하며 기존 데이터는 삭제하지 않는다. 최신 적용 순서는 [학습법 운영 적용](../study/operations.md)을 따른다.
 
-학습법 문제 상황 템플릿 활성화: `20261010072805_study_problem_templates.sql` 로컬 적용. `problemSource=template` 저장을 허용하며 16개 대표 문장을 선택하면 문제 상황 본문에 입력하고 수정할 수 있다. 앞선 학습법 migration 이후 적용하며 운영 절차는 [학습법 운영 적용](study/operations.md)을 따른다.
+학습법 문제 상황 템플릿 활성화: `20261010072805_study_problem_templates.sql` 로컬 적용. `problemSource=template` 저장을 허용하며 16개 대표 문장을 선택하면 문제 상황 본문에 입력하고 수정할 수 있다. 앞선 학습법 migration 이후 적용하며 운영 절차는 [학습법 운영 적용](../study/operations.md)을 따른다.
 
-학습법 선택 제목: `20261010083351_study_optional_title.sql` 로컬 적용. 선택 제목/이름(100자)을 저장하고 없으면 기존 학습 전략을 표시한다. 운영 반영 순서는 [학습법 운영 적용](study/operations.md)을 따른다. 운영 미적용.
+학습법 선택 제목: `20261010083351_study_optional_title.sql` 로컬 적용. 선택 제목/이름(100자)을 저장하고 없으면 기존 학습 전략을 표시한다. 운영 반영 순서는 [학습법 운영 적용](../study/operations.md)을 따른다. 운영 미적용.
 
 ## 표형 응답 제작 (2026-10-11)
 
@@ -121,7 +121,7 @@ npm run build
 
 최신 운영 이력은 `20261011143258_question_answer_layouts`이며 적용 후 dry-run에 대기가 없다. 운영 가이드 함수 해시 `607716af71009f7941df8fef56b2e443`는 검증과 적용 전후 동일하게 유지됐다. 보안 advisor 경고는 전후 모두 기존 4개이며 새 경고는 없다. 이 해시는 이번 검증 기록이며 다음 작업에서는 사전 조회에서 읽은 값을 사용한다.
 
-앱 타입 검사·변경 파일 린트·관련 JS 회귀 29개·Webpack 빌드는 통과했다. 로컬 Docker/Podman과 PostgreSQL이 없는 실행 환경이므로 **로컬 migration 적용과 SQL 회귀는 미실행**이다. 실제 브라우저 테스트는 하지 않았으며 앱 배포·실사용 기능 확인은 별도 단계다. 로컬 DB가 있는 개발 환경에서 재현하려면 다음을 수행한다. `supabase start`만으로 앱 환경 변수는 바뀌지 않으므로 [로컬 연결](local-supabase.md)을 확인한다.
+앱 타입 검사·변경 파일 린트·관련 JS 회귀 29개·Webpack 빌드는 통과했다. 로컬 Docker/Podman과 PostgreSQL이 없는 실행 환경이므로 **로컬 migration 적용과 SQL 회귀는 미실행**이다. 실제 브라우저 테스트는 하지 않았으며 앱 배포·실사용 기능 확인은 별도 단계다. 로컬 DB가 있는 개발 환경에서 재현하려면 다음을 수행한다. `supabase start`만으로 앱 환경 변수는 바뀌지 않으므로 [로컬 연결](../local-supabase.md)을 확인한다.
 
 ```bash
 cd /Users/mealdm/Desktop/MEA/system
@@ -562,3 +562,33 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --
 기존 응답 무결성 마이그레이션 이후 앱 변경만 추가한다. 새 DB migration/API 변경은 없다. 기존 운영 대기 migration을 생략해도 된다는 뜻은 아니며 전체 운영 적용 시 위 순서를 따른다. 이번 로컬 검증은 타입/변경 파일 린트·Webpack 빌드 및 질문별 검증·조건/참조·제출 차단/수정 후 재제출·범위 내 스크롤/포커스 JS 33개다. 실제 브라우저 테스트와 운영 배포는 미수행이다.
 
 앱 배포 후에는 필수 칸을 비운 제출, 첫 오류로의 이동, 오류 목록에서 다른 질문 이동, 답변 수정 후 안내 해제, 조건부 질문·표의 빈 여분 행·진로 흐름 필수 시기, 모든 답변을 채운 뒤 정상 제출을 확인한다.
+
+## 답변 판정 통일·질문지 서버 목록 (2026-10-15)
+
+이번 추가 migration은 `20261015105318_questionnaire_paged_list_reads.sql` 한 개다. `list_questionnaires`, 제한된 ID 메타데이터 조회 및 내부 역할/범위 함수를 추가한다. 기존 테이블·열·정책·저장 함수·데이터를 변경하지 않는다. 현재 `in_review/published` 상태 명칭을 전제로 하므로 앞선 상태 전환과 응답 구조 migration 이후 적용한다.
+
+로컬에서 migration+가상 데이터 1,043개 회귀를 같은 트랜잭션으로 먼저 시험/롤백하고, 대기 파일이 이번 한 개임을 확인한 뒤 영구 적용했다. 적용 후 동일 회귀를 다시 실행해 전체 롤백했다. 1,000개 이후 페이지/직접 조회, 전체 2·2·10 제한, 검색·작성자·보관 범위, 마지막 페이지 보정, 배포 순서·작성자·제출 수, 관리자 표시 역할 제한, 컨설턴트 제출 탭, 학생/비로그인 접근 차단을 검사한다. 로컬 보안 advisor 적용 전후 문제 없음. 실제 브라우저·운영 DB 조회/적용·앱 배포는 수행하지 않았다.
+
+관련 검증:
+
+- `supabase/tests/questionnaire_paged_lists.sql`: 조회·집계·권한·ACL, 가상 데이터 전체 롤백.
+- `scripts/verify-questionnaire-list-model.mjs`: URL 정규화와 목록 캐시/상세 복귀 조건.
+- `scripts/verify-questionnaire-storage.mjs`: 상세를 전체 목록과 분리해 조회, 기존 편집/표시 권한.
+- `scripts/verify-response-submission-validation.mjs`: 구형 추가 서술 응답을 미리보기 완료 보고·후속 조건·제출 검사에서 동일 판정.
+- 타입 검사·변경 파일 린트·관련 JS 35개·Webpack 빌드가 통과했다. 기존 초안 권한/검토 중 공동 편집/배포 제출 SQL 3개도 가상 데이터 전체 롤백으로 통과했다. 실제 브라우저 검증은 사용자 요청 시에만 수행한다.
+
+운영 적용은 전체 개선 작업 마지막에 진행한다. 기존 미적용 파일도 함께 검토해야 하며 이번 파일만 임의로 순서를 건너뛰어 적용하지 않는다. 앞선 상태 전환의 점검 시간·구형 앱 차단 요건도 유지한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 전체 대기 이력과 이번 예상 파일 20261015105318_questionnaire_paged_list_reads.sql 확인
+# 예상과 다르면 적용 전에 중단하고 이력을 검토
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 적용 대기 없음 확인 → 현재 앱 배포 → 열린 탭 새로고침 → 기능 확인
+```
+
+기능 확인은 관리자/리드의 검색·상태·작성자·페이지, 목록 외 ID 상세, 컨설턴트 제출 전/완료, 기존 추가 서술 응답 뒤의 조건 질문 표시를 포함한다. 실제 운영 데이터를 삭제하거나 가상 답변을 제출해 검증하지 않는다. 1번(가이드 답변과 설정 축소), 2번(공유 질문 의존 관계의 배치 영향)은 [남은 개선 과제](data-api.md#남은-개선-과제-이번-작업-제외)로 유지한다.

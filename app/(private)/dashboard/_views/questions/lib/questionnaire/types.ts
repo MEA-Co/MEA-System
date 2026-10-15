@@ -71,6 +71,7 @@ export type QuestionnaireStatus = 'draft' | 'in_review' | 'published';
 export type QuestionnaireListItem = {
   creatorName?: string | null;
   submittedResponseCount?: number;
+  responseStatus?: string | null;
   id: string;
   title: string;
   status: QuestionnaireStatus;
@@ -95,14 +96,24 @@ export type QuestionnaireReviewContext = {
 
 export type QuestionnaireViewData = {
   sharedSources?: QuestionBlockRow[];
-  drafts: QuestionnaireListItem[];
-  inReview: QuestionnaireListItem[];
-  published: QuestionnaireListItem[];
-  archived?: QuestionnaireListItem[];
+  list?: QuestionnaireListPage;
   staff: boolean;
   selected: QuestionnaireListItem | null;
   reviews: QuestionReview[];
   pendingReviewCount?: number;
   initialDraft: QuestionnaireDraft | null;
   sharedDocument: QuestionnaireDraft | null;
+};
+
+export type QuestionnaireListPage = {
+  groups: {
+    status: QuestionnaireStatus;
+    total: number;
+    items: QuestionnaireListItem[];
+  }[];
+  total: number;
+  page: number;
+  pages: number;
+  items: QuestionnaireListItem[];
+  responseCounts?: { pending: number; complete: number };
 };

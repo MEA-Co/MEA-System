@@ -179,7 +179,11 @@ async function handle(request: Request, context: Context) {
       if (id === 'new' && !staff)
         return json({ error: '작성 권한이 없어요.' }, 403);
       return json(
-        await loadQuestionnaireView(id, access as AuthorizedUserAccess),
+        await loadQuestionnaireView(
+          id,
+          access as AuthorizedUserAccess,
+          new URL(request.url).searchParams,
+        ),
       );
     }
     const origin = request.headers.get('origin');

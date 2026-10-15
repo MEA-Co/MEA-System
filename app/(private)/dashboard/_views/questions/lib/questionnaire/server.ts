@@ -15,10 +15,15 @@ import type { QuestionBlockRow } from '../question-blocks';
 import type { QuestionReview } from '../reviews/types';
 
 import { QuestionnaireHttpError } from './http-error';
+import {
+  loadQuestionnaireList,
+  loadQuestionnaireListItem,
+} from './list-server';
 import { savedDraftSchema, saveQuestionnaireSchema } from './schema';
 import type {
   QuestionnaireDraft,
   QuestionnaireListItem,
+  QuestionnaireViewData,
   SaveQuestionnaireResult,
 } from './types';
 
@@ -83,6 +88,7 @@ export async function deleteQuestionnaireDraft(
 export async function loadQuestionnaireView(
   requestedId?: string,
   authorizedAccess?: AuthorizedUserAccess,
+  params = new URLSearchParams(),
 ) {
   const access =
     authorizedAccess ??
@@ -92,123 +98,8 @@ export async function loadQuestionnaireView(
   const viewRole = await getViewRole(access.role);
   const staff = viewRole === 'admin' || viewRole === 'consultant_lead';
   const client = createClient(await cookies());
-  const { data, error } = await client
-    .from('questionnaires')
-    .select(
-      'id, title, status, review_started_at, published_at, revision, updated_at, archived_at, created_by',
-    )
-    .order('updated_at', { ascending: false });
-  if (error)
-    throw new Error('질문지 목록을 불러오지 못했어요.', { cause: error });
-  const rows = (data ?? []) as unknown as Array<{
-    id: string;
-    title: string;
-    status: QuestionnaireListItem['status'];
-    review_started_at: string | null;
-    published_at: string | null;
-    revision: number;
-    updated_at: string;
-    archived_at: string | null;
-    created_by: string;
-  }>;
-  const reviewCounts = new Map<string, number>();
-  const unreadReviewCounts = new Map<string, number>();
-  if (staff) {
-    const counts = await client.rpc('question_review_counts');
-    if (counts.error)
-      throw new Error('검토 요청 개수를 불러오지 못했어요.', {
-        cause: counts.error,
-      });
-    for (const item of (counts.data ?? []) as {
-      questionnaire_id: string;
-      count: number;
-      unread_count: number;
-    }[]) {
-      reviewCounts.set(item.questionnaire_id, item.count);
-      unreadReviewCounts.set(item.questionnaire_id, item.unread_count);
-    }
-  }
-  const submissionCounts = new Map<string, number>();
-  if (
-    staff &&
-    rows.some((row) => row.status === 'published' && !row.archived_at)
-  ) {
-    const counts = await client.rpc('published_submission_counts');
-    if (counts.error)
-      throw new Error('제출 응답 개수를 불러오지 못했어요.', {
-        cause: counts.error,
-      });
-    for (const item of (counts.data ?? []) as {
-      questionnaire_id: string;
-      count: number;
-    }[])
-      submissionCounts.set(item.questionnaire_id, Number(item.count));
-  }
-  const authors = new Map<string, string>();
-  if (
-    staff &&
-    rows.some(
-      (row) => row.status === 'in_review' || row.status === 'published',
-    )
-  ) {
-    const result = await client.rpc('shared_questionnaire_authors');
-    if (result.error)
-      throw new Error('제작자 이름을 불러오지 못했어요.', {
-        cause: result.error,
-      });
-    for (const author of (result.data ?? []) as {
-      questionnaireId: string;
-      name: string;
-    }[])
-      authors.set(author.questionnaireId, author.name);
-  }
-  const questionnaires: QuestionnaireListItem[] = rows
-    .filter((item) =>
-      staff
-        ? item.status !== 'draft' ||
-          item.created_by === access.user.id ||
-          viewRole === 'admin'
-        : item.status === 'published' && !item.archived_at,
-    )
-    .map((item) => ({
-      id: item.id,
-      title: item.title,
-      creatorName: authors.get(item.id) ?? null,
-      submittedResponseCount: staff
-        ? (submissionCounts.get(item.id) ?? 0)
-        : undefined,
-      status: item.status,
-      archivedAt: item.archived_at,
-      reviewStartedAt: item.review_started_at,
-      publishedAt: item.published_at,
-      updatedAt: item.updated_at,
-      revision: item.revision,
-      hasPublished: item.status === 'published',
-      isOwner: staff && item.created_by === access.user.id,
-      canEditDraft:
-        staff &&
-        item.status === 'draft' &&
-        (viewRole === 'admin' || item.created_by === access.user.id),
-      unreadReviewCount: staff ? (unreadReviewCounts.get(item.id) ?? 0) : 0,
-      pendingReviewCount:
-        staff && item.created_by === access.user.id
-          ? (reviewCounts.get(item.id) ?? 0)
-          : 0,
-      canDelete:
-        staff && (viewRole === 'admin' || item.created_by === access.user.id),
-    }));
-  const result = {
+  const result: QuestionnaireViewData = {
     sharedSources: [] as QuestionBlockRow[],
-    drafts: questionnaires.filter(
-      (item) => !item.archivedAt && item.status === 'draft',
-    ),
-    inReview: questionnaires.filter(
-      (item) => !item.archivedAt && item.status === 'in_review',
-    ),
-    published: questionnaires.filter(
-      (item) => !item.archivedAt && item.status === 'published',
-    ),
-    archived: questionnaires.filter((item) => !!item.archivedAt),
     staff,
     selected: null as QuestionnaireListItem | null,
     reviews: [] as QuestionReview[],
@@ -216,7 +107,10 @@ export async function loadQuestionnaireView(
     initialDraft: null as QuestionnaireDraft | null,
     sharedDocument: null as QuestionnaireDraft | null,
   };
-  if (!requestedId) return result;
+  if (!requestedId) {
+    result.list = await loadQuestionnaireList(client, viewRole, params);
+    return result;
+  }
   if (requestedId === 'new') {
     if (!staff)
       throw new QuestionnaireHttpError(403, '질문지를 작성할 권한이 없어요.');
@@ -235,8 +129,10 @@ export async function loadQuestionnaireView(
     };
     return result;
   }
-  const selected = questionnaires.find((item) => item.id === requestedId);
-  if (!z.uuid().safeParse(requestedId).success || !selected)
+  const selected = z.uuid().safeParse(requestedId).success
+    ? await loadQuestionnaireListItem(client, viewRole, requestedId)
+    : null;
+  if (!selected)
     throw new QuestionnaireHttpError(
       404,
       '선택한 질문지를 찾을 수 없어요. 질문지 관리로 다시 이동해 주세요.',
@@ -541,7 +437,9 @@ export async function transitionQuestionnaireDraft(
     return { error: `질문지를 확인한 뒤 ${label}해 주세요.` };
   const client = createClient(await cookies());
   const { error } = await client.rpc(
-    mode === 'start_review' ? 'start_questionnaire_review' : 'publish_questionnaire',
+    mode === 'start_review'
+      ? 'start_questionnaire_review'
+      : 'publish_questionnaire',
     {
       p_questionnaire_id: parsed.data.questionnaireId,
       p_expected_revision: parsed.data.revision,

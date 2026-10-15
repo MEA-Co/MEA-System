@@ -150,3 +150,66 @@ test('navigation focuses and scrolls only the matching question in this editor, 
   focusResponseQuestion({ querySelectorAll: () => [target] }, 'other', false);
   assert.equal(calls.length, 2);
 });
+
+test('preview row reporting and submission agree for legacy supplementary text, including downstream conditions', () => {
+  const { answeredResponseRows } = loadQuestionModule(
+    root + 'field-validation.ts',
+    {},
+    mock,
+  );
+  const { placementPreviewState } = loadQuestionModule(
+    root + '../questionnaire/placement-preview.ts',
+    {},
+    mock,
+  );
+  for (const kind of ['scale', 'single', 'multiple']) {
+    const q = question({
+      id: 'source',
+      fields: [
+        field('a', {
+          kind,
+          choiceAllowText: true,
+          options: [{ id: 'yes', label: '선택' }],
+          scaleConfig: { max: 7, allowText: true },
+        }),
+      ],
+    });
+    const value = JSON.stringify(
+      kind === 'scale'
+        ? { score: 5, text: '기존 설명' }
+        : { choices: ['yes'], text: '기존 설명' },
+    );
+    const rows = [row({ a: value }, 8)];
+    const reported = answeredResponseRows(q.fields, rows);
+    assert.equal(reported.length, 1);
+    assert.equal(reported[0].id, 8);
+    const follow = question({
+      id: 'follow',
+      after_block_id: q.id,
+      condition: {
+        mode: 'all',
+        clauses: [{ blockId: q.id, fieldId: 'a', op: 'answered' }],
+      },
+    });
+    assert.equal(
+      placementPreviewState(follow, [q, follow], { [q.id]: reported }).waiting,
+      false,
+    );
+    assert.equal(validate(q, rows).issues.length, 0);
+    const issues = all(
+      { questions: [q, follow].map((definition) => ({ definition })) },
+      { source: rows, follow: [row({})] },
+    );
+    assert.equal(issues[0].questionId, 'follow');
+    assert.equal(answeredResponseRows(q.fields, [row({})]).length, 0);
+    const invalid =
+      kind === 'scale'
+        ? JSON.stringify({ score: 9, text: '이유' })
+        : JSON.stringify({ choices: ['missing'], text: '이유' });
+    assert.equal(
+      answeredResponseRows(q.fields, [row({ a: invalid })]).length,
+      0,
+    );
+    assert.ok(validate(q, [row({ a: invalid })]).issues.length);
+  }
+});

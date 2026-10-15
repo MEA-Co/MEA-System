@@ -30,12 +30,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { QUESTIONNAIRE_REVIEWS_VISIBLE } from '../../lib/questionnaire/features';
 import {
+  emptyQuestionnaireList,
   questionnaireDetailHref,
-  questionnaireListModel,
   type QuestionnaireListStatus,
   readQuestionnaireListOptions,
 } from '../../lib/questionnaire/list-model';
-import type { QuestionnaireListItem as Item } from '../../lib/questionnaire/types';
+import type {
+  QuestionnaireListItem as Item,
+  QuestionnaireListPage,
+} from '../../lib/questionnaire/types';
 
 import { ConsultantQuestionnaireList } from './ConsultantQuestionnaireList';
 import { DeleteQuestionnaireButton } from './DeleteQuestionnaireButton';
@@ -55,32 +58,25 @@ const date = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
 });
 export function QuestionnaireList(props: {
-  drafts: Item[];
-  inReview: Item[];
-  published: Item[];
-  archived?: Item[];
+  model?: QuestionnaireListPage;
   staff: boolean;
   loading?: boolean;
 }) {
   return props.staff ? (
     <StaffQuestionnaireList {...props} />
   ) : (
-    <ConsultantQuestionnaireList
-      items={props.published}
-      loading={props.loading}
-    />
+    <ConsultantQuestionnaireList model={props.model} loading={props.loading} />
   );
 }
 function StaffQuestionnaireList(props: {
-  drafts: Item[];
-  inReview: Item[];
-  published: Item[];
-  archived?: Item[];
+  model?: QuestionnaireListPage;
   loading?: boolean;
 }) {
   const params = useSearchParams();
   const options = readQuestionnaireListOptions(params);
-  const model = questionnaireListModel(props, options);
+  const model = props.loading
+    ? emptyQuestionnaireList()
+    : (props.model ?? emptyQuestionnaireList());
   const { unreadIds } = useQuestionnaireNotifications();
   function update(values: Record<string, string>) {
     const url = new URL(window.location.href);
@@ -296,9 +292,7 @@ function QuestionnaireListRow({
       (QUESTIONNAIRE_REVIEWS_VISIBLE && (item.unreadReviewCount ?? 0) > 0));
   const published = item.status === 'published';
   const day = date.format(
-    new Date(
-      published ? (item.publishedAt ?? item.updatedAt) : item.updatedAt,
-    ),
+    new Date(published ? (item.publishedAt ?? item.updatedAt) : item.updatedAt),
   );
   const creator = item.isOwner ? '나' : item.creatorName?.trim() || '—';
   return (

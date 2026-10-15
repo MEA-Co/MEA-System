@@ -38,6 +38,7 @@ export async function questionnaireFetcher<T>(url: string): Promise<T> {
 export function useQuestionnaireResource<T>(
   path: string | null,
   refreshInterval = QUESTIONNAIRE_REFRESH_INTERVAL,
+  keepPreviousData = true,
 ) {
   return useSWR<T, QuestionnaireApiError>(
     path === null ? null : `${QUESTIONNAIRE_API}${path}`,
@@ -48,10 +49,11 @@ export function useQuestionnaireResource<T>(
       revalidateOnReconnect: path?.split('?')[0] !== '/new',
       revalidateIfStale: path?.split('?')[0] !== '/new',
       dedupingInterval: 500,
-      shouldRetryOnError: (error) => ![401, 403, 404, 426].includes(error.status),
+      shouldRetryOnError: (error) =>
+        ![401, 403, 404, 426].includes(error.status),
       errorRetryInterval: 2000,
       errorRetryCount: 3,
-      keepPreviousData: true,
+      keepPreviousData,
     },
   );
 }

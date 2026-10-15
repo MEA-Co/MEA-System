@@ -1,26 +1,18 @@
-import type { QuestionnaireListItem } from './types';
-
-export const questionnaireStages = [
-  'draft',
-  'in_review',
-  'published',
-] as const;
+export const questionnaireStages = ['draft', 'in_review', 'published'] as const;
 export type QuestionnaireListStatus =
   'all' | (typeof questionnaireStages)[number] | 'archived';
-export const questionnaireOverviewLimits = {
-  draft: 2,
-  in_review: 2,
-  published: 10,
-} as const;
-export const QUESTIONNAIRE_LIST_PAGE_SIZE = 10;
-
 export function readQuestionnaireListOptions(
   params: Pick<URLSearchParams, 'get'>,
 ) {
   // qStatus was used before published changed meaning. Preserve old bookmarks.
   const legacy = params.get('qStatus');
-  const raw = params.get('qStage') ??
-    (legacy === 'published' ? 'in_review' : legacy === 'distributed' ? 'published' : legacy);
+  const raw =
+    params.get('qStage') ??
+    (legacy === 'published'
+      ? 'in_review'
+      : legacy === 'distributed'
+        ? 'published'
+        : legacy);
   const status: QuestionnaireListStatus =
     raw === 'draft' ||
     raw === 'in_review' ||
@@ -31,86 +23,48 @@ export function readQuestionnaireListOptions(
   const rawPage = Number(params.get('qPage'));
   return {
     status,
-    query: params.get('qSearch') ?? '',
+    query: (params.get('qSearch') ?? '').slice(0, 200),
+    response:
+      params.get('qResponse') === 'complete'
+        ? ('complete' as const)
+        : ('pending' as const),
     owner:
       params.get('qOwner') === 'mine' ? ('mine' as const) : ('all' as const),
-    page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    page:
+      Number.isSafeInteger(rawPage) && rawPage > 0 && rawPage <= 100000
+        ? rawPage
+        : 1,
   };
 }
 
-export function questionnaireListModel(
-  source: {
-    drafts: QuestionnaireListItem[];
-    inReview: QuestionnaireListItem[];
-    published: QuestionnaireListItem[];
-    archived?: QuestionnaireListItem[];
-  },
-  options: ReturnType<typeof readQuestionnaireListOptions>,
+export function questionnaireListPath(
+  params: Pick<URLSearchParams, 'get'>,
+  staff = true,
 ) {
-  // Shared inReview/published rows come from the existing authorized API.
-  // Private drafts and archived rows retain the previous author-only list scope.
-  const unique = new Map<string, QuestionnaireListItem>();
-  for (const item of [
-    ...source.drafts,
-    ...source.inReview,
-    ...source.published,
-    ...(source.archived ?? []),
-  ]) {
-    if (item.archivedAt && !item.isOwner) continue;
-    if (item.status === 'draft' && !item.isOwner && !item.canEditDraft)
-      continue;
-    unique.set(item.id, item);
-  }
-  const query = options.query.trim().toLocaleLowerCase();
-  const matches = [...unique.values()].filter(
-    (item) =>
-      (options.owner !== 'mine' || item.isOwner) &&
-      (item.title || '제목 없는 질문지').toLocaleLowerCase().includes(query),
-  );
-  const forStatus = (status: Exclude<QuestionnaireListStatus, 'all'>) =>
-    matches
-      .filter((item) =>
-        status === 'archived'
-          ? !!item.archivedAt
-          : !item.archivedAt && item.status === status,
-      )
-      .sort((a, b) => {
-        const dateA =
-          status === 'published'
-            ? (a.publishedAt ?? a.updatedAt)
-            : a.updatedAt;
-        const dateB =
-          status === 'published'
-            ? (b.publishedAt ?? b.updatedAt)
-            : b.updatedAt;
-        return dateB.localeCompare(dateA) || a.id.localeCompare(b.id);
-      });
-  const groups = questionnaireStages.map((status) => {
-    const items = forStatus(status);
-    return {
-      status,
-      total: items.length,
-      items: items.slice(0, questionnaireOverviewLimits[status]),
-    };
-  });
-  const items = options.status === 'all' ? [] : forStatus(options.status);
-  const pages = Math.max(
-    1,
-    Math.ceil(items.length / QUESTIONNAIRE_LIST_PAGE_SIZE),
-  );
-  const page = Math.min(options.page, pages);
+  const options = readQuestionnaireListOptions(params);
+  const query = new URLSearchParams();
+  if (staff) {
+    if (options.status !== 'all') query.set('qStage', options.status);
+    if (options.query.trim()) query.set('qSearch', options.query.trim());
+    if (options.owner === 'mine') query.set('qOwner', 'mine');
+  } else if (options.response === 'complete')
+    query.set('qResponse', 'complete');
+  if ((!staff || options.status !== 'all') && options.page > 1)
+    query.set('qPage', String(options.page));
+  return query.size ? `?${query}` : '';
+}
+
+export function emptyQuestionnaireList(): import('./types').QuestionnaireListPage {
   return {
-    groups,
-    total:
-      options.status === 'all'
-        ? groups.reduce((sum, group) => sum + group.total, 0)
-        : items.length,
-    page,
-    pages,
-    items: items.slice(
-      (page - 1) * QUESTIONNAIRE_LIST_PAGE_SIZE,
-      page * QUESTIONNAIRE_LIST_PAGE_SIZE,
-    ),
+    groups: questionnaireStages.map((status) => ({
+      status,
+      total: 0,
+      items: [],
+    })),
+    total: 0,
+    page: 1,
+    pages: 1,
+    items: [],
   };
 }
 

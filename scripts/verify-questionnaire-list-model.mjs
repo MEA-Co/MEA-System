@@ -3,85 +3,15 @@ import { test } from 'node:test';
 
 import {
   questionnaireDetailHref,
-  questionnaireListModel as model,
+  questionnaireListPath,
   readQuestionnaireListOptions as options,
 } from '../app/(private)/dashboard/_views/questions/lib/questionnaire/list-model.ts';
-const rows = (status, count, extra = {}) =>
-  Array.from({ length: count }, (_, n) => ({
-    id: `${status}-${n}`,
-    title: `질문지 ${n}`,
-    status,
-    updatedAt: new Date(2026, 0, n + 1).toISOString(),
-    publishedAt: null,
-    isOwner: true,
-    ...extra,
-  }));
-const source = {
-  drafts: rows('draft', 5),
-  inReview: rows('in_review', 4),
-  published: rows('published', 23),
-};
 const opt = (query = '') => options(new URLSearchParams(query));
-test('overview limits 2/2/10 while totals include all matching rows', () => {
-  const result = model(source, opt());
-  assert.deepEqual(
-    result.groups.map((g) => g.items.length),
-    [2, 2, 10],
-  );
-  assert.deepEqual(
-    result.groups.map((g) => g.total),
-    [5, 4, 23],
-  );
-  assert.equal(result.total, 32);
-  assert.equal(result.groups[0].items[0].id, 'draft-4');
-});
-test('status lists paginate independently and clamp after deletion', () => {
-  assert.equal(
-    model(source, opt('qStage=published&qPage=2')).items.length,
-    10,
-  );
-  const last = model(source, opt('qStage=published&qPage=99'));
-  assert.equal(last.page, 3);
-  assert.equal(last.items.length, 3);
-});
-test('search and ownership apply before counts and limits', () => {
-  const mixed = {
-    ...source,
-    inReview: rows('in_review', 4, { isOwner: false }),
-  };
-  const result = model(mixed, opt('qSearch=질문지+1&qOwner=mine'));
-  assert.deepEqual(
-    result.groups.map((g) => g.total),
-    [1, 0, 11],
-  );
-});
-test('private drafts and archives stay owner-only; archives excluded from overview', () => {
-  const mixed = {
-    drafts: rows('draft', 2, { isOwner: false }),
-    inReview: [],
-    published: [],
-    archived: [
-      ...rows('in_review', 2, { archivedAt: '2026-01-01' }),
-      ...rows('draft', 2, { archivedAt: '2026-01-01', isOwner: false }),
-    ],
-  };
-  assert.equal(model(mixed, opt()).total, 0);
-  assert.equal(model(mixed, opt('qStage=archived')).total, 2);
-});
-test('publication date takes precedence and duplicate IDs occur once', () => {
-  const a = rows('published', 2);
-  a[0].publishedAt = '2027-01-01';
-  const result = model(
-    { drafts: [], inReview: [], published: [...a, a[0]] },
-    opt(),
-  );
-  assert.equal(result.total, 2);
-  assert.equal(result.groups[2].items[0].id, a[0].id);
-});
 test('invalid query options fall back safely', () => {
   assert.deepEqual(opt('qStage=invalid&qPage=-3&qOwner=other'), {
     status: 'all',
     query: '',
+    response: 'pending',
     owner: 'all',
     page: 1,
   });
@@ -123,16 +53,33 @@ test('questionnaire links preserve draft and filters without drawer presentation
   assert.equal(other.has('questionnaireEditor'), false);
 });
 
- test('administrator can see editable drafts without becoming their owner', () => {
- const shared = { drafts: rows('draft', 1, { isOwner: false, canEditDraft: true }), inReview: [], published: [] };
- assert.equal(model(shared, opt()).total, 1);
- assert.equal(model(shared, opt('qOwner=mine')).total, 0);
- });
-
-
 test('old status bookmarks retain meaning while v2 links use qStage', () => {
   assert.equal(opt('qStatus=published').status, 'in_review');
   assert.equal(opt('qStatus=distributed').status, 'published');
   assert.equal(opt('qStatus=published&qStage=published').status, 'published');
   assert.equal(opt('qStage=in_review').status, 'in_review');
+});
+
+test('list cache key includes filters but ignores editor route and overview page', () => {
+  const params = new URLSearchParams(
+    'draft=anything&qStage=published&qPage=2&qSearch=test&qOwner=mine',
+  );
+  assert.equal(
+    questionnaireListPath(params),
+    '?qStage=published&qSearch=test&qOwner=mine&qPage=2',
+  );
+  params.delete('qStage');
+  assert.equal(questionnaireListPath(params), '?qSearch=test&qOwner=mine');
+  assert.equal(
+    questionnaireListPath(new URLSearchParams('draft=new&qPage=9')),
+    '',
+  );
+  assert.equal(
+    questionnaireListPath(
+      new URLSearchParams('qResponse=complete&qPage=2'),
+      false,
+    ),
+    '?qResponse=complete&qPage=2',
+  );
+  assert.equal(opt('qPage=100001').page, 1);
 });

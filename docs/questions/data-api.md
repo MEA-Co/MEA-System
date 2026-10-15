@@ -1,6 +1,6 @@
-# 질문·질문지 저장 구조
+# 질문·질문지·응답 데이터·API·권한
 
-아래는 질문·질문지의 저장 계약이다. 기능은 [질문·질문지 관리](questions.md), 최신 운영 적용 상태와 적용 절차는 [운영 안내](questions-operations.md)를 따른다. 과거 날짜별 적용 기록은 현행 운영 상태와 구분한다.
+아래는 질문·질문지의 저장 계약이다. 기능은 [질문·질문지 관리](ui.md), 최신 운영 적용 상태와 적용 절차는 [운영 안내](operations.md)를 따른다. 과거 날짜별 적용 기록은 현행 운영 상태와 구분한다.
 
 ## 식별자와 테이블
 
@@ -179,3 +179,69 @@ public `publish_questionnaire`와 `change_questionnaire_status`는 필수 `p_wor
 - `QuestionResponseForm`/`QuestionnairePreview`: 오류 요약·질문별 표시. `submission-navigation.ts`는 현재 편집기 내부의 질문 영역만 찾아 스크롤·포커스하며 다른 미리보기에 영향을 주지 않는다.
 
 이번 오류 안내에는 DB migration이나 API 응답 형식 변경이 없다. 기존 DB 검증·저장/제출 원자성·배포 권한과 기존 제출 snapshot은 유지한다.
+
+## 질문 → 질문지 → 응답의 책임 경계
+
+```mermaid
+flowchart LR
+  Q[questions 원본 질문] --> D[question_details 설명]
+  Q --> R[question_review_requests 검토 요청]
+  P[questionnaires 질문지] --> S[questionnaire_sections 섹션]
+  S --> L[questionnaire_questions 배치]
+  L --> Q
+  P --> RS[response_sessions 개인 작성 세션]
+  RS --> A[question_responses 질문별 작업 답변]
+  A --> Q
+  RS --> SUB[response_submissions 마지막 제출본]
+```
+
+- 질문 내용을 같은 원본으로 **연결**하면 수정·설명·검토 요청이 공유된다. 새 질문의 **질문 불러오기**는 내용만 복사하고 질문/필드/설명 ID를 새로 발급한다. 답변·검토 요청·배포 잠금은 복사하지 않으며 원본과 내용이 같으면 저장하지 않는다.
+- 질문지의 안내·섹션·순서·배치는 질문지에 귀속된다. 배치 ID로 원본 질문을 대신 식별하지 않는다. 안내는 답변이 없는 시작 안내이며 등록을 강제하지 않는다.
+- 같은 질문을 다른 질문지에서 사용해도 작업 답변은 `(respondent_id, origin_questionnaire_id, started_stage)`별 세션에서 분리된다. 세션 안 질문별 답변은 `(session_id, question_id)`로 유일하다. 응답 ID·행 ID·필드 ID는 순서 번호가 아니다.
+- 저장은 본인 작업 내용만 갱신한다. 제출은 전체 질문지를 DB에서 원자적으로 검증하고 마지막 제출본을 갱신한다. 재제출 전의 비공개 편집을 리드/관리자의 제출 조회·PDF에 섞지 않는다.
+
+### API와 코드 진입점
+
+기본 구현 루트는 `app/(private)/dashboard/_views/questions/`다. HTTP 인증·표시 역할·오류 변환은 `app/api/`에서, 도메인 입력 검증/조회 조합은 `lib/`에서, 최종 권한·원자적 쓰기는 DB에서 담당한다.
+
+| HTTP 경로 | 계약과 코드 책임 |
+| --- | --- |
+| `GET /api/questions` | 검색·10개 페이지·관계 메타데이터. `lib/question-server.ts` 및 질문 목록 모듈 |
+| `GET /api/questions/:id` | 원본과 설명·편집 정보. 불러오기/편집의 동일 조회 계약 |
+| `POST /api/questions`, `PUT /api/questions/:id` | 질문과 설명을 함께 저장. revision/saveId 및 가이드 필드 제거 확인. `lib/question-request-schema.ts` → `save_question` |
+| `/api/questions/:questionId/reviews` | 질문 귀속 요청 생성·처리·읽음·완료 이력 페이지. `lib/reviews/` |
+| `GET /api/questionnaires` | 아래의 서버 목록 계약. `lib/questionnaire/list-server.ts` |
+| `GET /api/questionnaires/:id` | 해당 ID의 메타데이터와 편집/공유 문서. 목록과 무관하게 조회. `lib/questionnaire/server.ts` |
+| `GET /api/questionnaires/new` | 저장 전 빈 작성 문서. 목록/기존 질문지 전체 조회 없음 |
+| `POST /api/questionnaires`, `PUT /api/questionnaires/:id` | `{document, expectedRevision, saveId, confirmedRemovedGuideQuestions?}` → 저장 revision/savedAt 또는 충돌. `save_questionnaire_draft` |
+| `/api/questionnaires/:id/status`, `/:id/publication` | 상태 변경/배포. 기존 작성자·검토·배포 잠금 검사 유지 |
+| `/:id/review-responses`, `/:id/published-responses` | 작업 응답 읽기/저장/제출. `lib/responses/`와 `question-response-server.ts` |
+| `/:id/submitted-responses` 하위 | 제출 목록·개별 snapshot·내보내기 manifest. 위 제출 조회 API 절 참고 |
+
+질문지 HTTP 계약은 `X-Questionnaire-Workflow: 2`를 요구한다. 실제 역할은 DB도 검사하고 관리자 표시 역할은 조회 범위를 좁힐 수만 있다. 세션 생성·임시 저장·제출 권한과 배포 잠금은 이번 조회 개선으로 변경하지 않는다.
+
+## 질문지 서버 목록·상세 조회 계약
+
+`20261015105318_questionnaire_paged_list_reads.sql`은 조회 함수만 추가한다. 기존 쓰기 함수·RLS·데이터는 변경하지 않는다.
+
+- 목록 요청: `GET /api/questionnaires?qStage=all|draft|in_review|published|archived&qSearch=제목&qOwner=all|mine&qPage=N`. URL과 캐시 키는 `list-model.ts`에서 정규화한다. 기존 `qStatus=published/distributed` 북마크는 각각 검토 중/배포로 해석한다.
+- 반환: 기존 화면의 `staff`, `selected`, `initialDraft`, `sharedDocument` 메타데이터에 `list: {groups,total,page,pages,items,responseCounts?}`를 포함한다. 전체 원본 목록 배열 `drafts/inReview/published/archived`를 내려받아 클라이언트에서 자르지 않는다.
+- 전체 보기: `groups`에 수정 중 2개·검토 중 2개·배포 10개와 각 단계의 **검색/작성자 조건 적용 후 전체 개수**를 반환한다. `total`은 활성 세 단계의 합이며 보관 제외다. `items=[]`, `page=pages=1`이다.
+- 상태 보기: `items` 최대 10개, 정확한 `total`, 최소 1페이지, 존재하지 않는 큰 페이지는 마지막 페이지로 보정한다. 페이지 입력은 1~100000이며 잘못된 URL 값은 1로 정규화한다.
+- 제목 검색은 대소문자 무시 부분 일치, 공백 trim, 200자 상한이다. `%`·`_`는 와일드카드로 해석하지 않는다. 빈 제목은 `제목 없는 질문지`로 검색한다. 필터 적용 후 DB에서 count/limit/offset을 계산하므로 PostgREST의 행 상한에 전체 개수가 잘리지 않는다.
+- 정렬: 배포 목록은 `coalesce(published_at,updated_at) DESC, id ASC`, 다른 상태는 `updated_at DESC, id ASC`. 기존 수정/배포 시각 표시와 동일하다.
+- 리드의 비공개 초안은 본인 것만, 관리자는 다른 작성자 초안도 조회한다. 보관 목록은 기존과 같이 본인 것만 표시한다. 검토 중/배포 공유 범위는 유지한다.
+- 컨설턴트는 활성 배포본만 받으며 `qResponse=pending|complete`로 제출 전/완료를 서버에서 구분한다. 기존 `response_sessions.status` 판정을 유지하고 각 탭 정확한 전체 수를 `responseCounts`로 반환한다. 각 탭도 10개씩 조회하며 본인의 `responseStatus`만 표시한다.
+- `public.list_questionnaires`는 invoker로 RLS를 적용한다. `private.questionnaire_read_scope`는 실제 역할과 표시 역할을 검증하며 조회 범위를 추가로 제한한다. 페이지별 이름·검토 수·제출 수는 최대 14개 ID를 받는 `questionnaire_list_items`로 조회한다. 메타데이터 private definer는 세션 소유자 RLS 너머의 **제출 수**·공유 작성자 이름 집계에만 필요하며 같은 명시적 읽기 범위를 검사한다. 작업 답변 본문은 반환하지 않는다. 함수는 anon/PUBLIC 실행을 회수하고 authenticated만 허용한다.
+- 상세는 `questionnaire_list_items([id],viewRole)`로 직접 조회한 뒤 기존 편집/공유 문서 RPC를 호출한다. 현재 목록의 검색어·페이지·전체 데이터량에 따라 404가 되지 않는다. 권한 없는/없는 ID는 404, 보관된 ID는 기존 409를 유지한다. 새 작성은 이 메타데이터 조회도 하지 않는다.
+
+### 답변 완료 판정 통일
+
+`responseFieldAnswered`가 현재/구형 선택·척도 추가 서술 설정을 보존해 판정한다. `QuestionBlockPreview`의 조건 판정과 `answeredResponseRows` 완료 행 보고, `placementPreviewState`, 제출 검사가 이를 공유한다. 입력 UI를 위한 `questionFromField`의 정규화 결과로 완료 여부를 판단하지 않는다. 빈 값·유효하지 않은 선택지/범위는 계속 미완성이며, 기존 유효 추가 서술 때문에 다음 질문이 숨겨지는 문제를 방지한다. 저장 형식과 UI 디자인은 유지한다.
+
+## 남은 개선 과제 (이번 작업 제외)
+
+1. **기존 가이드 답변과 같은 유형 안의 설정 변경**: 필드 삭제/유형 변경은 확인하지만, 선택지 제거·척도 범위 축소·최대 행 수 축소는 기존 답변이 유효하지 않거나 일부 행이 화면에서 제외될 수 있다. 가이드 답변이 있는 질문에서는 이런 변경을 피하고 새 질문으로 내용을 불러오는 운영 기준을 적용한다. 영향 검사/확인·보존 방식은 후속 과제다.
+2. **공유 원본의 의존 관계 변경과 기존 배치**: 순환/참조 대상은 검사하지만, 이미 사용 중인 모든 질문지에 선행 질문이 올바르게 배치돼 있는지 원본 저장 시 동시에 확인하지 않는다. 조건을 변경하면 사용 중인 질문지의 선행 배치·순서를 모두 점검해야 한다. 질문지 저장/배포 검사가 잘못된 배치를 막더라도 원본 수정 직후의 구성을 자동 복구하지는 않는다. 전체 영향 검사/잠금은 후속 과제다.
+
+두 과제는 사용자가 이번 수정에서 제외했다. 검증 완료나 구조적 보호 완료로 기록하지 않는다.

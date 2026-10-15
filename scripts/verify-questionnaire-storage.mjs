@@ -20,11 +20,19 @@ function load(path, imports = {}, globals = {}) {
     {
       exports,
       TextEncoder,
+      URLSearchParams,
       structuredClone,
       ...globals,
       require: (name) => {
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
+        if (name === './list-server' || name === './list-model')
+          return load(
+            'app/(private)/dashboard/_views/questions/lib/questionnaire/' +
+              name.slice(2) +
+              '.ts',
+            imports,
+          );
         if (name === './http-error')
           return load(
             'app/(private)/dashboard/_views/questions/lib/questionnaire/http-error.ts',
@@ -465,18 +473,33 @@ test('questionnaire loader permits inReview staff collaboration and keeps consul
               calls.push(name);
               if (name === 'read_shared_question_sources')
                 return { data: [], error: null };
-              if (name === 'question_review_counts')
+              if (name === 'list_questionnaires')
+                return {
+                  data: { groups: [], items: [], total: 0, page: 1, pages: 1 },
+                  error: null,
+                };
+              if (name === 'questionnaire_list_items') {
+                const staff = scenario.visible !== 'consultant';
                 return {
                   data: [
-                    { questionnaire_id: row.id, count: 2, unread_count: 0 },
+                    {
+                      id: row.id,
+                      title: row.title,
+                      status: row.status,
+                      revision: 2,
+                      archivedAt: row.archived_at,
+                      isOwner: staff && scenario.user === ownerId,
+                      canDelete:
+                        staff &&
+                        (scenario.user === ownerId ||
+                          scenario.visible === 'admin'),
+                      pendingReviewCount:
+                        staff && scenario.user === ownerId ? 2 : 0,
+                    },
                   ],
                   error: null,
                 };
-              if (name === 'shared_questionnaire_authors')
-                return {
-                  data: [{ questionnaireId: row.id, name: '제작자' }],
-                  error: null,
-                };
+              }
               return {
                 data: {
                   ...structuredClone(doc),
@@ -499,10 +522,7 @@ test('questionnaire loader permits inReview staff collaboration and keeps consul
       ),
       false,
     );
-    assert.equal(
-      calls.includes('question_review_counts'),
-      ['admin', 'consultant_lead'].includes(scenario.visible),
-    );
+    assert.equal(calls.includes('list_questionnaires'), false);
     assert.equal(
       result.selected.pendingReviewCount,
       result.selected.isOwner ? 2 : 0,
@@ -525,16 +545,7 @@ test('questionnaire loader permits inReview staff collaboration and keeps consul
     );
     row.archived_at = '2026-09-28T00:00:00Z';
     const archiveList = await loadQuestionnaireView();
-    assert.equal(
-      archiveList.published.length +
-        archiveList.inReview.length +
-        archiveList.drafts.length,
-      0,
-    );
-    assert.equal(
-      archiveList.archived.length,
-      scenario.visible === 'consultant' ? 0 : 1,
-    );
+    assert.equal(archiveList.list.total, 0);
     await assert.rejects(loadQuestionnaireView(doc.questionnaireId));
     if (scenario.visible === 'consultant') {
       assert.equal(result.staff, false);

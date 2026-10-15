@@ -31,7 +31,6 @@ import {
   scaleAnswer,
   scaleConfig,
   scaleLabel,
-  validTypedAnswer,
 } from '../../lib/question-types';
 import {
   answeredSourceRows,
@@ -39,6 +38,10 @@ import {
   type PreviewAnswerRow,
   referenceAnswerRows,
 } from '../../lib/reference-rows';
+import {
+  answeredResponseRows,
+  responseFieldAnswered,
+} from '../../lib/responses/field-validation';
 import { richTextPlainText } from '../../lib/rich-text';
 import { submittedRowLabel } from '../../lib/submitted-row-label';
 
@@ -181,12 +184,7 @@ function QuestionBlockResponsePreview({
           : source.fields.map((field) => field.id),
         (id, value) => {
           const field = source.fields.find((item) => item.id === id);
-          return (
-            !!field &&
-            (field.kind === 'text'
-              ? !!richTextPlainText(value).trim()
-              : validTypedAnswer(questionFromField(field), value, true))
-          );
+          return !!field && responseFieldAnswered(field, value);
         },
       );
     }
@@ -229,15 +227,7 @@ function QuestionBlockResponsePreview({
     document.initialRows,
   ]);
   const answeredRows = useMemo(
-    () =>
-      visibleRows.filter((row) =>
-        document.fields.some((field) => {
-          const value = row.answers[field.id] ?? '';
-          return field.kind === 'text'
-            ? !!richTextPlainText(value).trim()
-            : validTypedAnswer(questionFromField(field), value, true);
-        }),
-      ),
+    () => answeredResponseRows(document.fields, visibleRows),
     [visibleRows, document.fields],
   );
   useEffect(() => {

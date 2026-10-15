@@ -8,10 +8,6 @@ import {
   questionnaireFetcher,
   useQuestionnaireResource,
 } from '../lib/questionnaire/api-client';
-import {
-  questionnaireListModel,
-  readQuestionnaireListOptions,
-} from '../lib/questionnaire/list-model';
 import type { QuestionnaireViewData } from '../lib/questionnaire/types';
 export function QuestionsNavigation({
   questionnaire,
@@ -31,10 +27,7 @@ export function QuestionsNavigation({
     questionCount ?? (questionError ? undefined : questions?.total);
   const questionnairesTotal =
     questionnaires && !questionnaireError
-      ? questionnaireListModel(
-          questionnaires,
-          readQuestionnaireListOptions(new URLSearchParams()),
-        ).total
+      ? questionnaires.list?.total
       : undefined;
   return (
     <nav aria-label="질문 관리 영역" className="flex gap-2">
