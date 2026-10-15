@@ -109,7 +109,7 @@ export function StudyView({
         <Button
           type="button"
           disabled={!ready || busy}
-          className="h-auto min-h-9 max-w-full text-left whitespace-normal wrap-anywhere"
+          size="wrap"
           onClick={(event) => {
             opener.current = event.currentTarget;
             create();

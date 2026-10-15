@@ -241,8 +241,8 @@ export function QuestionLibraryView({
             <DialogDescription>
               ‘{pendingArchive ? questionName(pendingArchive) : '이 질문'}’을
               {pendingArchive?.purpose === 'study_registration'
-                ? '삭제합니다. 이미 등록한 학습법은 유지됩니다.'
-                : '삭제합니다. 이 질문에 연결된 게시 단계의 응답도 함께 삭제되며 되돌릴 수 없습니다.'}
+                ? ' 삭제합니다. 이미 등록한 학습법은 유지됩니다.'
+                : ' 삭제합니다. 이 질문에 연결된 게시 단계의 응답도 함께 삭제되며 되돌릴 수 없습니다.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

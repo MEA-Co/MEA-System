@@ -25,7 +25,7 @@ export function StudyRegistrationAction({ label }: { label: string }) {
         <Button
           type="button"
           disabled
-          className="h-auto min-h-9 max-w-full text-left whitespace-normal wrap-anywhere"
+          size="wrap"
         >
           <Plus aria-hidden="true" />
           {label}

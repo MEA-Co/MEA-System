@@ -73,7 +73,9 @@ function mount({
   let tree;
   let effects = [];
   const calls = [];
-  const history = [restoredUrl ?? 'https://example.test/dashboard?view=questions'];
+  const history = [
+    restoredUrl ?? 'https://example.test/dashboard?view=questions',
+  ];
   let position = 0;
   const local = new Map(restoredLocal);
   const same = (a, b) =>
@@ -187,6 +189,7 @@ function mount({
     },
   };
   const globals = {
+    structuredClone,
     window,
     URL,
     crypto: { randomUUID },
@@ -303,6 +306,7 @@ function mount({
         'useQuestionEditorSession',
         'useQuestionLibraryList',
         'question-editor-draft',
+        'question-copy',
         'QuestionEditorContent',
         'question-validation-errors',
       ].some((suffix) => name.endsWith(suffix))
@@ -1058,16 +1062,26 @@ for (const prompt of ['', '새로고침 전에 작성한 본문']) {
   test(`refresh restores an unsaved question without fetching its local UUID (${prompt ? 'edited' : 'untouched'})`, async () => {
     const app = mount();
     await app.flush();
-    app.find('Button', (p) => Array.isArray(p.children) &&
-      p.children.some((child) => child?.props?.children === '새 질문 만들기')
-    ).props.onClick();
+    app
+      .find(
+        'Button',
+        (p) =>
+          Array.isArray(p.children) &&
+          p.children.some(
+            (child) => child?.props?.children === '새 질문 만들기',
+          ),
+      )
+      .props.onClick();
     await app.flush();
     if (prompt) {
       app.find('QuestionRichTextEditor').props.onChange(prompt);
       await app.flush();
     }
     assert.ok(app.local.size > 0);
-    const refreshed = mount({ restoredUrl: app.window.location.href, restoredLocal: app.local });
+    const refreshed = mount({
+      restoredUrl: app.window.location.href,
+      restoredLocal: app.local,
+    });
     await refreshed.flush();
     assert.deepEqual(refreshed.detailRequests, []);
     assert.equal(refreshed.find('Drawer').props.open, true);
@@ -1076,3 +1090,91 @@ for (const prompt of ['', '새로고침 전에 작성한 본문']) {
     assert.equal(refreshed.toasts.length, 0);
   });
 }
+
+test('content import pauses autosave, retains the draft ID and resumes independent saving', async () => {
+  const app = mount({ embedded: true });
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange('작성 중');
+  await app.flush();
+  const id = app.find('QuestionRichTextEditor').props.id;
+  app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('다른 질문 내용 가져오기'),
+    )
+    .props.onClick();
+  await app.flush();
+  assert.equal(app.find('QuestionImportDialog').props.hasChanges, true);
+  app.tick();
+  await app.flush();
+  assert.equal(app.saves.length, 0);
+  app.find('QuestionImportDialog').props.onImport(app.row);
+  await app.flush();
+  assert.equal(app.find('QuestionImportDialog'), null);
+  assert.equal(app.find('QuestionRichTextEditor').props.value, app.row.prompt);
+  assert.equal(app.find('QuestionRichTextEditor').props.id, id);
+  app.tick();
+  await app.flush();
+  assert.equal(app.saves.length, 0, 'import alone does not save');
+  app.find('QuestionRichTextEditor').props.onChange('수정한 질문');
+  await app.flush();
+  app.find('QuestionRichTextEditor').props.onChange(app.row.prompt);
+  await app.flush();
+  app.tick();
+  await app.flush();
+  assert.equal(
+    app.saves.length,
+    0,
+    'reverting to import baseline does not save',
+  );
+  app.find('QuestionRichTextEditor').props.onChange('다른 질문');
+  await app.flush();
+  app.tick();
+  await app.flush();
+  assert.equal(app.saves.length, 1);
+  assert.notEqual(app.saves[0].body.document.id, app.row.id);
+  assert.equal(app.saves[0].body.expectedRevision, 0);
+});
+
+test('unchanged imported draft survives refresh without saving and closes without discard confirmation', async () => {
+  const app = mount();
+  await app.flush();
+  app
+    .find(
+      'Button',
+      (p) =>
+        Array.isArray(p.children) &&
+        p.children.some((child) => child?.props?.children === '새 질문 만들기'),
+    )
+    .props.onClick();
+  await app.flush();
+  app
+    .find(
+      'Button',
+      (p) => Array.isArray(p.children) && p.children.includes('다른 질문 내용 가져오기'),
+    )
+    .props.onClick();
+  await app.flush();
+  app.find('QuestionImportDialog').props.onImport(app.row);
+  await app.flush();
+  const refreshed = mount({
+    restoredUrl: app.window.location.href,
+    restoredLocal: app.local,
+  });
+  await refreshed.flush();
+  refreshed.tick();
+  await refreshed.flush();
+  assert.equal(refreshed.saves.length, 0);
+  assert.equal(
+    refreshed.find('QuestionRichTextEditor').props.value,
+    app.row.prompt,
+  );
+  refreshed.find('Button', (p) => p.children === '닫기').props.onClick();
+  await refreshed.flush();
+  assert.equal(refreshed.find('Drawer').props.open, false);
+  assert.equal(
+    refreshed.find('AlertDialog', (p) => p.open === true),
+    null,
+  );
+  assert.equal(refreshed.local.size, 0);
+});

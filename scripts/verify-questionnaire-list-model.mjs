@@ -108,3 +108,17 @@ test('detail links retain filters and clear conflicting routes', () => {
     false,
   );
 });
+
+test('questionnaire links preserve draft and filters without drawer presentation', () => {
+  const params = new URLSearchParams('qStatus=draft&qSearch=test&qPage=2');
+  const href = questionnaireDetailHref(params, 'new');
+  const next = new URL(href, 'https://example.test').searchParams;
+  assert.equal(next.has('questionnaireEditor'), false);
+  assert.equal(next.get('qSearch'), 'test');
+  assert.equal(next.get('qPage'), '2');
+  const other = new URL(
+    questionnaireDetailHref(next, 'other'),
+    'https://example.test',
+  ).searchParams;
+  assert.equal(other.has('questionnaireEditor'), false);
+});

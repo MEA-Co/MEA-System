@@ -56,15 +56,14 @@ set local role authenticated;
 do $$ declare qid uuid; vid uuid; begin
  select source_id into qid from publish_docs;
  select (doc->>'questionnaireId')::uuid into vid from second_review_doc;
- if public.can_request_question_review(qid,vid) then raise exception 'Questionnaire owner request enabled'; end if;
- begin
- perform public.request_question_review(gen_random_uuid(),qid,vid,'관리자 질문지에서 타인 원본 검토');
- raise exception 'Questionnaire owner wrote review';
- exception when insufficient_privilege then null; end;
+ if not public.can_request_question_review(qid,vid) then raise exception 'Questionnaire owner blocked for another author question'; end if;
+ if not public.can_request_question_review(qid,gen_random_uuid()) then raise exception 'Legacy context affected permissions'; end if;
  if not public.can_request_question_review(qid,(select (doc->>'questionnaireId')::uuid from publish_docs)) then raise exception 'Non-owner administrator blocked'; end if;
+ perform public.request_question_review(gen_random_uuid(),qid,vid,'질문지 작성자 검토 허용');
  if jsonb_array_length(public.unread_question_review_ids(qid))<>0 then raise exception 'Questionnaire owner received source notification'; end if;
 end $$;
 reset role;
+delete from public.question_review_requests where question_id=(select source_id from publish_docs) and description='질문지 작성자 검토 허용';
 create temporary table review_fixture(id uuid default gen_random_uuid());
 insert into review_fixture default values;
 grant select on review_fixture to authenticated;
@@ -74,7 +73,8 @@ do $$ declare qid uuid; vid uuid; rid uuid; payload jsonb; begin
  select source_id,(doc->>'questionnaireId')::uuid into qid,vid from publish_docs;
  select id into rid from review_fixture;
  perform public.request_question_review(rid,qid,vid,'검토해 주세요');
- perform public.request_question_review(rid,qid,vid,'검토해 주세요');
+ perform public.request_question_review(rid,qid,gen_random_uuid(),'검토해 주세요');
+ if exists(select 1 from public.question_review_requests where id=rid and origin_questionnaire_id is not null) then raise exception 'New review retained questionnaire context'; end if;
  perform public.mark_question_reviews_read(qid,array[rid]);
  if exists(select 1 from public.question_review_reads) then raise exception 'Requester marked creator receipt'; end if;
  payload:=public.read_question_reviews(qid);
@@ -84,6 +84,8 @@ do $$ declare qid uuid; vid uuid; rid uuid; payload jsonb; begin
  begin update public.question_review_requests set resolved_at=now() where id=rid; raise exception 'Direct write allowed'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+-- Historical provenance remains valid; deleting its questionnaire must retain the review.
+update public.question_review_requests set origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs) where id=(select id from review_fixture);
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
 set local role authenticated;
 do $$ begin

@@ -1,6 +1,5 @@
 'use client';
 
-import { Tabs } from '@base-ui/react/tabs';
 import {
   ArrowDown,
   ArrowUp,
@@ -14,6 +13,15 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Drawer,
   DrawerContent,
@@ -22,7 +30,10 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 
 import { useQuestionLibrary } from '../../hooks/questionnaire/useQuestionLibrary';
 import { useQuestionnaireSave } from '../../hooks/questionnaire/useQuestionnaireSave';
@@ -38,12 +49,13 @@ import type {
   QuestionnaireReviewContext,
   QuestionnaireSection,
 } from '../../lib/questionnaire/types';
+import { questionCanvasClass } from '../question/question-styles';
 import { QuestionLibraryView } from '../question/QuestionLibraryView';
+import { QuestionRichTextEditor } from '../question/QuestionRichTextEditor';
 
 import { QuestionLibraryPicker } from './QuestionLibraryPicker';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
-import { QuestionnaireStartNotice } from './QuestionnaireStartNotice';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
 import { QuestionResponseForm } from './QuestionResponseForm';
@@ -56,7 +68,9 @@ export function QuestionnaireComposer({
   reviewContext,
   onEditorState,
   paused = false,
+  onClose,
 }: {
+  onClose?: () => void;
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
   initialDraft: QuestionnaireDraft;
@@ -81,6 +95,9 @@ export function QuestionnaireComposer({
     );
   }, []);
   const [title, setTitle] = useState(initialDraft.title);
+  const [startNotice, setStartNotice] = useState(
+    initialDraft.startNotice ?? null,
+  );
   const [sections, setSections] = useState(initialDraft.sections);
   const [checkingRemoval, setCheckingRemoval] = useState(false);
   const removalLock = useRef(false);
@@ -131,10 +148,12 @@ export function QuestionnaireComposer({
       questionnaireId: initialDraft.questionnaireId,
       title,
       sections,
+      startNotice,
     },
     initialDraft,
     (draft) => {
       setTitle(draft.title);
+      setStartNotice(draft.startNotice ?? null);
       setSections(draft.sections);
     },
     remoteUnavailable,
@@ -320,7 +339,7 @@ export function QuestionnaireComposer({
   function openQuestionAdder(sectionId: string, trigger: HTMLButtonElement) {
     addTrigger.current = trigger;
     setEditingQuestionId(undefined);
-    setAddMode('new');
+    setAddMode('existing');
     setPickerSection(sectionId);
   }
   async function placeCreated(question: QuestionBlockRow) {
@@ -350,40 +369,16 @@ export function QuestionnaireComposer({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <div className="space-y-5">
-        <header className="flex flex-wrap items-end justify-end gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              섹션 {sections.length}개 · 질문 {count}개
-            </span>
-            <Button
-              onClick={() => void save()}
-              disabled={
-                saving ||
-                blocked ||
-                !!validation ||
-                (hasPlacements && (!library.data || !!library.error)) ||
-                !dirty
-              }
-            >
-              {saving ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Save className="size-4" />
-              )}
-              저장
-            </Button>
-          </div>
-        </header>
-        <p className="text-xs text-muted-foreground" role="status">
-          {saving
-            ? '저장 중…'
-            : dirty
-              ? '변경 사항이 있어요 · 10초마다 자동 저장'
-              : savedAt
-                ? '모든 변경 사항을 저장했어요'
-                : '질문을 배치하면 10초마다 자동 저장됩니다.'}
+    <div className="mx-auto max-w-6xl overflow-hidden rounded-xl border">
+      <div
+        inert={paused || pickerSection !== null}
+        className={cn(questionCanvasClass, 'space-y-5')}
+        style={
+          paused || pickerSection !== null ? { overflow: 'hidden' } : undefined
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          섹션 {sections.length}개 · 질문 {count}개
         </p>
         {(error || validation) && (
           <p
@@ -393,7 +388,7 @@ export function QuestionnaireComposer({
             {validation || error}
           </p>
         )}
-        <Tabs.Root
+        <Tabs
           value={tab}
           onValueChange={(value) => {
             if (responseState.saving) return;
@@ -406,26 +401,17 @@ export function QuestionnaireComposer({
             setTab(value as string);
           }}
         >
-          <Tabs.List
-            className="mb-4 inline-flex gap-1 rounded-full bg-muted p-1"
-            aria-label="질문지 보기 방식"
-          >
-            <Tabs.Tab
-              value="edit"
-              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm data-active:bg-background"
-            >
+          <TabsList className="mb-4" aria-label="질문지 보기 방식">
+            <TabsTrigger value="edit" className="gap-2 px-4">
               <PencilLine className="size-4" />
               배치
-            </Tabs.Tab>
-            <Tabs.Tab
-              value="preview"
-              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm data-active:bg-background"
-            >
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="gap-2 px-4">
               <Eye className="size-4" />
               미리보기
-            </Tabs.Tab>
-          </Tabs.List>
-          <Tabs.Panel value="preview" className="rounded-2xl border">
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview" className="min-w-0">
             {published && guideAccess?.canWrite ? (
               <QuestionResponseForm
                 questionnaireId={initialDraft.questionnaireId}
@@ -433,7 +419,7 @@ export function QuestionnaireComposer({
               />
             ) : (
               <QuestionnairePreview
-                startNotice={initialDraft.startNotice}
+                startNotice={startNotice}
                 reviewQuestionnaireId={
                   published ? initialDraft.questionnaireId : undefined
                 }
@@ -443,227 +429,339 @@ export function QuestionnaireComposer({
                 showGuideAnswers
               />
             )}
-          </Tabs.Panel>
-          <Tabs.Panel
+          </TabsContent>
+          <TabsContent
             value="edit"
             keepMounted
-            className="space-y-8 rounded-2xl border bg-background p-5 sm:p-8 data-hidden:hidden"
+            className="space-y-6 data-hidden:hidden"
           >
-            <div>
-              <label
-                htmlFor="questionnaire-title"
-                className="text-sm font-medium"
-              >
-                질문지 제목
-              </label>
-              <Input
-                id="questionnaire-title"
-                value={title}
-                disabled={blocked || checkingRemoval || saving}
-                maxLength={500}
-                placeholder="제목을 입력하세요"
-                onChange={(event) => setTitle(event.target.value)}
-                className="mt-2 h-12 text-lg"
-              />
-            </div>
-            {initialDraft.startNotice && (
-              <QuestionnaireStartNotice notice={initialDraft.startNotice} />
-            )}
-            {sections.map((section, si) => (
-              <section
-                key={section.id}
-                className="space-y-4 border-t pt-6"
-                aria-label={`섹션 ${si + 1}`}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <label
-                    htmlFor={`section-${section.id}`}
-                    className="text-sm font-medium"
-                  >
-                    섹션 {si + 1}
-                  </label>
-                  <Input
-                    id={`section-${section.id}`}
-                    value={section.title}
-                    disabled={blocked || checkingRemoval || saving}
-                    maxLength={500}
-                    placeholder="섹션 제목"
-                    className="min-w-40 flex-1"
-                    onChange={(event) =>
-                      setSections(
-                        sections.map((s) =>
-                          s.id === section.id
-                            ? { ...s, title: event.target.value }
-                            : s,
-                        ),
-                      )
-                    }
-                  />
-                  {[-1, 1].map((direction) => (
+            <Card variant="accent">
+              <CardContent>
+                <Label
+                  htmlFor="questionnaire-title"
+                  className="text-sm font-medium"
+                >
+                  질문지 제목
+                </Label>
+                <Input
+                  id="questionnaire-title"
+                  value={title}
+                  disabled={blocked || checkingRemoval || saving}
+                  maxLength={500}
+                  placeholder="제목을 입력하세요"
+                  onChange={(event) => setTitle(event.target.value)}
+                  className="mt-2 h-12 text-lg"
+                />
+              </CardContent>
+            </Card>
+            {startNotice ? (
+              <Card variant="accent">
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="notice-title">질문지 시작 안내</Label>
                     <Button
-                      key={direction}
                       variant="ghost"
                       size="icon-sm"
-                      disabled={
-                        blocked ||
-                        si + direction < 0 ||
-                        si + direction >= sections.length
-                      }
-                      aria-label={`섹션 ${si + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
-                      onClick={() => {
-                        const next = [...sections];
-                        [next[si], next[si + direction]] = [
-                          next[si + direction],
-                          next[si],
-                        ];
-                        commit(next);
-                      }}
+                      aria-label="시작 안내 삭제"
+                      disabled={blocked || saving}
+                      onClick={() => setStartNotice(null)}
                     >
-                      {direction < 0 ? <ArrowUp /> : <ArrowDown />}
+                      <Trash2 />
                     </Button>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={blocked || checkingRemoval || saving}
-                    aria-label={`섹션 ${si + 1} 삭제`}
-                    onClick={() =>
-                      void removeQuestions(
-                        sections.filter((s) => s.id !== section.id),
-                        section.questions,
-                        true,
-                      )
+                  </div>
+                  <Input
+                    id="notice-title"
+                    aria-label="안내 제목"
+                    placeholder="안내 제목"
+                    maxLength={200}
+                    value={startNotice.title}
+                    disabled={blocked || saving}
+                    onChange={(e) =>
+                      setStartNotice({ ...startNotice, title: e.target.value })
                     }
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
-                {section.questions.length === 0 && (
-                  <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                    이 섹션에 질문을 배치해 주세요.
-                  </p>
-                )}
-                {section.questions.map((question, qi) => {
-                  const source = questions.find(
-                    (q) => q.id === question.sourceQuestionId,
-                  );
-                  return (
-                    <div
-                      key={question.id}
-                      className="space-y-3 rounded-xl border p-4 sm:p-5"
+                  />
+                  <QuestionRichTextEditor
+                    id="notice-body"
+                    ariaLabel="안내 내용"
+                    value={startNotice.body}
+                    disabled={blocked || saving}
+                    onChange={(body) =>
+                      setStartNotice({ ...startNotice, body })
+                    }
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={!!startNotice.buttonLabel}
+                      disabled={blocked || saving}
+                      onCheckedChange={(checked) =>
+                        setStartNotice({
+                          ...startNotice,
+                          buttonLabel: checked ? '학습법 추가' : '',
+                        })
+                      }
+                    />
+                    학습법 등록 버튼 표시
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={!!startNotice.explorationButtonLabel}
+                      disabled={blocked || saving}
+                      onCheckedChange={(checked) =>
+                        setStartNotice({
+                          ...startNotice,
+                          explorationButtonLabel: checked
+                            ? '탐구활동 추가'
+                            : '',
+                        })
+                      }
+                    />
+                    탐구활동 등록 버튼 표시
+                  </label>
+                  {startNotice.explorationButtonLabel && (
+                    <Input
+                      aria-label="탐구활동 등록 버튼 문구"
+                      maxLength={100}
+                      value={startNotice.explorationButtonLabel}
+                      disabled={blocked || saving}
+                      onChange={(e) =>
+                        setStartNotice({
+                          ...startNotice,
+                          explorationButtonLabel: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+                  {startNotice.buttonLabel && (
+                    <Input
+                      aria-label="학습법 등록 버튼 문구"
+                      maxLength={100}
+                      value={startNotice.buttonLabel}
+                      disabled={blocked || saving}
+                      onChange={(e) =>
+                        setStartNotice({
+                          ...startNotice,
+                          buttonLabel: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-11 w-full border-dashed bg-muted/60"
+                disabled={blocked || saving}
+                onClick={() =>
+                  setStartNotice({ title: '', body: '', buttonLabel: '' })
+                }
+              >
+                <Plus />
+                시작 안내 추가
+              </Button>
+            )}
+            {sections.map((section, si) => (
+              <Card
+                variant="accent"
+                key={section.id}
+                className="gap-0"
+                aria-label={`섹션 ${si + 1}`}
+              >
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 border-b pb-4">
+                    <Label
+                      htmlFor={`section-${section.id}`}
+                      className="text-sm font-medium"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          질문 {qi + 1}
-                        </span>
-                        <div className="flex gap-1">
-                          {[-1, 1].map((direction) => (
-                            <Button
-                              key={direction}
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={
-                                blocked ||
-                                (direction < 0
-                                  ? si === 0 && qi === 0
-                                  : si === sections.length - 1 &&
-                                    qi === section.questions.length - 1)
-                              }
-                              aria-label={`섹션 ${si + 1} 질문 ${qi + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
-                              onClick={() =>
-                                moveQuestion(section.id, question.id, direction)
-                              }
-                            >
-                              {direction < 0 ? <ArrowUp /> : <ArrowDown />}
-                            </Button>
-                          ))}
-                          {source && (
+                      섹션 {si + 1}
+                    </Label>
+                    <Input
+                      id={`section-${section.id}`}
+                      value={section.title}
+                      disabled={blocked || checkingRemoval || saving}
+                      maxLength={500}
+                      placeholder="섹션 제목"
+                      className="min-w-0 basis-full sm:basis-auto sm:flex-1"
+                      onChange={(event) =>
+                        setSections(
+                          sections.map((s) =>
+                            s.id === section.id
+                              ? { ...s, title: event.target.value }
+                              : s,
+                          ),
+                        )
+                      }
+                    />
+                    {[-1, 1].map((direction) => (
+                      <Button
+                        key={direction}
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={
+                          blocked ||
+                          si + direction < 0 ||
+                          si + direction >= sections.length
+                        }
+                        aria-label={`섹션 ${si + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
+                        onClick={() => {
+                          const next = [...sections];
+                          [next[si], next[si + direction]] = [
+                            next[si + direction],
+                            next[si],
+                          ];
+                          commit(next);
+                        }}
+                      >
+                        {direction < 0 ? <ArrowUp /> : <ArrowDown />}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={blocked || checkingRemoval || saving}
+                      aria-label={`섹션 ${si + 1} 삭제`}
+                      onClick={() =>
+                        void removeQuestions(
+                          sections.filter((s) => s.id !== section.id),
+                          section.questions,
+                          true,
+                        )
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                  {section.questions.length === 0 && (
+                    <p className="rounded-lg bg-muted/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                      이 섹션에 질문을 배치해 주세요.
+                    </p>
+                  )}
+                  {section.questions.map((question, qi) => {
+                    const source = questions.find(
+                      (q) => q.id === question.sourceQuestionId,
+                    );
+                    return (
+                      <div
+                        key={question.id}
+                        className="space-y-3 rounded-lg border border-t-2 border-t-brand bg-background p-4 sm:p-5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            질문 {qi + 1}
+                          </span>
+                          <div className="flex gap-1">
+                            {[-1, 1].map((direction) => (
+                              <Button
+                                key={direction}
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={
+                                  blocked ||
+                                  (direction < 0
+                                    ? si === 0 && qi === 0
+                                    : si === sections.length - 1 &&
+                                      qi === section.questions.length - 1)
+                                }
+                                aria-label={`섹션 ${si + 1} 질문 ${qi + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
+                                onClick={() =>
+                                  moveQuestion(
+                                    section.id,
+                                    question.id,
+                                    direction,
+                                  )
+                                }
+                              >
+                                {direction < 0 ? <ArrowUp /> : <ArrowDown />}
+                              </Button>
+                            ))}
+                            {source && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={blocked || checkingRemoval || saving}
+                                aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 수정`}
+                                title="질문 수정"
+                                onClick={(event) => {
+                                  addTrigger.current = event.currentTarget;
+                                  setEditingQuestionId(source.id);
+                                  setAddMode('new');
+                                  setPickerSection(section.id);
+                                }}
+                              >
+                                <PencilLine aria-hidden="true" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon-sm"
                               disabled={blocked || checkingRemoval || saving}
-                              aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 수정`}
-                              title="질문 수정"
-                              onClick={(event) => {
-                                addTrigger.current = event.currentTarget;
-                                setEditingQuestionId(source.id);
-                                setAddMode('new');
-                                setPickerSection(section.id);
-                              }}
+                              aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
+                              onClick={() =>
+                                void removeQuestions(
+                                  sections.map((s) =>
+                                    s.id === section.id
+                                      ? {
+                                          ...s,
+                                          questions: s.questions.filter(
+                                            (q) => q.id !== question.id,
+                                          ),
+                                        }
+                                      : s,
+                                  ),
+                                  [question],
+                                )
+                              }
                             >
-                              <PencilLine aria-hidden="true" />
+                              <Trash2 />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={blocked || checkingRemoval || saving}
-                            aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
-                            onClick={() =>
-                              void removeQuestions(
-                                sections.map((s) =>
-                                  s.id === section.id
-                                    ? {
-                                        ...s,
-                                        questions: s.questions.filter(
-                                          (q) => q.id !== question.id,
-                                        ),
-                                      }
-                                    : s,
-                                ),
-                                [question],
-                              )
-                            }
-                          >
-                            <Trash2 />
-                          </Button>
+                          </div>
                         </div>
+                        {source ? (
+                          <QuestionPlacementCard
+                            question={source}
+                            showSourceLink={false}
+                          />
+                        ) : (
+                          <p
+                            role="alert"
+                            className="text-sm text-muted-foreground"
+                          >
+                            {library.error
+                              ? '질문을 불러오지 못했어요.'
+                              : library.isLoading
+                                ? '질문을 불러오고 있어요.'
+                                : '원본 질문을 찾을 수 없어요. 원본 질문을 저장한 뒤 다시 배치해 주세요.'}
+                          </p>
+                        )}
+                        {reviewContext && (
+                          <QuestionnaireReviews
+                            {...reviewContext}
+                            questionId={question.sourceQuestionId ?? undefined}
+                            initialReviews={reviewContext.initialReviews.filter(
+                              (review) => review.question_id === question.id,
+                            )}
+                          />
+                        )}
                       </div>
-                      {source ? (
-                        <QuestionPlacementCard
-                          question={source}
-                          showSourceLink={false}
-                        />
-                      ) : (
-                        <p
-                          role="alert"
-                          className="text-sm text-muted-foreground"
-                        >
-                          {library.error
-                            ? '질문을 불러오지 못했어요.'
-                            : library.isLoading
-                              ? '질문을 불러오고 있어요.'
-                              : '원본 질문을 찾을 수 없어요. 원본 질문을 저장한 뒤 다시 배치해 주세요.'}
-                        </p>
-                      )}
-                      {reviewContext && (
-                        <QuestionnaireReviews
-                          {...reviewContext}
-                          questionId={question.sourceQuestionId ?? undefined}
-                          initialReviews={reviewContext.initialReviews.filter(
-                            (review) => review.question_id === question.id,
-                          )}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed"
-                  disabled={blocked || section.questions.length >= 100}
-                  onClick={(event) =>
-                    openQuestionAdder(section.id, event.currentTarget)
-                  }
-                >
-                  <Plus />
-                  질문 추가하기
-                </Button>
-              </section>
+                    );
+                  })}
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full border-dashed bg-muted/60 hover:bg-muted"
+                    disabled={blocked || section.questions.length >= 100}
+                    onClick={(event) =>
+                      openQuestionAdder(section.id, event.currentTarget)
+                    }
+                  >
+                    <Plus />
+                    질문 추가하기
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
             <Button
               variant="outline"
-              className="w-full border-dashed"
+              className="h-11 w-full bg-background"
               disabled={blocked || sections.length >= 50}
               onClick={() =>
                 setSections([
@@ -675,11 +773,91 @@ export function QuestionnaireComposer({
               <Plus />
               섹션 추가
             </Button>
-          </Tabs.Panel>
-        </Tabs.Root>
+          </TabsContent>
+        </Tabs>
       </div>
+      <footer
+        inert={paused || pickerSection !== null}
+        className="flex shrink-0 flex-col gap-3 border-t bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      >
+        <p className="min-h-5 text-xs text-muted-foreground" role="status">
+          {saving
+            ? '저장 중…'
+            : dirty
+              ? '변경 사항이 있어요 · 10초마다 자동 저장'
+              : savedAt
+                ? '모든 변경 사항을 저장했어요'
+                : '제목과 질문을 구성하면 10초마다 자동 저장됩니다.'}
+        </p>
+        <div className="flex shrink-0 justify-end gap-2">
+          {onClose && (
+            <Button
+              variant="outline"
+              disabled={saving || responseState.saving}
+              onClick={onClose}
+            >
+              닫기
+            </Button>
+          )}
+          <Button
+            onClick={() => void save()}
+            disabled={
+              saving ||
+              blocked ||
+              checkingRemoval ||
+              !!validation ||
+              (hasPlacements && (!library.data || !!library.error)) ||
+              !dirty
+            }
+          >
+            {saving ? (
+              <LoaderCircle className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Save aria-hidden="true" />
+            )}
+            {saving ? '저장 중…' : '저장'}
+          </Button>
+        </div>
+      </footer>
+      {pickerSection !== null && addMode === 'existing' && (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) closeQuestionAdder();
+          }}
+        >
+          <DialogContent
+            className="flex h-[min(800px,85dvh)] min-h-0 flex-col overflow-hidden sm:max-w-4xl"
+            finalFocus={() => addTrigger.current}
+          >
+            <DialogHeader className="shrink-0 pr-10">
+              <DialogTitle>기존 질문 추가</DialogTitle>
+              <DialogDescription>
+                기존 질문을 원본 그대로 질문지에 연결합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingQuestionId(undefined);
+                setEditorInstance((value) => value + 1);
+                setAddMode('new');
+              }}
+            >
+              <Plus />새 질문 만들기
+            </Button>
+            <QuestionLibraryPicker
+              placedIds={placedIds}
+              onAdd={add}
+              error={library.error?.message}
+              loading={library.isLoading}
+              refresh={() => void library.mutate()}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
       <Drawer
-        open={pickerSection !== null}
+        open={pickerSection !== null && addMode === 'new'}
         onOpenChange={(open) => {
           if (open || placing || questionStateRef.current.saving) return;
           if (
@@ -694,126 +872,49 @@ export function QuestionnaireComposer({
           finalFocus={() => addTrigger.current}
         >
           <DrawerHeader>
-            <DrawerTitle className="sr-only">질문 추가 및 수정</DrawerTitle>
-            <DrawerDescription className="sr-only">
-              새 질문을 만들거나 저장된 질문을 불러와 원본을 수정하고
-              배치합니다.
+            <DrawerTitle>
+              {editingQuestionId ? '질문 수정' : '새 질문 만들기'}
+            </DrawerTitle>
+            <DrawerDescription>
+              {editingQuestionId
+                ? '저장하면 원본 질문이 수정됩니다.'
+                : '새 질문을 저장한 뒤 질문지에 배치합니다.'}
             </DrawerDescription>
           </DrawerHeader>
-          {pickerSection && (
-            <section
-              aria-label="질문 추가하기"
-              className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-8 sm:px-8"
-              aria-busy={placing}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2
-                  ref={addHeading}
-                  tabIndex={-1}
-                  className="text-xl font-semibold"
-                >
-                  {editingQuestionId ? '질문 수정' : '질문 추가하기'}
-                </h2>
-              </div>
-              <Tabs.Root
-                value={addMode}
-                onValueChange={(value) => {
-                  if (placing || questionStateRef.current.saving) return;
-                  setAddMode(value as 'new' | 'existing');
+          <section
+            aria-label="질문 편집"
+            className="min-h-0 flex-1 overflow-y-auto"
+            aria-busy={placing}
+          >
+            {pickerSection !== null && addMode === 'new' && (
+              <QuestionLibraryView
+                key={`${editingQuestionId ?? 'new'}:${editorInstance}`}
+                embedded={{
+                  questionId: editingQuestionId,
+                  allowSharedEdit: published,
+                  questionnaireId: initialDraft.questionnaireId,
+                  sharedSources: questions,
+                  actionLabel:
+                    editingQuestionId && placedIds.has(editingQuestionId)
+                      ? '완료'
+                      : '질문지에 배치',
+                  onSaved: (saved) => {
+                    void library.mutate(
+                      (current) => [
+                        saved,
+                        ...(current ?? []).filter((q) => q.id !== saved.id),
+                      ],
+                      { revalidate: false },
+                    );
+                  },
+                  onPlace: placeCreated,
+                  paused: paused || placing,
+                  onCancel: closeQuestionAdder,
+                  onStateChange: reportQuestion,
                 }}
-              >
-                <Tabs.List
-                  aria-label="질문 추가 방식"
-                  className="mb-5 inline-flex gap-1 rounded-full bg-muted p-1"
-                >
-                  <Tabs.Tab
-                    value="new"
-                    disabled={placing || questionState.saving}
-                    className="rounded-full px-4 py-2 text-sm data-active:bg-background"
-                  >
-                    새 질문 만들기
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="existing"
-                    disabled={placing || questionState.saving}
-                    className="rounded-full px-4 py-2 text-sm data-active:bg-background"
-                  >
-                    저장된 질문 불러오기
-                  </Tabs.Tab>
-                </Tabs.List>
-                <Tabs.Panel
-                  value="new"
-                  keepMounted
-                  className="data-hidden:hidden"
-                >
-                  {editingQuestionId && addMode === 'new' && (
-                    <p className="text-sm text-muted-foreground">
-                      저장하면 원본 질문이 수정됩니다.
-                    </p>
-                  )}
-
-                  <QuestionLibraryView
-                    key={`${editingQuestionId ?? 'new'}:${editorInstance}`}
-                    embedded={{
-                      questionId: editingQuestionId,
-                      allowSharedEdit: published,
-                      questionnaireId: initialDraft.questionnaireId,
-                      sharedSources: questions,
-                      actionLabel:
-                        editingQuestionId && placedIds.has(editingQuestionId)
-                          ? '완료'
-                          : '질문지에 배치',
-                      onSaved: (saved) => {
-                        void library.mutate(
-                          (current) => [
-                            saved,
-                            ...(current ?? []).filter((q) => q.id !== saved.id),
-                          ],
-                          { revalidate: false },
-                        );
-                      },
-                      onPlace: placeCreated,
-                      paused: paused || placing,
-                      onCancel: closeQuestionAdder,
-                      onStateChange: reportQuestion,
-                    }}
-                  />
-                </Tabs.Panel>
-                <Tabs.Panel value="existing">
-                  {addMode === 'existing' && (
-                    <>
-                      <QuestionLibraryPicker
-                        questions={questions}
-                        placedIds={placedIds}
-                        onAdd={(id) => {
-                          if (placing || questionStateRef.current.saving)
-                            return;
-                          if (
-                            questionStateRef.current.dirty &&
-                            !window.confirm(
-                              '작성 중인 새 질문의 저장하지 않은 변경 내용을 버리고 저장된 질문을 배치할까요?',
-                            )
-                          )
-                            return;
-                          setEditingQuestionId(id);
-                          setEditorInstance((value) => value + 1);
-                          setQuestionState({ dirty: false, saving: false });
-                          questionStateRef.current = {
-                            dirty: false,
-                            saving: false,
-                          };
-                          setAddMode('new');
-                        }}
-                        error={library.error?.message}
-                        loading={library.isLoading}
-                        refresh={() => void library.mutate()}
-                      />
-                    </>
-                  )}
-                </Tabs.Panel>
-              </Tabs.Root>
-            </section>
-          )}
+              />
+            )}
+          </section>
         </DrawerContent>
       </Drawer>
     </div>

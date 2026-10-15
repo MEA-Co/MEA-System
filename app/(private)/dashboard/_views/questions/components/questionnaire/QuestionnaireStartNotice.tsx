@@ -1,6 +1,7 @@
 'use client';
 
 import type { QuestionnaireStartNotice as StartNotice } from '../../lib/questionnaire/types';
+import { ExplorationRegistrationAction } from '../question/ExplorationRegistrationAction';
 import {
   questionPromptClass,
   questionSurfaceClass,
@@ -13,7 +14,16 @@ export function QuestionnaireStartNotice({ notice }: { notice: StartNotice }) {
     <aside aria-label="질문지 시작 안내" className={questionSurfaceClass}>
       <h3 className={questionPromptClass}>{notice.title}</h3>
       <RichTextContent value={notice.body} />
-      <StudyRegistrationAction label={notice.buttonLabel} />
+      <div className="flex flex-wrap gap-3">
+        {notice.buttonLabel && (
+          <StudyRegistrationAction label={notice.buttonLabel} />
+        )}
+        {notice.explorationButtonLabel && (
+          <ExplorationRegistrationAction
+            label={notice.explorationButtonLabel}
+          />
+        )}
+      </div>
     </aside>
   );
 }

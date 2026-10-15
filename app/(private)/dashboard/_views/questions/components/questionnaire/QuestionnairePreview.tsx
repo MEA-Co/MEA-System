@@ -141,7 +141,6 @@ export function QuestionnairePreview({
                 {reviewQuestionnaireId && (
                   <QuestionReviews
                     questionId={question.sourceQuestionId}
-                    questionnaireId={reviewQuestionnaireId}
                   />
                 )}
                 {renderQuestionFooter?.(question.id)}

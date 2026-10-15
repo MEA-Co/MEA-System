@@ -386,3 +386,75 @@ npx supabase db push --linked --dry-run
 - 두 SQL 파일은 로컬에서 가상 데이터로 실행하고 전체 롤백했다. 관련 JS 회귀 54개 통과. 실제 브라우저 테스트·운영 적용은 수행하지 않았다.
 
 - 이번 설명 항목 정리의 타입 검사·변경 파일 린트도 통과했다.
+
+### 검토 요청 조회·갱신 분리 (2026-10-15)
+
+- 신규 migration: `20261015054101_question_review_paged_reads.sql`. 로컬 적용·이력 생성 완료. 요청/읽음 데이터 변경 없음. 새 조회 함수·완료 이력 partial index 및 기존 집계 함수 2개의 anon 실행 권한 명시적 회수를 포함한다.
+- `supabase/tests/question_review_pages.sql`: 실제 역할별 등록, 23개 완료/2개 미처리 분리, 10/10/3 페이지·동률 정렬 중복 방지, 출처 권한, 일괄 읽음, 잘못된 페이지, consultant/anon 거절 검증.
+- 기존 `question_review_requests.sql`과 함께 로컬 실행·가상 데이터 전체 롤백 완료. DB security advisor 경고/오류 없음. 기존 요청/처리 함수의 권한·출처 삭제 보존 계약은 유지한다.
+- JS 검증: `scripts/verify-question-reviews.mjs`의 API/훅/재시도/읽음/이력 10개와 기존 집계·질문지 저장·질문 편집 회귀를 함께 실행한다. 브라우저 테스트·운영 DB 조회/반영·앱 배포는 수행하지 않았다.
+
+운영은 전체 개선 작업 종료 시 다음 순서로 적용한다. 이번에 추가한 파일은 위 1개이며, 이전 작업의 운영 미적용 migration이 함께 표시될 수 있으므로 기존 운영 절차·이력과 대조한다. 예상과 다른 파일은 적용 전에 검토한다. `docs/local-supabase.md`의 이력 차이를 먼저 확인하고 무조건 push/reset/repair하지 않는다.
+
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 연결 대상·대기 파일 확인 후에만 실행
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+적용 대기 없음 확인 → 앱 배포 → 요청 등록/처리/읽음, 완료 이력 더 보기, 출처별 권한 및 갱신 실패 안내를 확인한다. 새 앱은 새 페이지 RPC가 필요하므로 DB 적용 후 배포한다.
+
+- 최종 검증: 관련 JS 47개·타입 검사·변경 파일 린트·Webpack 빌드 통과. 로컬 migration dry-run은 적용 대기 없음으로 확인했다.
+
+
+### 질문 내용 불러오기·질문 귀속 검토 (2026-10-15)
+
+- 신규 migration: `20261015055947_question_owned_reviews.sql`. 로컬 DB에 함수 변경을 적용한 뒤 `db pull question_owned_reviews --local --yes`로 생성·이력 기록했다. CLI의 remoteHistoryUpdated 문구는 이 명령의 로컬 DB 이력이다. 운영 조회/변경 없음.
+- 기존 요청·읽음·처리·질문·응답 데이터는 수정하지 않았다. 기존 출처 ID는 보존한다. 신규 요청은 출처 없이 생성하고 출처 인자는 권한/재시도에서 제외한다. 이전 단계 페이지 조회 RPC의 anon 실행 권한 명시적 회수도 생성 파일에 포함하여 현재 로컬 ACL과 재생 결과를 일치시킨다.
+- `question_review_requests.sql`: 질문지 작성자가 타인의 질문에 요청 가능, 원본 작성자/일반 컨설턴트 요청 차단, 출처가 다른 재시도 중복 방지, 새 출처 NULL, 과거 출처 보존·질문지 삭제 후 요청 보존 검증. `question_review_pages.sql`: 출처와 무관한 권한 및 완료 이력 페이지 검증. 로컬 가상 데이터 전체 롤백.
+- `verify-question-copy.mjs`: 열/선택지/설명 새 ID, 설정 보존, 원본 불변, 외부 연결 해제, 답변/이력 제외 검증. 편집기 회귀에 선택 중 자동 저장 중지·초안 ID 보존·새 질문 저장 재개를 추가했다.
+- 질문지 구조·기수별 배포·제출 검증은 변경하지 않았다. 실제 브라우저 테스트는 수행하지 않았다.
+
+운영 적용은 전체 개선 완료 후 진행한다. 이번 예상 추가 파일은 `20261015055947_question_owned_reviews.sql`, 직전 작업의 `20261015054101_question_review_paged_reads.sql`도 먼저 필요하다. 그 이전의 로컬 전용 migration은 기존 운영 기록과 함께 대조한다. **예상과 다른 migration이 나오면 적용 전에 이력을 검토한다.**
+
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 대상과 전체 대기 파일 검토 후
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+대기 없음 확인 → 앱 배포 → 새 질문 불러오기/원본 보존, 질문 귀속 검토 권한, 새·구형 API, 읽음/처리, 완료 이력, 편집기 로딩과 중첩 팝업 동작을 확인한다.
+
+- 최종 검증: 관련 JS 51개, 타입 검사·변경 파일 린트·Webpack 빌드 통과. 로컬 SQL 2개 전체 롤백·security advisor 경고/오류 없음·로컬 migration dry-run 적용 대기 없음 확인. 실제 브라우저 테스트 및 운영 적용은 미수행.
+
+## 질문지 시작 안내 편집 (2026-10-15)
+
+`20261015064129_questionnaire_editable_notice.sql`: 기존 저장 함수의 최종 UPDATE에 안내를 포함하며 권한/원자성/충돌/재시도는 유지한다. 기존 데이터를 변경하지 않는다. 로컬 적용 완료, `supabase/tests/questionnaire_editable_notice.sql` 가상 데이터 전체 롤백 검증 통과. 운영은 전체 개선 마지막에 적용한다.
+
+운영 적용 시 순서:
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase projects list
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 예상 migration과 이전 개선 작업의 대기 파일 목록을 대조한 뒤에만 진행
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+연결된 프로젝트를 확인하고 예상 밖 migration/이력 차이가 있으면 적용 전 검토한다. 적용 대기 없음 확인 후 앱을 배포하고 시작 안내 추가/수정/삭제·새로고침 복원·기존 2주차 안내·배포본 수정 차단을 확인한다. 운영 적용과 앱 배포는 이번 작업에서 수행하지 않았다.
+
+### 2주차 첫 등록 카드 전환 재확인 (2026-10-15)
+
+로컬 `2주차: 학습전략` (`6e67447a-1c1b-4e09-aab9-7c3dd1e702cf`)의 `학습법 블록 등록`은 이미 `start_notice`로 이전되었다. 실제 첫 응답 질문은 `학습 도구`이며, 이번 재확인에서는 데이터 변경이나 중복 migration을 만들지 않았다.
+
+운영도 기존 `20261015034458_questionnaire_start_notice.sql`로 전환한다. 원본 제목/서식 본문/버튼 문구를 그대로 옮기고 등록 카드는 보관하며, 일반 첫 질문을 제목/순서만으로 안내로 바꾸지 않는다. 적용 전 기존 안내 질문에 연결된 세션·응답·최종 제출·설명/중복 안내가 있으면 migration 전체가 중단된다. 이 검사를 우회하거나 기존 답변을 삭제하여 적용하지 않는다. 실제 운영 상태가 이 조건에 맞지 않으면 별도 보존 이전을 설계한다.
+
+위 운영 적용 순서에 따라 대상·이력을 확인하고 dry-run의 기존 전환 파일 및 후속 편집 파일을 검토한다. 적용 후 `supabase/tests/questionnaire_week2_notice.sql`을 운영 SQL 편집기에서 읽기 전용으로 실행하여 안내와 보관 원문의 동일성·질문 배치 제외·응답 질문 잔존을 확인한다. 앱 배포 뒤 번호 없는 안내와 학습법 등록 버튼, 첫 실제 질문의 번호를 확인한다. 운영 조회/적용은 이번 재확인에서 수행하지 않았다.

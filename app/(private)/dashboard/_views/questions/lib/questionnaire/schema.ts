@@ -67,6 +67,15 @@ const sectionSchema = z.object({
 });
 export const questionnaireDocumentSchema = z
   .object({
+    startNotice: z
+      .object({
+        title: z.string().max(200),
+        body: z.string().max(20000).transform(normalizeRichTextValue),
+        buttonLabel: z.string().max(100),
+        explorationButtonLabel: z.string().max(100).optional(),
+      })
+      .nullable()
+      .optional(),
     questionnaireId: z.uuid(),
     title: z.string().max(500),
     sections: z.array(sectionSchema).max(50),
@@ -145,6 +154,7 @@ export const savedDraftSchema = questionnaireDocumentSchema
           title: z.string(),
           body: z.string(),
           buttonLabel: z.string(),
+          explorationButtonLabel: z.string().max(100).optional(),
         })
         .nullish(),
     }),

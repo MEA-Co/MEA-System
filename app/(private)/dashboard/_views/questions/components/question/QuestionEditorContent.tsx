@@ -1,5 +1,5 @@
 'use client';
-import { Eye, LoaderCircle, PencilLine, Plus, Save } from 'lucide-react';
+import { Copy, Eye, LoaderCircle, PencilLine, Plus, Save } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -65,6 +65,7 @@ import {
   QuestionEditorSkeleton,
   QuestionRelationshipsSkeleton,
 } from './QuestionEditorSkeleton';
+import { QuestionImportDialog } from './QuestionImportDialog';
 import { QuestionReviews } from './QuestionReviews';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 function MaxItemsInput({
@@ -119,6 +120,11 @@ export function QuestionEditorContent({
   embedded: QuestionLibraryProps['embedded'];
 }) {
   const {
+    unchangedImport,
+    importOpen,
+    setImportOpen,
+    openImport,
+    importQuestion,
     requestedId,
     savedRow,
     userId,
@@ -154,6 +160,13 @@ export function QuestionEditorContent({
   } = editor;
   return (
     <>
+      {importOpen && (
+        <QuestionImportDialog
+          onClose={() => setImportOpen(false)}
+          onImport={importQuestion}
+          hasChanges={dirty}
+        />
+      )}
       <AlertDialog
         open={guideDialog.open}
         onOpenChange={(open) => {
@@ -265,6 +278,18 @@ export function QuestionEditorContent({
                 배포된 질문지에 사용된 질문입니다. 질문 내용·설명·답변 설정을
                 수정하거나 삭제할 수 없습니다.
               </p>
+            )}
+            {revision === 0 && (
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  disabled={busy || !!saveError || conflicted}
+                  onClick={openImport}
+                >
+                  <Copy aria-hidden="true" />
+                  다른 질문 내용 가져오기
+                </Button>
+              </div>
             )}
             {revision > 0 && <QuestionReviews questionId={draft.id} />}
             <CollectionTabs defaultValue="edit">
@@ -789,11 +814,13 @@ export function QuestionEditorContent({
                     ? '다른 곳에서 수정됐어요. 작성 내용은 유지됩니다.'
                     : saveError
                       ? saveError
-                      : dirty
-                        ? '변경 사항이 있어요 · 10초마다 자동 저장'
-                        : savedAt
-                          ? '모든 변경 사항을 저장했어요 · 10초마다 자동 저장'
-                          : '내용을 입력하면 10초마다 자동 저장됩니다.'}
+                      : unchangedImport
+                        ? '불러온 내용을 수정하면 새 질문으로 저장됩니다.'
+                        : dirty
+                          ? '변경 사항이 있어요 · 10초마다 자동 저장'
+                          : savedAt
+                            ? '모든 변경 사항을 저장했어요 · 10초마다 자동 저장'
+                            : '내용을 입력하면 10초마다 자동 저장됩니다.'}
               </p>
             )}
         </div>

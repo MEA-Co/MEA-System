@@ -1,5 +1,6 @@
 import type { QuestionBlockRow } from '../question-blocks';
 import type { QuestionDetail } from '../question-details';
+import type { QuestionReview } from '../reviews/types';
 
 import type { QuestionKind } from './question-types';
 
@@ -36,6 +37,7 @@ export type QuestionnaireStartNotice = {
   title: string;
   body: string;
   buttonLabel: string;
+  explorationButtonLabel?: string;
 };
 
 export type QuestionnaireDocument = {
@@ -83,22 +85,11 @@ export type QuestionnaireListItem = {
   pendingReviewCount: number;
   unreadReviewCount?: number;
 };
-export type QuestionnaireReview = {
-  id: string;
-  question_id: string | null;
-  title: string;
-  requester_name: string;
-  description: string;
-  created_at: string;
-  resolved_at: string | null;
-};
-
 export type QuestionnaireReviewContext = {
   questionnaireId: string;
   isOwner: boolean;
-  initialReviews: QuestionnaireReview[];
+  initialReviews: QuestionReview[];
   disabled?: boolean;
-  canRequest?: boolean;
 };
 
 export type QuestionnaireViewData = {
@@ -109,7 +100,8 @@ export type QuestionnaireViewData = {
   archived?: QuestionnaireListItem[];
   staff: boolean;
   selected: QuestionnaireListItem | null;
-  reviews: QuestionnaireReview[];
+  reviews: QuestionReview[];
+  pendingReviewCount?: number;
   initialDraft: QuestionnaireDraft | null;
   publishedDocument: QuestionnaireDraft | null;
 };

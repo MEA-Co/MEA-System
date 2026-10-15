@@ -668,7 +668,7 @@ test('server refuses whitespace-only questionnaire titles before database writes
   assert.match(result.error, /제목이 비어/);
 });
 
-test('start notice survives reads but cannot be overwritten by ordinary questionnaire saves', () => {
+test('start notice and independent registration buttons survive reads and validated saves', () => {
   const { savedDraftSchema, questionnaireDocumentSchema } = load(
     'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
   );
@@ -676,6 +676,7 @@ test('start notice survives reads but cannot be overwritten by ordinary question
     title: '학습법 등록',
     body: '서식 원문',
     buttonLabel: '학습법 추가',
+    explorationButtonLabel: '탐구활동 추가',
   };
   const document = {
     questionnaireId: randomUUID(),
@@ -691,6 +692,6 @@ test('start notice survives reads but cannot be overwritten by ordinary question
   assert.deepEqual(read.startNotice, startNotice);
   assert.equal(
     'startNotice' in questionnaireDocumentSchema.parse(document),
-    false,
+    true,
   );
 });

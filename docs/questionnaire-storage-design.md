@@ -66,7 +66,7 @@
 
 `questionnaires.start_notice`는 nullable JSONB `{title,body,buttonLabel}`이며 API의 조회 문서 및 작업 응답 스냅샷에서는 `startNotice`다. 기존 questions의 제목·prompt 서식 원문·button_label을 그대로 이전한다. 답변 모델과 독립적이며 학습법은 기존 study 저장 경로만 사용한다. 새 테이블/공개 RPC나 강제 등록 검증은 추가하지 않는다.
 
-기존 read_questionnaire_draft/read_published_questionnaire 및 private 작업 응답 조회 함수의 반환에 추가하되 소유자·역할·RLS·함수 ACL은 유지한다. 일반 저장 schema는 안내를 전달하지 않으며 DB 트리거도 안내 변경을 차단한다. 질문 제작에서 purpose 선택은 없애고 API 및 DB가 새 study_registration 저장을 거절한다. 원본 보관/과거 캐시 읽기 호환을 위해 기존 purpose 열·렌더러·빈 답변 처리 코드는 당장 제거하지 않는다.
+기존 read_questionnaire_draft/read_published_questionnaire 및 private 작업 응답 조회 함수의 반환에 추가하되 소유자·역할·RLS·함수 ACL은 유지한다. 일반 저장 schema는 선택적인 startNotice를 전달한다. 미전달은 기존 안내 보존, null은 삭제, 객체는 교체한다. title 200자/body 20000자/buttonLabel 100자 이내이며 빈 buttonLabel은 등록 버튼 없는 일반 안내다. 기존 원자적 저장 함수의 최종 UPDATE에서 revision과 함께 저장한다. 저장 재시도 해시에 안내도 포함하며 원격 동기화/변경 감지 대상이다. 직접 변경은 guard_start_notice가 차단하고 기존 definer 저장 경로의 역할·소유자/게시 공유·배포/보관 잠금을 유지한다. 질문 제작에서 purpose 선택은 없애고 API 및 DB가 새 study_registration 저장을 거절한다. 원본 보관/과거 캐시 읽기 호환을 위해 기존 purpose 열·렌더러·빈 답변 처리 코드는 당장 제거하지 않는다.
 
 이전은 전체 트랜잭션·잠금 아래 안내마다 질문지 1개 안내, 부가 설명 없음, 대상 질문지 세션/안내 응답/제출 이력 없음 조건을 검사한다. 예상하지 못한 데이터가 있으면 롤백하고 별도 이전을 설계한다. 안내 배치 및 그 결과 비는 섹션만 삭제하며 원본은 archived_at으로 보관한다. 나머지 질문·섹션·답변 ID/내용·제출 시각을 유지하고 질문지 revision 증가로 기존 편집 캐시 충돌을 감지한다. 배포 보호 트리거는 대상 이전 동안만 잠금 아래 해제하고 같은 트랜잭션에서 복구한다.
 
@@ -100,3 +100,19 @@
 ### 설명 항목 계약 정리 (2026-10-15)
 
 설명의 저장 원본은 `question_details`이며 별도 API/독립 revision을 추가하지 않는다. 설명 타입·현재 검증 제한은 `lib/question-details.ts`를 공유한다. 구형 로컬 질문지 초안의 넓은 설명 제한은 `savedDraftSchema`의 읽기 호환 경로에만 남긴다. 빈 설명의 숨김은 표시 단계에서만 수행하며 ID·본문·공개 여부·표시 순서와 저장 데이터는 변경하지 않는다. 기존 DB 스키마/권한 변경 및 데이터 이전은 없다.
+
+### 검토 요청 페이지 조회 (2026-10-15)
+
+`20261015054101_question_review_paged_reads.sql`은 `read_question_review_page(qid uuid, origin_id uuid default null, completed boolean default false, page integer default 1) → jsonb`를 추가한다. `SECURITY INVOKER`/빈 search_path이며 기존 요청 RLS와 can_read/can_request 권한 함수가 계속 적용된다. 비로그인 실행을 허용하지 않는다. 미처리는 전부 반환하고 완료는 10개씩 반환한다. page는 1~100000이며 동률 정렬은 ID로 고정한다. 미처리/완료 count는 페이지 길이와 별개다. 완료 조회는 읽음을 변경하지 않는다.
+
+완료 이력용 partial index는 `(question_id,created_at DESC,id DESC) WHERE resolved_at IS NOT NULL`이다. 기존 요청·읽음 테이블, FK/삭제 정책, 생성·처리·읽음 RPC는 변경하지 않는다. 기존 전체 조회 RPC는 호환용으로 남기고 새 화면의 주기 조회는 페이지 RPC를 사용한다. migration 생성 시 이전 질문 집계 두 함수의 익명 실행 권한도 명시적으로 회수하여 현재 로컬의 권한 상태와 재생 결과를 맞춘다. 인증 사용자 권한은 그대로다.
+
+
+### 질문 귀속 검토·내용 복사 (2026-10-15)
+
+- `20261015055947_question_owned_reviews.sql`은 private can_request/request 함수를 교체하고 이전 단계 페이지 조회 RPC의 anon 실행 권한을 명시적으로 회수한다. 질문·요청·읽음·응답 테이블과 기존 행을 수정하지 않는다. 기존 origin_questionnaire_id 값은 과거 출처 정보로 보존하고 FK의 SET NULL도 유지한다. 새 요청은 항상 origin_questionnaire_id=NULL이다.
+- 기존 RPC의 출처 인자/signature는 구형 클라이언트 호환을 위해 유지하지만 권한과 중복 요청 검사에서는 무시한다. API는 항상 NULL로 전달한다. 원본 질문 작성자 제외 + admin/consultant_lead + 활성 게시본에 포함된 질문이라는 조건을 조회와 저장에 동일 적용한다. 질문지 작성자 제외 조건은 제거한다.
+- 저장 시 원본 질문과 활성 게시 배치를 잠가 상태 변경과 경합을 방지한다. 중복 요청 ID는 질문·요청자·본문이 같은 경우에만 재시도로 인정한다. 기존 요청 처리/읽음/조회 RLS와 권한은 유지한다.
+- 새 질문 불러오기는 클라이언트에서 정의만 독립 복사한 뒤 기존 save_question에 revision 0으로 저장한다. 별도 복제 테이블이나 원본 연결을 만들지 않는다. 필드·선택지·설명 ID를 새로 만들며 응답/가이드/검토 이력은 전달하지 않는다. 외부 질문 연결은 복사하지 않는다.
+
+- startNotice에 선택 문자열 explorationButtonLabel(최대 100자)을 저장한다. 미지정/빈 문자열은 탐구활동 버튼 숨김이다. 기존 JSONB와 원자적 저장 경로를 그대로 사용하며 신규 migration은 없다.

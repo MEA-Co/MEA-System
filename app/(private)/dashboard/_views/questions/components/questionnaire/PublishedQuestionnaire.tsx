@@ -113,9 +113,6 @@ export function PublishedQuestionnaire({
               {staff && reviewContext && (
                 <QuestionnaireReviews
                   {...reviewContext}
-                  canRequest={
-                    !distributed && reviewContext.canRequest !== false
-                  }
                   questionId={question.sourceQuestionId ?? undefined}
                   initialReviews={reviewContext.initialReviews.filter(
                     (review) => review.question_id === question.id,

@@ -12,13 +12,13 @@ import {
 import { createClient } from '@/lib/supabase/server';
 
 import type { QuestionBlockRow } from '../question-blocks';
+import type { QuestionReview } from '../reviews/types';
 
 import { QuestionnaireHttpError } from './http-error';
 import { savedDraftSchema, saveQuestionnaireSchema } from './schema';
 import type {
   QuestionnaireDraft,
   QuestionnaireListItem,
-  QuestionnaireReview,
   SaveQuestionnaireResult,
 } from './types';
 
@@ -205,7 +205,8 @@ export async function loadQuestionnaireView(
     archived: questionnaires.filter((item) => !!item.archivedAt),
     staff,
     selected: null as QuestionnaireListItem | null,
-    reviews: [] as QuestionnaireReview[],
+    reviews: [] as QuestionReview[],
+    pendingReviewCount: 0,
     initialDraft: null as QuestionnaireDraft | null,
     publishedDocument: null as QuestionnaireDraft | null,
   };
@@ -290,9 +291,8 @@ export async function loadQuestionnaireView(
   if (staff && selected.status !== 'draft') {
     const reviews = await client
       .from('question_review_requests')
-      .select(
-        'id, question_id, title, requester_name, description, created_at, resolved_at',
-      )
+      .select('id', { count: 'exact', head: true })
+      .is('resolved_at', null)
       .in(
         'question_id',
         document.sections.flatMap((s) =>
@@ -306,7 +306,7 @@ export async function loadQuestionnaireView(
       throw new Error('검토 요청을 불러오지 못했어요.', {
         cause: reviews.error,
       });
-    result.reviews = reviews.data as QuestionnaireReview[];
+    result.pendingReviewCount = reviews.count ?? 0;
   }
   return result;
 }

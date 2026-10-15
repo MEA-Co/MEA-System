@@ -12,15 +12,15 @@ import {
 } from 'react';
 
 import { CollectionHeader } from '@/components/patterns/collection';
-import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 import { DashboardPageCategory } from '../../../../_components/DashboardPageCategory';
 import {
@@ -60,6 +60,15 @@ export function QuestionnaireView({
   const requested = searchParams.get('draft') ?? undefined;
   const [active, setActive] = useState(requested ?? requestedId);
   const [confirm, setConfirm] = useState(false);
+  const continueWriting = useRef<HTMLButtonElement>(null);
+  const listFocus = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (searchParams.has('questionnaireEditor')) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('questionnaireEditor');
+      window.history.replaceState(null, '', url);
+    }
+  }, [searchParams]);
   const [emptyTitle, setEmptyTitle] = useState(false);
   const editor = useRef<QuestionnaireEditorState>({
     dirty: false,
@@ -71,9 +80,11 @@ export function QuestionnaireView({
   }, []);
   function navigate(id?: string) {
     const url = new URL(window.location.href);
-    if (id) url.searchParams.set('draft', id);
-    else {
+    if (id) {
+      url.searchParams.set('draft', id);
+    } else {
       url.searchParams.delete('draft');
+      url.searchParams.delete('questionnaireEditor');
       url.searchParams.set('tab', 'questionnaires');
       url.searchParams.delete('return');
       url.searchParams.delete('questionnairePanel');
@@ -86,6 +97,7 @@ export function QuestionnaireView({
     editor.current = { dirty: false, saving: false, emptyTitle: true };
     setConfirm(false);
     setActive(undefined);
+
     navigate();
   }
   function requestClose() {
@@ -94,16 +106,7 @@ export function QuestionnaireView({
       return;
     }
     if (editor.current.saving) return;
-    if (editor.current.childEditorOpen) {
-      if (
-        !editor.current.dirty ||
-        window.confirm(
-          '질문과 질문지의 저장하지 않은 변경 내용을 버리고 목록으로 돌아갈까요?',
-        )
-      )
-        close();
-      return;
-    }
+    if (editor.current.childEditorOpen || confirm) return;
     if (editor.current.dirty) {
       setEmptyTitle(editor.current.emptyTitle);
       setConfirm(true);
@@ -116,7 +119,12 @@ export function QuestionnaireView({
       setActive(requested);
       return;
     }
-    if (active && (editor.current.dirty || editor.current.saving)) {
+    if (
+      active &&
+      (editor.current.dirty ||
+        editor.current.saving ||
+        editor.current.childEditorOpen)
+    ) {
       navigate(active);
       requestClose();
       return;
@@ -131,7 +139,7 @@ export function QuestionnaireView({
   }, [requested]);
   return (
     <>
-      <div hidden={!!active}>
+      <div ref={listFocus} tabIndex={-1} hidden={!!active}>
         <QuestionnairePanel staff={staff} />
       </div>
       {active && (
@@ -152,29 +160,34 @@ export function QuestionnaireView({
             id={active}
             onEditorState={report}
             paused={confirm}
+            onClose={requestClose}
           />
         </div>
       )}
-      <Dialog open={confirm} onOpenChange={setConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>작성 중인 내용을 버릴까요?</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={confirm} onOpenChange={setConfirm}>
+        <AlertDialogContent initialFocus={continueWriting}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>작성을 취소할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
               {emptyTitle
                 ? '질문지 제목이 비어 있어 저장할 수 없어요. 계속 작성해 제목을 입력하거나 변경 내용을 버려 주세요.'
                 : '저장하지 않은 변경 내용이나 답변은 사라집니다.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirm(false)}>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              ref={continueWriting}
+              variant="outline"
+              onClick={() => setConfirm(false)}
+            >
               계속 작성
             </Button>
             <Button variant="destructive" onClick={close}>
               변경 내용 버리기
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -183,7 +196,9 @@ function QuestionnairePanel({
   id,
   onEditorState,
   paused = false,
+  onClose,
 }: {
+  onClose?: () => void;
   staff: boolean;
   id?: string;
   onEditorState?: (state: QuestionnaireEditorState) => void;
@@ -223,7 +238,7 @@ function QuestionnairePanel({
     );
   }
   if (!data || (id === 'new' && isLoading)) {
-    if (!error) return <QuestionnaireLoading />;
+    if (!error) return <QuestionnaireLoading editor />;
     return (
       <div role="alert" className="space-y-3">
         <p>{error.message}</p>
@@ -238,7 +253,7 @@ function QuestionnairePanel({
     return error ? (
       <p role="alert">{error.message}</p>
     ) : (
-      <QuestionnaireLoading />
+      <QuestionnaireLoading editor />
     );
   return (
     <QuestionnaireContent
@@ -247,6 +262,7 @@ function QuestionnairePanel({
       error={error}
       onEditorState={onEditorState}
       paused={paused}
+      onClose={onClose}
     />
   );
 }
@@ -257,7 +273,9 @@ function QuestionnaireContent({
   error,
   onEditorState,
   paused,
+  onClose,
 }: {
+  onClose?: () => void;
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
   onRetry?: () => void;
@@ -294,12 +312,11 @@ function QuestionnaireContent({
           isOwner: selected.isOwner,
           initialReviews: reviews,
           disabled: !!error,
-          canRequest: selected.status === 'published',
         }
       : undefined;
-  const pendingReviewCount = reviews.filter(
-    (review) => !review.resolved_at,
-  ).length;
+  const pendingReviewCount =
+    data.pendingReviewCount ??
+    reviews.filter((review) => !review.resolved_at).length;
   const unlinkedReviews = reviews.filter((review) => !review.question_id);
   if (editorDraft || publishedDocument) {
     return (
@@ -346,6 +363,7 @@ function QuestionnaireContent({
           <QuestionnaireComposer
             key={`editor:${editorDraft.questionnaireId}`}
             initialDraft={editorDraft}
+            onClose={onClose}
             publishedSources={data.publishedSources}
             published={selected?.status === 'published'}
             onEditorState={reportEditor}
@@ -376,7 +394,11 @@ function QuestionnaireContent({
       {error && (
         <div role="alert" className="space-y-2 text-sm text-destructive">
           <p>{error.message}</p>
-          {onRetry && <Button variant="outline" onClick={onRetry}>다시 시도</Button>}
+          {onRetry && (
+            <Button variant="outline" onClick={onRetry}>
+              다시 시도
+            </Button>
+          )}
         </div>
       )}
       <CollectionHeader

@@ -49,7 +49,11 @@ export function ExplorationView({
   canViewOthers = false,
   onSelect,
   onEditorOpenChange,
+  registrationOnly = false,
+  registrationLabel = '탐구활동 추가',
 }: {
+  registrationOnly?: boolean;
+  registrationLabel?: string;
   userId: string;
   canViewOthers?: boolean;
   onSelect?: (activity: Exploration) => void;
@@ -70,7 +74,7 @@ export function ExplorationView({
     saveLocal,
     confirm,
     remove,
-  } = useExplorationStorage(userId, !onSelect);
+  } = useExplorationStorage(userId, !onSelect && !registrationOnly);
   useEffect(() => {
     onEditorOpenChange?.(!!draft);
   }, [draft, onEditorOpenChange]);
@@ -92,11 +96,35 @@ export function ExplorationView({
 
   return (
     <section
-      aria-labelledby={onSelect ? undefined : 'exploration-management-title'}
-      aria-label={onSelect ? '탐구활동 목록' : undefined}
-      className={onSelect ? 'space-y-2' : 'space-y-6'}
+      aria-labelledby={
+        onSelect || registrationOnly
+          ? undefined
+          : 'exploration-management-title'
+      }
+      aria-label={
+        registrationOnly
+          ? '탐구활동 등록'
+          : onSelect
+            ? '탐구활동 목록'
+            : undefined
+      }
+      className={registrationOnly || onSelect ? 'space-y-2' : 'space-y-6'}
     >
-      {!onSelect && (
+      {registrationOnly && (
+        <Button
+          size="wrap"
+          type="button"
+          disabled={!ready || busy}
+          onClick={(event) => {
+            opener.current = event.currentTarget;
+            create();
+          }}
+        >
+          <Plus aria-hidden="true" />
+          {registrationLabel}
+        </Button>
+      )}
+      {!onSelect && !registrationOnly && (
         <CollectionHeader
           id="exploration-management-title"
           category={<DashboardPageCategory view="exploration" />}
@@ -272,7 +300,7 @@ export function ExplorationView({
           )}
         </DrawerContent>
       </Drawer>
-      {onSelect ? (
+      {registrationOnly ? null : onSelect ? (
         <ExplorationSelectList
           busy={busy || !ready}
           onSelect={onSelect}

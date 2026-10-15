@@ -8,6 +8,7 @@ import ts from 'typescript';
 
 function mount({
   component = 'QuestionnaireView',
+  href = 'https://example.test/dashboard?view=questions&tab=questionnaires&draft=new',
   props = {},
   imports = {},
   fetcher = async () => ({ ok: true, json: async () => ({ questionIds: [] }) }),
@@ -19,7 +20,7 @@ function mount({
   let tree;
   const window = {
     location: {
-      href: 'https://example.test/dashboard?view=questions&tab=questionnaires&draft=new',
+      href,
     },
     history: {
       replaceState: (_a, _b, url) => {
@@ -152,34 +153,25 @@ test('untouched questionnaire returns immediately while list remains mounted', (
   const app = mount();
   app.flush();
   assert.ok(app.find('QuestionnairePanel', (p) => !p.id));
-  app
-    .find(
-      'Button',
-      (p) =>
-        Array.isArray(p.children) && p.children.includes('질문지 목록으로'),
-    )
-    .props.onClick();
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
   app.flush();
   assert.equal(
     app.find('QuestionnairePanel', (p) => !!p.id),
     null,
   );
-  assert.equal(app.find('Dialog').props.open, false);
+  assert.equal(app.find('AlertDialog').props.open, false);
 });
 test('changed untitled questionnaire confirms closing and pauses autosave', () => {
   const app = mount();
   app.flush();
   app.report({ dirty: true, saving: false, emptyTitle: true });
-  app
-    .find(
-      'Button',
-      (p) =>
-        Array.isArray(p.children) && p.children.includes('질문지 목록으로'),
-    )
-    .props.onClick();
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
   app.flush();
-  assert.equal(app.find('Dialog').props.open, true);
-  assert.match(app.find('DialogDescription').props.children, /제목이 비어/);
+  assert.equal(app.find('AlertDialog').props.open, true);
+  assert.match(
+    app.find('AlertDialogDescription').props.children,
+    /제목이 비어/,
+  );
   assert.equal(
     app.find('QuestionnairePanel', (p) => !!p.id).props.paused,
     true,
@@ -187,13 +179,7 @@ test('changed untitled questionnaire confirms closing and pauses autosave', () =
   app.find('Button', (p) => p.children === '계속 작성').props.onClick();
   app.flush();
   assert.ok(app.find('QuestionnairePanel', (p) => !!p.id));
-  app
-    .find(
-      'Button',
-      (p) =>
-        Array.isArray(p.children) && p.children.includes('질문지 목록으로'),
-    )
-    .props.onClick();
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
   app.flush();
   app.find('Button', (p) => p.children === '변경 내용 버리기').props.onClick();
   app.flush();
@@ -206,20 +192,14 @@ test('Back cannot discard edited questionnaire and saving prevents close', () =>
   const app = mount();
   app.flush();
   app.report({ dirty: true, saving: true, emptyTitle: false });
-  app
-    .find(
-      'Button',
-      (p) =>
-        Array.isArray(p.children) && p.children.includes('질문지 목록으로'),
-    )
-    .props.onClick();
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
   app.flush();
   assert.ok(app.find('QuestionnairePanel', (p) => !!p.id));
   app.report({ dirty: true, saving: false, emptyTitle: false });
   app.route();
   app.flush();
   assert.ok(app.find('QuestionnairePanel', (p) => !!p.id));
-  assert.equal(app.find('Dialog').props.open, true);
+  assert.equal(app.find('AlertDialog').props.open, true);
 });
 test('first save URL replacement retains the active questionnaire panel', () => {
   const app = mount();
@@ -231,7 +211,7 @@ test('first save URL replacement retains the active questionnaire panel', () => 
     app.find('QuestionnairePanel', (p) => !!p.id).props.id,
     'saved-id',
   );
-  assert.equal(app.find('Dialog').props.open, false);
+  assert.equal(app.find('AlertDialog').props.open, false);
 });
 
 function composer({ existing = false, occupied = false } = {}) {
@@ -307,14 +287,13 @@ function composer({ existing = false, occupied = false } = {}) {
         useQuestionnaireResource: () => ({ data: {}, error: null }),
       },
       '@/components/ui/toast': { toast: { add() {} } },
-      '@base-ui/react/tabs': {
-        Tabs: {
-          Root: 'TabsRoot',
-          List: 'TabsList',
-          Tab: 'Tab',
-          Panel: 'Panel',
-        },
+      '@/components/ui/tabs': {
+        Tabs: 'TabsRoot',
+        TabsList: 'TabsList',
+        TabsTrigger: 'Tab',
+        TabsContent: 'Panel',
       },
+      '@/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
     },
   });
   return {
@@ -324,7 +303,7 @@ function composer({ existing = false, occupied = false } = {}) {
     confirmations: () => confirmations,
   };
 }
-test('question addition defaults to shared inline creator and preserves questionnaire edits', async () => {
+test('question picker switches to shared creator without stacked surfaces and preserves edits', async () => {
   const app = composer();
   app.flush();
   app
@@ -338,9 +317,14 @@ test('question addition defaults to shared inline creator and preserves question
     )
     .props.onClick({ currentTarget: { focus() {} } });
   app.flush();
+  assert.ok(app.find('Dialog'));
+  assert.equal(app.find('Drawer').props.open, false);
+  app.find('Button', (p) => Array.isArray(p.children) && p.children.includes('새 질문 만들기')).props.onClick();
+  app.flush();
+  assert.equal(app.find('Dialog'), null);
   const editor = app.find('QuestionLibraryView');
   assert.ok(editor);
-  assert.equal(app.find('Dialog'), null);
+  assert.equal(app.find('AlertDialog'), null);
   assert.equal(app.find('QuestionLibraryPicker'), null);
   const created = { ...app.source, id: randomUUID(), title: '새 질문' };
   await editor.props.embedded.onPlace(created);
@@ -353,7 +337,7 @@ test('question addition defaults to shared inline creator and preserves question
     created.id,
   );
 });
-test('existing question loads into Drawer editor before placement and can reopen for original edits', async () => {
+test('existing question is placed directly and can reopen for original edits', async () => {
   const app = composer();
   app.flush();
   app
@@ -363,24 +347,11 @@ test('existing question loads into Drawer editor before placement and can reopen
     )
     .props.onClick({ currentTarget: { focus() {} } });
   app.flush();
-  app
-    .find('TabsRoot', (p) => p.value === 'new')
-    .props.onValueChange('existing');
-  app.flush();
-  assert.ok(
-    app.find('QuestionLibraryView'),
-    'switching modes retains new question input',
-  );
+  assert.ok(app.find('Dialog'));
+  assert.equal(app.find('QuestionLibraryView'), null);
   app.find('QuestionLibraryPicker').props.onAdd(app.source.id);
   app.flush();
-  assert.equal(app.find('Drawer').props.open, true);
-  assert.equal(
-    app.find('QuestionLibraryView').props.embedded.questionId,
-    app.source.id,
-  );
-  assert.equal(app.document().sections[0].questions.length, 0);
-  await app.find('QuestionLibraryView').props.embedded.onPlace(app.source);
-  app.flush();
+  assert.equal(app.find('Drawer').props.open, false);
   assert.equal(
     app.document().sections[0].questions[0].sourceQuestionId,
     app.source.id,
@@ -447,4 +418,71 @@ test('question without guide answers is removed without confirmation', async () 
     app.flush();
   }
   assert.equal(app.document().sections[0].questions.length, 0);
+});
+
+test('new questionnaire uses full page and preserves draft URL across first save', () => {
+  const app = mount();
+  app.flush();
+  assert.equal(app.find('Drawer'), null);
+  assert.equal(
+    new URL(app.window.location.href).searchParams.get('questionnaireEditor'),
+    null,
+  );
+  assert.equal(
+    app.find('div', (p) => p.hidden !== undefined).props.hidden,
+    true,
+  );
+  const id = randomUUID();
+  app.route(id);
+  app.flush();
+  assert.equal(app.find('QuestionnairePanel', (p) => !!p.id).props.id, id);
+  app.report({ dirty: true, saving: false, emptyTitle: false });
+  app.route();
+  app.flush();
+  assert.equal(app.find('Drawer'), null);
+  assert.equal(app.find('AlertDialog').props.open, true);
+  assert.equal(
+    new URL(app.window.location.href).searchParams.get('questionnaireEditor'),
+    null,
+  );
+  app.find('Button', (p) => p.children === '변경 내용 버리기').props.onClick();
+  app.flush();
+  assert.equal(app.find('QuestionnairePanel', (p) => !!p.id), null);
+  assert.equal(
+    new URL(app.window.location.href).searchParams.has('questionnaireEditor'),
+    false,
+  );
+});
+
+test('questionnaire cannot close while a question editor is open', () => {
+  const app = mount();
+  app.flush();
+  app.report({
+    dirty: true,
+    saving: false,
+    emptyTitle: false,
+    childEditorOpen: true,
+  });
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
+  app.flush();
+  assert.equal(app.find('Drawer'), null);
+  assert.equal(app.find('AlertDialog').props.open, false);
+});
+
+test('legacy drawer URL opens full page and closing preserves list filters', () => {
+  const id = randomUUID();
+  const app = mount({
+    href: `https://example.test/dashboard?view=questions&tab=questionnaires&draft=${id}&questionnaireEditor=drawer&qStatus=draft&qSearch=test&qPage=2`,
+  });
+  app.flush();
+  assert.equal(app.find('Drawer'), null);
+  assert.equal(app.find('QuestionnairePanel', (p) => !!p.id).props.id, id);
+  app.find('QuestionnairePanel', (p) => !!p.id).props.onClose();
+  app.flush();
+  const params = new URL(app.window.location.href).searchParams;
+  assert.equal(params.has('draft'), false);
+  assert.equal(params.has('questionnaireEditor'), false);
+  assert.equal(params.get('qSearch'), 'test');
+  assert.equal(params.get('qPage'), '2');
+  assert.equal(params.get('qStatus'), 'draft');
 });

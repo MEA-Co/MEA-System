@@ -180,7 +180,9 @@ export function QuestionManagementTable({
   error = false,
   filtered = false,
   onRetry,
+  selection,
 }: {
+  selection?: { addedIds: Set<string>; disabled?: boolean };
   questions: QuestionBlockRow[];
   loading?: boolean;
   error?: boolean;
@@ -195,7 +197,7 @@ export function QuestionManagementTable({
     counts: Record<string, number>;
     unreadCounts: Record<string, number>;
   }>(
-    questions.length
+    !selection && questions.length
       ? `/api/question-reviews?questions=${questions.map((q) => q.id).join(',')}`
       : null,
     questionnaireFetcher,
@@ -222,8 +224,10 @@ export function QuestionManagementTable({
                 제작자
               </TableHead>
             )}
-            <TableHead className="w-16 text-right pr-4">
-              <span className="inline-block w-8 text-center">관리</span>
+            <TableHead className="w-20 text-right pr-4">
+              <span className="inline-block w-8 text-center">
+                {selection ? '선택' : '관리'}
+              </span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -260,13 +264,22 @@ export function QuestionManagementTable({
             questions.map((q) => (
               <TableRow
                 key={q.id}
-                className={`${canManage(q) ? 'cursor-pointer' : ''} ${reviewCounts?.unreadCounts[q.id] ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30' : ''}`}
+                className={`${(selection ? !selection.disabled && !selection.addedIds.has(q.id) : canManage(q)) ? 'cursor-pointer' : ''} ${reviewCounts?.unreadCounts[q.id] ? 'bg-blue-50/80 hover:bg-blue-100/70 dark:bg-blue-950/30' : ''}`}
                 onClick={() => {
-                  if (canManage(q)) onOpen(q);
+                  if (
+                    selection
+                      ? !selection.disabled && !selection.addedIds.has(q.id)
+                      : canManage(q)
+                  )
+                    onOpen(q);
                 }}
               >
                 <TableCell className="whitespace-normal py-4 pl-4 align-top">
-                  {canManage(q) ? (
+                  {(
+                    selection
+                      ? !selection.disabled && !selection.addedIds.has(q.id)
+                      : canManage(q)
+                  ) ? (
                     <button
                       type="button"
                       className="max-w-full cursor-pointer text-left font-semibold hover:underline focus-visible:outline-ring"
@@ -296,19 +309,21 @@ export function QuestionManagementTable({
                       학습법 등록 안내
                     </Badge>
                   )}
-                  <div className="mt-2 flex flex-wrap gap-2 empty:hidden">
-                    <NewReviewBadge
-                      count={reviewCounts?.unreadCounts[q.id] ?? 0}
-                    />
-                    <ReviewRequestBadge
-                      count={reviewCounts?.counts[q.id] ?? 0}
-                    />
-                    {reviewError && (
-                      <span className="text-xs text-muted-foreground">
-                        검토 요청 확인 불가
-                      </span>
-                    )}
-                  </div>
+                  {!selection && (
+                    <div className="mt-2 flex flex-wrap gap-2 empty:hidden">
+                      <NewReviewBadge
+                        count={reviewCounts?.unreadCounts[q.id] ?? 0}
+                      />
+                      <ReviewRequestBadge
+                        count={reviewCounts?.counts[q.id] ?? 0}
+                      />
+                      {reviewError && (
+                        <span className="text-xs text-muted-foreground">
+                          검토 요청 확인 불가
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-2 flex flex-wrap items-center gap-2 lg:hidden">
                     <QuestionReferenceList question={q} />
                     <QuestionUsageList question={q} />
@@ -331,7 +346,22 @@ export function QuestionManagementTable({
                   </TableCell>
                 )}
                 <TableCell className="py-4 pr-4 text-right align-top">
-                  {canManage(q) ? (
+                  {selection ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        selection.disabled || selection.addedIds.has(q.id)
+                      }
+                      aria-label={`${questionName(q)} ${selection.addedIds.has(q.id) ? '추가됨' : '추가'}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpen(q);
+                      }}
+                    >
+                      {selection.addedIds.has(q.id) ? '추가됨' : '추가'}
+                    </Button>
+                  ) : canManage(q) ? (
                     <DeleteQuestionButton question={q} onArchive={onArchive} />
                   ) : (
                     <span className="text-xs text-muted-foreground">

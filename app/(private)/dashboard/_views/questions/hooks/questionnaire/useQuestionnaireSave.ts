@@ -45,9 +45,9 @@ export function useQuestionnaireSave(
       );
       return;
     }
-    const { questionnaireId, title, sections } = initialDraft;
+    const { questionnaireId, title, sections, startNotice } = initialDraft;
     const result = session.reconcileRemote(
-      { questionnaireId, title, sections },
+      { questionnaireId, title, sections, startNotice: startNotice ?? null },
       initialDraft.revision,
       document,
     );

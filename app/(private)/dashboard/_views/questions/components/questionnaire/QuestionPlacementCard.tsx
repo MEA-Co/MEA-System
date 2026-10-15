@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 
 import { type QuestionBlockRow, questionName } from '../../lib/question-blocks';
 import { hasQuestionDetailContent } from '../../lib/question-details';
-import { rowLimitLabel } from '../../lib/question-list';
+import {
+  questionExplanationClass,
+  questionPromptClass,
+} from '../question/question-styles';
 import { RichTextContent } from '../question/RichTextContent';
 
 const labels = {
@@ -31,7 +34,7 @@ export function QuestionPlacementCard({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold">{questionName(question)}</p>
+        <span className="sr-only">{questionName(question)}</span>
         {showSourceLink && (
           <Button
             variant="ghost"
@@ -49,18 +52,19 @@ export function QuestionPlacementCard({
           </Button>
         )}
       </div>
-      <RichTextContent value={question.prompt} />
+      <div className={questionPromptClass}>
+        <RichTextContent value={question.prompt} />
+      </div>
       <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary">{rowLimitLabel(question)}</Badge>
         {question.purpose === 'study_registration' && (
           <Button type="button" variant="outline" size="sm" disabled>
             {question.button_label || '학습법 추가'}
           </Button>
         )}
         {question.fields.map((field) => (
-          <Badge key={field.id} variant="outline">
+          <span key={field.id} className="text-xs text-muted-foreground">
             {field.label} · {labels[field.kind]}
-          </Badge>
+          </span>
         ))}
         {question.condition && <Badge variant="outline">조건부 질문</Badge>}
       </div>
@@ -71,7 +75,7 @@ export function QuestionPlacementCard({
             (showPrivate || detail.visibleToConsultants),
         )
         .map((detail) => (
-          <div key={detail.id} className="rounded-lg bg-muted/40 p-3 text-sm">
+          <div key={detail.id} className={questionExplanationClass}>
             <div className="mb-2 flex items-center gap-2">
               <strong>{detail.title || '설명'}</strong>
               <span className="text-xs text-muted-foreground">

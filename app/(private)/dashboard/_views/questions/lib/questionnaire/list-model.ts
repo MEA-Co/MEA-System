@@ -118,6 +118,7 @@ export function questionnaireDetailHref(
   next.set('view', 'questions');
   next.set('tab', 'questionnaires');
   next.set('draft', id);
+  next.delete('questionnaireEditor');
   next.delete('return');
   next.delete('question');
   next.delete('response');

@@ -14,6 +14,7 @@ import {
   type QuestionBlockRow,
   questionBlockSchema,
 } from '../lib/question-blocks';
+import { copyQuestionContent } from '../lib/question-copy';
 import {
   clearLocalDraft,
   localDraftKey,
@@ -99,7 +100,8 @@ export function useQuestionEditorSession({
   const [guideDialog, setGuideDialog] = useState({ open: false, message: '' });
   const guideResolver = useRef<((confirmed: boolean) => void) | null>(null);
   const guideCancelRef = useRef<HTMLButtonElement>(null);
-  const editorBlocked = confirmDiscard || guideDialog.open;
+  const [importOpen, setImportOpen] = useState(false);
+  const editorBlocked = confirmDiscard || guideDialog.open || importOpen;
   const [closingId, setClosingId] = useState<string | null>(null);
 
   const localSession =
@@ -518,7 +520,13 @@ export function useQuestionEditorSession({
     } else navigateQuestion(null, true);
   }
   function leaveEditor() {
-    if (savingRef.current || confirmDiscard || guideResolver.current) return;
+    if (
+      savingRef.current ||
+      confirmDiscard ||
+      guideResolver.current ||
+      importOpen
+    )
+      return;
     if (dirty) {
       pendingRoute.current = null;
       setConfirmDiscard(true);
@@ -565,6 +573,7 @@ export function useQuestionEditorSession({
     if (editorData.detail.data?.distribution_locked_at) return;
     if (
       !draft ||
+      importOpen ||
       checkingGuide.current ||
       (!manual && guideSavePaused.current) ||
       savingRef.current ||
@@ -799,7 +808,38 @@ export function useQuestionEditorSession({
     }
   }
 
+  function openImport() {
+    if (
+      !draft ||
+      revision !== 0 ||
+      savingRef.current ||
+      pendingSaves.current.has(draft.id)
+    )
+      return;
+    setImportOpen(true);
+  }
+  function importQuestion(source: QuestionBlockRow) {
+    if (
+      !draft ||
+      revision !== 0 ||
+      savingRef.current ||
+      pendingSaves.current.has(draft.id)
+    )
+      return;
+    const imported = copyQuestionContent(source, draft.id);
+    setDraft(imported);
+    setInitialDocument(imported);
+    setSaveError(null);
+    setImportOpen(false);
+  }
+
   return {
+    unchangedImport:
+      revision === 0 && !dirty && !!initialDocument?.prompt.trim(),
+    importOpen,
+    setImportOpen,
+    openImport,
+    importQuestion,
     requestedId,
     savedRow,
     userId,

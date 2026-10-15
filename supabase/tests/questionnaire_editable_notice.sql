@@ -1,0 +1,30 @@
+begin;
+create temp table notice_users as select gen_random_uuid() id, role from unnest(array['owner','other','consultant']) role;
+insert into auth.users(id) select id from notice_users;
+insert into public.profiles(id,role,name) select id,case when role='consultant' then role else 'consultant_lead' end,'안내 테스트' from notice_users;
+create temp table notice_fixture(id uuid);
+insert into notice_fixture values(gen_random_uuid());
+grant select on notice_users,notice_fixture to authenticated;
+select set_config('request.jwt.claim.sub',(select id::text from notice_users where role='owner'),true);
+set local role authenticated;
+do $$ declare doc jsonb; notice jsonb; saved jsonb; sid uuid:=gen_random_uuid(); begin
+ notice := jsonb_build_object('title','시작 안내','body','안내 내용','buttonLabel','');
+ doc := jsonb_build_object('questionnaireId',(select id from notice_fixture),'title','테스트','sections','[]'::jsonb,'startNotice',notice);
+ saved:=public.save_questionnaire_draft(doc,0,sid);
+ perform public.save_questionnaire_draft(doc,0,sid);
+ if (public.read_questionnaire_draft((select id from notice_fixture))->'startNotice') is distinct from notice then raise exception 'Notice not saved'; end if;
+ perform public.save_questionnaire_draft(doc-'startNotice',1,gen_random_uuid());
+ if (public.read_questionnaire_draft((select id from notice_fixture))->'startNotice') is distinct from notice then raise exception 'Legacy save erased notice'; end if;
+ begin perform public.save_questionnaire_draft(doc,0,gen_random_uuid()); raise exception 'Stale save accepted'; exception when serialization_failure then null; end;
+ perform public.save_questionnaire_draft(jsonb_set(doc,'{startNotice}','null'),2,gen_random_uuid());
+ if (public.read_questionnaire_draft((select id from notice_fixture))->'startNotice') <> 'null'::jsonb then raise exception 'Notice not removed'; end if;
+ begin perform public.save_questionnaire_draft(jsonb_set(doc,'{startNotice}',jsonb_build_object('title',repeat('x',201),'body','','buttonLabel','')),3,gen_random_uuid()); raise exception 'Invalid notice accepted'; exception when check_violation then null; end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from notice_users where role='other'),true);
+set local role authenticated;
+do $$ begin
+ begin perform public.save_questionnaire_draft(jsonb_build_object('questionnaireId',(select id from notice_fixture),'title','테스트','sections','[]'::jsonb,'startNotice',null),3,gen_random_uuid()); raise exception 'Other draft edit accepted'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+rollback;
