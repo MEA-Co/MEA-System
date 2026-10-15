@@ -134,3 +134,27 @@ test('retired registration notice is not imported as a question', () => {
     copy({ ...source(), purpose: 'study_registration' }, randomUUID()),
   );
 });
+
+test('career flow required groups follow the copied field IDs, not the original question', () => {
+  const original = source();
+  original.fields = [0, 1, 2].map((i) => ({
+    id: randomUUID(),
+    kind: 'text',
+    label: `시기 ${i}`,
+  }));
+  original.response_requirements = {
+    kind: 'career_flow',
+    startFieldIds: original.fields.slice(0, 2).map((f) => f.id),
+    admissionFieldId: original.fields[2].id,
+  };
+  const imported = copy(original, randomUUID());
+  assert.equal(
+    JSON.stringify(imported.responseRequirements.startFieldIds),
+    JSON.stringify(imported.fields.slice(0, 2).map((f) => f.id)),
+  );
+  assert.equal(
+    imported.responseRequirements.admissionFieldId,
+    imported.fields[2].id,
+  );
+  assert.notEqual(imported.fields[0].id, original.fields[0].id);
+});

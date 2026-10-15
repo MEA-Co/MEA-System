@@ -12,7 +12,12 @@ export function readError(result: unknown) {
 
 export function stableDocument(value: QuestionBlockDocument) {
   return JSON.stringify(
-    { ...value, title: value.title.trim(), details: value.details ?? [] },
+    {
+      ...value,
+      title: value.title.trim(),
+      details: value.details ?? [],
+      responseRequirements: value.responseRequirements ?? null,
+    },
     (_key, item: unknown) =>
       item && typeof item === 'object' && !Array.isArray(item)
         ? Object.fromEntries(

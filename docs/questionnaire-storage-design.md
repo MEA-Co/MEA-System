@@ -140,3 +140,42 @@
 public `publish_questionnaire`와 `change_questionnaire_status`는 필수 `p_workflow_version integer` 인자를 추가하고 2만 받는다. 같은 이름의 구형 시그니처는 제거하여 이전 publish 요청을 배포로 오인하지 않는다. private 구현의 역할·소유권·권한 범위는 그대로다. 기존 함수는 OID·ACL·보안 속성을 유지하여 rename/recreate하고 새 시그니처의 public wrapper는 invoker·빈 search_path·authenticated/service_role EXECUTE만 허용한다.
 
 `20261015075725_questionnaire_review_publication_workflow.sql`은 한 트랜잭션에서 old published→in_review, old distributed→published를 CASE로 이전하고 시각 열을 rename한다. ID·revision·작성/수정/제출 시각·질문/답변/제출/검토/읽음·상태 요청 영수증은 보존한다. 본문 JSON은 일괄 문자열 치환하지 않는다. 원래 함수 75개의 정의 지문과 전후 모든 관련 행의 정렬 체크섬·개수를 검사하고 예상 밖 드리프트·단계·데이터 차이가 있으면 전체 롤백한다. 트리거는 전환 대상 표에서만 중지하고 기존 enabled 상태를 복구한다. 과거 요청 영수증은 그대로 보존하며 구형 상태 fingerprint와 충돌하는 재시도는 안전하게 거절한다.
+
+
+## 응답 무결성·제출 조회 계약 (2026-10-15)
+
+`20261015090145_response_integrity_and_submission_reads.sql`은 다음을 추가한다. 기존 질문·응답·세션·제출 ID, 저장 답변, 제출 시각/revision과 RLS를 보존한다.
+
+### 질문에 귀속된 필수 시기
+
+`questions.response_requirements`는 nullable JSONB다. API 문서 속성은 `responseRequirements`이며 값은 `{kind:"career_flow",startFieldIds:[UUID,UUID],admissionFieldId:UUID}`다. 기본 null은 기존 일반 검증이다. 세 ID는 서로 다르며 해당 질문의 서술형 필드를 참조해야 한다. 질문 schema와 DB CHECK가 이를 검사한다. 원본 진로 흐름 한 건에만 기존 필수 시기를 backfill하고 이미 존재하는 다른 질문/복제를 추정하여 변경하지 않는다.
+
+질문 저장에서 속성 생략은 기존 값 보존, 명시적 null은 프리셋 해제다. 현재 제작 UI에 별도 프리셋 설정 컨트롤을 추가하지 않는다. 질문 불러오기는 모든 필드 ID를 새로 발급하면서 필수 시기 ID도 매핑한다. 프리셋이 남아 있는 동안 필수 열 삭제/유형 변경은 검증 오류다. 배포된 원본은 이 속성도 기존 불변성 트리거로 보호한다.
+
+배포 답변 제출 시 활성 응답에서 시작 그룹 둘 중 하나와 원서 접수 필드에 유효 서술형 답변이 각각 있어야 한다. 나머지 칸의 부분 입력 정책은 유지한다. 조건상 비활성 질문은 서버 검사를 건너뛴다. 임시 저장에는 완료 검사를 적용하지 않으며 과거 제출본은 재검증/취소하지 않는다. `private.prepare_question_response_rows`는 가이드/배포 저장의 중복된 행 구조·개수·필드 소속·값 유형·흐름표 정규화를 공유한다. 접근 제어·조건·완료·제출 스냅샷 처리는 각 기존 저장 함수에 유지한다.
+
+### 제출 조회 API
+
+모든 경로는 기존 `X-Questionnaire-Workflow: 2`, 로그인·실제 역할·표시 역할 검사를 따른다. 리드/관리자만 접근하며 DB도 활성 배포 질문지와 요청한 세션의 출처/시작 단계를 재검사한다. 비로그인 실행 권한을 부여하지 않는다.
+
+| GET `/api/questionnaires/:id` 하위 경로 | 반환 및 RPC |
+| --- | --- |
+| `/submitted-responses?page=N` | `{items:[{id,respondentName,submittedAt,revision}],total,page,pages}`. 10개 고정, N=1~100000, 초과 마지막 페이지 보정. `read_submitted_response_page` |
+| `/submitted-responses/:sessionId` | 마지막 제출 snapshot과 잠긴 질문 정의. 세션의 출처 불일치/없는 제출은 404. `read_submitted_response` |
+| `/submitted-responses/:sessionId?revision=N` | 내보내기용 동일 상세. 제출 revision 불일치는 409 |
+| `/submitted-responses/manifest` | `[{id,revision}]` 전체 경량 목록. 답변 본문 없음. `read_submitted_response_manifest` |
+| `/submitted-responses` (page 생략) | 구형 전체 조회 계약 보존. 새 UI는 사용하지 않음 |
+
+정렬은 제출 시각 내림차순·세션 ID 오름차순이다. 상세는 `response_submissions.answers`만 읽고 작업 `question_responses.rows`를 읽지 않는다. 전용 RPC는 private definer의 기존 권한 검사와 public invoker wrapper로 구성하고 명시적 ACL을 사용한다. 기존 origin_questionnaire_id 인덱스·session_id PK를 사용한다. 목록은 질문 정의를 구성하지 않는다.
+
+새 nullable 열은 live definition과 definitionToken에 포함된다. 적용 후 열린 응답 화면은 정의 변경을 감지하며 미저장 입력과 다른 탭의 변경이 충돌하면 기존 입력을 보존한다. 환경별 guide_consultant_id는 변경하지 않는다.
+
+
+### 제출 오류 표시의 코드 책임 (2026-10-15)
+
+- `lib/responses/submission-validation.ts`: 질문별 오류 `{questionId,rowId?,fieldId?,message}`와 활성 행을 계산하고 질문지 배치 순서로 합친다. 질문 ID/필드 ID/행 ID는 기존 저장 ID 그대로다. 완료 검사의 최종 권한은 기존 DB 저장 RPC에 남는다.
+- `lib/responses/field-validation.ts`: 현재/과거 필드의 유형·추가 서술 설정을 보존하는 유효 답변 판정. 조건 표시와 제출 검사에서 공유한다.
+- `useQuestionResponseEditor`: 제출 시 검사, 오류 목록/최초 이동 대상 상태, 미완성 제출 요청 차단. 임시 저장에는 이 검사를 강제하지 않는다.
+- `QuestionResponseForm`/`QuestionnairePreview`: 오류 요약·질문별 표시. `submission-navigation.ts`는 현재 편집기 내부의 질문 영역만 찾아 스크롤·포커스하며 다른 미리보기에 영향을 주지 않는다.
+
+이번 오류 안내에는 DB migration이나 API 응답 형식 변경이 없다. 기존 DB 검증·저장/제출 원자성·배포 권한과 기존 제출 snapshot은 유지한다.

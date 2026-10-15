@@ -1,23 +1,12 @@
-import { questionFromField } from '../field-question';
-import type {
-  QuestionBlockClause,
-  QuestionBlockField,
-  QuestionBlockRow,
-} from '../question-blocks';
+import type { QuestionBlockClause, QuestionBlockRow } from '../question-blocks';
 import {
   choiceAnswerId,
   choiceAnswerValue,
   scaleAnswer,
-  validTypedAnswer,
 } from '../question-types';
 import type { PreviewAnswerRow } from '../reference-rows';
+import { responseFieldAnswered as answered } from '../responses/field-validation';
 import { richTextPlainText } from '../rich-text';
-
-function answered(field: QuestionBlockField, value: string) {
-  return field.kind === 'text'
-    ? !!richTextPlainText(value).trim()
-    : validTypedAnswer(questionFromField(field), value, true);
-}
 
 function matches(
   row: PreviewAnswerRow,

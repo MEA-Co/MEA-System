@@ -1,13 +1,12 @@
 'use client';
 
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, CircleAlert, Plus, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DetailValue } from '@/components/ui/detail-value';
 
-import { CAREER_FLOW_QUESTION_ID } from '../../lib/career-flow-placeholders';
 import { matchingChoiceRows } from '../../lib/choice-condition';
 import { questionFromField } from '../../lib/field-question';
 import {
@@ -97,6 +96,7 @@ export type QuestionBlockPreviewProps = {
   onStoredRowsChange?: (rows: PreviewRow[]) => void;
   disabled?: boolean;
   submittedView?: boolean;
+  validationMessages?: string[];
 };
 
 export function QuestionBlockPreview(props: QuestionBlockPreviewProps) {
@@ -127,6 +127,7 @@ function QuestionBlockResponsePreview({
   onStoredRowsChange,
   disabled = false,
   submittedView = false,
+  validationMessages = [],
 }: QuestionBlockPreviewProps) {
   const nextRow = useRef(
     Math.max(1, ...(initialRows ?? []).map((row) => row.id)) + 1,
@@ -385,6 +386,29 @@ function QuestionBlockResponsePreview({
             />
           </aside>
         </div>
+        {validationMessages.length > 0 && (
+          <div
+            className="flex items-start gap-2.5 rounded-lg bg-destructive/5 px-4 py-3 text-sm"
+            role="note"
+          >
+            <CircleAlert
+              className="mt-0.5 size-4 shrink-0 text-destructive"
+              aria-hidden="true"
+            />
+            <div className="min-w-0 space-y-1.5">
+              <p className="font-medium text-destructive">
+                답변을 확인해 주세요
+              </p>
+              <ul className="space-y-1 text-foreground/80">
+                {validationMessages.map((message, index) => (
+                  <li key={index} className="break-words">
+                    {message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
         {(submittedView ? [] : (document.details ?? []))
           .filter(
             (detail) =>
@@ -415,7 +439,7 @@ function QuestionBlockResponsePreview({
             </div>
           ))}
         {!submittedView && guideAnswer?.rows?.length ? (
-          document.id === CAREER_FLOW_QUESTION_ID ? (
+          document.responseRequirements?.kind === 'career_flow' ? (
             <QuestionGuideAnswerTable
               document={document}
               answer={guideAnswer}
@@ -501,7 +525,8 @@ function QuestionBlockResponsePreview({
             조건에 맞는 앞선 응답 {matchedRows.length}개에 맞춰 입력합니다.
           </p>
         )}
-        {submittedView && document.id !== CAREER_FLOW_QUESTION_ID ? (
+        {submittedView &&
+        document.responseRequirements?.kind !== 'career_flow' ? (
           visibleRows.length ? (
             <div className="space-y-6">
               {visibleRows.map((row, index) => (
@@ -545,7 +570,10 @@ function QuestionBlockResponsePreview({
             </p>
           )
         ) : grid &&
-          !(submittedView && document.id === CAREER_FLOW_QUESTION_ID) ? (
+          !(
+            submittedView &&
+            document.responseRequirements?.kind === 'career_flow'
+          ) ? (
           <QuestionGridInput
             document={document}
             rows={visibleRows}
@@ -622,7 +650,7 @@ function QuestionBlockResponsePreview({
               setRows(visibleRows.filter((row) => row.id !== id));
             }}
           />
-        ) : document.id === CAREER_FLOW_QUESTION_ID ? (
+        ) : document.responseRequirements?.kind === 'career_flow' ? (
           <QuestionAnswerTable
             document={document}
             rows={visibleRows}

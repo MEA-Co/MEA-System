@@ -7,6 +7,8 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import { z } from 'zod';
 
+import { loadQuestionModule } from './helpers/load-question-module.mjs';
+
 function command(error = null) {
   const calls = [];
   const exports = {};
@@ -33,6 +35,15 @@ function command(error = null) {
     },
     './questionnaire/http-error': { QuestionnaireHttpError: HttpError },
     'server-only': {},
+    './responses/schema': loadQuestionModule(
+      'app/(private)/dashboard/_views/questions/lib/responses/schema.ts',
+      {},
+      (name) => (name === 'zod' ? { z } : undefined),
+    ),
+    './responses/requirements': {
+      CAREER_FLOW_REQUIREMENTS_MESSAGE: '진로 흐름 필수 시기',
+    },
+    './responses/submissions-server': {},
   };
   vm.runInNewContext(
     ts.transpileModule(
@@ -82,7 +93,9 @@ test('guide and published saves retain flow positions, custom labels and origina
     assert.equal(api.calls.length, 1);
     assert.equal(
       api.calls[0].name,
-      published ? 'save_published_question_response_session' : 'save_review_response_session',
+      published
+        ? 'save_published_question_response_session'
+        : 'save_review_response_session',
     );
     assert.deepEqual(api.calls[0].args.p_answers[question], rows);
   }

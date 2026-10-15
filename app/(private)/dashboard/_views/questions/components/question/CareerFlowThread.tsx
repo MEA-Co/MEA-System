@@ -21,9 +21,6 @@ import {
   type QuestionAnswerTableProps,
 } from './QuestionAnswerTable';
 
-const middle = 'f4689fea-ba91-400f-82be-f0b1dbf185db';
-const beforeHigh = '720f88bd-1ace-4b86-828f-5df7abbe0a10';
-const admission = 'e75649e4-82f5-4175-8c14-2298c522a45d';
 const groups = [
   '고교 입학 전',
   '고1-1',
@@ -37,6 +34,8 @@ const groups = [
 
 export function CareerFlowThread(props: QuestionAnswerTableProps) {
   const { document, rows, renderField, summary, disabled, waiting } = props;
+  const [middle, beforeHigh] = document.responseRequirements!.startFieldIds;
+  const admission = document.responseRequirements!.admissionFieldId;
   const hasAnswer = (id: string) => {
     const field = document.fields.find((item) => item.id === id);
     return (

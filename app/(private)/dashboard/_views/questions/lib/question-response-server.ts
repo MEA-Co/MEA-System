@@ -1,11 +1,12 @@
 import { cookies } from 'next/headers';
-import { z } from 'zod';
 
 import { getViewRole } from '@/lib/admin';
 import { requireUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 import { QuestionnaireHttpError } from './questionnaire/http-error';
+import { CAREER_FLOW_REQUIREMENTS_MESSAGE } from './responses/requirements';
+import { questionResponseSaveSchema } from './responses/schema';
 
 import 'server-only';
 
@@ -30,38 +31,7 @@ export async function questionResponseCommand(
   const client = createClient(await cookies());
   const args: Record<string, unknown> = { p_questionnaire_id: questionnaireId };
   if (mode === 'save') {
-    const parsed = z
-      .object({
-        answers: z.record(
-          z.uuid(),
-          z
-            .array(
-              z
-                .object({
-                  id: z.number().int().safe(),
-                  answers: z.record(z.uuid(), z.string().max(20000)),
-                  flowIndex: z.number().int().min(1).max(20).optional(),
-                  flowAfter: z.number().int().min(1).max(20).optional(),
-                  label: z.string().max(100).optional(),
-                })
-                .strict()
-                .refine(
-                  (row) =>
-                    !(
-                      row.flowIndex !== undefined && row.flowAfter !== undefined
-                    ) &&
-                    (row.label === undefined || row.flowAfter !== undefined),
-                ),
-            )
-            .max(20),
-        ),
-        revision: z.number().int().nonnegative(),
-        saveId: z.uuid(),
-        complete: z.boolean(),
-        definitionToken: z.string().length(32),
-      })
-      .strict()
-      .safeParse(input);
+    const parsed = questionResponseSaveSchema.safeParse(input);
     if (!parsed.success)
       throw new QuestionnaireHttpError(400, '답변 내용을 확인해 주세요.');
     Object.assign(args, {
@@ -73,7 +43,9 @@ export async function questionResponseCommand(
     });
   }
   const { data, error } = await client.rpc(
-    published ? `${mode}_published_question_response_session` : `${mode}_review_response_session`,
+    published
+      ? `${mode}_published_question_response_session`
+      : `${mode}_review_response_session`,
     args,
   );
   if (error) {
@@ -92,9 +64,11 @@ export async function questionResponseCommand(
         : status === 409
           ? '질문 또는 답변이 변경됐어요. 최신 내용을 확인한 뒤 다시 저장해 주세요.'
           : status === 400
-            ? error.message === 'Name every answered inserted flow period'
-              ? '답변을 작성한 추가 시기의 이름을 입력해 주세요.'
-              : '열려 있는 질문의 답변과 행 수를 확인해 주세요.'
+            ? error.message === 'Missing career flow required periods'
+              ? CAREER_FLOW_REQUIREMENTS_MESSAGE
+              : error.message === 'Name every answered inserted flow period'
+                ? '답변을 작성한 추가 시기의 이름을 입력해 주세요.'
+                : '열려 있는 질문의 답변과 행 수를 확인해 주세요.'
             : '답변을 저장하거나 불러오지 못했어요. 다시 시도해 주세요.',
     );
   }
@@ -137,22 +111,4 @@ export async function loadGuideAnswers(questionIds?: string[]) {
   return questionIds ? data : { canWrite: data === true };
 }
 
-export async function loadSubmittedResponses(questionnaireId: string) {
-  const access = await requireUserAccess({
-    allowedRoles: ['admin', 'consultant_lead'],
-  });
-  const role = await getViewRole(access.role);
-  if (role !== 'admin' && role !== 'consultant_lead')
-    throw new QuestionnaireHttpError(403, '제출된 답변 조회 권한이 없어요.');
-  const client = createClient(await cookies());
-  const { data, error } = await client.rpc(
-    'list_submitted_questionnaire_responses',
-    { qid: questionnaireId },
-  );
-  if (error)
-    throw new QuestionnaireHttpError(
-      error.code === '42501' ? 403 : 503,
-      '제출된 답변을 불러오지 못했어요.',
-    );
-  return data;
-}
+export { loadSubmittedResponses } from './responses/submissions-server';

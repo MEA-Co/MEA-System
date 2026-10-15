@@ -17,6 +17,7 @@ import type {
   QuestionnaireStartNotice as StartNotice,
 } from '../../lib/questionnaire/types';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
+import type { SubmissionIssue } from '../../lib/responses/submission-validation';
 import { questionCanvasClass } from '../question/question-styles';
 import { QuestionBlockPreview } from '../question/QuestionBlockPreview';
 import { QuestionReviews } from '../question/QuestionReviews';
@@ -39,7 +40,9 @@ export function QuestionnairePreview({
   showGuideAnswers = false,
   response,
   submittedView = false,
+  submissionIssues = [],
 }: {
+  submissionIssues?: SubmissionIssue[];
   startNotice?: StartNotice | null;
   reviewQuestionnaireId?: string;
   title: string;
@@ -126,8 +129,20 @@ export function QuestionnairePreview({
           </h3>
           {section.questions.map((question, questionIndex) =>
             question.sourceQuestionId ? (
-              <div key={question.id} className="space-y-3">
+              <div
+                key={question.id}
+                data-response-question={question.sourceQuestionId}
+                tabIndex={-1}
+                role="group"
+                aria-label={`${section.title || `섹션 ${sectionIndex + 1}`} · ${questionIndex + 1}번 질문`}
+                className="space-y-3 scroll-mt-24 rounded-lg focus-visible:outline-2 focus-visible:outline-ring"
+              >
                 <PlacedPreview
+                  validationMessages={submissionIssues
+                    .filter(
+                      (issue) => issue.questionId === question.sourceQuestionId,
+                    )
+                    .map((issue) => issue.message)}
                   sourceId={question.sourceQuestionId}
                   guideAnswer={guideAnswers?.[question.sourceQuestionId]}
                   number={questionIndex + 1}
@@ -139,9 +154,7 @@ export function QuestionnairePreview({
                   submittedView={submittedView}
                 />
                 {reviewQuestionnaireId && (
-                  <QuestionReviews
-                    questionId={question.sourceQuestionId}
-                  />
+                  <QuestionReviews questionId={question.sourceQuestionId} />
                 )}
                 {renderQuestionFooter?.(question.id)}
               </div>
@@ -186,6 +199,7 @@ export function QuestionnairePreview({
 }
 
 function PlacedPreview({
+  validationMessages,
   sourceId,
   guideAnswer,
   number,
@@ -196,6 +210,7 @@ function PlacedPreview({
   response,
   submittedView = false,
 }: {
+  validationMessages?: string[];
   submittedView?: boolean;
   showPrivateDetails: boolean;
   guideAnswer?: GuideAnswer;
@@ -230,6 +245,7 @@ function PlacedPreview({
     <QuestionBlockPreview
       key={`${source.id}:${source.revision}`}
       document={documentFromRow(source)}
+      validationMessages={validationMessages}
       guideAnswer={guideAnswer}
       showPrivateDetails={showPrivateDetails}
       questions={library}

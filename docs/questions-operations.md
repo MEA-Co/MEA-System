@@ -527,3 +527,38 @@ npx supabase db push --linked --dry-run
 - 관련 JS 회귀 164개·타입 검사·변경 파일 린트·Webpack 빌드 통과. DB lint(public/private)와 security advisor에서 오류/경고 없음. 로컬 dry-run 적용 대기 없음.
 - 전체 verify 스크립트 묶음에는 이전 리팩터링을 반영하지 않은 질문 schema/preview mock과 외부 실행 환경이 필요한 항목이 있어 전체 묶음 성공으로 간주하지 않는다. 이번 검증은 위 현재 스키마/관련 코드 회귀를 기준으로 한다. 과거 스키마 전용 SQL·migration 재실행 테스트는 그 시점 그대로 보존하며 최신 DB에 일괄 실행하지 않는다.
 - 운영 DB 조회/적용, 운영 앱 배포, 실제 브라우저 검증은 수행하지 않았다.
+
+## 응답 무결성·제출 조회 분리 (2026-10-15)
+
+신규 `20261015090145_response_integrity_and_submission_reads.sql`은 로컬에서 롤백 시험 후 적용했다. 운영 DB 조회·적용이나 앱 배포는 하지 않았다. 앞선 검토/배포 명칭 전환 및 기타 미적용 migration을 포함한 전체 적용 순서를 유지한다.
+
+- `questions.response_requirements`를 추가하고 기존 진로 흐름 원본에만 필수 시기 ID를 기록한다. 해당 원본이 없는 환경은 backfill을 건너뛰며, 있는데 필드 구성이 다르면 중단한다. 다른 질문, 과거 제출본, 응답 값, 제출 시각, 세션 revision은 수정하지 않는다.
+- 한 트랜잭션, 5초 lock_timeout, 60초 statement_timeout을 사용한다. 교체 함수 4개의 정의 지문이 선행 migration 이후 예상값과 달라지면 중단한다. backfill 동안 질문 테이블 독점 잠금 아래 기존 잠금/검증/가이드 정리 트리거 3개의 정상 상태를 확인하고 잠시 중지·복원하며 새 속성 외 질문 열이 동일한지 검사한다. 실패하면 전체 롤백된다. 사용자 계정별 가이드 함수·배포 권한은 변경하지 않는다.
+- 새 필수 조건은 이후 제출/재제출에 적용한다. 이전에 서버의 한 칸 예외로 제출된 응답을 삭제·취소하지 않는다. 일반 임시 저장은 부분 입력을 계속 허용한다.
+- 기존 전체 제출 조회 RPC와 page 없는 API를 유지해 새 조회 경로로의 전환을 지원한다. 다만 선행 상태명 전환의 점검/동시 배포 요구는 여전히 유효하다. nullable 속성이 정의 토큰에 포함되므로 적용 전에 저장을 마치고 앱 배포 후 새로고침한다.
+
+전체 개선 마지막 운영 반영 시:
+
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase projects list
+npx supabase migration list --linked
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --dry-run
+# 운영 대상·전체 대기 파일 확인 및 앞 절의 점검 전환 후에만 실행
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --dry-run
+# 적용 대기 없음 확인 → 현재 앱 배포 → 새로고침 및 기능 확인 → 점검 해제
+```
+
+이번 추가 파일은 위 090145 파일 한 개이며 이전 운영 대기 migration은 함께 검토해야 한다. 예상 밖 파일·이력 불일치·함수 지문 오류가 나오면 적용 전에 실제 정의와 선행 이력을 비교한다. 지문 검사 삭제, 원격 reset, migration repair로 우회하지 않는다. DB 적용 뒤 앱 배포가 실패하면 점검 상태에서 새 앱을 수정하며 이전 앱만 되돌려 서비스하지 않는다.
+
+검증: 타입 검사·변경 파일 린트·Webpack 빌드, 관련 JS 회귀, 기존 응답 SQL 6개 및 신규 `response_integrity_and_submission_reads.sql` 통과. 신규 SQL은 가상 사용자·질문지를 만들고 전체 롤백하며 필수 그룹/부분 저장, 다른 질문지의 세션 차단, 10명 페이지, 내보내기 revision 충돌, 미제출 수정 비공개, 리드/관리자 조회·일반 컨설턴트 차단·익명 ACL을 확인한다. DB lint(public/private)와 security advisor 오류/경고 없음. 실제 브라우저 테스트는 사용자 요청이 없어 수행하지 않았다.
+
+운영 앱 반영 뒤에는 가이드 다른 탭 동시 수정 시 입력 보존, 진로 흐름 필수 두 그룹 입력/부분 저장, 새 복제 질문의 필수 시기 매핑, 제출 목록 페이지/상세/목록 복귀, 개별 PDF·전체 ZIP 및 배포 역할별 접근을 확인한다.
+
+
+## 제출 오류 안내·이동 UI (2026-10-15)
+
+기존 응답 무결성 마이그레이션 이후 앱 변경만 추가한다. 새 DB migration/API 변경은 없다. 기존 운영 대기 migration을 생략해도 된다는 뜻은 아니며 전체 운영 적용 시 위 순서를 따른다. 이번 로컬 검증은 타입/변경 파일 린트·Webpack 빌드 및 질문별 검증·조건/참조·제출 차단/수정 후 재제출·범위 내 스크롤/포커스 JS 33개다. 실제 브라우저 테스트와 운영 배포는 미수행이다.
+
+앱 배포 후에는 필수 칸을 비운 제출, 첫 오류로의 이동, 오류 목록에서 다른 질문 이동, 답변 수정 후 안내 해제, 조건부 질문·표의 빈 여분 행·진로 흐름 필수 시기, 모든 답변을 채운 뒤 정상 제출을 확인한다.

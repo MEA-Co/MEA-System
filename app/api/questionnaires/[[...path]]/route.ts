@@ -49,7 +49,10 @@ async function handle(request: Request, context: Context) {
       return json({ error: '질문지 접근 권한이 없어요.' }, 403);
     if (request.headers.get('X-Questionnaire-Workflow') !== '2')
       return json(
-        { error: '질문지 관리가 업데이트되었어요. 새로고침 후 다시 이용해 주세요.' },
+        {
+          error:
+            '질문지 관리가 업데이트되었어요. 새로고침 후 다시 이용해 주세요.',
+        },
         426,
       );
     const path = (await context.params).path ?? [];
@@ -57,12 +60,42 @@ async function handle(request: Request, context: Context) {
     const method = request.method;
     if (method === 'GET') {
       if (
-        path.length === 2 &&
         resource === 'submitted-responses' &&
         staff &&
         z.uuid().safeParse(id).success
-      )
-        return json(await loadSubmittedResponses(id));
+      ) {
+        const params = new URL(request.url).searchParams;
+        if (path.length === 3 && path[2] === 'manifest')
+          return json(await loadSubmittedResponses(id, { manifest: true }));
+        if (path.length === 3 && z.uuid().safeParse(path[2]).success) {
+          const revision = params.has('revision')
+            ? Number(params.get('revision'))
+            : undefined;
+          if (
+            revision !== undefined &&
+            (!Number.isSafeInteger(revision) || revision < 0)
+          )
+            return json({ error: '제출 버전을 확인해 주세요.' }, 400);
+          return json(
+            await loadSubmittedResponses(id, { sessionId: path[2], revision }),
+          );
+        }
+        if (path.length === 2) {
+          const page = params.has('page')
+            ? Number(params.get('page'))
+            : undefined;
+          if (
+            page !== undefined &&
+            (!Number.isInteger(page) || page < 1 || page > 100000)
+          )
+            return json({ error: '페이지를 확인해 주세요.' }, 400);
+          return json(
+            await (page
+              ? loadSubmittedResponses(id, { page })
+              : loadSubmittedResponses(id)),
+          );
+        }
+      }
       if (
         path.length === 2 &&
         resource === 'guide-question-ids' &&
@@ -239,9 +272,7 @@ async function handle(request: Request, context: Context) {
     else if (method === 'PUT' && path.length === 2 && resource === 'read') {
       const client = createClient(await cookies());
       const { error } = await client.rpc(
-        staff
-          ? 'mark_questionnaire_review_read'
-          : 'open_published_response',
+        staff ? 'mark_questionnaire_review_read' : 'open_published_response',
         { p_questionnaire_id: id },
       );
       if (error) return json({ error: '확인 상태를 저장하지 못했어요.' }, 503);

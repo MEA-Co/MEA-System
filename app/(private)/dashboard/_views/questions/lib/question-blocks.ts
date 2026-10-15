@@ -130,6 +130,15 @@ export const questionBlockSchema = z
     fields: z.array(fieldSchema).max(20),
     rowMode: z.enum(['single', 'repeatable', 'reference']),
     answerLayout: z.enum(['cards', 'table', 'flow']).optional(),
+    responseRequirements: z
+      .object({
+        kind: z.literal('career_flow'),
+        startFieldIds: z.tuple([z.uuid(), z.uuid()]),
+        admissionFieldId: z.uuid(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
     flowInsertAfter: z
       .array(z.number().int().min(1).max(20))
       .max(20)
@@ -149,6 +158,27 @@ export const questionBlockSchema = z
       .nullable(),
   })
   .superRefine((block, context) => {
+    if (block.responseRequirements) {
+      const ids = [
+        ...block.responseRequirements.startFieldIds,
+        block.responseRequirements.admissionFieldId,
+      ];
+      if (
+        new Set(ids).size !== ids.length ||
+        ids.some(
+          (id) =>
+            !block.fields.some(
+              (field) => field.id === id && field.kind === 'text',
+            ),
+        )
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['responseRequirements'],
+          message: '진로 흐름의 필수 시기 열은 서술형으로 유지해 주세요.',
+        });
+      }
+    }
     if (!richTextPlainText(block.prompt).trim()) {
       context.addIssue({
         code: 'custom',
@@ -333,6 +363,7 @@ export type QuestionBlockRow = {
   fields: QuestionBlockField[];
   row_mode: QuestionBlockDocument['rowMode'];
   answer_layout?: QuestionBlockDocument['answerLayout'];
+  response_requirements?: QuestionBlockDocument['responseRequirements'];
   flow_insert_after?: number[];
   initial_rows?: number;
   max_rows: number | null;
@@ -380,6 +411,7 @@ export function documentFromRow(row: QuestionBlockRow): QuestionBlockDocument {
     fields: row.fields,
     rowMode: row.row_mode,
     answerLayout: row.answer_layout ?? 'cards',
+    responseRequirements: row.response_requirements ?? null,
     flowInsertAfter: row.flow_insert_after ?? [],
     initialRows: row.initial_rows ?? 1,
     maxRows: row.max_rows,
@@ -402,6 +434,7 @@ export function emptyQuestionBlock(): QuestionBlockDocument {
     fields: [{ id: crypto.randomUUID(), label: '답변', kind: 'text' }],
     rowMode: 'single',
     answerLayout: 'cards',
+    responseRequirements: null,
     flowInsertAfter: [],
     initialRows: 1,
     maxRows: null,

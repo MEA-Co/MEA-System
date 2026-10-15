@@ -4,6 +4,7 @@ import { Download, Eye, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import { CollectionPagination } from '@/components/patterns/collection-pagination';
 import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
+import {
+  QUESTIONNAIRE_API,
+  QuestionnaireApiError,
+  questionnaireFetcher,
+  useQuestionnaireResource,
+} from '../../lib/questionnaire/api-client';
 import {
   openSubmittedResponse,
   SUBMITTED_RESPONSE_PARAM,
 } from '../../lib/questionnaire/submitted-navigation';
+import type {
+  SubmissionDownload,
+  SubmissionManifestEntry,
+  SubmissionPage,
+} from '../../lib/responses/submissions';
 import type { SubmittedResponse } from '../../lib/submitted-response-export';
 
 import { QuestionnaireLoading } from './QuestionnaireLoading';
@@ -38,14 +49,43 @@ export function SubmittedQuestionnaireResponses({
 }: {
   questionnaireId: string;
 }) {
-  const { data, error } = useQuestionnaireResource<SubmittedResponse[]>(
-    `/${questionnaireId}/submitted-responses`,
-  );
   const selectedId = useSearchParams().get(SUBMITTED_RESPONSE_PARAM);
+  const [page, setPage] = useState(1);
+  return (
+    <SubmittedResponses
+      key={`${questionnaireId}:${selectedId ?? 'list'}`}
+      questionnaireId={questionnaireId}
+      selectedId={selectedId}
+      page={page}
+      setPage={setPage}
+    />
+  );
+}
+function SubmittedResponses({
+  questionnaireId,
+  selectedId,
+  page,
+  setPage,
+}: {
+  questionnaireId: string;
+  selectedId: string | null;
+  page: number;
+  setPage: (page: number) => void;
+}) {
+  const path = `/${questionnaireId}/submitted-responses`;
+  const list = useQuestionnaireResource<SubmissionPage>(
+    selectedId ? null : `${path}?page=${page}`,
+  );
+  const detail = useQuestionnaireResource<SubmittedResponse>(
+    selectedId ? `${path}/${selectedId}` : null,
+  );
+  const data = list.data;
+  const selected = detail.data;
+  const error = selectedId ? detail.error : list.error;
   const downloading = useRef(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  async function download(items: SubmittedResponse[], archive: boolean) {
+  async function download(item?: SubmittedResponse) {
     if (downloading.current) return;
     downloading.current = true;
     setProgress('PDF 준비 중…');
@@ -53,12 +93,28 @@ export function SubmittedQuestionnaireResponses({
     try {
       const { downloadSubmissions } =
         await import('./export/download-submissions');
-      await downloadSubmissions(items, archive, (done, total) =>
+      const manifest = item
+        ? []
+        : await questionnaireFetcher<SubmissionManifestEntry[]>(
+            `${QUESTIONNAIRE_API}${path}/manifest`,
+          );
+      const source: SubmissionDownload = item
+        ? { total: 1, load: async () => item }
+        : {
+            total: manifest.length,
+            load: (index) =>
+              questionnaireFetcher<SubmittedResponse>(
+                `${QUESTIONNAIRE_API}${path}/${manifest[index].id}?revision=${manifest[index].revision}`,
+              ),
+          };
+      await downloadSubmissions(source, !item, (done, total) =>
         setProgress(`PDF 생성 중 ${done} / ${total}`),
       );
-    } catch {
+    } catch (error) {
       setDownloadError(
-        'PDF를 다운로드하지 못했어요. 잠시 후 다시 시도해 주세요.',
+        error instanceof QuestionnaireApiError && error.status === 409
+          ? '내보내는 동안 답변이 다시 제출됐어요. 최신 내용으로 다시 다운로드해 주세요.'
+          : 'PDF를 다운로드하지 못했어요. 잠시 후 다시 시도해 주세요.',
       );
     } finally {
       downloading.current = false;
@@ -75,8 +131,7 @@ export function SubmittedQuestionnaireResponses({
     </>
   );
   if (error) return <p role="alert">{error.message}</p>;
-  if (!data) return <QuestionnaireLoading />;
-  const selected = data.find((item) => item.id === selectedId);
+  if (selectedId ? !selected : !data) return <QuestionnaireLoading />;
   if (selected)
     return (
       <div className="space-y-4">
@@ -85,7 +140,7 @@ export function SubmittedQuestionnaireResponses({
             className="w-48"
             aria-busy={!!progress}
             disabled={!!progress}
-            onClick={() => void download([selected], false)}
+            onClick={() => void download(selected)}
           >
             {progress ? (
               <Loader2 aria-hidden="true" className="animate-spin" />
@@ -120,18 +175,19 @@ export function SubmittedQuestionnaireResponses({
         />
       </div>
     );
+  if (!data) return <QuestionnaireLoading />;
   return (
     <section className="space-y-4">
       <div className="space-y-3 rounded-lg border bg-background p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            제출된 답변 <Badge variant="count">{data.length}</Badge>
+            제출된 답변 <Badge variant="count">{data.total}</Badge>
           </h2>
           <Button
             className="w-48"
             aria-busy={!!progress}
-            disabled={!data.length || !!progress}
-            onClick={() => void download(data, true)}
+            disabled={!data.total || !!progress}
+            onClick={() => void download()}
           >
             {progress ? (
               <Loader2 aria-hidden="true" className="animate-spin" />
@@ -156,7 +212,7 @@ export function SubmittedQuestionnaireResponses({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item) => (
+            {data.items.map((item) => (
               <TableRow
                 key={item.id}
                 className="cursor-pointer"
@@ -192,7 +248,7 @@ export function SubmittedQuestionnaireResponses({
                 </TableCell>
               </TableRow>
             ))}
-            {!data.length && (
+            {!data.total && (
               <CollectionTableState
                 colSpan={2}
                 title="아직 제출된 답변이 없습니다"
@@ -202,6 +258,15 @@ export function SubmittedQuestionnaireResponses({
           </TableBody>
         </Table>
       </div>
+      <CollectionPagination
+        label="제출된 답변 페이지"
+        total={data.total}
+        page={data.page}
+        pages={data.pages}
+        loading={list.isLoading}
+        error={list.error}
+        onPageChange={setPage}
+      />
     </section>
   );
 }

@@ -6,6 +6,8 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
+import { loadQuestionModule } from './helpers/load-question-module.mjs';
+
 const responseHelpers = {};
 vm.runInNewContext(
   ts.transpileModule(
@@ -64,7 +66,11 @@ function mount(published = true, empty = false, registration = false) {
       {
         questionId: 'q',
         responseId: 'r',
-        definition: { id: 'q' },
+        definition: {
+          id: 'q',
+          row_mode: 'single',
+          fields: [{ id: 'f', label: '답변', kind: 'text' }],
+        },
         rows: [{ id: 1, answers: { f: 'submitted' } }],
       },
     ],
@@ -97,6 +103,7 @@ function mount(published = true, empty = false, registration = false) {
     },
     swr: { useSWRConfig: () => ({ mutate: async () => {} }) },
     '@/components/ui/button': { Button: 'Button' },
+    '../../lib/responses/submission-navigation': { focusResponseQuestion() {} },
     '@/components/ui/toast': { toast: { add() {} } },
     '../../lib/career-flow-placeholders': {
       CAREER_FLOW_QUESTION_ID: '5f6064ad-1dd6-4e0d-95dd-611ccacbce92',
@@ -106,7 +113,7 @@ function mount(published = true, empty = false, registration = false) {
       hasIncompatibleFlowDraft: responseHelpers.hasIncompatibleFlowDraft,
       snapshotRows: (s) =>
         Object.fromEntries(s.questions.map((q) => [q.definition.id, q.rows])),
-      mergeGuideResponseRows: (rows) => rows,
+      mergeGuideResponseRows: responseHelpers.mergeGuideResponseRows,
     },
     '../../lib/questionnaire/api-client': {
       QUESTIONNAIRE_API: '/api/questionnaires',
@@ -120,6 +127,39 @@ function mount(published = true, empty = false, registration = false) {
     'app/(private)/dashboard/_views/questions/components/questionnaire/QuestionResponseForm.tsx',
     'utf8',
   ).replace('function ResponseEditor(', 'export function ResponseEditor(');
+  const globals = {
+    crypto: { randomUUID },
+    structuredClone,
+    setInterval,
+    clearInterval,
+    fetch: async (url, options) => {
+      const body = JSON.parse(options.body);
+      calls.push({ url, body });
+      return {
+        ok: true,
+        json: async () => ({
+          ...initial,
+          revision: 3,
+          questions: initial.questions.map((q) => ({
+            ...q,
+            rows: body.answers[q.definition.id],
+          })),
+        }),
+      };
+    },
+  };
+  imports['../../hooks/responses/useQuestionResponseEditor'] =
+    loadQuestionModule(
+      'app/(private)/dashboard/_views/questions/hooks/responses/useQuestionResponseEditor.ts',
+      globals,
+      (name) =>
+        name.endsWith('/rich-text')
+          ? { richTextPlainText: (value) => value }
+          : name.endsWith('/questionnaire/api-client')
+            ? imports['../../lib/questionnaire/api-client']
+            : imports[name],
+    );
+  imports['../../lib/responses/api-client'] = {};
   vm.runInNewContext(
     ts.transpileModule(source, {
       compilerOptions: {
@@ -337,4 +377,102 @@ test('a changed flow layout locks and keeps the original unsaved table visible',
   assert.equal(preview.props.response.disabled, true);
   assert.equal(view.find(tree, 'Button')[0].props.disabled, true);
   assert.equal(view.calls.length, 0);
+});
+
+test('a clean guide adopts newer answers even when the question definition changes too', () => {
+  const view = mount(false);
+  view.initial.questions[0].definition = {
+    id: 'q',
+    row_mode: 'repeatable',
+    max_rows: 3,
+    fields: [{ id: 'f', kind: 'text' }],
+  };
+  view.render();
+  const next = structuredClone(view.initial);
+  next.revision++;
+  next.definitionToken = 'b'.repeat(32);
+  next.questions[0].definition.fields.push({ id: 'g', kind: 'text' });
+  next.questions[0].rows[0].answers.f = 'newer remote answer';
+  view.applyRemote(next);
+  const tree = view.render();
+  assert.equal(
+    view.find(tree, 'Preview')[0].props.response.rows.q[0].answers.f,
+    'newer remote answer',
+  );
+  assert.equal(view.find(tree, 'Button')[0].props.disabled, true);
+  assert.equal(view.calls.length, 0);
+});
+
+test('simultaneous remote definition and answer edits preserve dirty inputs and stop saves', () => {
+  const view = mount(false);
+  view.initial.questions[0].definition = {
+    id: 'q',
+    row_mode: 'single',
+    fields: [{ id: 'f', kind: 'text' }],
+  };
+  view
+    .find(view.render(), 'Preview')[0]
+    .props.response.onChange('q', [{ id: 1, answers: { f: 'unsaved local' } }]);
+  view.render();
+  const next = structuredClone(view.initial);
+  next.revision++;
+  next.definitionToken = 'b'.repeat(32);
+  next.questions[0].rows[0].answers.f = 'remote';
+  view.applyRemote(next);
+  const tree = view.render();
+  const preview = view.find(tree, 'Preview')[0];
+  assert.equal(preview.props.response.rows.q[0].answers.f, 'unsaved local');
+  assert.equal(preview.props.response.disabled, true);
+  assert.equal(view.find(tree, 'Button')[0].props.disabled, true);
+});
+
+test('definition-only changes retain dirty compatible fields without advancing another answer revision', () => {
+  const view = mount(false);
+  view.initial.questions[0].definition = {
+    id: 'q',
+    row_mode: 'single',
+    fields: [{ id: 'f', kind: 'text' }],
+  };
+  view
+    .find(view.render(), 'Preview')[0]
+    .props.response.onChange('q', [{ id: 1, answers: { f: 'unsaved local' } }]);
+  view.render();
+  const next = structuredClone(view.initial);
+  next.definitionToken = 'b'.repeat(32);
+  next.questions[0].definition.fields.push({ id: 'g', kind: 'text' });
+  view.applyRemote(next);
+  const tree = view.render();
+  assert.equal(
+    view.find(tree, 'Preview')[0].props.response.rows.q[0].answers.f,
+    'unsaved local',
+  );
+  assert.equal(view.find(tree, 'Button')[0].props.disabled, false);
+});
+
+test('invalid submission stays editable, sends no request, and clears errors after correction', async () => {
+  const view = mount(true, true);
+  let tree = view.render();
+  view
+    .find(tree, 'Button')
+    .find((node) => node.props.children === '제출')
+    .props.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  tree = view.render();
+  const preview = view.find(tree, 'Preview')[0];
+  assert.ok(preview.props.submissionIssues.length);
+  assert.equal(preview.props.submissionIssues[0].questionId, 'q');
+  assert.equal(preview.props.response.disabled, false);
+  assert.equal(view.calls.length, 0);
+  preview.props.response.onChange('q', [
+    { id: 1, answers: { f: '완성한 답변' } },
+  ]);
+  tree = view.render();
+  assert.equal(view.find(tree, 'Preview')[0].props.submissionIssues.length, 0);
+  view
+    .find(tree, 'Button')
+    .find((node) => node.props.children === '제출')
+    .props.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(view.calls.length, 1);
+  assert.equal(view.calls[0].body.complete, true);
 });

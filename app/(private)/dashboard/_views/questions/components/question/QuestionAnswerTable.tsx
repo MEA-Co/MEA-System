@@ -63,11 +63,8 @@ export function QuestionAnswerTable({
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string[]>([]);
   const [addingGroup, setAddingGroup] = useState<string | null>(null);
-  const startIds = [
-    'f4689fea-ba91-400f-82be-f0b1dbf185db',
-    '720f88bd-1ace-4b86-828f-5df7abbe0a10',
-  ];
-  const admissionId = 'e75649e4-82f5-4175-8c14-2298c522a45d';
+  const startIds: string[] = document.responseRequirements?.startFieldIds ?? [];
+  const admissionId = document.responseRequirements?.admissionFieldId;
   const hasAnswer = (field: QuestionBlockField) =>
     rows.some((row) => !!summary(field, row.answers[field.id] ?? ''));
   const groupFor = (field: QuestionBlockField) => {

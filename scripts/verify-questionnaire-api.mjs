@@ -100,9 +100,9 @@ function route({
       },
     },
   );
-  async function request(method, path = [], body, headers = {}) {
+  async function request(method, path = [], body, headers = {}, query = '') {
     const req = new Request(
-      `https://example.test/api/questionnaires/${path.join('/')}`,
+      `https://example.test/api/questionnaires/${path.join('/')}${query}`,
       {
         method,
         headers: {
@@ -343,8 +343,7 @@ test('consultants can open, read, save and submit canonical publication response
     ['PUT', { complete: true }],
   ]) {
     assert.equal(
-      (await client.request(method, [id, 'published-responses'], body))
-        .status,
+      (await client.request(method, [id, 'published-responses'], body)).status,
       200,
     );
     const call = client.calls.at(-1);
@@ -393,15 +392,100 @@ test('only staff views can request submitted responses, not consultant previews'
   assert.equal(preview.calls.length, 0);
 });
 
-
 test('an old browser cannot read or mutate statuses with changed meanings', async () => {
   const api = route();
   for (const version of ['', '1']) {
     const headers = { 'X-Questionnaire-Workflow': version };
-    assert.equal((await api.request('GET', [], undefined, headers)).status, 426);
-    assert.equal((await api.request('PATCH', [randomUUID(), 'status'], {
-      status: 'published', expectedStatus: 'draft',
-    }, headers)).status, 426);
+    assert.equal(
+      (await api.request('GET', [], undefined, headers)).status,
+      426,
+    );
+    assert.equal(
+      (
+        await api.request(
+          'PATCH',
+          [randomUUID(), 'status'],
+          {
+            status: 'published',
+            expectedStatus: 'draft',
+          },
+          headers,
+        )
+      ).status,
+      426,
+    );
   }
   assert.equal(api.calls.length, 0);
+});
+
+test('submission summaries, detail and export manifest route separately with bounded parameters', async () => {
+  const api = route();
+  const qid = randomUUID(),
+    sid = randomUUID();
+  assert.equal(
+    (
+      await api.request(
+        'GET',
+        [qid, 'submitted-responses'],
+        undefined,
+        {},
+        '?page=2',
+      )
+    ).status,
+    200,
+  );
+  assert.equal(api.calls.at(-1)[2].page, 2);
+  assert.equal(
+    (
+      await api.request(
+        'GET',
+        [qid, 'submitted-responses', sid],
+        undefined,
+        {},
+        '?revision=4',
+      )
+    ).status,
+    200,
+  );
+  assert.equal(api.calls.at(-1)[2].sessionId, sid);
+  assert.equal(api.calls.at(-1)[2].revision, 4);
+  assert.equal(
+    (await api.request('GET', [qid, 'submitted-responses', 'manifest'])).status,
+    200,
+  );
+  assert.equal(api.calls.at(-1)[2].manifest, true);
+  for (const query of ['?page=0', '?page=100001', '?page=1.5'])
+    assert.equal(
+      (
+        await api.request(
+          'GET',
+          [qid, 'submitted-responses'],
+          undefined,
+          {},
+          query,
+        )
+      ).status,
+      400,
+    );
+  assert.equal(
+    (
+      await api.request(
+        'GET',
+        [qid, 'submitted-responses', sid],
+        undefined,
+        {},
+        '?revision=-1',
+      )
+    ).status,
+    400,
+  );
+  const consultant = route({ role: 'consultant' });
+  for (const path of [
+    [qid, 'submitted-responses'],
+    [qid, 'submitted-responses', sid],
+    [qid, 'submitted-responses', 'manifest'],
+  ]) {
+    assert.notEqual((await consultant.request('GET', path)).status, 200);
+  }
+  assert.equal(consultant.calls.length, 0);
 });
