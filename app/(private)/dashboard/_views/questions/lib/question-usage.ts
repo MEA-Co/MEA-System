@@ -76,48 +76,26 @@ export async function withQuestionnaireUsage(
       string,
       Map<string, { id: string; title: string }>
     >();
-    const pageIds = new Set(blocks.map((block) => block.id));
-    for (let start = 0; ; start += 500) {
-      const result = await client
-        .from('questions')
-        .select('id,title,created_by,source_block_id,after_block_id,condition')
-        .is('archived_at', null)
-        .order('id')
-        .range(start, start + 499)
-        .overrideTypes<
-          Pick<
-            QuestionBlockRow,
-            | 'id'
-            | 'title'
-            | 'created_by'
-            | 'source_block_id'
-            | 'after_block_id'
-            | 'condition'
-          >[],
-          { merge: false }
-        >();
-      if (result.error) throw result.error;
-      for (const question of result.data ?? []) {
-        for (const id of [
-          question.source_block_id,
-          question.after_block_id,
-          ...(question.condition?.clauses.map((clause) => clause.blockId) ??
-            []),
-        ]) {
-          if (!id || !pageIds.has(id)) continue;
-          referencedIds.add(id);
-          if (ownOnly && question.created_by !== userId) continue;
-          const incoming =
-            references.get(id) ??
-            new Map<string, { id: string; title: string }>();
-          incoming.set(question.id, {
-            id: question.id,
-            title: question.title?.trim() || '제목 없는 질문',
-          });
-          references.set(id, incoming);
-        }
-      }
-      if (!result.data || result.data.length < 500) break;
+    const incoming = await client.rpc('question_incoming_references', {
+      p_question_ids: blocks.map((block) => block.id),
+    });
+    if (incoming.error) throw incoming.error;
+    for (const question of (incoming.data ?? []) as {
+      target_id: string;
+      id: string;
+      title: string;
+      created_by: string;
+    }[]) {
+      referencedIds.add(question.target_id);
+      if (ownOnly && question.created_by !== userId) continue;
+      const linked =
+        references.get(question.target_id) ??
+        new Map<string, { id: string; title: string }>();
+      linked.set(question.id, {
+        id: question.id,
+        title: question.title?.trim() || '제목 없는 질문',
+      });
+      references.set(question.target_id, linked);
     }
     return blocks.map((block) => ({
       ...block,

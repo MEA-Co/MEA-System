@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import vm from 'node:vm';
 
-import ts from 'typescript';
+import { loadQuestionModule } from './helpers/load-question-module.mjs';
 
 // Exercise state/history/requests without running a browser.
 function mount({
@@ -14,6 +12,8 @@ function mount({
   guideFields = [],
   saveResults = [],
   purpose = 'response',
+  restoredUrl,
+  restoredLocal = [],
 } = {}) {
   const placed = [];
   const saves = [];
@@ -73,9 +73,9 @@ function mount({
   let tree;
   let effects = [];
   const calls = [];
-  const history = ['https://example.test/dashboard?view=questions'];
+  const history = [restoredUrl ?? 'https://example.test/dashboard?view=questions'];
   let position = 0;
-  const local = new Map();
+  const local = new Map(restoredLocal);
   const same = (a, b) =>
     !!a &&
     !!b &&
@@ -125,7 +125,8 @@ function mount({
     ref.current = fn;
     return react.useCallback((...args) => ref.current(...args), []);
   };
-  const jsx = (type, props) => ({ type, props });
+  const jsx = (type, props) =>
+    type?.name === 'QuestionEditorContent' ? type(props) : { type, props };
   const window = {
     location: { href: history[0] },
     history: {
@@ -185,137 +186,136 @@ function mount({
       Tabs: { Root: 'TabsRoot', List: 'TabsList', Tab: 'Tab', Panel: 'Panel' },
     },
   };
-  const exports = {};
-  vm.runInNewContext(
-    ts.transpileModule(
-      readFileSync(
-        'app/(private)/dashboard/_views/questions/components/question/QuestionLibraryView.tsx',
-        'utf8',
-      ),
-      {
-        compilerOptions: {
-          module: ts.ModuleKind.CommonJS,
-          target: ts.ScriptTarget.ES2022,
-          jsx: ts.JsxEmit.ReactJSX,
-        },
-      },
-    ).outputText,
-    {
-      exports,
-      window,
-      URL,
-      crypto: { randomUUID },
-      HTMLElement: class {},
-      HTMLAnchorElement: class {},
-      Element: class {},
-      fetch: async (url, options) => {
-        calls.push(url);
-        if (url.endsWith('/guide-answer-fields'))
-          return { ok: true, json: async () => ({ fieldIds: guideFields }) };
-        if (failSave && options?.method) throw new Error('offline');
-        if (options?.method) {
-          saves.push({
-            url,
-            method: options.method,
-            body: JSON.parse(options.body),
-          });
-          const result = saveResults.shift();
-          if (result instanceof Error) throw result;
-          if (result)
-            return {
-              ok: false,
-              status: result.status,
-              json: async () => result.data,
-            };
-          const doc = JSON.parse(options.body).document;
+  const globals = {
+    window,
+    URL,
+    crypto: { randomUUID },
+    HTMLElement: class {},
+    HTMLAnchorElement: class {},
+    Element: class {},
+    fetch: async (url, options) => {
+      calls.push(url);
+      if (url.endsWith('/guide-answer-fields'))
+        return { ok: true, json: async () => ({ fieldIds: guideFields }) };
+      if (failSave && options?.method) throw new Error('offline');
+      if (options?.method) {
+        saves.push({
+          url,
+          method: options.method,
+          body: JSON.parse(options.body),
+        });
+        const result = saveResults.shift();
+        if (result instanceof Error) throw result;
+        if (result)
           return {
-            ok: true,
-            json: async () => ({
-              block: {
-                ...row,
-                id: doc.id,
-                title: doc.title,
-                prompt: doc.prompt,
-                purpose: doc.purpose ?? 'response',
-                button_label: doc.buttonLabel ?? null,
-                fields: doc.fields,
-                row_mode: doc.rowMode,
-                answer_layout: doc.answerLayout ?? 'cards',
-                flow_insert_after: doc.flowInsertAfter ?? [],
-                initial_rows: doc.initialRows ?? 1,
-                min_rows: doc.minRows ?? 1,
-                max_rows: doc.maxRows,
-                row_labels: doc.rowLabels ?? [],
-                source_block_id: doc.sourceBlockId,
-                source_field_id: doc.sourceFieldId,
-                after_block_id: doc.afterBlockId,
-                condition: doc.condition,
-                revision: 2,
-              },
-            }),
+            ok: false,
+            status: result.status,
+            json: async () => result.data,
           };
-        }
+        const doc = JSON.parse(options.body).document;
         return {
           ok: true,
           json: async () => ({
-            blocks: [row],
-            references: [],
-            total: 1,
-            page: 1,
-            userId: 'owner',
-            role: 'consultant_lead',
+            block: {
+              ...row,
+              id: doc.id,
+              title: doc.title,
+              prompt: doc.prompt,
+              purpose: doc.purpose ?? 'response',
+              button_label: doc.buttonLabel ?? null,
+              fields: doc.fields,
+              row_mode: doc.rowMode,
+              answer_layout: doc.answerLayout ?? 'cards',
+              flow_insert_after: doc.flowInsertAfter ?? [],
+              initial_rows: doc.initialRows ?? 1,
+              min_rows: doc.minRows ?? 1,
+              max_rows: doc.maxRows,
+              row_labels: doc.rowLabels ?? [],
+              source_block_id: doc.sourceBlockId,
+              source_field_id: doc.sourceFieldId,
+              after_block_id: doc.afterBlockId,
+              condition: doc.condition,
+              revision: 2,
+            },
           }),
         };
-      },
-      require: (name) => {
-        if (imports[name]) return imports[name];
-        if (name.endsWith('useQuestionEditorData'))
-          return {
-            useQuestionEditorData: (id, unsaved) => {
-              if (id && id !== 'new' && !unsaved) detailRequests.push(id);
-              return {
-                detail: {
-                  data: id === row.id ? row : undefined,
-                  isLoading: false,
-                  mutate: async () => {},
-                },
-                relationships: {
-                  data: [row],
-                  isLoading: false,
-                  mutate: async () => {},
-                },
-              };
-            },
-          };
-        if (name.endsWith('question-blocks'))
-          return {
-            documentFromRow,
-            emptyQuestionBlock: () => ({
-              ...documentFromRow(row),
-              id: randomUUID(),
-              title: '',
-              prompt: '',
-            }),
-            questionBlockSchema: {
-              safeParse: (value) => ({ success: true, data: value }),
-            },
-            questionName: (q) => q.title || q.prompt,
-          };
-        if (name === '@/lib/utils')
-          return { cn: (...values) => values.filter(Boolean).join(' ') };
-        if (name.endsWith('rich-text')) return { richTextPlainText: (s) => s };
-        if (name.endsWith('/toast'))
-          return {
-            toast: {
-              add(value) {
-                toasts.push(value);
-              },
-            },
-          };
-        return new Proxy({}, { get: (_t, key) => key });
-      },
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          blocks: [row],
+          references: [],
+          total: 1,
+          page: 1,
+          userId: 'owner',
+          role: 'consultant_lead',
+        }),
+      };
     },
+  };
+  const mock = (name) => {
+    if (imports[name]) return imports[name];
+    if (name.endsWith('useQuestionEditorData'))
+      return {
+        useQuestionEditorData: (id, unsaved) => {
+          if (id && id !== 'new' && !unsaved) detailRequests.push(id);
+          return {
+            detail: {
+              data: id === row.id ? row : undefined,
+              isLoading: false,
+              mutate: async () => {},
+            },
+            relationships: {
+              data: [row],
+              isLoading: false,
+              mutate: async () => {},
+            },
+          };
+        },
+      };
+    if (name.endsWith('question-blocks'))
+      return {
+        documentFromRow,
+        emptyQuestionBlock: () => ({
+          ...documentFromRow(row),
+          id: randomUUID(),
+          title: '',
+          prompt: '',
+        }),
+        questionBlockSchema: {
+          safeParse: (value) => ({ success: true, data: value }),
+        },
+        questionName: (q) => q.title || q.prompt,
+      };
+    if (name === '@/lib/utils')
+      return { cn: (...values) => values.filter(Boolean).join(' ') };
+    if (name.endsWith('rich-text')) return { richTextPlainText: (s) => s };
+    if (name.endsWith('/toast'))
+      return {
+        toast: {
+          add(value) {
+            toasts.push(value);
+          },
+        },
+      };
+    if (
+      [
+        'useQuestionEditorSession',
+        'useQuestionLibraryList',
+        'question-editor-draft',
+        'QuestionEditorContent',
+        'question-validation-errors',
+      ].some((suffix) => name.endsWith(suffix))
+    )
+      return undefined;
+    return new Proxy({}, { get: (_t, key) => key });
+  };
+  const exports = loadQuestionModule(
+    'app/(private)/dashboard/_views/questions/components/question/QuestionLibraryView.tsx',
+    globals,
+    mock,
   );
+
   async function flush() {
     for (let i = 0; i < 25; i++) {
       if (changed) {
@@ -1053,3 +1053,26 @@ test('registration role and full fixed-period capacity do not expose new inserti
     null,
   );
 });
+
+for (const prompt of ['', '새로고침 전에 작성한 본문']) {
+  test(`refresh restores an unsaved question without fetching its local UUID (${prompt ? 'edited' : 'untouched'})`, async () => {
+    const app = mount();
+    await app.flush();
+    app.find('Button', (p) => Array.isArray(p.children) &&
+      p.children.some((child) => child?.props?.children === '새 질문 만들기')
+    ).props.onClick();
+    await app.flush();
+    if (prompt) {
+      app.find('QuestionRichTextEditor').props.onChange(prompt);
+      await app.flush();
+    }
+    assert.ok(app.local.size > 0);
+    const refreshed = mount({ restoredUrl: app.window.location.href, restoredLocal: app.local });
+    await refreshed.flush();
+    assert.deepEqual(refreshed.detailRequests, []);
+    assert.equal(refreshed.find('Drawer').props.open, true);
+    assert.equal(refreshed.find('QuestionRichTextEditor').props.value, prompt);
+    assert.equal(refreshed.window.location.href, app.window.location.href);
+    assert.equal(refreshed.toasts.length, 0);
+  });
+}

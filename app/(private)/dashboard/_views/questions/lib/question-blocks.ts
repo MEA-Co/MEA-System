@@ -244,6 +244,14 @@ export const questionBlockSchema = z
         message: '시기 추가 허용 위치는 기본 시기 범위 안에서 정해 주세요.',
       });
     }
+    const detailIds = (block.details ?? []).map((detail) => detail.id);
+    if (new Set(detailIds).size !== detailIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['details'],
+        message: '설명 항목 ID가 중복됐어요.',
+      });
+    }
     const ids = block.fields.map((field) => field.id);
     if (new Set(ids).size !== ids.length) {
       context.addIssue({ code: 'custom', message: '답변 열 ID가 중복됐어요.' });

@@ -71,8 +71,23 @@ function client(rows, fail = false, references = []) {
     },
   };
   return {
+    async rpc(name, args) {
+      assert.equal(name, 'question_incoming_references');
+      assert.deepEqual(Array.from(args.p_question_ids), ['q']);
+      return {
+        error: fail ? new Error('offline') : null,
+        data: references
+          .filter(
+            (r) =>
+              r.source_block_id === 'q' ||
+              r.after_block_id === 'q' ||
+              r.condition?.clauses.some((c) => c.blockId === 'q'),
+          )
+          .map((r) => ({ ...r, target_id: 'q' })),
+      };
+    },
     from(table) {
-      assert.ok(['questions', 'questionnaire_questions'].includes(table));
+      assert.equal(table, 'questionnaire_questions');
       query.table = table;
       return query;
     },

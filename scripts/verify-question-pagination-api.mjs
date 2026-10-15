@@ -6,6 +6,8 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 import ts from 'typescript';
+
+import { loadQuestionModule } from './helpers/load-question-module.mjs';
 const require = createRequire(import.meta.url);
 function setup({
   role = 'consultant_lead',
@@ -55,15 +57,17 @@ function setup({
           calls.push({ name, args });
           return {
             data:
-              name === 'read_published_question_sources'
-                ? sharedSources
-                : {
-                    blocks: [],
-                    references: [],
-                    total: 41,
-                    page: args.p_page,
-                    pageSize: 10,
-                  },
+              name === 'question_incoming_references'
+                ? []
+                : name === 'read_published_question_sources'
+                  ? sharedSources
+                  : {
+                      blocks: [],
+                      references: [],
+                      total: 41,
+                      page: args.p_page,
+                      pageSize: 10,
+                    },
             error: rpcError,
           };
         },
@@ -108,27 +112,10 @@ function setup({
       }),
     },
   };
-  const exports = {};
-  vm.runInNewContext(
-    ts.transpileModule(
-      readFileSync('app/api/questions/[[...path]]/route.ts', 'utf8'),
-      {
-        compilerOptions: {
-          module: ts.ModuleKind.CommonJS,
-          target: ts.ScriptTarget.ES2022,
-        },
-      },
-    ).outputText,
-    {
-      exports,
-      Response,
-      URL,
-      TextEncoder,
-      require: (name) => {
-        assert.ok(imports[name], name);
-        return imports[name];
-      },
-    },
+  const exports = loadQuestionModule(
+    'app/api/questions/[[...path]]/route.ts',
+    { Response, URL, TextEncoder },
+    (name) => imports[name],
   );
   return {
     calls,
@@ -231,7 +218,6 @@ test('admin lead preview filters before pagination and returns the display role'
     [
       { start: 980, end: 989 },
       { start: 10, end: 19 },
-      { start: 0, end: 499 },
       { start: 0, end: 499 },
     ],
   );

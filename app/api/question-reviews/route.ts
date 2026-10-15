@@ -30,29 +30,12 @@ export async function GET(request: Request) {
     if (!parsed.success)
       return json({ error: '질문 목록을 확인해 주세요.' }, 400);
     const client = createClient(await cookies());
-    const { data, error } = await client
-      .from('question_review_requests')
-      .select('question_id')
-      .in('question_id', parsed.data)
-      .is('resolved_at', null);
+    const { data, error } = await client.rpc('question_review_counts', {
+      p_question_ids: [...new Set(parsed.data)],
+    });
     if (error)
       return json({ error: '검토 요청 개수를 불러오지 못했어요.' }, 503);
-    const counts: Record<string, number> = {};
-    for (const row of data ?? [])
-      counts[row.question_id] = (counts[row.question_id] ?? 0) + 1;
-    const unreadCounts: Record<string, number> = {};
-    const results = await Promise.all(
-      parsed.data.map(async (id) => ({
-        id,
-        result: await client.rpc('unread_question_review_ids', { qid: id }),
-      })),
-    );
-    for (const { id, result } of results) {
-      if (result.error)
-        return json({ error: '새 검토 요청을 확인하지 못했어요.' }, 503);
-      unreadCounts[id] = (result.data ?? []).length;
-    }
-    return json({ counts, unreadCounts });
+    return json(data);
   } catch {
     return json({ error: '검토 요청 개수를 불러오지 못했어요.' }, 503);
   }

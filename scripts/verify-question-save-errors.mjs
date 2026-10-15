@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import vm from 'node:vm';
 
-import ts from 'typescript';
 import { z } from 'zod';
+
+import { loadQuestionModule } from './helpers/load-question-module.mjs';
 
 function setup(error) {
   const calls = [];
@@ -33,38 +32,33 @@ function setup(error) {
       }),
     },
   };
-  const exports = {};
-  vm.runInNewContext(
-    ts.transpileModule(
-      readFileSync('app/api/questions/[[...path]]/route.ts', 'utf8'),
-      {
-        compilerOptions: {
-          module: ts.ModuleKind.CommonJS,
-          target: ts.ScriptTarget.ES2022,
-        },
-      },
-    ).outputText,
-    {
-      exports,
-      Response,
-      URL,
-      TextEncoder,
-      require: (name) => {
-        assert.ok(name in imports, name);
-        return imports[name];
-      },
-    },
+  const exports = loadQuestionModule(
+    'app/api/questions/[[...path]]/route.ts',
+    { Response, URL, TextEncoder },
+    (name) => imports[name],
   );
   return {
     calls,
-    save: () => {
+    save: (patch = {}) => {
       const id = randomUUID();
       return exports.PUT(
         new Request(`https://example.test/api/questions/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            document: { id, prompt: '보존할 원본 질문' },
+            document: {
+              id,
+              title: '',
+              prompt: '보존할 원본 질문',
+              fields: [{ id: randomUUID(), label: '답변', kind: 'text' }],
+              rowMode: 'single',
+              maxRows: null,
+              sourceBlockId: null,
+              sourceFieldId: null,
+              afterBlockId: null,
+              condition: null,
+              ...patch,
+            },
             expectedRevision: 3,
             saveId: randomUUID(),
           }),
@@ -169,4 +163,50 @@ test('saved flow period protection remains a recoverable policy error with avail
   assert.equal(result.code, 'question_edit_restricted');
   assert.match(result.error, /표시 방식이나 기본 시기 수를 바꿀 수 없어요/);
   assert.match(result.error, /시기 이름과 추가 허용 위치는 수정할 수/);
+});
+
+test('invalid question fields return a concrete path before database save', async () => {
+  const app = setup(null);
+  const response = await app.save({
+    fields: [{ id: randomUUID(), label: 'x'.repeat(101), kind: 'text' }],
+  });
+  const result = await response.json();
+  assert.equal(response.status, 400);
+  assert.equal(result.code, 'question_validation_failed');
+  assert.deepEqual(result.fieldErrors[0].path, [
+    'document',
+    'fields',
+    0,
+    'label',
+  ]);
+  assert.match(result.error, /답변 열.*1번.*100/);
+  assert.equal(app.calls.length, 0);
+});
+
+test('duplicate explanation IDs are rejected before any write', async () => {
+  const app = setup(null);
+  const detail = {
+    id: randomUUID(),
+    title: '예시',
+    text: '',
+    visibleToConsultants: true,
+  };
+  const response = await app.save({ details: [detail, detail] });
+  const result = await response.json();
+  assert.equal(response.status, 400);
+  assert.match(result.error, /설명 항목.*중복/);
+  assert.deepEqual(result.fieldErrors[0].path, ['document', 'details']);
+  assert.equal(app.calls.length, 0);
+});
+
+test('known database validation failures preserve the affected area', async () => {
+  const app = setup({
+    code: '22023',
+    message: 'Detail belongs to another question',
+  });
+  const response = await app.save();
+  const result = await response.json();
+  assert.equal(response.status, 400);
+  assert.match(result.error, /다른 질문에 속한 설명/);
+  assert.deepEqual(result.fieldErrors[0].path, ['document', 'details']);
 });

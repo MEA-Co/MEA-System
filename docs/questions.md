@@ -284,3 +284,44 @@ Drawer에 새 질문 만들기/질문 수정 제목과 안내를 표시하고 �
 ### 질문 편집 로딩 UI
 
 질문 상세를 기다리는 동안 독립 Drawer와 질문지 내 편집기 모두 공통 Skeleton과 accent Card로 구성한 편집 영역 스켈레톤을 표시한다. 참조 질문 로딩도 스켈레톤으로 표시하며 오류 시 기존 재시도 UI를 유지한다. 기존 질문은 로딩 중에도 질문 수정 제목을 유지하고, 다른 질문의 저장 상태는 표시하지 않는다. 하단 버튼 영역은 유지하며 저장 안내에 최소 높이를 확보한다. 저장·조회 API 계약은 변경하지 않는다.
+
+## 질문 단위 조회·저장과 코드 책임 (2026-10-15)
+
+질문 원본·설명·검토 요청·응답 테이블 및 ID는 유지한다. 설명은 원본과 `save_question`에서 원자적으로 저장하며 별도 설명 저장 API를 만들지 않는다. 질문지 제출 검증은 이번 정리 범위에 포함하지 않는다.
+
+| API | 계약 |
+| --- | --- |
+| `GET /api/questions?page=&search=` | 서버 검색·10개 페이지. 현재 페이지의 배치 사용처와 역참조 관계를 추가한다. |
+| `GET /api/questions` | 그래프·기존 제작기의 명시적 전체 목록 조회. 500개씩 읽어 Data API 행 제한으로 잘리지 않도록 한다. |
+| `GET /api/questions?mode=relationships` | 조건 설정과 참조 미리보기에 필요한 질문 정의 목록. 설명·저장 재시도 메타데이터는 제외한다. |
+| `GET /api/questions/:id` | 본인/관리자의 원본 상세. `questionnaireId`가 있으면 기존 게시본 조회 RPC가 배치·공유 열람 권한을 검사한다. |
+| `GET /api/questions/:id/guide-answer-fields` | 가이드 응답이 존재하는 답변 열 ID 조회. 저장 때 DB가 다시 확인한다. |
+| `POST /api/questions`, `PUT /api/questions/:id` | `document`, `expectedRevision`, `saveId`, 선택적 `confirmedGuideAnswerFields`. 생성 revision은 0이고 URL/본문 ID가 같아야 한다. |
+| `DELETE /api/questions/:id` | `expectedRevision`을 확인하여 보관 처리. 기존 배치·참조·배포 잠금을 유지한다. |
+| `GET /api/question-reviews?questions=id,...` | 최대 10개 질문의 미처리/미확인 개수. `question_review_counts` 한 번으로 DB에서 집계한다. |
+
+목록의 `withQuestionnaireUsage`는 현재 페이지 ID를 `question_incoming_references`에 전달한다. 전체 질문을 앱 서버로 가져와 역참조를 계산하지 않는다. 조건 JSONB에는 GIN 인덱스를 추가하고 기존 source/after 인덱스와 함께 대상 질문으로 필터링한다. 한 질문이 선행·조건·응답 참조에 동시에 등장해도 한 번만 표시한다. 관리자 역할 미리보기에서 타인 질문 이름을 숨기는 기존 필터와 사용처 조회 실패 시 알 수 없음 처리를 유지한다. 그래프와 조건 후보의 명시적 전체 조회는 이 역참조 집계 경로와 구분한다.
+
+두 집계 RPC는 `SECURITY INVOKER`로 기존 RLS를 적용한다. 관리자·리드만 호출하며 일반 컨설턴트·비로그인은 거절한다. 읽지 않은 요청은 원본 작성자에게만, 다른 사람이 작성한 미처리 요청 중 본인의 읽음 기록이 없는 경우에 센다. 기존 요청자·게시/배포본 공유 열람 정책을 유지한다. 결과는 JSONB 집계로 반환하여 Data API 1,000행 제한에 의해 개수가 잘리지 않는다.
+
+저장 schema 오류는 HTTP 400의 `code: question_validation_failed`, `error`, `fieldErrors: [{path, message}]`로 반환한다. 예: `path: ["document", "fields", 0, "label"]`. 편집기도 동일한 오류 설명 변환을 사용하므로 기존 토스트에 항목·위치가 표시된다. 설명 ID 중복은 API와 편집기에서도 미리 거절한다. 알려진 DB 검증 오류에는 설명/조건 등 영향 영역을 반환하며, 알 수 없는 DB 오류 본문을 그대로 노출하지 않는다. `revision_conflict`, `question_edit_restricted`, `guide_answer_confirmation_required`의 기존 코드·재시도 처리는 유지한다.
+
+| 파일 (`questions/` 아래) | 책임 |
+| --- | --- |
+| `components/question/QuestionLibraryView.tsx` | 목록·그래프·Drawer 연결과 삭제 UI |
+| `components/question/QuestionEditorContent.tsx` | 편집·미리보기·확인창·하단 버튼의 기존 UI |
+| `hooks/useQuestionLibraryList.ts` | 검색·페이지·목록 조회와 이전 요청 응답 차단 |
+| `hooks/useQuestionEditorSession.ts` | URL 전환·초안 상태·자동 저장·충돌·재시도·가이드 확인 |
+| `hooks/useQuestionEditorData.ts` | 상세/참조 정의 SWR 조회 |
+| `lib/question-editor-draft.ts` | 로컬 초안 읽기·삭제·변경 비교 및 기존 키 호환 |
+| `lib/question-editor-types.ts` | 독립/질문지 내 편집기의 연결 계약 |
+| `lib/question-server.ts` | 인증·권한 분기·질문 조회/저장/보관 처리 |
+| `lib/question-request-schema.ts` | HTTP 저장·삭제 요청 schema |
+| `lib/question-errors.ts`, `lib/question-validation-errors.ts` | DB 오류 매핑·공통 항목별 검증 오류 설명 |
+
+`app/api/questions/[[...path]]/route.ts`는 요청을 서버 모듈로 연결한다. `QuestionBlock*` 타입과 DB `*_block_id` 명칭은 기존 호환성을 위해 유지하며 DB 열 이름이나 응답 저장 모델을 변경하지 않는다. 화면 마크업·카드·버튼·자동 저장 주기·로컬 복원·닫기 확인 흐름을 유지한다.
+
+### 저장 전 새 질문의 새로고침
+
+- URL의 질문 UUID만으로 서버 저장 여부를 판단하지 않는다. 사용자 확인 후 해당 사용자의 로컬 초안 revision을 확인한 뒤 상세 조회를 시작한다.
+- revision 0인 새 질문은 빈 초안도 로컬에서 복원하며 상세 API를 호출하지 않는다. 서버에 저장된 질문은 기존 상세 조회·충돌 검사 경로를 유지한다.

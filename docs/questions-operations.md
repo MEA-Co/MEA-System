@@ -353,3 +353,26 @@ npx supabase db push --linked --dry-run
 6. 앱 배포 후 질문 제작에 카드 종류가 없는지, 2주차 상단 안내/학습법 등록/일반 응답 저장·제출/제출본 조회 확인.
 
 검증 완료: 타입 검사·변경 파일 린트·관련 JS 44개 통과. 새 시작 안내 조회 schema 보존 및 일반 저장 payload 제외, 번호 없는 렌더링과 기존 학습법 등록 액션을 검증했다. 실제 브라우저 테스트는 수행하지 않았다.
+
+## 질문 조회 집계·편집기 책임 분리 (2026-10-15)
+
+- Migration: `20261015051602_question_read_models.sql`.
+- 로컬 Postgres에 조회 RPC 두 개와 조건 GIN 인덱스를 적용하고 `db pull --local`로 migration을 생성했다. CLI 출력의 `remoteHistoryUpdated`는 이 명령에서 선택한 **로컬 DB** 이력 기록이다. 운영 DB는 조회·수정하지 않았다.
+- 로컬 `migration list --local`과 `db push --local --dry-run`으로 적용 이력·대기 없음 확인. 기존 질문·설명·응답 데이터 변경 없음.
+- SQL `supabase/tests/question_read_models.sql`: 가상 계정/질문/요청을 만들고 1,005건 정확한 집계·읽음 제외·처리 완료 제외·역참조 중복 제거·비공개 질문 차단·관리자/리드/컨설턴트/anon·잘못된 배열 검사를 수행하고 전부 롤백한다.
+- JS: `verify-question-drawer`, `verify-question-pagination-api`, `verify-question-save-errors`, `verify-question-usage`, `verify-question-review-counts`, `verify-questionnaire-question-types`, `verify-questionnaire-drawer` 총 68개 통과. 테스트는 분리된 실제 모듈을 로드하고 네트워크/인증 경계만 대체한다.
+- 타입 검사·변경 파일 린트·Webpack 프로덕션 빌드 통과. 로컬 security advisor 경고·오류 없음. 실제 브라우저 테스트와 운영 앱 배포는 미수행. 제출 검증은 변경하지 않았다.
+
+전체 UI 개선 완료 후 운영 반영 시 다음 순서를 사용한다. 현재 작업에서 실행하지 않는다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 예상 migration 목록을 확인한 뒤에만 실행
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+이번에 추가한 예상 파일은 `20261015051602_question_read_models.sql`이다. 앞선 로컬 전용 migration이 아직 운영에 없다면 함께 표시되므로 이 문서의 이전 절과 적용 이력을 먼저 대조한다. 예상하지 않은 파일이 있으면 적용 전에 이력을 검토하고 임의 repair/reset하지 않는다. 마지막 dry-run에서 대기가 없음을 확인한 뒤 앱을 배포한다. 배포 후 질문 목록의 검토 요청 수/참조 관계·질문 생성/수정/설명 저장·가이드 확인·자동 저장·닫기/재열기·권한별 목록을 확인한다. DB 함수가 먼저 준비되어야 앱의 새 집계 경로가 동작한다.

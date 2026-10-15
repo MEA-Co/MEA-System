@@ -85,3 +85,14 @@
 전환은 명시적 단일 트랜잭션·5초 잠금 대기 제한·대상 테이블 독점 잠금 아래 수행한다. 질문 검증/배포 잠금/가이드 정리 트리거만 잠시 중지한 뒤 같은 트랜잭션에서 복구한다. 일반 수정·배포 잠금 정책은 유지한다. 원본 없는 구형 정의/이전 정의에 폐기 유형이 있거나 첨부 UUID를 비교하는 조건, 잘못된 UUID가 발견되면 전체 롤백하고 별도 검토한다. 현재 로컬·운영 사전 조회에서는 해당 사례가 없었다.
 
 참조 제목은 개인정보를 복제하지 않는 `첨부한 탐구활동`/`첨부한 학습법`이며 mark의 UUID만 유지한다. 참조 대상·파일은 기존 인증/RLS로 조회한다. 학습법 가이드 권한 함수의 독립 UUID 분기를 제거하고 기존 본문 mark 조회만 사용한다. public 권한·RLS·함수 ACL은 바꾸지 않는다.
+
+## 질문 조회 집계 모델 (2026-10-15)
+
+`20261015051602_question_read_models.sql`은 저장 테이블 변경 없이 조회 함수 두 개와 인덱스 하나를 추가한다.
+
+- `question_review_counts(p_question_ids uuid[]) → jsonb`: `{counts: {questionId: number}, unreadCounts: {questionId: number}}`. 미처리 요청을 DB에서 집계하며 0건 키는 생략할 수 있다. 호출자는 누락된 키를 0으로 해석한다. 기존 요청 열람 RLS를 사용하고 미확인은 원본 작성자/타인 요청/읽음 기록 없음 조건을 유지한다.
+- `question_incoming_references(p_question_ids uuid[]) → jsonb`: `[{target_id,id,title,created_by}]`. source/after/condition 중 하나라도 대상 ID를 참조하는 활성 질문만 반환한다. 대상 ID 중복과 복수 관계를 중복 집계하지 않으며 대상·참조 질문 모두 RLS 범위 안에 있어야 한다.
+- 두 함수는 1~10개의 null 아닌 UUID 배열을 받는다. `SECURITY INVOKER`, 빈 `search_path`, 명시적 authenticated 실행 권한, 관리자/리드 역할 검사를 사용한다. 테이블 권한을 확대하지 않는다.
+- `questions_active_condition_idx`: 활성 질문의 `condition`에 대한 `GIN(jsonb_path_ops)` 인덱스. 원본 `condition` JSONB와 source/after 열이 계속 관계의 단일 저장 원본이며 관계 복제 테이블을 만들지 않는다.
+
+질문·설명 원자적 저장, revision/saveId, 가이드 응답 삭제 확인, 배포 잠금, 응답 행 ID와 제출 스냅샷에는 변경이 없다. 앱 저장 schema에서 설명 항목 ID 중복을 추가 검사하며 기존 DB 검사와 일치시킨다. 제출 검증 변경은 별도 후속 작업이다.
