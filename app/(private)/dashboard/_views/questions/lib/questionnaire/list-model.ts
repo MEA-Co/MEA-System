@@ -53,7 +53,9 @@ export function questionnaireListModel(
     ...source.distributed,
     ...(source.archived ?? []),
   ]) {
-    if ((item.status === 'draft' || item.archivedAt) && !item.isOwner) continue;
+    if (item.archivedAt && !item.isOwner) continue;
+    if (item.status === 'draft' && !item.isOwner && !item.canEditDraft)
+      continue;
     unique.set(item.id, item);
   }
   const query = options.query.trim().toLocaleLowerCase();

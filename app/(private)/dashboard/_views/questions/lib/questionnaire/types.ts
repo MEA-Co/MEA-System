@@ -81,6 +81,7 @@ export type QuestionnaireListItem = {
   hasDistributed: boolean;
   archivedAt?: string | null;
   isOwner: boolean;
+  canEditDraft?: boolean;
   canDelete: boolean;
   pendingReviewCount: number;
   unreadReviewCount?: number;

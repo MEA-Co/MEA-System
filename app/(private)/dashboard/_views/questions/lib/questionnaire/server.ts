@@ -165,7 +165,9 @@ export async function loadQuestionnaireView(
   const questionnaires: QuestionnaireListItem[] = rows
     .filter((item) =>
       staff
-        ? item.status !== 'draft' || item.created_by === access.user.id
+        ? item.status !== 'draft' ||
+          item.created_by === access.user.id ||
+          viewRole === 'admin'
         : item.status === 'distributed' && !item.archived_at,
     )
     .map((item) => ({
@@ -183,6 +185,10 @@ export async function loadQuestionnaireView(
       revision: item.revision,
       hasDistributed: item.status === 'distributed',
       isOwner: staff && item.created_by === access.user.id,
+      canEditDraft:
+        staff &&
+        item.status === 'draft' &&
+        (viewRole === 'admin' || item.created_by === access.user.id),
       unreadReviewCount: staff ? (unreadReviewCounts.get(item.id) ?? 0) : 0,
       pendingReviewCount:
         staff && item.created_by === access.user.id
@@ -242,6 +248,7 @@ export async function loadQuestionnaireView(
     );
   const editable =
     (selected.isOwner && selected.status !== 'distributed') ||
+    (viewRole === 'admin' && selected.status === 'draft') ||
     (staff && selected.status === 'published');
   const documentResult = await client.rpc(
     editable ? 'read_questionnaire_draft' : 'read_published_questionnaire',

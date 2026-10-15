@@ -122,3 +122,9 @@ test('questionnaire links preserve draft and filters without drawer presentation
   ).searchParams;
   assert.equal(other.has('questionnaireEditor'), false);
 });
+
+ test('administrator can see editable drafts without becoming their owner', () => {
+ const shared = { drafts: rows('draft', 1, { isOwner: false, canEditDraft: true }), published: [], distributed: [] };
+ assert.equal(model(shared, opt()).total, 1);
+ assert.equal(model(shared, opt('qOwner=mine')).total, 0);
+ });

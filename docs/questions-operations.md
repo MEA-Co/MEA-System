@@ -458,3 +458,18 @@ npx supabase db push --linked --dry-run
 운영도 기존 `20261015034458_questionnaire_start_notice.sql`로 전환한다. 원본 제목/서식 본문/버튼 문구를 그대로 옮기고 등록 카드는 보관하며, 일반 첫 질문을 제목/순서만으로 안내로 바꾸지 않는다. 적용 전 기존 안내 질문에 연결된 세션·응답·최종 제출·설명/중복 안내가 있으면 migration 전체가 중단된다. 이 검사를 우회하거나 기존 답변을 삭제하여 적용하지 않는다. 실제 운영 상태가 이 조건에 맞지 않으면 별도 보존 이전을 설계한다.
 
 위 운영 적용 순서에 따라 대상·이력을 확인하고 dry-run의 기존 전환 파일 및 후속 편집 파일을 검토한다. 적용 후 `supabase/tests/questionnaire_week2_notice.sql`을 운영 SQL 편집기에서 읽기 전용으로 실행하여 안내와 보관 원문의 동일성·질문 배치 제외·응답 질문 잔존을 확인한다. 앱 배포 뒤 번호 없는 안내와 학습법 등록 버튼, 첫 실제 질문의 번호를 확인한다. 운영 조회/적용은 이번 재확인에서 수행하지 않았다.
+
+## 질문지 초안 작성자·관리자 접근 (2026-10-15)
+
+`20261015074005_questionnaire_private_draft_access.sql` 로컬 적용. 기존 데이터 수정 없이 SELECT RLS 및 초안 조회/저장/안내 guard를 조정한다. `supabase/tests/questionnaire_private_draft_access.sql`은 소유자·타 리드·관리자 조회/저장을 가상 데이터로 검증 후 롤백한다. 게시 공동 편집 회귀도 유지한다. 운영은 아직 미적용이다.
+
+전체 개선 완료 시 프로젝트 루트에서 연결된 운영 대상 확인 → 이력 비교 → dry-run(이번 파일 및 앞선 대기 migration 검토) → 적용 → 대기 없음 확인 → 앱 배포 → 역할별 기능 확인 순서다.
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase projects list
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+예상 밖 파일/이력 차이는 적용 전에 검토한다. 앱 배포 뒤 작성자·관리자의 초안 조회/수정, 타 리드의 목록·직접 URL·Data API 차단을 확인한다.
