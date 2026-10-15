@@ -83,7 +83,7 @@ function QuestionReviewsContent({ questionId, disabled = false }: Props) {
   const [expanded, setExpanded] = useState(false);
   return (
     <section
-      className="overflow-hidden rounded-xl border bg-background"
+      className="overflow-hidden rounded-xl border border-t-2 border-t-green-500 bg-background"
       aria-label="검토 요청"
     >
       <button
@@ -105,7 +105,7 @@ function QuestionReviewsContent({ questionId, disabled = false }: Props) {
           <span className="text-xs text-destructive">불러오기 실패</span>
         ) : (
           <span className="flex flex-wrap items-center gap-2 text-xs font-medium">
-            <span className="rounded-md bg-green-50 px-2 py-1 text-green-800">
+            <span className="rounded-md bg-green-50 px-2 py-1 text-green-800 dark:bg-green-900 dark:text-green-100">
               미처리 {data?.pendingCount ?? 0}
             </span>
             <span className="text-muted-foreground">
@@ -148,7 +148,7 @@ function QuestionReviewsContent({ questionId, disabled = false }: Props) {
           {reviews.map((review) => (
             <div
               key={review.id}
-              className="rounded-xl border border-green-200 bg-background p-4 dark:border-green-900 dark:bg-green-950/30"
+              className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 {data?.unreadIds?.includes(review.id) && (
