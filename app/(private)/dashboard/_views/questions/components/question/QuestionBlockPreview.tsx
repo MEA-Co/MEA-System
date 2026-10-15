@@ -131,7 +131,9 @@ function QuestionBlockResponsePreview({
     Math.max(1, ...(initialRows ?? []).map((row) => row.id)) + 1,
   );
   const previewId = useId();
-  const [activeRowId, setActiveRowId] = useState<number | null>(null);
+  // Undefined follows the first visible row, including rows revealed by a condition.
+  // Null records an explicit collapse and must not reopen after an answer changes.
+  const [activeRowId, setActiveRowId] = useState<number | null | undefined>();
   const [rows, setRows] = useState<PreviewRow[]>(
     initialRows ?? [{ id: 1, answers: {} }],
   );
@@ -664,7 +666,10 @@ function QuestionBlockResponsePreview({
               </thead>
               <tbody>
                 {visibleRows.map((row, index) => {
-                  const expanded = activeRowId === row.id;
+                  const expanded =
+                    (activeRowId === undefined
+                      ? visibleRows[0]?.id
+                      : activeRowId) === row.id;
                   const panelId = `${previewId}-row-${row.id}`;
                   const toggle = () => setActiveRowId(expanded ? null : row.id);
                   return (
@@ -785,7 +790,7 @@ function QuestionBlockResponsePreview({
                   );
                 })}
                 {!reference && !waiting && (
-                  <tr className="border-t border-dashed">
+                  <tr className="border-t">
                     <td colSpan={3} className="p-0">
                       <Button
                         type="button"

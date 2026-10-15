@@ -54,6 +54,8 @@ function createHarness({
   disabled = false,
   waiting = false,
   insertAfter = [1, 3],
+  answerLayout = 'flow',
+  rowMode = 'repeatable',
   fields = [
     { id: 'score', label: '성적', kind: 'text' },
     { id: 'note', label: '대응', kind: 'text' },
@@ -207,8 +209,8 @@ function createHarness({
     title: '성적 흐름',
     prompt: '시기별 성적과 대응',
     purpose: 'response',
-    answerLayout: 'flow',
-    rowMode: 'repeatable',
+    answerLayout,
+    rowMode,
     minRows: 2,
     maxRows: 3,
     initialRows: 3,
@@ -246,8 +248,9 @@ function createHarness({
     const grid = nodes(response).find(
       (item) => item.type === QuestionGridInput,
     );
-    assert.ok(grid, 'The real preview must render the real grid');
-    const tree = run('grid', QuestionGridInput, grid.props);
+    if (props.document.answerLayout !== 'cards')
+      assert.ok(grid, 'The real preview must render the real grid');
+    const tree = grid ? run('grid', QuestionGridInput, grid.props) : response;
     for (const item of nodes(tree)) {
       const ref = item.props.ref;
       if (!ref) continue;
@@ -264,7 +267,7 @@ function createHarness({
     const pending = effects;
     effects = [];
     pending.forEach((callback) => callback());
-    return { tree, grid: grid.props, stored, answered, focusHistory };
+    return { tree, grid: grid?.props, stored, answered, focusHistory };
   }
   return { render, document };
 }
@@ -277,8 +280,81 @@ const labelInput = (tree) => nodes(tree).find((node) => node.type === 'input');
 const dialogRoot = (tree) => nodes(tree).find((node) => node.type === 'Dialog');
 const click = (node) => {
   assert.ok(node, 'Expected the action to be rendered');
-  node.props.onClick({ currentTarget: { isConnected: true, focus() {} } });
+  node.props.onClick({
+    currentTarget: { isConnected: true, focus() {} },
+    stopPropagation() {},
+  });
 };
+
+const cardToggles = (tree) =>
+  nodes(tree).filter((node) => node.props['aria-expanded'] !== undefined);
+
+test('repeated cards open the first saved row and retain explicit collapse and selection', () => {
+  const harness = createHarness({ answerLayout: 'cards' });
+  let view = harness.render();
+  assert.deepEqual(
+    cardToggles(view.tree).map((node) => node.props['aria-expanded']),
+    [true, false, false],
+  );
+  assert.equal(
+    nodes(view.tree).find((node) => node.type === 'RichTextEditor').props.value,
+    '기존 성적',
+  );
+
+  click(cardToggles(view.tree)[0]);
+  view = harness.render();
+  assert.ok(
+    cardToggles(view.tree).every((node) => !node.props['aria-expanded']),
+  );
+  click(cardToggles(view.tree)[1]);
+  view = harness.render();
+  nodes(view.tree)
+    .find((node) => node.type === 'RichTextEditor')
+    .props.onChange('둘째 행 수정');
+  view = harness.render();
+  assert.deepEqual(
+    cardToggles(view.tree).map((node) => node.props['aria-expanded']),
+    [false, true, false],
+  );
+  assert.equal(view.stored[1].answers.score, '둘째 행 수정');
+  assert.equal(view.stored[0].answers.score, '기존 성적');
+});
+
+test('new repeated cards open the first empty row without saving generated rows', () => {
+  const harness = createHarness({ answerLayout: 'cards', initialRows: [] });
+  const view = harness.render();
+  assert.deepEqual(
+    cardToggles(view.tree).map((node) => node.props['aria-expanded']),
+    [true, false],
+  );
+  assert.deepEqual(view.stored, []);
+  assert.deepEqual(view.answered, []);
+});
+
+test('reference cards open the first row when the condition becomes available', () => {
+  const harness = createHarness({
+    answerLayout: 'cards',
+    rowMode: 'reference',
+    initialRows: [],
+    waiting: true,
+  });
+  assert.equal(cardToggles(harness.render().tree).length, 0);
+  const matchedRows = [
+    { id: 57, answers: {} },
+    { id: 92, answers: {} },
+  ];
+  let view = harness.render({ runtime: { waiting: false, matchedRows } });
+  assert.deepEqual(
+    cardToggles(view.tree).map((node) => node.props['aria-expanded']),
+    [true, false],
+  );
+  click(cardToggles(view.tree)[0]);
+  harness.render({ runtime: { waiting: true, matchedRows: [] } });
+  view = harness.render({ runtime: { waiting: false, matchedRows } });
+  assert.ok(
+    cardToggles(view.tree).every((node) => !node.props['aria-expanded']),
+  );
+});
 
 // A row-spanning cell can cross ordinary rows, but never a thead/tbody boundary.
 function directChildren(node) {

@@ -331,3 +331,25 @@ npx supabase db push --linked --dry-run
 운영 대상 `epwlcallocdjkmgdmtlv` 및 이전 이력을 확인한다. 예상과 다른 대기가 있으면 적용 전에 검토하며 include-all/reset/repair로 우회하지 않는다. 변환 실패 시 트랜잭션 전체 롤백 후 원인을 확인한다. DB 적용 완료·대기 없음 확인 → 앱 배포 → 기존 가이드/제출의 참조 링크 및 권한, 새 질문의 네 유형, 진로 흐름 필수 입력 배경 확인 순서다. 이전 앱을 계속 사용하지 않도록 전환 시 작성 화면을 닫고 배포 후 새로 고침한다.
 
 최종 앱 검증: 타입 검사·변경 파일 린트·관련 JS 31개·Webpack 프로덕션 빌드 통과. 브라우저 테스트는 요청에 따라 실행하지 않았다.
+
+## 질문지 시작 안내 분리 (2026-10-15, 로컬 적용)
+
+- Migration: `20261015034458_questionnaire_start_notice.sql`.
+- 로컬의 2주차 학습전략 안내 1개를 `questionnaires.start_notice`로 이전했다. 기존 source `096d2cd2-66f5-47f8-9faf-2f3e63ee4059`는 보관, placement `03fd9674-fd4c-4f6d-a7a1-78ed7bf6a933`와 안내만 있던 섹션은 제거했다. 실제 질문 15개는 동일 ID로 유지한다.
+- 원문/버튼/질문지 ID·배포 상태·배포 시각 유지. 등록 강제 없음. 시작 안내는 현재 일반 UI에서 수정하지 않는 질문지 설정이다.
+- 사전 시험: `node scripts/prepare-questionnaire-start-notice-check.mjs > /tmp/start-notice-check.sql`이 만드는 SQL은 **이 migration 적용 전 DB** 전용이다. 이전+보존 회귀를 실행하고 전체 롤백한다. 이미 적용된 DB에서 다시 실행하지 않는다.
+- 실제 로컬 데이터 기준 다른 질문 44개, 작업 응답 72개, 최종 제출본 3개가 이전 전후 완전히 같음을 확인했다. 안내 원문 일치·기존 보호 트리거 복구 확인 후 `supabase migration up --local`로 해당 파일 하나를 적용했다.
+- 적용 후 `supabase/tests/questionnaire_start_notice_access.sql`은 가상 컨설턴트의 안내 조회/응답 시작/15개 질문 보존, 일반 컨설턴트 작성 거부와 리드의 폐기 유형 생성 거부를 확인하고 롤백한다. `distributed_response_submissions.sql` 회귀 통과. 로컬 security advisor 경고·오류 없음.
+- 안내가 둘 이상이거나 미배치 안내, 부가 설명, 대상 질문지의 기존 세션, 안내 연결 응답/제출 이력이 있으면 migration은 전체 롤백한다. **운영에서 이 오류가 나면 검사나 트리거를 우회하지 않는다.** 해당 이력을 보존하는 별도 이전 검토가 필요하다.
+- 운영 조회·쓰기 및 실제 브라우저 테스트·앱 배포는 이번 작업에서 하지 않았다. 기존 운영 적용 대기 목록에 이번 파일을 추가한다. 이전 기록 기준 예상 대기는 `20261014064007`, `20261014075610`, `20261014081939`, `20261014082243`, `20261015034458`이며 실제 이력을 반드시 우선 확인한다.
+
+전체 UI 개선 완료 후 운영 반영 순서:
+
+1. `cd /Users/mealdm/Desktop/MEA/system`
+2. `cat supabase/.temp/project-ref`, `npx supabase migration list --linked`로 운영 대상·이력 확인.
+3. `npx supabase db push --linked --dry-run`으로 위 예상 대기 파일 확인. 다르면 적용 전 이력 검토.
+4. `npx supabase db push --linked` 실행. 시작 안내 검사 실패 시 중단하고 별도 검토.
+5. `npx supabase migration list --linked`, `npx supabase db push --linked --dry-run`으로 대기 없음 확인.
+6. 앱 배포 후 질문 제작에 카드 종류가 없는지, 2주차 상단 안내/학습법 등록/일반 응답 저장·제출/제출본 조회 확인.
+
+검증 완료: 타입 검사·변경 파일 린트·관련 JS 44개 통과. 새 시작 안내 조회 schema 보존 및 일반 저장 payload 제외, 번호 없는 렌더링과 기존 학습법 등록 액션을 검증했다. 실제 브라우저 테스트는 수행하지 않았다.

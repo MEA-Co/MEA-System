@@ -28,3 +28,6 @@ export const questionNumberClass =
   'inline-flex min-w-4 shrink-0 items-center justify-start text-sm font-bold leading-7 text-muted-foreground tabular-nums';
 export const questionExplanationClass =
   'rounded-r-lg border-l-2 border-neutral-300 bg-neutral-50 px-4 py-3 text-sm leading-7 dark:border-neutral-600 dark:bg-neutral-800/50';
+
+/** Shared gray canvas for authoring and questionnaire preview. */
+export const questionCanvasClass = 'bg-muted p-4 sm:p-8';

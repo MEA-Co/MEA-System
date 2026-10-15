@@ -36,7 +36,14 @@ export type QuestionnaireSection = {
   questions: Question[];
 };
 
+export type QuestionnaireStartNotice = {
+  title: string;
+  body: string;
+  buttonLabel: string;
+};
+
 export type QuestionnaireDocument = {
+  startNotice?: QuestionnaireStartNotice | null;
   questionnaireId: string;
   title: string;
   sections: QuestionnaireSection[];

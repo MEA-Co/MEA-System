@@ -3,8 +3,9 @@
 import type { ReactNode } from 'react';
 
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-import { questionStyles } from './question-styles';
+import { questionExplanationClass, questionStyles } from './question-styles';
 import { QuestionRichTextEditor } from './QuestionRichTextEditor';
 
 /** Shared title/body card for question explanations and review requests. */
@@ -40,32 +41,50 @@ export function QuestionAnnotationEditor({
   textMaxLength?: number;
 }) {
   const surfaceClassName = authoring
-    ? 'rounded-lg border border-neutral-200 border-l-[3px] border-l-neutral-300 bg-white p-4 dark:border-neutral-700 dark:border-l-neutral-600 dark:bg-neutral-900'
+    ? questionExplanationClass
     : onTitleChange
       ? questionStyles.explanation
       : 'rounded-xl border bg-muted/20 p-4';
 
   return (
     <div className={surfaceClassName}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        {onTitleChange ? (
-          <label
+      <div
+        className={
+          authoring
+            ? 'mb-2 flex flex-wrap items-start justify-between gap-3'
+            : 'mb-3 flex flex-wrap items-center justify-between gap-2'
+        }
+      >
+        {authoring && onTitleChange ? (
+          <Input
+            id={`${id}-title`}
+            aria-label={`${label} 제목`}
+            value={title ?? ''}
+            placeholder={titlePlaceholder}
+            className="h-10 min-w-40 flex-1 rounded-lg bg-neutral-200/70 px-3 text-sm font-semibold shadow-none dark:bg-neutral-800"
+            disabled={disabled}
+            required={required}
+            maxLength={titleMaxLength}
+            onChange={(event) => onTitleChange(event.target.value)}
+          />
+        ) : onTitleChange ? (
+          <Label
             htmlFor={`${id}-title`}
-            className="text-xs font-medium text-muted-foreground"
+            className="text-xs leading-normal font-medium text-muted-foreground"
           >
             {label}
-          </label>
+          </Label>
         ) : (
           <span
             id={`${id}-text-label`}
-            className="text-xs font-medium text-muted-foreground"
+            className="text-xs leading-normal font-medium text-muted-foreground"
           >
             {label}
           </span>
         )}
         <div className="flex items-center gap-1">{actions}</div>
       </div>
-      {onTitleChange && (
+      {onTitleChange && !authoring && (
         <Input
           id={`${id}-title`}
           value={title ?? ''}
@@ -87,7 +106,12 @@ export function QuestionAnnotationEditor({
         ariaLabelledBy={`${id}-text-label`}
         value={text}
         placeholder="내용을 작성하세요"
-        className="mt-3 rounded-lg"
+        compact={authoring}
+        className={
+          authoring
+            ? 'rounded-lg bg-neutral-200/70 dark:bg-neutral-800 [&_.tiptap]:min-h-20'
+            : 'mt-3 rounded-lg'
+        }
         disabled={disabled}
         required={required}
         maxLength={textMaxLength}

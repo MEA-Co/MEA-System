@@ -186,7 +186,7 @@ export function ExplorationView({
               noValidate
               inert={confirmDiscard}
               style={confirmDiscard ? { overflow: 'hidden' } : undefined}
-              className="min-h-0 flex-1 overflow-y-auto bg-background px-4 pt-4 md:px-6 md:pt-5"
+              className="min-h-0 flex-1 overflow-y-auto bg-muted px-4 pt-4 md:px-6 md:pt-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 confirm();

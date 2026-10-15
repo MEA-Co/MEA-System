@@ -1,8 +1,12 @@
-import type { QuestionnaireSection } from './questionnaire/types';
+import type {
+  QuestionnaireSection,
+  QuestionnaireStartNotice,
+} from './questionnaire/types';
 import type { QuestionBlockRow } from './question-blocks';
 import type { PreviewAnswerRow } from './reference-rows';
 
 export type QuestionResponseSnapshot = {
+  startNotice?: QuestionnaireStartNotice | null;
   id: string;
   definitionToken: string;
   sourceDeleted: boolean;

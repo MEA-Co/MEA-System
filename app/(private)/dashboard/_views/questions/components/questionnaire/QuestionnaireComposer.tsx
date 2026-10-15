@@ -43,6 +43,7 @@ import { QuestionLibraryView } from '../question/QuestionLibraryView';
 import { QuestionLibraryPicker } from './QuestionLibraryPicker';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { QuestionnaireStartNotice } from './QuestionnaireStartNotice';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
 import { QuestionResponseForm } from './QuestionResponseForm';
@@ -432,6 +433,7 @@ export function QuestionnaireComposer({
               />
             ) : (
               <QuestionnairePreview
+                startNotice={initialDraft.startNotice}
                 reviewQuestionnaireId={
                   published ? initialDraft.questionnaireId : undefined
                 }
@@ -464,6 +466,9 @@ export function QuestionnaireComposer({
                 className="mt-2 h-12 text-lg"
               />
             </div>
+            {initialDraft.startNotice && (
+              <QuestionnaireStartNotice notice={initialDraft.startNotice} />
+            )}
             {sections.map((section, si) => (
               <section
                 key={section.id}

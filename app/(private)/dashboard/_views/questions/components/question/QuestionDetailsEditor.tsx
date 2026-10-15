@@ -4,8 +4,10 @@ import { Plus, Trash2 } from 'lucide-react';
 
 import type { QuestionDetail } from '@/app/(private)/dashboard/_views/questions/lib/types';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
+import { questionExplanationClass } from './question-styles';
 import { QuestionAnnotationEditor } from './QuestionAnnotationEditor';
 
 export function QuestionDetailsEditor({
@@ -24,7 +26,7 @@ export function QuestionDetailsEditor({
   }
 
   return (
-    <div className="mt-4 space-y-3 border-l-2 border-neutral-300 pl-4 dark:border-neutral-700">
+    <div className="space-y-3">
       {details.map((detail, index) => (
         <QuestionAnnotationEditor
           key={detail.id}
@@ -39,14 +41,14 @@ export function QuestionDetailsEditor({
           onTextChange={(text) => update(detail.id, { text })}
           actions={
             <>
-              <label
+              <Label
                 htmlFor={`detail-visible-${detail.id}`}
-                className={`mr-2 cursor-pointer text-xs font-medium ${detail.visibleToConsultants ? 'text-blue-600' : 'text-muted-foreground'}`}
+                className={`mr-2 cursor-pointer text-xs leading-normal font-medium ${detail.visibleToConsultants ? 'text-blue-600' : 'text-muted-foreground'}`}
               >
                 {detail.visibleToConsultants
                   ? '컨설턴트 공개'
                   : '컨설턴트 비공개'}
-              </label>
+              </Label>
               <Switch
                 id={`detail-visible-${detail.id}`}
                 checked={detail.visibleToConsultants}
@@ -59,6 +61,7 @@ export function QuestionDetailsEditor({
                 }
               />
               <Button
+                type="button"
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`설명 항목 ${index + 1} 삭제`}
@@ -73,8 +76,9 @@ export function QuestionDetailsEditor({
         />
       ))}
       <Button
+        type="button"
         variant="ghost"
-        size="sm"
+        className={`${questionExplanationClass} h-auto min-h-12 w-full justify-start rounded-l-none border-y-0 border-r-0 hover:bg-neutral-100 dark:hover:bg-neutral-800`}
         disabled={details.length >= 20}
         onClick={() =>
           onChange([

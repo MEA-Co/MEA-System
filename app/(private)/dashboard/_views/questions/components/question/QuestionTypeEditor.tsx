@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -114,12 +115,12 @@ export function QuestionTypeEditor({
                 onChange({ ...question, explorationRecommended: checked })
               }
             />
-            <label
+            <Label
               htmlFor={`exploration-recommended-${question.id}`}
-              className="cursor-pointer text-sm"
+              className="cursor-pointer text-sm font-normal leading-normal"
             >
               탐구활동 참조 권장
-            </label>
+            </Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -130,12 +131,12 @@ export function QuestionTypeEditor({
                 onChange({ ...question, studyRecommended: checked })
               }
             />
-            <label
+            <Label
               htmlFor={`study-recommended-${question.id}`}
-              className="cursor-pointer text-sm"
+              className="cursor-pointer text-sm font-normal leading-normal"
             >
               학습법 참조 권장
-            </label>
+            </Label>
           </div>
         </div>
       )}
@@ -152,12 +153,7 @@ export function QuestionTypeEditor({
             {kind === 'single' ? '하나만' : '여러 개를'} 선택할 수 있어요.
             선택지는 2~20개까지 작성할 수 있어요.
           </p>
-          {compactChoices ? (
-            <p className="text-xs text-muted-foreground">
-              표에서는 드롭다운으로 선택합니다. 선택지와 직접 입력 항목은
-              아래에서 설정해 주세요.
-            </p>
-          ) : (
+          {!compactChoices && (
             <div className="flex items-center gap-3 py-1">
               <Switch
                 id={`choice-style-${question.id}`}
@@ -170,12 +166,12 @@ export function QuestionTypeEditor({
                   })
                 }
               />
-              <label
+              <Label
                 htmlFor={`choice-style-${question.id}`}
-                className="text-sm"
+                className="text-sm font-normal leading-normal"
               >
                 칩 스타일
-              </label>
+              </Label>
             </div>
           )}
           {regularOptions.map((option, index) => (
@@ -355,7 +351,12 @@ function ScaleSettings({
               }
             }}
           />
-          <label htmlFor={`scale-max-${question.id}`}>점 척도</label>
+          <Label
+            className="font-normal leading-normal"
+            htmlFor={`scale-max-${question.id}`}
+          >
+            점 척도
+          </Label>
           <span className="font-normal text-muted-foreground">(2~9)</span>
         </div>
         {(!validMax || reverted) && (

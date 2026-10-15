@@ -5,7 +5,7 @@ import { Trash2 } from 'lucide-react';
 import { QuestionTypeEditor } from '@/app/(private)/dashboard/_views/questions/components/question/QuestionTypeEditor';
 import type { Question } from '@/app/(private)/dashboard/_views/questions/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent,CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,8 +66,11 @@ export function QuestionBlockFieldEditor({
   const compactChoices = answerLayout === 'table' || flow;
 
   return (
-    <Card className="pt-0">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b bg-muted py-3 [.border-b]:pb-3">
+    <Card variant="accent">
+      <CardHeader
+        variant="emphasis"
+        className="flex flex-row items-center justify-between gap-3"
+      >
         <QuestionTypeEditor
           part="header"
           question={question}
@@ -87,9 +90,28 @@ export function QuestionBlockFieldEditor({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor={`answer-label-${field.id}`}>
-            {flow ? '답변 항목 이름 (세로)' : '열 제목'}
-          </Label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label htmlFor={`answer-label-${field.id}`}>
+              {flow ? '답변 항목 이름 (세로)' : '열 제목'}
+            </Label>{' '}
+            {!flow && (
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <Checkbox
+                  id={`answer-required-${field.id}`}
+                  checked={field.required !== false}
+                  onCheckedChange={(required) =>
+                    onChange({ ...field, required })
+                  }
+                />
+                <Label
+                  htmlFor={`answer-required-${field.id}`}
+                  className="cursor-pointer"
+                >
+                  필수 입력
+                </Label>
+              </div>
+            )}
+          </div>
           <Input
             id={`answer-label-${field.id}`}
             value={field.label}
@@ -103,21 +125,7 @@ export function QuestionBlockFieldEditor({
             }
           />
         </div>
-        {!flow && (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id={`answer-required-${field.id}`}
-              checked={field.required !== false}
-              onCheckedChange={(required) => onChange({ ...field, required })}
-            />
-            <Label
-              htmlFor={`answer-required-${field.id}`}
-              className="cursor-pointer"
-            >
-              필수 입력
-            </Label>
-          </div>
-        )}
+
         <QuestionTypeEditor
           question={question}
           onChange={changeQuestion}

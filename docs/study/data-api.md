@@ -204,3 +204,7 @@ study_queries/study_storage/study_guide_reference/study_solution_fields SQL 4개
 ## 질문 참조 계약
 
 독립 `kind: study` 대신 서술형 `text`의 `studyReference` mark로 학습법 UUID를 저장한다. 기존 첨부형 질문·작성/가이드/제출 답변도 같은 형식으로 변환한다. 학습법 원본·파일·API·RLS는 유지하며 가이드 예외는 표시 가능한 본문 참조 범위로 제한한다. 이전 절차와 검증은 [질문 운영 문서](../questions-operations.md#독립-첨부형-제거와-본문-참조-전환-2026-10-14)를 따른다.
+
+### 질문지 시작 안내 연계 (2026-10-15)
+
+2주차의 학습법 등록 진입점은 질문이 아닌 questionnaires.start_notice 설정으로 이전했다. 안내 버튼은 기존 본인 학습법 등록 API·권한을 그대로 사용한다. 등록 완료/개수와 질문지 제출의 강제 연결은 없으며 study 테이블·저장 계약 변경은 없다. 자세한 이전/중단 조건은 질문 저장 구조 및 운영 문서를 따른다.

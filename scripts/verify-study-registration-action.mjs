@@ -88,8 +88,8 @@ test('registration preview never runs answer hooks or forwards answer callbacks'
 
 test('the registration action opens the existing editor for the authenticated owner without an attachment callback', () => {
   const scopes = [];
-  const { StudyRegistrationCard } = load(
-    `${questionRoot}StudyRegistrationCard.tsx`,
+  const { StudyRegistrationAction } = load(
+    `${questionRoot}StudyRegistrationAction.tsx`,
     {
       '@/app/(private)/dashboard/_views/study/hooks/useStudyList': {
         useStudyList: (scope) => {
@@ -99,9 +99,7 @@ test('the registration action opens the existing editor for the authenticated ow
       },
     },
   );
-  const card = StudyRegistrationCard({ document });
-  const action = nodes(card).find((node) => typeof node.type === 'function');
-  const editor = action.type(action.props);
+  const editor = StudyRegistrationAction({ label: document.buttonLabel });
   assert.deepEqual(scopes, ['own']);
   assert.equal(editor.type, 'StudyView');
   assert.equal(editor.props.userId, 'owner');
@@ -201,4 +199,19 @@ test('registration metadata has no answer rows even when merging a cached snapsh
   );
   assert.deepEqual(merged.registration, []);
   assert.deepEqual(merged.question, question.rows);
+});
+
+test('questionnaire start notice renders original content and action without a question number', () => {
+  const { QuestionnaireStartNotice } = load(
+    'app/(private)/dashboard/_views/questions/components/questionnaire/QuestionnaireStartNotice.tsx',
+  );
+  const notice = { title: '학습법 등록', body: '원문 안내', buttonLabel: '학습법 추가' };
+  const result = QuestionnaireStartNotice({ notice });
+  assert.equal(result.type, 'aside');
+  assert.equal(result.props['aria-label'], '질문지 시작 안내');
+  const content = nodes(result).find((node) => node.type === 'RichTextContent');
+  assert.equal(content.props.value, notice.body);
+  const action = nodes(result).find((node) => node.type === 'StudyRegistrationAction');
+  assert.equal(action.props.label, notice.buttonLabel);
+  assert.equal(nodes(result).some((node) => node.type === 'span'), false);
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Download, Eye, Loader2 } from 'lucide-react';
+import { Download, Eye, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
@@ -18,7 +18,6 @@ import {
 
 import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
 import {
-  closeSubmittedResponse,
   openSubmittedResponse,
   SUBMITTED_RESPONSE_PARAM,
 } from '../../lib/questionnaire/submitted-navigation';
@@ -81,10 +80,7 @@ export function SubmittedQuestionnaireResponses({
   if (selected)
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="ghost" size="sm" onClick={closeSubmittedResponse}>
-            <ArrowLeft aria-hidden="true" /> 제출 목록으로
-          </Button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Button
             className="w-48"
             aria-busy={!!progress}

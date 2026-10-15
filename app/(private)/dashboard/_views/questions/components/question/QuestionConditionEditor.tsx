@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -154,150 +155,154 @@ export function QuestionConditionEditor({
 
   return (
     <div className="space-y-2">
-      <div className="min-w-0 space-y-4 rounded-2xl border bg-background p-5 md:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-semibold">조건</h3>
-          {hasCondition && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearCondition}
-            >
-              조건 해제
-            </Button>
-          )}
-        </div>
-        <fieldset
-          disabled={unavailable}
-          aria-label="질문 조건 설정"
-          className="min-w-0 space-y-4 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <ConditionSelect
-              label="조건 대상 질문"
-              value={questionId}
-              placeholder="질문 선택"
-              disabled={unavailable}
-              options={[
-                { value: 'none', label: '조건 없음' },
-                ...responseQuestions.map((question) => ({
-                  value: question.id,
-                  label: questionName(question),
-                })),
-              ]}
-              onChange={(target) => {
-                setPendingQuestionId(target === 'none' ? '' : target);
-                setPendingFieldId('all');
-                if (target === 'none') applyClause(null);
-                else if (clause) applyClause(answered(target, 'all'));
-              }}
-            />
-            <span className="text-sm">의</span>
-            <ConditionSelect
-              label="조건 답변 열"
-              value={selectedQuestion ? fieldId : ''}
-              placeholder="열 선택"
-              disabled={!selectedQuestion || unavailable}
-              options={[
-                { value: 'all', label: '모든 열' },
-                ...(selectedQuestion?.fields ?? []).map((field) => ({
-                  value: field.id,
-                  label: field.label,
-                })),
-              ]}
-              onChange={(next) => {
-                setPendingFieldId(next);
-                if (clause) applyClause(answered(questionId, next));
-              }}
-            />
-            <span className="text-sm">
-              {condition === 'choice' && canChoose ? '에서' : '에'}
-            </span>
-            {condition === 'choice' && canChoose && clause && (
-              <ConditionSelect
-                label="조건 선택지"
-                value={typeof clause.value === 'string' ? clause.value : ''}
-                placeholder="선택지 선택"
-                disabled={unavailable}
-                options={(selectedField.options ?? []).map((option) => ({
-                  value: option.id,
-                  label: option.label,
-                }))}
-                onChange={(value) => applyClause({ ...clause, value })}
-              />
+      <Card className="min-w-0 gap-0 rounded-2xl bg-background py-0">
+        <CardContent className="space-y-4 p-5 md:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold">조건</h3>
+            {hasCondition && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearCondition}
+              >
+                조건 해제
+              </Button>
             )}
-            {condition === 'choice' && canChoose && (
-              <span className="text-sm">항목을</span>
-            )}
-            <ConditionSelect
-              label="질문 조건"
-              value={condition === 'choice' && !canChoose ? '' : condition}
-              placeholder="조건 선택"
-              disabled={
-                !selectedQuestion ||
-                (fieldId !== 'all' && !selectedField) ||
-                unavailable
-              }
-              options={[
-                { value: 'none', label: '조건 없음' },
-                { value: 'answered', label: '응답했을 때' },
-                ...(canChoose
-                  ? [{ value: 'choice', label: '선택했을 때' }]
-                  : []),
-              ]}
-              onChange={(value) => {
-                if (value === 'none') clearCondition();
-                else if (value === 'answered') applyClause(answered());
-                else if (canChoose)
-                  applyClause({
-                    blockId: questionId,
-                    fieldId: selectedField.id,
-                    op:
-                      selectedField.kind === 'multiple' ? 'includes' : 'equals',
-                  });
-              }}
-            />
           </div>
-          {clause &&
-            selectedQuestion &&
-            (condition === 'answered' ||
-              (condition === 'choice' && canChoose)) && (
-              <div className="space-y-2 border-t pt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="reference-condition-answers">
-                    앞선 질문의 응답 참조
-                  </Label>
-                  <Switch
-                    id="reference-condition-answers"
-                    disabled={unavailable || document.answerLayout === 'flow'}
-                    checked={referencing}
-                    onCheckedChange={(checked) =>
-                      onChange({
-                        rowMode: checked ? 'reference' : 'single',
-                        initialRows: 1,
-                        maxRows: null,
-                        minRows: 1,
-                        sourceBlockId: checked ? questionId : null,
-                        sourceFieldId: null,
-                        afterBlockId: null,
-                      })
-                    }
-                  />
+          <fieldset
+            disabled={unavailable}
+            aria-label="질문 조건 설정"
+            className="min-w-0 space-y-4 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <ConditionSelect
+                label="조건 대상 질문"
+                value={questionId}
+                placeholder="질문 선택"
+                disabled={unavailable}
+                options={[
+                  { value: 'none', label: '조건 없음' },
+                  ...responseQuestions.map((question) => ({
+                    value: question.id,
+                    label: questionName(question),
+                  })),
+                ]}
+                onChange={(target) => {
+                  setPendingQuestionId(target === 'none' ? '' : target);
+                  setPendingFieldId('all');
+                  if (target === 'none') applyClause(null);
+                  else if (clause) applyClause(answered(target, 'all'));
+                }}
+              />
+              <span className="text-sm">의</span>
+              <ConditionSelect
+                label="조건 답변 열"
+                value={selectedQuestion ? fieldId : ''}
+                placeholder="열 선택"
+                disabled={!selectedQuestion || unavailable}
+                options={[
+                  { value: 'all', label: '모든 열' },
+                  ...(selectedQuestion?.fields ?? []).map((field) => ({
+                    value: field.id,
+                    label: field.label,
+                  })),
+                ]}
+                onChange={(next) => {
+                  setPendingFieldId(next);
+                  if (clause) applyClause(answered(questionId, next));
+                }}
+              />
+              <span className="text-sm">
+                {condition === 'choice' && canChoose ? '에서' : '에'}
+              </span>
+              {condition === 'choice' && canChoose && clause && (
+                <ConditionSelect
+                  label="조건 선택지"
+                  value={typeof clause.value === 'string' ? clause.value : ''}
+                  placeholder="선택지 선택"
+                  disabled={unavailable}
+                  options={(selectedField.options ?? []).map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                  }))}
+                  onChange={(value) => applyClause({ ...clause, value })}
+                />
+              )}
+              {condition === 'choice' && canChoose && (
+                <span className="text-sm">항목을</span>
+              )}
+              <ConditionSelect
+                label="질문 조건"
+                value={condition === 'choice' && !canChoose ? '' : condition}
+                placeholder="조건 선택"
+                disabled={
+                  !selectedQuestion ||
+                  (fieldId !== 'all' && !selectedField) ||
+                  unavailable
+                }
+                options={[
+                  { value: 'none', label: '조건 없음' },
+                  { value: 'answered', label: '응답했을 때' },
+                  ...(canChoose
+                    ? [{ value: 'choice', label: '선택했을 때' }]
+                    : []),
+                ]}
+                onChange={(value) => {
+                  if (value === 'none') clearCondition();
+                  else if (value === 'answered') applyClause(answered());
+                  else if (canChoose)
+                    applyClause({
+                      blockId: questionId,
+                      fieldId: selectedField.id,
+                      op:
+                        selectedField.kind === 'multiple'
+                          ? 'includes'
+                          : 'equals',
+                    });
+                }}
+              />
+            </div>
+            {clause &&
+              selectedQuestion &&
+              (condition === 'answered' ||
+                (condition === 'choice' && canChoose)) && (
+                <div className="space-y-2 border-t pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="reference-condition-answers">
+                      앞선 질문의 응답 참조
+                    </Label>
+                    <Switch
+                      id="reference-condition-answers"
+                      disabled={unavailable || document.answerLayout === 'flow'}
+                      checked={referencing}
+                      onCheckedChange={(checked) =>
+                        onChange({
+                          rowMode: checked ? 'reference' : 'single',
+                          initialRows: 1,
+                          maxRows: null,
+                          minRows: 1,
+                          sourceBlockId: checked ? questionId : null,
+                          sourceFieldId: null,
+                          afterBlockId: null,
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    참조하면 위 조건에 맞는 응답 항목만 가져와 반복합니다.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  참조하면 위 조건에 맞는 응답 항목만 가져와 반복합니다.
-                </p>
-              </div>
-            )}
-        </fieldset>
-        {hasCondition && (
-          <p className="text-xs text-muted-foreground">
-            연결된 질문의 열 구성을 바꾸려면 먼저 이 조건을 해제하고 저장해
-            주세요.
-          </p>
-        )}
-      </div>
+              )}
+          </fieldset>
+          {hasCondition && (
+            <p className="text-xs text-muted-foreground">
+              연결된 질문의 열 구성을 바꾸려면 먼저 이 조건을 해제하고 저장해
+              주세요.
+            </p>
+          )}
+        </CardContent>
+      </Card>
       {unavailable && (
         <p className="px-1 text-xs text-muted-foreground">
           선택할 다른 질문이 없어요. 먼저 질문을 만들어 주세요.

@@ -445,6 +445,7 @@ function ResponseEditor({
         </p>
       )}
       <QuestionnairePreview
+        startNotice={snapshot.startNotice}
         reviewQuestionnaireId={
           distributed || snapshot.sourceDeleted ? undefined : questionnaireId
         }

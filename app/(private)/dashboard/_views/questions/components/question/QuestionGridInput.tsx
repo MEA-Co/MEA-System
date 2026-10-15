@@ -249,129 +249,149 @@ export function QuestionGridInput({
         </p>
       ) : (
         <>
-          <div
-            ref={gridRegion}
-            role="region"
-            aria-label={`${document.title || '질문'} ${transposed ? '흐름표' : '표'}`}
-            tabIndex={0}
-            className="max-h-[70dvh] overflow-auto rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <table
-              className="w-full table-fixed border-separate border-spacing-0 text-sm"
-              style={{
-                minWidth:
-                  firstColumnWidth +
-                  columnCount * 240 +
-                  insertionAfterRows.size * insertionWidth,
-              }}
+          <div className="overflow-hidden rounded-xl border">
+            <div
+              ref={gridRegion}
+              role="region"
+              aria-label={`${document.title || '질문'} ${transposed ? '흐름표' : '표'}`}
+              tabIndex={0}
+              className="max-h-[70dvh] overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
-              <caption className="sr-only">
-                {document.title || '질문'} ·{' '}
-                {transposed ? '시기별 답변 입력' : '행별 답변 입력'}
-              </caption>
-              <colgroup>
-                <col style={{ width: firstColumnWidth }} />
-                {transposed
-                  ? rows.map((row) => (
-                      <Fragment key={row.id}>
-                        <col style={{ width: 240 }} />
-                        {insertionAfterRows.has(row.id) && (
-                          <col style={{ width: insertionWidth }} />
-                        )}
-                      </Fragment>
-                    ))
-                  : document.fields.map((field) => (
-                      <col key={field.id} style={{ width: 240 }} />
-                    ))}
-              </colgroup>
-              {!transposed && (
-                <thead className="sticky top-0 z-20">
-                  <tr>
-                    <th
-                      scope="col"
-                      className={`${headerClass} sticky left-0 z-30 bg-muted`}
-                    >
-                      번호
-                    </th>
-                    {document.fields.map((field, fieldIndex) => (
+              <table
+                className="w-full table-fixed border-separate border-spacing-0 text-sm"
+                style={{
+                  minWidth:
+                    firstColumnWidth +
+                    columnCount * 240 +
+                    insertionAfterRows.size * insertionWidth,
+                }}
+              >
+                <caption className="sr-only">
+                  {document.title || '질문'} ·{' '}
+                  {transposed ? '시기별 답변 입력' : '행별 답변 입력'}
+                </caption>
+                <colgroup>
+                  <col style={{ width: firstColumnWidth }} />
+                  {transposed
+                    ? rows.map((row) => (
+                        <Fragment key={row.id}>
+                          <col style={{ width: 240 }} />
+                          {insertionAfterRows.has(row.id) && (
+                            <col style={{ width: insertionWidth }} />
+                          )}
+                        </Fragment>
+                      ))
+                    : document.fields.map((field) => (
+                        <col key={field.id} style={{ width: 240 }} />
+                      ))}
+                </colgroup>
+                {!transposed && (
+                  <thead className="sticky top-0 z-20">
+                    <tr>
                       <th
-                        key={field.id}
-                        id={`${gridId}-field-${field.id}`}
                         scope="col"
-                        className={`${headerClass} ${field.required === false ? 'bg-slate-100/70 text-slate-600 dark:bg-slate-900 dark:text-slate-300' : 'bg-muted'}`}
+                        className={`${headerClass} sticky left-0 z-30 bg-muted`}
                       >
-                        {fieldLabel(fieldIndex)}
-                        {field.required === false && (
-                          <span className="ml-2 inline-flex rounded-md bg-slate-200/60 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            (선택)
-                          </span>
-                        )}
+                        번호
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-              )}
-              <tbody>
-                {/* The flow header shares this row group so each + cell spans the whole table. */}
-                {transposed && (
-                  <tr>
-                    <th
-                      scope="col"
-                      className={`${headerClass} sticky top-0 left-0 z-30 bg-muted`}
-                    >
-                      항목
-                    </th>
-                    {rows.map(flowHeader)}
-                  </tr>
-                )}
-                {transposed
-                  ? document.fields.map((field, fieldIndex) => (
-                      <tr key={field.id}>
+                      {document.fields.map((field, fieldIndex) => (
                         <th
+                          key={field.id}
                           id={`${gridId}-field-${field.id}`}
-                          scope="row"
-                          className={`${headerClass} sticky left-0 z-10 bg-muted`}
+                          scope="col"
+                          className={`${headerClass} ${field.required === false ? 'bg-slate-100/70 text-slate-600 dark:bg-slate-900 dark:text-slate-300' : 'bg-muted'}`}
                         >
                           {fieldLabel(fieldIndex)}
+                          {field.required === false && (
+                            <span className="ml-2 inline-flex rounded-md bg-slate-200/60 px-1.5 py-0.5 text-xs font-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              (선택)
+                            </span>
+                          )}
                         </th>
-                        {rows.map((row) => inputCell(row, fieldIndex))}
-                      </tr>
-                    ))
-                  : rows.map((row, rowIndex) => (
-                      <tr key={row.id}>
-                        <th
-                          id={`${gridId}-row-${row.id}`}
-                          scope="row"
-                          className={`${headerClass} sticky left-0 z-10 bg-muted`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span>{rowLabel(rowIndex)}</span>
-                            {removeButton(row, rowIndex)}
-                          </div>
-                        </th>
-                        {document.fields.map((_, fieldIndex) =>
-                          inputCell(row, fieldIndex),
-                        )}
-                      </tr>
-                    ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              {disabled
-                ? '가로로 스크롤해 모든 항목을 확인할 수 있어요.'
-                : transposed
-                  ? '기억나는 칸만 입력하세요. Tab 키로 다음 칸으로 이동할 수 있어요.'
-                  : '각 칸에 바로 입력하세요. Tab 키로 다음 칸으로 이동할 수 있어요.'}
-            </p>
-            {editable && canAdd && (
-              <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-                <Plus aria-hidden="true" />
-                {transposed ? '시기 추가' : '행 추가'}
+                      ))}
+                    </tr>
+                  </thead>
+                )}
+                <tbody>
+                  {/* The flow header shares this row group so each + cell spans the whole table. */}
+                  {transposed && (
+                    <tr>
+                      <th
+                        scope="col"
+                        className={`${headerClass} sticky top-0 left-0 z-30 bg-muted`}
+                      >
+                        항목
+                      </th>
+                      {rows.map(flowHeader)}
+                    </tr>
+                  )}
+                  {transposed
+                    ? document.fields.map((field, fieldIndex) => (
+                        <tr key={field.id}>
+                          <th
+                            id={`${gridId}-field-${field.id}`}
+                            scope="row"
+                            className={`${headerClass} sticky left-0 z-10 bg-muted`}
+                          >
+                            {fieldLabel(fieldIndex)}
+                          </th>
+                          {rows.map((row) => inputCell(row, fieldIndex))}
+                        </tr>
+                      ))
+                    : rows.map((row, rowIndex) => (
+                        <tr key={row.id}>
+                          <th
+                            id={`${gridId}-row-${row.id}`}
+                            scope="row"
+                            className={`${headerClass} sticky left-0 z-10 bg-muted`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span>{rowLabel(rowIndex)}</span>
+                              {removeButton(row, rowIndex)}
+                            </div>
+                          </th>
+                          {document.fields.map((_, fieldIndex) =>
+                            inputCell(row, fieldIndex),
+                          )}
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
+            </div>
+            {!transposed && editable && canAdd && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-12 w-full rounded-none border-t bg-background text-muted-foreground"
+                onClick={onAdd}
+              >
+                <Plus aria-hidden="true" /> 항목 추가
               </Button>
             )}
           </div>
+          {(disabled || transposed) && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {(disabled || transposed) && (
+                <p className="text-xs text-muted-foreground">
+                  {disabled
+                    ? '가로로 스크롤해 모든 항목을 확인할 수 있어요.'
+                    : '기억나는 칸만 입력해주세요.'}
+                </p>
+              )}
+              {transposed && editable && canAdd && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={onAdd}
+                >
+                  <Plus aria-hidden="true" />
+                  시기 추가
+                </Button>
+              )}
+            </div>
+          )}
         </>
       )}
       <Dialog

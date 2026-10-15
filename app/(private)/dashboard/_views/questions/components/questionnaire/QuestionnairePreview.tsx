@@ -12,17 +12,23 @@ import {
 } from '../../lib/question-blocks';
 import { questionnaireFetcher } from '../../lib/questionnaire/api-client';
 import { placementPreviewState } from '../../lib/questionnaire/placement-preview';
-import type { QuestionnaireSection } from '../../lib/questionnaire/types';
+import type {
+  QuestionnaireSection,
+  QuestionnaireStartNotice as StartNotice,
+} from '../../lib/questionnaire/types';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
+import { questionCanvasClass } from '../question/question-styles';
 import { QuestionBlockPreview } from '../question/QuestionBlockPreview';
 import { QuestionReviews } from '../question/QuestionReviews';
 
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { questionnaireStyles } from './questionnaire-styles';
+import { QuestionnaireStartNotice } from './QuestionnaireStartNotice';
 import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
 
 export function QuestionnairePreview({
+  startNotice,
   title,
   reviewQuestionnaireId,
   sections,
@@ -34,6 +40,7 @@ export function QuestionnairePreview({
   response,
   submittedView = false,
 }: {
+  startNotice?: StartNotice | null;
   reviewQuestionnaireId?: string;
   title: string;
   sections: QuestionnaireSection[];
@@ -83,7 +90,12 @@ export function QuestionnairePreview({
     }),
   );
   return (
-    <div className="min-w-0 max-w-full space-y-5 rounded-lg bg-muted p-4 sm:space-y-8 sm:p-8">
+    <div
+      className={cn(
+        questionCanvasClass,
+        'min-w-0 max-w-full space-y-5 rounded-lg sm:space-y-8',
+      )}
+    >
       <header className="space-y-3 border-b-2 border-foreground pb-4 sm:pb-5">
         <h2 className="text-xl font-extrabold leading-tight whitespace-pre-wrap wrap-break-word sm:text-3xl">
           {title || '제목 없는 질문지'}
@@ -94,6 +106,9 @@ export function QuestionnairePreview({
           </p>
         )}
       </header>
+      {startNotice && !submittedView && (
+        <QuestionnaireStartNotice notice={startNotice} />
+      )}
       {sections.map((section, sectionIndex) => (
         <section key={section.id} className="space-y-3 sm:space-y-5">
           <h3

@@ -85,6 +85,7 @@ export function QuestionRichTextEditor({
   const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const commandPopup = useRef<HTMLDivElement>(null);
   const [focusWithin, setFocusWithin] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dismissedCommand, setDismissedCommand] = useState<string | null>(null);
@@ -377,79 +378,116 @@ export function QuestionRichTextEditor({
           onBlurCapture={(event) => {
             if (!hintPopup.current?.contains(event.relatedTarget))
               setHintOpen(false);
-            if (!event.currentTarget.contains(event.relatedTarget))
+            if (
+              !event.currentTarget.contains(event.relatedTarget) &&
+              !commandPopup.current?.contains(event.relatedTarget)
+            )
               setFocusWithin(false);
           }}
           className="relative min-w-0"
         >
-          {commandOpen && (
-            <div
-              role="menu"
-              aria-label="사용 가능한 명령어"
-              className="absolute bottom-full left-0 z-40 mb-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border bg-popover p-1 shadow-lg"
-            >
-              {commands.length ? (
-                commands.map((command, index) => (
-                  <Button
-                    key={command.kind}
-                    type="button"
-                    ref={index === 0 ? menuButton : undefined}
-                    role="menuitem"
-                    variant="ghost"
-                    className="h-auto w-full items-start justify-start gap-3 px-3 py-2 text-left whitespace-normal"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === 'ArrowDown' ||
-                        event.key === 'ArrowUp'
-                      ) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const buttons =
-                          event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
-                            '[role="menuitem"]',
-                          );
-                        buttons?.[
-                          (index +
-                            (event.key === 'ArrowDown'
-                              ? 1
-                              : commands.length - 1)) %
-                            commands.length
-                        ]?.focus();
-                      }
-                    }}
-                    onClick={() => openPicker(command.kind)}
-                  >
-                    {command.kind === 'study' ? (
-                      <StudyIcon
-                        className="size-5 shrink-0 text-violet-600 dark:text-violet-400"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <ExplorationIcon
-                        className="size-5 shrink-0 text-blue-600 dark:text-blue-400"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{command.label}</span>
-                      <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
-                        신규 {command.label}을 추가하거나, 작성한{' '}
-                        {command.label}을 첨부해요
-                      </span>
-                    </span>
-                  </Button>
-                ))
-              ) : (
-                <p
-                  role="status"
-                  className="px-3 py-2 text-sm text-muted-foreground"
+          <Popover.Root
+            open={commandOpen}
+            onOpenChange={(open, details) => {
+              if (open) return;
+              // The editor is the anchor, not a trigger. Keep typing/caret clicks
+              // inside it active; the shared blur handler owns focus dismissal.
+              if (
+                details.reason === 'focus-out' ||
+                (details.reason === 'outside-press' &&
+                  editorAnchor.current?.contains(details.event.target as Node))
+              ) {
+                details.cancel();
+                return;
+              }
+              setDismissedCommand(commandKey);
+              if (details.reason === 'escape-key') editor?.commands.focus();
+            }}
+          >
+            <Popover.Portal>
+              <Popover.Positioner
+                anchor={editorAnchor}
+                side="top"
+                align="start"
+                sideOffset={8}
+                collisionPadding={16}
+                positionMethod="fixed"
+                className="z-60 data-[anchor-hidden]:invisible"
+              >
+                <Popover.Popup
+                  ref={commandPopup}
+                  role="menu"
+                  aria-label="사용 가능한 명령어"
+                  initialFocus={false}
+                  finalFocus={false}
+                  className="max-h-[var(--available-height)] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg outline-none"
                 >
-                  검색 결과 없음
-                </p>
-              )}
-            </div>
-          )}
+                  {commands.length ? (
+                    commands.map((command, index) => (
+                      <Button
+                        key={command.kind}
+                        type="button"
+                        ref={index === 0 ? menuButton : undefined}
+                        role="menuitem"
+                        variant="ghost"
+                        className="h-auto w-full items-start justify-start gap-3 px-3 py-2 text-left whitespace-normal"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === 'ArrowDown' ||
+                            event.key === 'ArrowUp'
+                          ) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            const buttons =
+                              event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                                '[role="menuitem"]',
+                              );
+                            buttons?.[
+                              (index +
+                                (event.key === 'ArrowDown'
+                                  ? 1
+                                  : commands.length - 1)) %
+                                commands.length
+                            ]?.focus();
+                          }
+                        }}
+                        onClick={() => openPicker(command.kind)}
+                      >
+                        {command.kind === 'study' ? (
+                          <StudyIcon
+                            className="size-5 shrink-0 text-violet-600 dark:text-violet-400"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ExplorationIcon
+                            className="size-5 shrink-0 text-blue-600 dark:text-blue-400"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium">
+                            {command.label}
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 font-normal whitespace-normal break-keep text-muted-foreground">
+                            신규 {command.label}을 추가하거나, 작성한{' '}
+                            {command.label}을 첨부해요
+                          </span>
+                        </span>
+                      </Button>
+                    ))
+                  ) : (
+                    <p
+                      role="status"
+                      className="px-3 py-2 text-sm text-muted-foreground"
+                    >
+                      검색 결과 없음
+                    </p>
+                  )}
+                </Popover.Popup>
+              </Popover.Positioner>
+            </Popover.Portal>
+          </Popover.Root>
           {placeholderTone === 'example' ? (
             <div className="grid min-w-0">
               {state?.empty && (

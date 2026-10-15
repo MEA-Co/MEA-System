@@ -116,9 +116,21 @@ export const saveQuestionnaireSchema = z.object({
   expectedRevision: z.number().int().nonnegative().max(2147483646),
   saveId: z.uuid(),
 });
-export const savedDraftSchema = questionnaireDocumentSchema.and(
-  z.object({
-    revision: z.number().int().nonnegative(),
-    savedAt: z.string(),
-  }),
-);
+export const savedDraftSchema = questionnaireDocumentSchema
+  .and(
+    z.object({
+      startNotice: z
+        .object({
+          title: z.string(),
+          body: z.string(),
+          buttonLabel: z.string(),
+        })
+        .nullish(),
+    }),
+  )
+  .and(
+    z.object({
+      revision: z.number().int().nonnegative(),
+      savedAt: z.string(),
+    }),
+  );

@@ -21,6 +21,7 @@ function mount({
   let cancelled = false;
   let autoSave;
   let pendingBack = null;
+  const timers = [];
   const detailRequests = [];
   const toasts = [];
   const row = {
@@ -161,7 +162,10 @@ function mount({
       addEventListener() {},
       removeEventListener() {},
     },
-    setTimeout: () => 1,
+    setTimeout: (callback) => {
+      timers.push(callback);
+      return timers.length;
+    },
     clearTimeout() {},
     setInterval: (callback) => {
       autoSave = callback;
@@ -297,6 +301,8 @@ function mount({
             },
             questionName: (q) => q.title || q.prompt,
           };
+        if (name === '@/lib/utils')
+          return { cn: (...values) => values.filter(Boolean).join(' ') };
         if (name.endsWith('rich-text')) return { richTextPlainText: (s) => s };
         if (name.endsWith('/toast'))
           return {
@@ -354,9 +360,10 @@ function mount({
       predicate(node.props)
     )
       return node;
-    return node.props?.children == null
-      ? null
-      : find(type, predicate, node.props.children);
+    return (
+      find(type, predicate, node.props?.children ?? null) ??
+      find(type, predicate, node.props?.action ?? null)
+    );
   }
   return {
     flush,
@@ -369,6 +376,7 @@ function mount({
     toasts,
     completeBack: () => pendingBack?.(),
     tick: () => autoSave?.(),
+    runTimers: () => timers.splice(0).forEach((callback) => callback()),
     placed,
     saves,
     reported,
@@ -407,7 +415,9 @@ test('new question close asks before discarding and cancel retains the draft', a
       'Button',
       (props) =>
         Array.isArray(props.children) &&
-        props.children.includes(' 새 질문 만들기'),
+        props.children.some(
+          (child) => child?.props?.children === '새 질문 만들기',
+        ),
     )
     .props.onClick();
   await app.flush();
@@ -420,12 +430,10 @@ test('new question close asks before discarding and cancel retains the draft', a
   await app.flush();
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
-  const dialog = app.find('Dialog', (props) => props.open);
+  const dialog = app.find('AlertDialog', (props) => props.open);
   assert.ok(dialog);
   assert.equal(app.find('Drawer').props.open, true);
-  app
-    .find('Button', (props) => props.children === '계속 작성', dialog)
-    .props.onClick();
+  dialog.props.onOpenChange(false);
   await app.flush();
   assert.equal(
     new URL(app.window.location.href).searchParams.get('question'),
@@ -434,7 +442,7 @@ test('new question close asks before discarding and cancel retains the draft', a
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
   app
-    .find('Button', (props) => props.children === '변경 내용 버리기')
+    .find('AlertDialogAction', (props) => props.children === '변경 내용 버리기')
     .props.onClick();
   await app.flush();
   assert.equal(app.find('Drawer').props.open, false);
@@ -449,7 +457,9 @@ test('Back with unsaved content restores the editor until discard is confirmed',
       'Button',
       (props) =>
         Array.isArray(props.children) &&
-        props.children.includes(' 새 질문 만들기'),
+        props.children.some(
+          (child) => child?.props?.children === '새 질문 만들기',
+        ),
     )
     .props.onClick();
   await app.flush();
@@ -460,9 +470,9 @@ test('Back with unsaved content restores the editor until discard is confirmed',
   app.window.history.back();
   await app.flush();
   assert.equal(app.find('Drawer').props.open, true);
-  assert.ok(app.find('Dialog', (props) => props.open));
+  assert.ok(app.find('AlertDialog', (props) => props.open));
   app
-    .find('Button', (props) => props.children === '변경 내용 버리기')
+    .find('AlertDialogAction', (props) => props.children === '변경 내용 버리기')
     .props.onClick();
   await app.flush();
   assert.equal(app.find('Drawer').props.open, false);
@@ -479,7 +489,8 @@ test('discard does not request an unsaved question while history Back is pending
     .find(
       'Button',
       (p) =>
-        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
+        Array.isArray(p.children) &&
+        p.children.some((child) => child?.props?.children === '새 질문 만들기'),
     )
     .props.onClick();
   await app.flush();
@@ -489,7 +500,9 @@ test('discard does not request an unsaved question while history Back is pending
   await app.flush();
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
-  app.find('Button', (p) => p.children === '변경 내용 버리기').props.onClick();
+  app
+    .find('AlertDialogAction', (p) => p.children === '변경 내용 버리기')
+    .props.onClick();
   await app.flush();
   assert.deepEqual(app.detailRequests, []);
   app.completeBack();
@@ -505,7 +518,8 @@ test('untouched new question disables save and closes without confirmation or de
     .find(
       'Button',
       (p) =>
-        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
+        Array.isArray(p.children) &&
+        p.children.some((child) => child?.props?.children === '새 질문 만들기'),
     )
     .props.onClick();
   await app.flush();
@@ -519,7 +533,7 @@ test('untouched new question disables save and closes without confirmation or de
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
   assert.equal(
-    app.find('Dialog', (p) => p.open),
+    app.find('AlertDialog', (p) => p.open),
     null,
   );
   assert.equal(app.local.size, 0);
@@ -535,7 +549,8 @@ test('edited new question enables save but empty prompt prevents requests and ex
     .find(
       'Button',
       (p) =>
-        Array.isArray(p.children) && p.children.includes(' 새 질문 만들기'),
+        Array.isArray(p.children) &&
+        p.children.some((child) => child?.props?.children === '새 질문 만들기'),
     )
     .props.onClick();
   await app.flush();
@@ -555,10 +570,10 @@ test('edited new question enables save but empty prompt prevents requests and ex
   assert.match(app.toasts.at(-1).title, /질문 본문이 비어/);
   app.find('Drawer').props.onOpenChange(false);
   await app.flush();
-  const dialog = app.find('Dialog', (p) => p.open);
+  const dialog = app.find('AlertDialog', (p) => p.open);
   assert.match(
-    app.find('DialogDescription', () => true, dialog).props.children,
-    /저장할 수 없어요/,
+    app.find('AlertDialogDescription', () => true, dialog).props.children,
+    /저장하지 않은 변경 내용이 사라집니다/,
   );
 });
 
@@ -621,7 +636,7 @@ test('inline question omits return button and nested scroll container', async ()
     null,
   );
   assert.equal(
-    app.find('Dialog', (p) => p.open),
+    app.find('AlertDialog', (p) => p.open),
     null,
   );
 });
@@ -651,11 +666,7 @@ test('occupied guide field deletion asks once and cancellation preserves the fie
     { id: fieldId, label: '첫째', kind: 'text' },
     { id: randomUUID(), label: '둘째', kind: 'text' },
   ];
-  let prompts = 0;
-  app.window.confirm = () => {
-    prompts++;
-    return false;
-  };
+  app.window.confirm = () => assert.fail('Use the shared confirmation dialog');
   await app.flush();
   app.find('QuestionManagementTable').props.onOpen(app.row);
   await app.flush();
@@ -663,19 +674,34 @@ test('occupied guide field deletion asks once and cancellation preserves the fie
     .find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId)
     .props.onRemove();
   await app.flush();
-  assert.equal(prompts, 1);
+  assert.ok(app.find('AlertDialog', (p) => p.open));
   assert.ok(
     app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId),
   );
-  app.window.confirm = () => {
-    prompts++;
-    return true;
-  };
+  app.window.history.back();
+  await app.flush();
+  assert.equal(
+    new URL(app.window.location.href).searchParams.get('question'),
+    app.row.id,
+  );
+  const guideDialog = app.find('AlertDialog', (p) => p.open);
+  assert.equal(
+    app.find('AlertDialogTitle', () => true, guideDialog).props.children,
+    '가이드 응답을 삭제하고 변경할까요?',
+  );
+  app.find('AlertDialogCancel', (p) => p.children === '취소').props.onClick();
+  await app.flush();
+  assert.ok(
+    app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId),
+  );
   app
     .find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId)
     .props.onRemove();
   await app.flush();
-  assert.equal(prompts, 2);
+  app
+    .find('AlertDialogAction', (p) => p.children === '삭제하고 계속')
+    .props.onClick();
+  await app.flush();
   assert.equal(
     app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId),
     null,
@@ -692,11 +718,7 @@ test('type changes ask only for occupied guide fields; labels do not ask', async
     { id: fieldId, label: '첫째', kind: 'text' },
     { id: randomUUID(), label: '둘째', kind: 'text' },
   ];
-  let prompts = 0;
-  app.window.confirm = () => {
-    prompts++;
-    return false;
-  };
+  app.window.confirm = () => assert.fail('Use the shared confirmation dialog');
   await app.flush();
   app.find('QuestionManagementTable').props.onOpen(app.row);
   await app.flush();
@@ -706,21 +728,29 @@ test('type changes ask only for occupied guide fields; labels do not ask', async
   );
   field.props.onChange({ ...field.props.field, label: '새 이름' });
   await app.flush();
-  assert.equal(prompts, 0);
+  assert.equal(
+    app.find('AlertDialog', (p) => p.open),
+    null,
+  );
   field = app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId);
   field.props.onChange({ ...field.props.field, kind: 'scale' });
   await app.flush();
-  assert.equal(prompts, 1);
+  assert.ok(app.find('AlertDialog', (p) => p.open));
   assert.equal(
     app.find('QuestionBlockFieldEditor', (p) => p.field.id === fieldId).props
       .field.kind,
     'text',
   );
+  app.find('AlertDialogCancel', (p) => p.children === '취소').props.onClick();
+  await app.flush();
   app
     .find('QuestionBlockFieldEditor', (p) => p.field.id !== fieldId)
     .props.onRemove();
   await app.flush();
-  assert.equal(prompts, 1);
+  assert.equal(
+    app.find('AlertDialog', (p) => p.open),
+    null,
+  );
 });
 
 test('dependency rejection keeps edits available for another save after the dependency is removed', async () => {
@@ -817,28 +847,19 @@ test('an uncertain save retries with the same save ID, revision and content', as
   assert.deepEqual(app.saves[1].body, app.saves[0].body);
 });
 
-test('a reusable study registration card hides answer settings and saves its own original definition', async () => {
+test('question creation no longer exposes a card purpose selector', async () => {
   const app = mount({ embedded: true });
   await app.flush();
-  const purpose = app.find('Select', (p) => p.value === 'response');
-  assert.equal(purpose.props.disabled, false);
-  purpose.props.onValueChange('study_registration');
-  await app.flush();
-  assert.equal(app.find('QuestionBlockFieldEditor'), null);
-  assert.equal(app.find('QuestionConditionEditor'), null);
   assert.equal(
-    app.find('SelectTrigger', (p) => p.id === 'answer-layout'),
+    app.find(
+      'Select',
+      (p) => p.value === 'response' || p.value === 'study_registration',
+    ),
     null,
   );
-  app
-    .find('QuestionRichTextEditor')
-    .props.onChange('사용한 학습법을 등록해 주세요.');
-  app
-    .find('Input', (p) => p.id === 'block-title')
-    .props.onChange({ target: { value: '학습법 기록' } });
-  app
-    .find('Input', (p) => p.id === 'study-registration-button')
-    .props.onChange({ target: { value: '학습법 작성하기' } });
+  assert.ok(app.find('SelectTrigger', (p) => p.id === 'answer-layout'));
+  assert.ok(app.find('QuestionConditionEditor'));
+  app.find('QuestionRichTextEditor').props.onChange('새 질문');
   await app.flush();
   await app
     .find(
@@ -847,82 +868,77 @@ test('a reusable study registration card hides answer settings and saves its own
     )
     .props.onClick();
   await app.flush();
-  assert.equal(app.saves.length, 1);
-  const document = app.saves[0].body.document;
-  assert.equal(document.purpose, 'study_registration');
-  assert.equal(document.buttonLabel, '학습법 작성하기');
-  assert.equal(document.title, '학습법 기록');
-  assert.deepEqual(document.fields, []);
-  assert.equal(document.rowMode, 'single');
-  assert.equal(document.maxRows, null);
-  assert.equal(document.minRows, 1);
-  assert.equal(document.initialRows, 1);
-  assert.deepEqual(document.rowLabels, []);
-  assert.equal(document.sourceBlockId, null);
-  assert.equal(document.sourceFieldId, null);
-  assert.equal(document.afterBlockId, null);
-  assert.equal(document.condition, null);
-  assert.equal(
-    app.find('Select', (p) => p.value === 'study_registration').props.disabled,
-    true,
-  );
-  const place = app.find('Button', (p) => p.children === '질문지에 배치');
-  assert.equal(place.props.disabled, false);
-  place.props.onClick();
-  assert.equal(app.placed[0].id, document.id);
-  assert.equal(app.placed[0].purpose, 'study_registration');
-  assert.equal(app.placed[0].button_label, '학습법 작성하기');
+  assert.equal(app.saves[0].body.document.purpose, 'response');
 });
 
-test('an unsaved registration card can return to a response question with a new answer field', async () => {
-  const app = mount({ embedded: true });
-  await app.flush();
-  app
-    .find('Select', (p) => p.value === 'response')
-    .props.onValueChange('study_registration');
-  await app.flush();
-  app
-    .find('Select', (p) => p.value === 'study_registration')
-    .props.onValueChange('response');
-  await app.flush();
-  const field = app.find('QuestionBlockFieldEditor');
-  assert.ok(field);
-  assert.equal(field.props.field.kind, 'text');
-  assert.ok(field.props.field.id);
-  assert.ok(app.find('QuestionConditionEditor'));
-  assert.equal(
-    app.find('Input', (p) => p.id === 'study-registration-button'),
-    null,
-  );
-});
-
-test('saved response and registration card kinds remain immutable while card content stays editable', async () => {
-  for (const purpose of ['response', 'study_registration']) {
-    const app = mount({ embedded: 'existing', purpose });
+for (const confirmed of [false, true]) {
+  test(`save-time guide confirmation ${confirmed ? 'retries the same save' : 'pauses autosave'} without changing the closing message`, async () => {
+    const fieldId = randomUUID();
+    const app = mount({
+      embedded: 'existing',
+      saveResults: [
+        {
+          status: 409,
+          data: {
+            code: 'guide_answer_confirmation_required',
+            fieldIds: [fieldId],
+          },
+        },
+      ],
+    });
     await app.flush();
-    const kind = app.find('Select', (p) => p.value === purpose);
-    assert.equal(kind.props.disabled, true);
-    kind.props.onValueChange(
-      purpose === 'response' ? 'study_registration' : 'response',
-    );
+    app.find('QuestionRichTextEditor').props.onChange('보존할 내용');
     await app.flush();
-    assert.ok(app.find('Select', (p) => p.value === purpose));
-    app
-      .find('QuestionRichTextEditor')
-      .props.onChange('카드 내용을 수정합니다.');
-    await app.flush();
-    await app
+    const save = app
       .find(
         'Button',
         (p) => Array.isArray(p.children) && p.children.includes('저장'),
       )
       .props.onClick();
     await app.flush();
-    assert.equal(app.saves[0].body.document.purpose, purpose);
-    assert.equal(app.saves[0].body.document.id, app.row.id);
-    assert.equal(app.saves[0].method, 'PUT');
-  }
-});
+    const dialog = app.find('AlertDialog', (p) => p.open);
+    assert.ok(dialog);
+    const message = app.find('AlertDialogDescription', () => true, dialog).props
+      .children;
+    assert.match(message, /새로 저장된 가이드 응답/);
+    assert.ok(
+      app.find('div', (p) => p.inert && p.style?.overflow === 'hidden'),
+    );
+    assert.equal(app.saves.length, 1);
+    app
+      .find(
+        confirmed ? 'AlertDialogAction' : 'AlertDialogCancel',
+        (p) => p.children === (confirmed ? '삭제하고 계속' : '취소'),
+        dialog,
+      )
+      .props.onClick();
+    await save;
+    await app.flush();
+    assert.equal(
+      app.find('AlertDialog', (p) => p.open),
+      null,
+    );
+    assert.ok(
+      app.find('AlertDialogDescription', (p) => p.children === message),
+    );
+    app.runTimers();
+    await app.flush();
+    if (confirmed) {
+      assert.equal(app.saves.length, 2);
+      assert.equal(app.saves[1].body.saveId, app.saves[0].body.saveId);
+      assert.deepEqual(app.saves[1].body.confirmedGuideAnswerFields, [fieldId]);
+      assert.equal(app.saves[1].body.document.prompt, '보존할 내용');
+    } else {
+      app.tick();
+      await app.flush();
+      assert.equal(app.saves.length, 1);
+      assert.equal(
+        app.find('QuestionRichTextEditor').props.value,
+        '보존할 내용',
+      );
+    }
+  });
+}
 
 test('flow insertion permissions follow fixed period indices and keep original field IDs', async () => {
   const app = mount({ embedded: 'existing' });
@@ -1030,22 +1046,10 @@ test('registration role and full fixed-period capacity do not expose new inserti
     app.find('Checkbox', (p) => p.id === 'flow-insert-after-1').props.checked,
     false,
   );
-  app
-    .find('Select', (p) => p.value === 'response')
-    .props.onValueChange('study_registration');
-  await app.flush();
+  const legacy = mount({ embedded: 'existing', purpose: 'study_registration' });
+  await legacy.flush();
   assert.equal(
-    app.find('Checkbox', (p) => p.id?.startsWith('flow-insert-after-')),
+    legacy.find('Checkbox', (p) => p.id?.startsWith('flow-insert-after-')),
     null,
   );
-  app.find('QuestionRichTextEditor').props.onChange('학습법을 등록해 주세요.');
-  await app.flush();
-  await app
-    .find(
-      'Button',
-      (p) => Array.isArray(p.children) && p.children.includes('저장'),
-    )
-    .props.onClick();
-  await app.flush();
-  assert.deepEqual(app.saves[0].body.document.flowInsertAfter, []);
 });
