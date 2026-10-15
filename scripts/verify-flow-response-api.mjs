@@ -65,8 +65,8 @@ function input(rows) {
   };
 }
 
-test('guide and distributed saves retain flow positions, custom labels and original answers', async () => {
-  for (const distributed of [false, true]) {
+test('guide and published saves retain flow positions, custom labels and original answers', async () => {
+  for (const published of [false, true]) {
     const api = command();
     const rows = [
       { id: 901, flowIndex: 1, answers: { [field]: '고1 성적' } },
@@ -78,11 +78,11 @@ test('guide and distributed saves retain flow positions, custom labels and origi
       },
       { id: -1, flowIndex: 2, answers: {} },
     ];
-    await api.save(randomUUID(), 'save', input(rows), distributed);
+    await api.save(randomUUID(), 'save', input(rows), published);
     assert.equal(api.calls.length, 1);
     assert.equal(
       api.calls[0].name,
-      `save_${distributed ? 'distributed_' : ''}question_response_session`,
+      published ? 'save_published_question_response_session' : 'save_review_response_session',
     );
     assert.deepEqual(api.calls[0].args.p_answers[question], rows);
   }

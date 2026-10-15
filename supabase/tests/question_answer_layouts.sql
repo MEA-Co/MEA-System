@@ -57,10 +57,10 @@ begin
         'questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),
           'sourceQuestionId',q->'id','text','표형 응답','details','[]'::jsonb)))));
     perform public.save_questionnaire_draft(d,0,gen_random_uuid());
-    perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
-    if public.read_published_question_sources((d->>'questionnaireId')::uuid)#>>'{0,answer_layout}' <> saved->>'answer_layout'
-      or public.read_published_question_sources((d->>'questionnaireId')::uuid)#>>'{0,initial_rows}' <> saved->>'initial_rows' then
-      raise exception 'Published source omitted layout';
+    perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
+    if public.read_shared_question_sources((d->>'questionnaireId')::uuid)#>>'{0,answer_layout}' <> saved->>'answer_layout'
+      or public.read_shared_question_sources((d->>'questionnaireId')::uuid)#>>'{0,initial_rows}' <> saved->>'initial_rows' then
+      raise exception 'Review source omitted layout';
     end if;
     insert into layout_docs values(name,q,(d->>'questionnaireId')::uuid);
   end loop;
@@ -77,14 +77,14 @@ begin
 end $$;
 reset role;
 
--- Published guide completion uses the same optional fields and spare-row rules.
+-- Review guide completion uses the same optional fields and spare-row rules.
 select set_config('request.jwt.claim.sub',(select id::text from layout_users where role='guide'),true);
 set local role authenticated;
 do $$
 declare fixture record; x jsonb; payload jsonb; filled jsonb; fid text; incomplete_other jsonb;
 begin
   for fixture in select * from layout_docs where name in ('table','flow','cards') loop
-    x:=public.open_question_response_session(fixture.questionnaire_id);
+    x:=public.open_review_response_session(fixture.questionnaire_id);
     fid:=fixture.doc#>>'{fields,0,id}';
     filled:=jsonb_build_array(jsonb_build_object('id',10,'answers',jsonb_build_object(fid,'첫 답변')));
     if fixture.name='table' then
@@ -97,13 +97,13 @@ begin
     incomplete_other:=jsonb_build_object('id',404,'answers',jsonb_build_object(fixture.doc#>>'{fields,3,id}',
       jsonb_build_object('id',fixture.doc#>>'{fields,3,options,0,id}','text','')::text));
     begin
-      perform public.save_question_response_session(fixture.questionnaire_id,
+      perform public.save_review_response_session(fixture.questionnaire_id,
         jsonb_build_object(fixture.doc->>'id',filled||jsonb_build_array(incomplete_other)),0,gen_random_uuid(),true,x->>'definitionToken');
       raise exception 'Incomplete optional Other submitted as a blank guide spare row';
     exception when invalid_parameter_value then null; end;
-    x:=public.save_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+    x:=public.save_review_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
     if jsonb_array_length(x#>'{questions,0,activeRowIds}') <> (case when fixture.name='table' then 2 else 1 end) then
-      raise exception 'Published spare rows counted as active';
+      raise exception 'Review spare rows counted as active';
     end if;
     if x#>'{questions,0,rows}' <> filled then raise exception 'Raw guide row IDs or blanks changed'; end if;
   end loop;
@@ -114,7 +114,7 @@ select set_config('request.jwt.claim.sub',(select id::text from layout_users whe
 set local role authenticated;
 do $$ declare fixture record; begin
   for fixture in select * from layout_docs loop
-    perform public.change_questionnaire_status(fixture.questionnaire_id,2,'published',null,'distributed',gen_random_uuid());
+    perform public.change_questionnaire_status(fixture.questionnaire_id,2,'in_review',null,'published',gen_random_uuid(),2);
   end loop;
 end $$;
 reset role;
@@ -125,7 +125,7 @@ do $$
 declare fixture record; x jsonb; payload jsonb; raw_rows jsonb; fid text; scale_id text; sid uuid; incomplete_other jsonb;
 begin
   for fixture in select * from layout_docs loop
-    x:=public.open_distributed_question_response_session(fixture.questionnaire_id);
+    x:=public.open_published_question_response_session(fixture.questionnaire_id);
     fid:=fixture.doc#>>'{fields,0,id}'; scale_id:=fixture.doc#>>'{fields,2,id}';
     raw_rows:=jsonb_build_array(
       jsonb_build_object('id',-8,'answers','{}'::jsonb),
@@ -136,7 +136,7 @@ begin
     payload:=jsonb_build_object(fixture.doc->>'id',raw_rows);
     if fixture.name in ('table','flow_minimum') then
       begin
-        perform public.save_distributed_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+        perform public.save_published_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
         raise exception 'Blank slots satisfied required row count';
       exception when invalid_parameter_value then null; end;
       raw_rows:=jsonb_set(raw_rows,'{3,answers}',jsonb_build_object(fid,'둘째 답변'));
@@ -144,7 +144,7 @@ begin
     end if;
     if fixture.name='cards' then
       begin
-        perform public.save_distributed_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+        perform public.save_published_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
         raise exception 'Cards stopped requiring their blank rows';
       exception when invalid_parameter_value then null; end;
       raw_rows:=jsonb_build_array(raw_rows->1);
@@ -152,7 +152,7 @@ begin
     end if;
     -- Optional and sparse fields still reject invalid nonempty typed values.
     begin
-      perform public.save_distributed_question_response_session(fixture.questionnaire_id,
+      perform public.save_published_question_response_session(fixture.questionnaire_id,
         jsonb_build_object(fixture.doc->>'id',jsonb_set(raw_rows,
           case when fixture.name='cards' then array['0','answers',scale_id] else array['1','answers',scale_id] end,
           '"99"'::jsonb)),0,gen_random_uuid(),true,x->>'definitionToken');
@@ -161,7 +161,7 @@ begin
     incomplete_other:=jsonb_build_object(fixture.doc#>>'{fields,3,id}',
       jsonb_build_object('id',fixture.doc#>>'{fields,3,options,0,id}','text','')::text);
     begin
-      perform public.save_distributed_question_response_session(fixture.questionnaire_id,
+      perform public.save_published_question_response_session(fixture.questionnaire_id,
         jsonb_build_object(fixture.doc->>'id',case when fixture.name='cards' then
           raw_rows||jsonb_build_array(jsonb_build_object('id',404,'answers',incomplete_other))
           else jsonb_set(raw_rows,'{2,answers}',incomplete_other) end),
@@ -169,14 +169,14 @@ begin
       raise exception 'Incomplete optional Other submitted as a blank spare row';
     exception when invalid_parameter_value then null; end;
     begin
-      perform public.save_distributed_question_response_session(fixture.questionnaire_id,
+      perform public.save_published_question_response_session(fixture.questionnaire_id,
         jsonb_build_object(fixture.doc->>'id',jsonb_build_array(jsonb_build_object('id',1,'answers','{}'::jsonb))),
         0,gen_random_uuid(),true,x->>'definitionToken');
       raise exception 'Entirely empty question submitted';
     exception when invalid_parameter_value then null; end;
     sid:=gen_random_uuid();
-    x:=public.save_distributed_question_response_session(fixture.questionnaire_id,payload,0,sid,true,x->>'definitionToken');
-    if public.save_distributed_question_response_session(fixture.questionnaire_id,payload,0,sid,true,x->>'definitionToken')<>x then
+    x:=public.save_published_question_response_session(fixture.questionnaire_id,payload,0,sid,true,x->>'definitionToken');
+    if public.save_published_question_response_session(fixture.questionnaire_id,payload,0,sid,true,x->>'definitionToken')<>x then
       raise exception 'Submission retry changed result';
     end if;
     if x#>'{questions,0,rows}' <> raw_rows then raise exception 'Raw row IDs or period slots changed'; end if;
@@ -210,8 +210,8 @@ begin
         jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',source->'id','text','조건 원본','details','[]'::jsonb),
         jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',flow->'id','text','흐름','details','[]'::jsonb)))));
   perform public.save_questionnaire_draft(d,0,gen_random_uuid());
-  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
-  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,2,'published',null,'distributed',gen_random_uuid());
+  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
+  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,2,'in_review',null,'published',gen_random_uuid(),2);
   insert into layout_docs values('conditional',jsonb_build_object('source',source,'flow',flow),(d->>'questionnaireId')::uuid);
 end $$;
 reset role;
@@ -221,12 +221,12 @@ do $$
 declare fixture record; x jsonb; raw_rows jsonb; payload jsonb; submission jsonb;
 begin
   select * into fixture from layout_docs where name='conditional';
-  x:=public.open_distributed_question_response_session(fixture.questionnaire_id);
+  x:=public.open_published_question_response_session(fixture.questionnaire_id);
   raw_rows:=jsonb_build_array(jsonb_build_object('id',77,'answers',jsonb_build_object(fixture.doc#>>'{flow,fields,0,id}','비공개 조건 입력')),
     jsonb_build_object('id',-77,'answers','{}'::jsonb));
   payload:=jsonb_build_object(fixture.doc#>>'{source,id}',jsonb_build_array(jsonb_build_object('id',1,'answers','{}'::jsonb)),
     fixture.doc#>>'{flow,id}',raw_rows);
-  x:=public.save_distributed_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+  x:=public.save_published_question_response_session(fixture.questionnaire_id,payload,0,gen_random_uuid(),true,x->>'definitionToken');
   select answers->(fixture.doc#>>'{flow,id}') into submission from public.response_submissions where session_id=(x->>'id')::uuid;
   if jsonb_array_length(submission->'rows')<>2 or submission->'activeRowIds'<>'[]'::jsonb
     or submission::text like '%비공개 조건 입력%' then raise exception 'Inactive flow answers leaked or periods disappeared'; end if;

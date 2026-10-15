@@ -31,10 +31,10 @@ function route({
     'loadQuestionnaireView',
     'saveQuestionnaireDraft',
     'deleteQuestionnaireDraft',
-    'publishQuestionnaireDraft',
+    'transitionQuestionnaireDraft',
     'changeQuestionnaireStatus',
     'questionResponseCommand',
-    'listMyPublishedResponses',
+    'listMyReviewResponses',
     'loadGuideAnswers',
     'loadSubmittedResponses',
   ]) {
@@ -51,9 +51,9 @@ function route({
     '@/app/(private)/dashboard/_views/questions/lib/question-response-server':
       functions,
     [`${root}answers-server`]: functions,
-    [`${root}publication-notifications`]: {
-      loadUnreadQuestionnairePublications: async (distributed) => [
-        distributed ? 'distributed-new' : 'unread',
+    [`${root}update-notifications`]: {
+      loadUnreadQuestionnaireUpdates: async (published) => [
+        published ? 'published-new' : 'unread',
       ],
     },
     '@/lib/admin': { getViewRole: async () => visibleRole },
@@ -106,6 +106,7 @@ function route({
       {
         method,
         headers: {
+          'X-Questionnaire-Workflow': '2',
           ...(body === undefined
             ? {}
             : {
@@ -145,7 +146,7 @@ test('REST returns JSON auth failures and never invokes mutations for consultant
   assert.equal(client.calls.length, 0);
   const preview = route({ role: 'admin', visibleRole: 'consultant' });
   assert.deepEqual(await (await preview.request('GET', ['unread'])).json(), [
-    'distributed-new',
+    'published-new',
   ]);
   assert.equal((await preview.request('GET', ['new'])).status, 403);
 });
@@ -206,14 +207,14 @@ test('every workflow command uses its REST resource and deletion/errors are not 
   const client = route({
     service: { deleteQuestionnaireDraft: async () => ({ mode: 'deleted' }) },
   });
-  for (const resource of ['publication', 'distribution']) {
+  for (const resource of ['review', 'publication']) {
     assert.equal(
       (await client.request('POST', [id, resource], { revision: 3 })).status,
       200,
     );
   }
-  assert.equal(client.calls[0][2], 'publish');
-  assert.equal(client.calls[1][2], 'distribute');
+  assert.equal(client.calls[0][2], 'start_review');
+  assert.equal(client.calls[1][2], 'publish');
   assert.equal(
     (await client.request('POST', [id, 'reviews'], { id: reviewId })).status,
     404,
@@ -252,7 +253,7 @@ test('removed questionnaire explanation endpoints return 404 without mutations',
   assert.equal(client.calls.length, 0);
 });
 
-test('consultants can save their response and read distribution notifications without gaining staff mutations', async () => {
+test('consultants can save their response and read publication notifications without gaining staff mutations', async () => {
   const id = randomUUID();
   const client = route({ role: 'consultant' });
   assert.equal((await client.request('GET', [id, 'answers'])).status, 200);
@@ -285,7 +286,7 @@ test('consultants can save their response and read distribution notifications wi
   );
   assert.equal((await client.request('POST', [id, 'reviews'], {})).status, 403);
   assert.equal(
-    (await client.request('POST', [id, 'distribution'], {})).status,
+    (await client.request('POST', [id, 'publication'], {})).status,
     403,
   );
   assert.equal((await client.request('PUT', [id, 'read'], {})).status, 200);
@@ -332,7 +333,7 @@ test('status changes use the URL identity and deny consultant/cross-origin mutat
   );
 });
 
-test('consultants can open, read, save and submit canonical distribution responses only', async () => {
+test('consultants can open, read, save and submit canonical publication responses only', async () => {
   const id = randomUUID();
   const client = route({ role: 'consultant' });
   for (const [method, body] of [
@@ -342,7 +343,7 @@ test('consultants can open, read, save and submit canonical distribution respons
     ['PUT', { complete: true }],
   ]) {
     assert.equal(
-      (await client.request(method, [id, 'distributed-responses'], body))
+      (await client.request(method, [id, 'published-responses'], body))
         .status,
       200,
     );
@@ -352,7 +353,7 @@ test('consultants can open, read, save and submit canonical distribution respons
     assert.equal(call[4], true);
   }
   assert.equal(
-    (await client.request('POST', [id, 'question-responses'], {})).status,
+    (await client.request('POST', [id, 'review-responses'], {})).status,
     403,
   );
   assert.equal(
@@ -364,7 +365,7 @@ test('consultants can open, read, save and submit canonical distribution respons
     (
       await client.request(
         'PUT',
-        [id, 'distributed-responses'],
+        [id, 'published-responses'],
         {},
         { origin: 'https://foreign.test' },
       )
@@ -390,4 +391,17 @@ test('only staff views can request submitted responses, not consultant previews'
     404,
   );
   assert.equal(preview.calls.length, 0);
+});
+
+
+test('an old browser cannot read or mutate statuses with changed meanings', async () => {
+  const api = route();
+  for (const version of ['', '1']) {
+    const headers = { 'X-Questionnaire-Workflow': version };
+    assert.equal((await api.request('GET', [], undefined, headers)).status, 426);
+    assert.equal((await api.request('PATCH', [randomUUID(), 'status'], {
+      status: 'published', expectedStatus: 'draft',
+    }, headers)).status, 426);
+  }
+  assert.equal(api.calls.length, 0);
 });

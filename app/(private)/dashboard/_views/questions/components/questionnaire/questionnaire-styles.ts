@@ -1,4 +1,4 @@
-/** Shared visual hierarchy for authoring, preview, and published questionnaires. */
+/** Shared visual hierarchy for authoring, preview, and inReview questionnaires. */
 export const questionnaireStyles = {
   document:
     'border-neutral-200 bg-background dark:border-neutral-800 dark:bg-neutral-900',
@@ -21,9 +21,9 @@ export const questionnaireStyles = {
 /** Status is always named; color only supports its visual hierarchy. */
 export const questionnaireStatusColors = {
   draft: 'border-brand/40 bg-brand/15 text-foreground hover:bg-brand/15',
-  published:
+  in_review:
     'border-green-200 bg-green-50 text-green-800 hover:bg-green-50 dark:border-green-800 dark:bg-green-950 dark:text-green-200 dark:hover:bg-green-950',
-  distributed:
+  published:
     'border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-50 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-950',
   archived: 'border-border bg-background text-muted-foreground',
 } as const;

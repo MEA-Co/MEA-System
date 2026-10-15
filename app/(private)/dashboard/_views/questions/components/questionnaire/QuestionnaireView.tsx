@@ -36,12 +36,12 @@ import {
 import type { QuestionnaireViewData } from '../../lib/questionnaire/types';
 import { QuestionsNavigation } from '../QuestionsNavigation';
 
-import { PublicationReadMarker } from './PublicationNotifications';
-import { PublishedQuestionnaire } from './PublishedQuestionnaire';
 import { QuestionnaireComposer } from './QuestionnaireComposer';
 import { QuestionnaireList } from './QuestionnaireList';
 import { QuestionnaireLoading } from './QuestionnaireLoading';
+import { QuestionnaireReadMarker } from './QuestionnaireNotifications';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
+import { SharedQuestionnaire } from './SharedQuestionnaire';
 
 export type QuestionnaireEditorState = {
   dirty: boolean;
@@ -226,12 +226,12 @@ function QuestionnairePanel({
         data={{
           staff,
           drafts: [],
+          inReview: [],
           published: [],
-          distributed: [],
           selected: null,
           reviews: [],
           initialDraft: null,
-          publishedDocument: null,
+          sharedDocument: null,
         }}
         error={error}
       />
@@ -248,7 +248,7 @@ function QuestionnairePanel({
       </div>
     );
   }
-  const document = data.initialDraft ?? data.publishedDocument;
+  const document = data.initialDraft ?? data.sharedDocument;
   if (id && id !== 'new' && document?.questionnaireId !== id)
     return error ? (
       <p role="alert">{error.message}</p>
@@ -289,12 +289,12 @@ function QuestionnaireContent({
   const {
     initialDraft,
     drafts,
+    inReview,
     published,
-    distributed,
     staff,
     selected,
     reviews,
-    publishedDocument,
+    sharedDocument,
   } = data;
   const editorDraft = initialDraft ?? openedDraft;
   const editUnavailable =
@@ -318,7 +318,7 @@ function QuestionnaireContent({
     data.pendingReviewCount ??
     reviews.filter((review) => !review.resolved_at).length;
   const unlinkedReviews = reviews.filter((review) => !review.question_id);
-  if (editorDraft || publishedDocument) {
+  if (editorDraft || sharedDocument) {
     return (
       <>
         {error && (
@@ -329,13 +329,13 @@ function QuestionnaireContent({
             {error.message}
           </p>
         )}
-        {((staff && selected?.status === 'published' && !selected.isOwner) ||
+        {((staff && selected?.status === 'in_review' && !selected.isOwner) ||
           (!staff &&
-            selected?.status === 'distributed' &&
-            !data.publishedDocument?.sections.some((section) =>
+            selected?.status === 'published' &&
+            !data.sharedDocument?.sections.some((section) =>
               section.questions.some((question) => question.sourceQuestionId),
             ))) &&
-          selected && <PublicationReadMarker questionnaireId={selected.id} />}
+          selected && <QuestionnaireReadMarker questionnaireId={selected.id} />}
         {reviewContext?.isOwner && pendingReviewCount > 0 && (
           <div
             role="status"
@@ -353,9 +353,9 @@ function QuestionnaireContent({
             />
           </div>
         )}
-        {initialDraft && selected?.status === 'published' && (
+        {initialDraft && selected?.status === 'in_review' && (
           <p className="mx-auto mb-4 max-w-6xl rounded-lg bg-muted p-4 text-sm">
-            게시 중인 질문지입니다. 저장한 수정 내용은 다른 리드와 관리자에게도
+            검토 중인 질문지입니다. 저장한 수정 내용은 다른 리드와 관리자에게도
             반영됩니다.
           </p>
         )}
@@ -364,20 +364,20 @@ function QuestionnaireContent({
             key={`editor:${editorDraft.questionnaireId}`}
             initialDraft={editorDraft}
             onClose={onClose}
-            publishedSources={data.publishedSources}
-            published={selected?.status === 'published'}
+            sharedSources={data.sharedSources}
+            inReview={selected?.status === 'in_review'}
             onEditorState={reportEditor}
             paused={paused}
             remoteUnavailable={editUnavailable}
             reviewContext={reviewContext}
           />
-        ) : publishedDocument && !error ? (
-          <PublishedQuestionnaire
+        ) : sharedDocument && !error ? (
+          <SharedQuestionnaire
             submittedResponseCount={selected?.submittedResponseCount}
             onEditorState={reportEditor}
-            document={publishedDocument}
-            sources={data.publishedSources}
-            distributed={selected?.status === 'distributed'}
+            document={sharedDocument}
+            sources={data.sharedSources}
+            published={selected?.status === 'published'}
             staff={staff}
             reviewContext={reviewContext}
           />
@@ -407,7 +407,7 @@ function QuestionnaireContent({
         title={staff ? '질문지 관리' : '질문지'}
         description={
           staff
-            ? '질문지의 작성·게시·배포와 제출 응답을 한곳에서 관리하세요.'
+            ? '질문지 작성·검토·배포와 제출 응답을 한곳에서 관리하세요.'
             : '배포된 질문지에 답변하고 제출한 내용을 확인하세요.'
         }
         action={
@@ -433,8 +433,8 @@ function QuestionnaireContent({
       <QuestionnaireList
         loading={loading}
         drafts={drafts}
+        inReview={inReview}
         published={published}
-        distributed={distributed}
         staff={staff}
         archived={data.archived ?? []}
       />

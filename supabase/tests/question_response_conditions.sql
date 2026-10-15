@@ -1,7 +1,7 @@
 begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
-insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'검토 중 테스트' from publish_users;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
@@ -35,10 +35,10 @@ begin
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  perform public.read_shared_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 
 
@@ -49,23 +49,23 @@ do $$
 declare vid uuid; snap jsonb; qid text; fid text; followid text; followfield text; payload jsonb; result jsonb; ref jsonb;
 begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- snap:=public.open_question_response_session(vid);
+ snap:=public.open_review_response_session(vid);
  select value->'definition' into ref from jsonb_array_elements(snap->'questions') where value#>>'{definition,row_mode}'='reference';
  followid:=ref->>'id'; followfield:=ref#>>'{fields,0,id}';
  select value->'definition' into ref from jsonb_array_elements(snap->'questions') where value#>>'{definition,row_mode}'='repeatable';
  qid:=ref->>'id'; fid:=ref#>>'{fields,0,id}';
  payload:=jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1234567890123,'answers',jsonb_build_object(fid,'응답'))),followid,jsonb_build_array(jsonb_build_object('id',1234567890123,'answers',jsonb_build_object(followfield,'이유'))));
- result:=public.save_question_response_session(vid,payload,0,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
+ result:=public.save_review_response_session(vid,payload,0,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken');
  select value into ref from jsonb_array_elements(result->'questions') where value#>>'{definition,id}'=followid;
  if ref->'activeRowIds'<>'[1234567890123]'::jsonb then raise exception 'Reference row not activated: %',ref; end if;
  if not exists(select 1 from public.question_responses where id=(ref->>'responseId')::uuid and referenced_response_id is not null) then raise exception 'Reference response not linked'; end if;
  payload:=jsonb_set(payload,array[qid,'0','answers',fid],'""');
- result:=public.save_question_response_session(vid,payload,1,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
+ result:=public.save_review_response_session(vid,payload,1,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken');
  select value into ref from jsonb_array_elements(result->'questions') where value#>>'{definition,id}'=followid;
  if ref->'activeRowIds'<>'[]'::jsonb or ref#>>array['rows','0','answers',followfield]<>'이유' then raise exception 'Inactive answer lost or active'; end if;
  if public.read_guide_answers(array[qid::uuid,followid::uuid])<>'{}'::jsonb then raise exception 'Inactive or blank guide rows exposed'; end if;
  -- Completion must require minimum rows and all visible fields.
- begin perform public.save_question_response_session(vid,payload,2,gen_random_uuid(),true,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Incomplete submitted'; exception when invalid_parameter_value then null; end;
+ begin perform public.save_review_response_session(vid,payload,2,gen_random_uuid(),true,public.read_review_response_session(vid)->>'definitionToken'); raise exception 'Incomplete submitted'; exception when invalid_parameter_value then null; end;
 end $$;
 reset role;
 -- Delete the questionnaire: answers and frozen questions must survive.

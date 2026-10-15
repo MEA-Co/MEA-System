@@ -8,11 +8,11 @@ set local role authenticated;
 do $$
 declare d jsonb; s jsonb; target uuid;
 begin
- select id into target from public.questionnaires where start_notice is not null and status='distributed' limit 1;
+ select id into target from public.questionnaires where start_notice is not null and status='published' limit 1;
  if target is null then raise exception 'Missing migrated questionnaire'; end if;
- d:=public.read_published_questionnaire(target);
+ d:=public.read_shared_questionnaire(target);
  if d#>>'{startNotice,title}' is distinct from '학습법 블록 등록' then raise exception 'Notice missing in public document'; end if;
- s:=public.open_distributed_question_response_session(target);
+ s:=public.open_published_question_response_session(target);
  if s->'startNotice' is distinct from d->'startNotice' then raise exception 'Response notice differs'; end if;
  if exists(select 1 from jsonb_array_elements(s->'questions') q where q#>>'{definition,purpose}'='study_registration') then raise exception 'Notice still an answer question'; end if;
  if jsonb_array_length(s->'questions')<>15 then raise exception 'Other question count changed'; end if;

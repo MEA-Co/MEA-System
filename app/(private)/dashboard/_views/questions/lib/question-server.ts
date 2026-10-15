@@ -74,7 +74,7 @@ export async function handleQuestionRequest(
           return json({ error: '질문 관리 권한이 없어요.' }, 403);
         // The questionnaire RPC checks access and placement. An admin's lead
         // preview must not apply the independent library's owner-only filter here.
-        const sources = await client.rpc('read_published_question_sources', {
+        const sources = await client.rpc('read_shared_question_sources', {
           p_questionnaire_id: questionnaireId,
         });
         if (sources.error)

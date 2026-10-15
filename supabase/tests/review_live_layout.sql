@@ -1,7 +1,7 @@
 begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
-insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'검토 중 테스트' from publish_users;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
@@ -32,10 +32,10 @@ begin
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  perform public.read_shared_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 
 reset role;
@@ -44,12 +44,12 @@ grant all on layout_snapshots to authenticated;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare x jsonb; payload jsonb; begin
- x:=public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ x:=public.open_review_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  payload:=jsonb_build_object(x#>>'{questions,0,definition,id}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','기존 답변 보존'))));
  payload:=jsonb_set(payload,array[x#>>'{questions,0,definition,id}'],(payload->(x#>>'{questions,0,definition,id}'))||jsonb_build_array(jsonb_build_object('id',2,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','두 번째 답변'))));
- x:=public.save_question_response_session((x->>'id')::uuid,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+ x:=public.save_review_response_session((x->>'id')::uuid,payload,0,gen_random_uuid(),true,x->>'definitionToken');
  insert into layout_snapshots values('initial',x);
- begin perform private.sync_published_response_layout((x->>'id')::uuid); raise exception 'Internal helper exposed'; exception when insufficient_privilege then null; end;
+ begin perform private.sync_review_response_layout((x->>'id')::uuid); raise exception 'Internal helper exposed'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
@@ -69,16 +69,16 @@ set local role authenticated;
 do $$ declare x jsonb; old jsonb; payload jsonb; vid uuid; begin
  select data into old from layout_snapshots where stage='initial';
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- x:=public.read_question_response_session(vid);
+ x:=public.read_review_response_session(vid);
  if x->>'title'<>'변경된 제목' or jsonb_array_length(x->'questions')<>2 or x#>>'{sections,0,title}'<>'추가 섹션' then raise exception 'Latest layout missing'; end if;
  if x->>'revision'<>old->>'revision' then raise exception 'Layout refresh changed answer revision'; end if;
  if x->>'definitionToken'=old->>'definitionToken' then raise exception 'Layout token unchanged'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}' and q->'rows'=old#>'{questions,0,rows}') then raise exception 'Old answer overwritten'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- begin perform public.save_question_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Old layout accepted'; exception when serialization_failure then null; end;
- x:=public.save_question_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
+ begin perform public.save_review_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Old layout accepted'; exception when serialization_failure then null; end;
+ x:=public.save_review_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
  insert into layout_snapshots values('added',x);
- if public.read_question_response_session(vid)<>public.read_question_response_session(vid) then raise exception 'Read not idempotent'; end if;
+ if public.read_review_response_session(vid)<>public.read_review_response_session(vid) then raise exception 'Read not idempotent'; end if;
 end $$;
 reset role;
 -- Confirm removal of the original source placement and delete only its guide response.
@@ -95,11 +95,11 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; payload jsonb; begin
  select data into old from layout_snapshots where stage='initial';
- x:=public.read_question_response_session((old->>'id')::uuid);
+ x:=public.read_review_response_session((old->>'id')::uuid);
  if jsonb_array_length(x->'questions')<>1 then raise exception 'Removed question visible'; end if;
  if exists(select 1 from public.question_responses where id=(old#>>'{questions,0,responseId}')::uuid) then raise exception 'Removed answer retained'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
+ perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
 end $$;
 reset role;
 -- Re-add using a new placement ID; start without the removed answer.
@@ -116,7 +116,7 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; begin
  select data into old from layout_snapshots where stage='initial';
- x:=public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ x:=public.open_review_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  if jsonb_array_length(x->'questions')<>2 then raise exception 'Re-added question missing'; end if;
  if exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}') then raise exception 'Deleted answer identity restored'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q#>>'{definition,id}'=old#>>'{questions,0,definition,id}' and q->'rows'='[]') then raise exception 'Re-added answer not empty'; end if;
@@ -138,24 +138,24 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; payload jsonb; begin
  select data into old from layout_snapshots where stage='readded';
- x:=public.read_question_response_session((old->>'id')::uuid);
+ x:=public.read_review_response_session((old->>'id')::uuid);
  if x->>'definitionToken'=old->>'definitionToken' or x#>>'{sections,0,title}'<>'순서 변경 섹션' or x#>>'{sections,0,questions,0,sourceQuestionId}'<>(select source_id::text from publish_docs) then raise exception 'Reorder was not reflected'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- begin perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale order accepted'; exception when serialization_failure then null; end;
+ begin perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale order accepted'; exception when serialization_failure then null; end;
 end $$;
 reset role;
--- An ordinary non-author lead sees the same latest published layout but cannot save.
+-- An ordinary non-author lead sees the same latest in_review layout but cannot save.
 insert into auth.users(id) values('ca000000-0000-4000-8000-000000000001');
 insert into public.profiles(id,role,name) values('ca000000-0000-4000-8000-000000000001','consultant_lead','읽기 리드');
 select set_config('request.jwt.claim.sub','ca000000-0000-4000-8000-000000000001',true);
 set local role authenticated;
 do $$ declare x jsonb; vid uuid; begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- x:=public.read_published_questionnaire(vid);
+ x:=public.read_shared_questionnaire(vid);
  if x->>'title'<>'변경된 제목' or jsonb_array_length(x#>'{sections,0,questions}')<>2 then raise exception 'Ordinary lead saw stale layout'; end if;
- if jsonb_array_length(public.read_published_question_sources(vid))<>2 then raise exception 'Ordinary lead saw stale sources'; end if;
- begin perform public.read_question_response_session(vid); raise exception 'Other response exposed'; exception when insufficient_privilege then null; end;
- begin perform public.open_question_response_session(vid); raise exception 'Other lead persisted answers'; exception when insufficient_privilege then null; end;
+ if jsonb_array_length(public.read_shared_question_sources(vid))<>2 then raise exception 'Ordinary lead saw stale sources'; end if;
+ begin perform public.read_review_response_session(vid); raise exception 'Other response exposed'; exception when insufficient_privilege then null; end;
+ begin perform public.open_review_response_session(vid); raise exception 'Other lead persisted answers'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 rollback;

@@ -12,14 +12,14 @@ const rows = (status, count, extra = {}) =>
     title: `질문지 ${n}`,
     status,
     updatedAt: new Date(2026, 0, n + 1).toISOString(),
-    distributedAt: null,
+    publishedAt: null,
     isOwner: true,
     ...extra,
   }));
 const source = {
   drafts: rows('draft', 5),
-  published: rows('published', 4),
-  distributed: rows('distributed', 23),
+  inReview: rows('in_review', 4),
+  published: rows('published', 23),
 };
 const opt = (query = '') => options(new URLSearchParams(query));
 test('overview limits 2/2/10 while totals include all matching rows', () => {
@@ -37,17 +37,17 @@ test('overview limits 2/2/10 while totals include all matching rows', () => {
 });
 test('status lists paginate independently and clamp after deletion', () => {
   assert.equal(
-    model(source, opt('qStatus=distributed&qPage=2')).items.length,
+    model(source, opt('qStage=published&qPage=2')).items.length,
     10,
   );
-  const last = model(source, opt('qStatus=distributed&qPage=99'));
+  const last = model(source, opt('qStage=published&qPage=99'));
   assert.equal(last.page, 3);
   assert.equal(last.items.length, 3);
 });
 test('search and ownership apply before counts and limits', () => {
   const mixed = {
     ...source,
-    published: rows('published', 4, { isOwner: false }),
+    inReview: rows('in_review', 4, { isOwner: false }),
   };
   const result = model(mixed, opt('qSearch=질문지+1&qOwner=mine'));
   assert.deepEqual(
@@ -58,28 +58,28 @@ test('search and ownership apply before counts and limits', () => {
 test('private drafts and archives stay owner-only; archives excluded from overview', () => {
   const mixed = {
     drafts: rows('draft', 2, { isOwner: false }),
+    inReview: [],
     published: [],
-    distributed: [],
     archived: [
-      ...rows('published', 2, { archivedAt: '2026-01-01' }),
+      ...rows('in_review', 2, { archivedAt: '2026-01-01' }),
       ...rows('draft', 2, { archivedAt: '2026-01-01', isOwner: false }),
     ],
   };
   assert.equal(model(mixed, opt()).total, 0);
-  assert.equal(model(mixed, opt('qStatus=archived')).total, 2);
+  assert.equal(model(mixed, opt('qStage=archived')).total, 2);
 });
-test('distribution date takes precedence and duplicate IDs occur once', () => {
-  const a = rows('distributed', 2);
-  a[0].distributedAt = '2027-01-01';
+test('publication date takes precedence and duplicate IDs occur once', () => {
+  const a = rows('published', 2);
+  a[0].publishedAt = '2027-01-01';
   const result = model(
-    { drafts: [], published: [], distributed: [...a, a[0]] },
+    { drafts: [], inReview: [], published: [...a, a[0]] },
     opt(),
   );
   assert.equal(result.total, 2);
   assert.equal(result.groups[2].items[0].id, a[0].id);
 });
 test('invalid query options fall back safely', () => {
-  assert.deepEqual(opt('qStatus=invalid&qPage=-3&qOwner=other'), {
+  assert.deepEqual(opt('qStage=invalid&qPage=-3&qOwner=other'), {
     status: 'all',
     query: '',
     owner: 'all',
@@ -89,7 +89,7 @@ test('invalid query options fall back safely', () => {
 });
 test('detail links retain filters and clear conflicting routes', () => {
   const p = new URLSearchParams(
-    'qStatus=distributed&qPage=2&qSearch=test&qOwner=mine&question=x&response=y&return=dashboard',
+    'qStage=published&qPage=2&qSearch=test&qOwner=mine&question=x&response=y&return=dashboard',
   );
   const href = questionnaireDetailHref(p, 'abc', true);
   const result = new URL(href, 'https://local.test').searchParams;
@@ -110,7 +110,7 @@ test('detail links retain filters and clear conflicting routes', () => {
 });
 
 test('questionnaire links preserve draft and filters without drawer presentation', () => {
-  const params = new URLSearchParams('qStatus=draft&qSearch=test&qPage=2');
+  const params = new URLSearchParams('qStage=draft&qSearch=test&qPage=2');
   const href = questionnaireDetailHref(params, 'new');
   const next = new URL(href, 'https://example.test').searchParams;
   assert.equal(next.has('questionnaireEditor'), false);
@@ -124,7 +124,15 @@ test('questionnaire links preserve draft and filters without drawer presentation
 });
 
  test('administrator can see editable drafts without becoming their owner', () => {
- const shared = { drafts: rows('draft', 1, { isOwner: false, canEditDraft: true }), published: [], distributed: [] };
+ const shared = { drafts: rows('draft', 1, { isOwner: false, canEditDraft: true }), inReview: [], published: [] };
  assert.equal(model(shared, opt()).total, 1);
  assert.equal(model(shared, opt('qOwner=mine')).total, 0);
  });
+
+
+test('old status bookmarks retain meaning while v2 links use qStage', () => {
+  assert.equal(opt('qStatus=published').status, 'in_review');
+  assert.equal(opt('qStatus=distributed').status, 'published');
+  assert.equal(opt('qStatus=published&qStage=published').status, 'published');
+  assert.equal(opt('qStage=in_review').status, 'in_review');
+});

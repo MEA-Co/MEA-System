@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
+
 import { z } from 'zod';
+
 import { loadQuestionModule } from './helpers/load-question-module.mjs';
 const root = 'app/(private)/dashboard/_views/questions/lib/';
 const copy = loadQuestionModule(
@@ -67,7 +69,7 @@ function source() {
     condition: { mode: 'all', clauses: [] },
     revision: 10,
     created_by: randomUUID(),
-    distribution_locked_at: '2026-01-01',
+    publication_locked_at: '2026-01-01',
     answers: ['개인 답변'],
     reviews: ['검토'],
   };
@@ -99,7 +101,7 @@ test('content import creates independent identities and preserves configuration 
     'reviews',
     'revision',
     'created_by',
-    'distribution_locked_at',
+    'publication_locked_at',
   ])
     assert.equal(key in doc, false);
   assert.equal(doc.condition, null);

@@ -47,9 +47,9 @@ begin
         'questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),
           'sourceQuestionId',q->'id','text',q->'prompt','details','[]'::jsonb)))));
     perform public.save_questionnaire_draft(d,0,gen_random_uuid());
-    perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
-    if public.read_published_question_sources((d->>'questionnaireId')::uuid)#>'{0,flow_insert_after}'
-      is distinct from saved->'flow_insert_after' then raise exception 'Published source omitted insertion slots'; end if;
+    perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
+    if public.read_shared_question_sources((d->>'questionnaireId')::uuid)#>'{0,flow_insert_after}'
+      is distinct from saved->'flow_insert_after' then raise exception 'Review source omitted insertion slots'; end if;
     insert into flow_cases values(case_name,q,(d->>'questionnaireId')::uuid,null);
   end loop;
   q:=(select doc from flow_cases where name='flow');
@@ -94,14 +94,14 @@ begin
         jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',source->'id','text',source->'prompt','details','[]'::jsonb),
         jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',conditional->'id','text',conditional->'prompt','details','[]'::jsonb)))));
   perform public.save_questionnaire_draft(d,0,gen_random_uuid());
-  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+  perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
   insert into flow_cases values('conditional',jsonb_build_object('source',source,'flow',conditional),(d->>'questionnaireId')::uuid,null);
 end $$;
 reset role;
 
 do $$ begin
   if not exists(select 1 from public.profiles where id=private.guide_consultant_id() and role in ('admin','consultant_lead')) then
-    raise exception 'Configured guide must have an existing staff profile for published regression';
+    raise exception 'Configured guide must have an existing staff profile for in_review regression';
   end if;
 end $$;
 select set_config('request.jwt.claim.sub',private.guide_consultant_id()::text,true);
@@ -112,12 +112,12 @@ declare fixture record; x jsonb; raw_rows jsonb; mixed_rows jsonb; bad jsonb; pa
 begin
   select * into fixture from flow_cases where name='flow';
   fid:=fixture.doc#>>'{fields,0,id}'; second_fid:=fixture.doc#>>'{fields,1,id}';
-  x:=public.open_question_response_session(fixture.questionnaire_id);
+  x:=public.open_review_response_session(fixture.questionnaire_id);
   raw_rows:=jsonb_build_array(
     jsonb_build_object('id',101,'answers',jsonb_build_object(fid,'고1 답변',second_fid,'기존 특이사항')),
     jsonb_build_object('id',102,'answers',jsonb_build_object(fid,'고2 답변')),
     jsonb_build_object('id',103,'answers','{}'::jsonb));
-  x:=public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
+  x:=public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
     (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
   -- Deliberately unordered input is stored canonically without changing IDs/answers.
   mixed_rows:=jsonb_build_array(
@@ -138,28 +138,28 @@ begin
     mixed_rows||jsonb_build_array(jsonb_build_object('id',505,'label','anchor 없음','answers','{}'::jsonb))
   )) loop
     begin
-      perform public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+      perform public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
         (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
-      raise exception 'Invalid published flow metadata accepted';
+      raise exception 'Invalid in_review flow metadata accepted';
     exception when invalid_parameter_value then null; end;
   end loop;
   bad:=jsonb_set(mixed_rows,'{1,label}','""'::jsonb);
-  x:=public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+  x:=public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
     (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
   for bad in select value from jsonb_array_elements(jsonb_build_array(
     bad,jsonb_set(mixed_rows,'{1,label}',to_jsonb(E' \n\t '::text))
   )) loop
     begin
-      perform public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+      perform public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
         (x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
-      raise exception 'Unnamed answered published period completed';
+      raise exception 'Unnamed answered in_review period completed';
     exception when invalid_parameter_value then
       if sqlerrm not like '%Name every answered inserted flow period%' then raise; end if;
     end;
   end loop;
   payload:=jsonb_build_object(fixture.doc->>'id',mixed_rows); retry:=gen_random_uuid(); save_revision:=(x->>'revision')::integer;
-  x:=public.save_question_response_session(fixture.questionnaire_id,payload,save_revision,retry,true,x->>'definitionToken');
-  if public.save_question_response_session(fixture.questionnaire_id,payload,save_revision,retry,true,x->>'definitionToken') is distinct from x then
+  x:=public.save_review_response_session(fixture.questionnaire_id,payload,save_revision,retry,true,x->>'definitionToken');
+  if public.save_review_response_session(fixture.questionnaire_id,payload,save_revision,retry,true,x->>'definitionToken') is distinct from x then
     raise exception 'Flow response retry changed the snapshot';
   end if;
   if (select jsonb_agg(row->'id' order by n) from jsonb_array_elements(x#>'{questions,0,rows}') with ordinality r(row,n))
@@ -168,7 +168,7 @@ begin
     or x#>>array['questions','0','rows','0','answers',second_fid] is distinct from '기존 특이사항' then
     raise exception 'Insertion moved fixed periods or lost existing answers';
   end if;
-  if public.open_question_response_session(fixture.questionnaire_id)#>'{questions,0,rows}' is distinct from x#>'{questions,0,rows}' then
+  if public.open_review_response_session(fixture.questionnaire_id)#>'{questions,0,rows}' is distinct from x#>'{questions,0,rows}' then
     raise exception 'Reopening flow lost insertion metadata';
   end if;
   shown:=public.read_guide_answers(array[(fixture.doc->>'id')::uuid])->(fixture.doc->>'id')->'rows';
@@ -179,7 +179,7 @@ begin
   update flow_cases set rows=x#>'{questions,0,rows}' where name='flow';
 
   for fixture in select * from flow_cases where name in ('legacy','single','table') loop
-    x:=public.open_question_response_session(fixture.questionnaire_id); fid:=fixture.doc#>>'{fields,0,id}';
+    x:=public.open_review_response_session(fixture.questionnaire_id); fid:=fixture.doc#>>'{fields,0,id}';
     if fixture.name='single' then
       raw_rows:=jsonb_build_array(jsonb_build_object('id',201,'flowIndex',1,'answers','{}'::jsonb),
         jsonb_build_object('id',202,'flowAfter',1,'label','고1 방학','answers',jsonb_build_object(fid,'단일 기본 시기 뒤 추가')));
@@ -188,13 +188,13 @@ begin
     end if;
     if fixture.name='table' then
       begin
-        perform public.save_question_response_session(fixture.questionnaire_id,
+        perform public.save_review_response_session(fixture.questionnaire_id,
           jsonb_build_object(fixture.doc->>'id',jsonb_set(raw_rows,'{0,flowIndex}','1'::jsonb)),
           (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
-        raise exception 'Nonflow published question accepted flow metadata';
+        raise exception 'Nonflow in_review question accepted flow metadata';
       exception when invalid_parameter_value then null; end;
     end if;
-    x:=public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
+    x:=public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
       (x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
     if x#>'{questions,0,rows}' is distinct from raw_rows then raise exception 'Legacy/single flow changed saved row IDs'; end if;
     update flow_cases set rows=raw_rows where name=fixture.name;
@@ -235,7 +235,7 @@ set local role authenticated;
 do $$
 declare fixture record; x jsonb; raw_rows jsonb; bad jsonb;
 begin
-  select * into fixture from flow_cases where name='flow'; x:=public.open_question_response_session(fixture.questionnaire_id);
+  select * into fixture from flow_cases where name='flow'; x:=public.open_review_response_session(fixture.questionnaire_id);
   raw_rows:=jsonb_set(fixture.rows,'{1,label}','"고1 여름 수정"'::jsonb)-3;
   for bad in select value from jsonb_array_elements(jsonb_build_array(
     raw_rows||jsonb_build_array(jsonb_build_object('id',601,'flowAfter',1,'label','새 시기','answers','{}'::jsonb)),
@@ -243,12 +243,12 @@ begin
     jsonb_build_array(jsonb_build_object('id',101,'answers','{}'::jsonb))
   )) loop
     begin
-      perform public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+      perform public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
         (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
       raise exception 'Disabled slot accepted new/moved periods or metadata downgrade';
     exception when invalid_parameter_value then null; end;
   end loop;
-  x:=public.save_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
+  x:=public.save_review_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',raw_rows),
     (x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
   if x#>'{questions,0,rows}' is distinct from raw_rows then raise exception 'Existing periods were lost after disabling a slot'; end if;
   update flow_cases set rows=raw_rows where name='flow';
@@ -263,11 +263,11 @@ begin
   q:=(select doc from flow_cases where name='flow')||jsonb_build_object('flowInsertAfter',jsonb_build_array(1,2));
   perform public.save_question(q,2,gen_random_uuid()); update flow_cases set doc=q where name='flow';
   for fixture in select * from flow_cases loop
-    perform public.change_questionnaire_status(fixture.questionnaire_id,2,'published',null,'distributed',gen_random_uuid());
+    perform public.change_questionnaire_status(fixture.questionnaire_id,2,'in_review',null,'published',gen_random_uuid(),2);
   end loop;
   begin
     perform public.save_question(q||jsonb_build_object('flowInsertAfter','[]'::jsonb),3,gen_random_uuid());
-    raise exception 'Distribution lock allowed slot editing';
+    raise exception 'Publication lock allowed slot editing';
   exception when object_not_in_prerequisite_state then null; end;
 end $$;
 reset role;
@@ -278,7 +278,7 @@ do $$
 declare fixture record; x jsonb; raw_rows jsonb; bad jsonb; payload jsonb; saved_rows jsonb; submission jsonb; fid text;
 begin
   for fixture in select * from flow_cases where name in ('flow','legacy','single','table') loop
-    x:=public.open_distributed_question_response_session(fixture.questionnaire_id); fid:=fixture.doc#>>'{fields,0,id}';
+    x:=public.open_published_question_response_session(fixture.questionnaire_id); fid:=fixture.doc#>>'{fields,0,id}';
     raw_rows:=fixture.rows;
     if fixture.name='flow' then
       raw_rows:=raw_rows||jsonb_build_array(jsonb_build_object('id',504,'flowAfter',2,'label','이름만 추가','answers','{}'::jsonb));
@@ -292,18 +292,18 @@ begin
           (select jsonb_agg(jsonb_build_object('id',1000+i,'flowAfter',1,'label','빈 시기','answers','{}'::jsonb)) from generate_series(1,18) i)
       )) loop
         begin
-          perform public.save_distributed_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+          perform public.save_published_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
             (x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
-          raise exception 'Invalid distributed flow metadata/completion accepted';
+          raise exception 'Invalid published flow metadata/completion accepted';
         exception when invalid_parameter_value then null; end;
       end loop;
       bad:=jsonb_set(raw_rows,'{1,label}','""'::jsonb);
-      x:=public.save_distributed_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+      x:=public.save_published_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
         (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
       begin
-        perform public.save_distributed_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
+        perform public.save_published_question_response_session(fixture.questionnaire_id,jsonb_build_object(fixture.doc->>'id',bad),
           (x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
-        raise exception 'Unnamed answered distributed period completed';
+        raise exception 'Unnamed answered published period completed';
       exception when invalid_parameter_value then
         if sqlerrm not like '%Name every answered inserted flow period%' then raise; end if;
       end;
@@ -312,18 +312,18 @@ begin
       raw_rows:=raw_rows||(select jsonb_agg(jsonb_build_object('id',202+i,'flowAfter',1,'label','추가 '||i,'answers','{}'::jsonb)) from generate_series(1,18) i);
     elsif fixture.name='table' then
       begin
-        perform public.save_distributed_question_response_session(fixture.questionnaire_id,
+        perform public.save_published_question_response_session(fixture.questionnaire_id,
           jsonb_build_object(fixture.doc->>'id',jsonb_set(raw_rows,'{0,flowIndex}','1'::jsonb)),
           (x->>'revision')::integer,gen_random_uuid(),false,x->>'definitionToken');
-        raise exception 'Nonflow distributed question accepted flow metadata';
+        raise exception 'Nonflow published question accepted flow metadata';
       exception when invalid_parameter_value then null; end;
     end if;
     payload:=jsonb_build_object(fixture.doc->>'id',raw_rows);
-    x:=public.save_distributed_question_response_session(fixture.questionnaire_id,payload,(x->>'revision')::integer,
+    x:=public.save_published_question_response_session(fixture.questionnaire_id,payload,(x->>'revision')::integer,
       gen_random_uuid(),true,x->>'definitionToken');
     saved_rows:=x#>'{questions,0,rows}';
-    if public.open_distributed_question_response_session(fixture.questionnaire_id)#>'{questions,0,rows}' is distinct from saved_rows then
-      raise exception 'Distributed reopening lost periods';
+    if public.open_published_question_response_session(fixture.questionnaire_id)#>'{questions,0,rows}' is distinct from saved_rows then
+      raise exception 'Published reopening lost periods';
     end if;
     select answers->(fixture.doc->>'id') into submission from public.response_submissions where session_id=(x->>'id')::uuid;
     if fixture.name in ('flow','single') and (jsonb_array_length(submission->'rows')<>jsonb_array_length(saved_rows)
@@ -339,7 +339,7 @@ begin
   end loop;
 
   select * into fixture from flow_cases where name='conditional';
-  x:=public.open_distributed_question_response_session(fixture.questionnaire_id);
+  x:=public.open_published_question_response_session(fixture.questionnaire_id);
   raw_rows:=jsonb_build_array(
     jsonb_build_object('id',301,'flowIndex',1,'answers','{}'::jsonb),
     jsonb_build_object('id',302,'flowIndex',2,'answers','{}'::jsonb),
@@ -348,7 +348,7 @@ begin
       'answers',jsonb_build_object(fixture.doc#>>'{flow,fields,0,id}','비공개 입력')));
   payload:=jsonb_build_object(fixture.doc#>>'{source,id}',jsonb_build_array(jsonb_build_object('id',1,'answers','{}'::jsonb)),
     fixture.doc#>>'{flow,id}',raw_rows);
-  x:=public.save_distributed_question_response_session(fixture.questionnaire_id,payload,(x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
+  x:=public.save_published_question_response_session(fixture.questionnaire_id,payload,(x->>'revision')::integer,gen_random_uuid(),true,x->>'definitionToken');
   select answers->(fixture.doc#>>'{flow,id}') into submission from public.response_submissions where session_id=(x->>'id')::uuid;
   if submission->'activeRowIds' is distinct from '[]'::jsonb or jsonb_array_length(submission->'rows')<>4
     or exists(select 1 from jsonb_array_elements(submission->'rows') r where r->'answers'<>'{}'::jsonb or coalesce(r->>'label','')<>'')
@@ -374,7 +374,7 @@ begin
   end if;
   begin
     perform public.save_question(fixture.doc||jsonb_build_object('flowInsertAfter','[]'::jsonb),3,gen_random_uuid());
-    raise exception 'Admin bypassed the distributed source lock';
+    raise exception 'Admin bypassed the published source lock';
   exception when object_not_in_prerequisite_state then null; end;
 end $$;
 reset role;

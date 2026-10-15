@@ -20,12 +20,12 @@ export function DeleteQuestionnaireButton({
   questionnaireId,
   revision,
   title,
-  hasDistributed,
+  hasPublished,
 }: {
   questionnaireId: string;
   revision: number;
   title: string;
-  hasDistributed: boolean;
+  hasPublished: boolean;
 }) {
   const { command } = useQuestionnaireApi();
   const [open, setOpen] = useState(false);
@@ -97,7 +97,7 @@ export function DeleteQuestionnaireButton({
           <DialogHeader>
             <DialogTitle>질문지를 삭제할까요?</DialogTitle>
             <DialogDescription className="wrap-break-word">
-              {hasDistributed
+              {hasPublished
                 ? `‘${label}’은 배포 이력이 있어 목록에서 제거하며, 질문지 내용과 답변은 보존합니다.`
                 : `‘${label}’의 내용, 질문, 설명, 검토 요청, 확인 기록 등 관련 데이터를 영구 삭제합니다. 삭제 후 복구할 수 없습니다.`}
             </DialogDescription>

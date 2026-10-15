@@ -4,11 +4,17 @@
 
 ## 현재 적용 상태
 
+2026-10-15 로컬 최신 이력은 `20261015075725_questionnaire_review_publication_workflow.sql`이다. 상태·명칭 전환과 데이터 보존 검사를 로컬에 적용했다. 운영 조회/적용·앱 배포·실제 브라우저 검증은 수행하지 않았다. **이번 전환은 아래 최신 ‘검토·배포 명칭 전환’ 절의 점검 시간 확보·구형 앱 차단·배포 순서를 우선한다.**
+
+운영의 마지막 확인된 선행 기록은 AGENTS.md에 기록된 `20261013033907_question_flow_insertions.sql` 적용이다. 현재 운영 상태를 다시 조회한 것은 아니므로 실제 적용 시 연결 대상·이력을 확인한다. 이전 published/distributed라는 표현은 당시 의미를 유지하며 현행 상태는 검토 중(in_review)/배포(published)다.
+
+### 과거 운영 확인 기록
+
 2026-10-12 운영 `epwlcallocdjkmgdmtlv`의 최신 이력은 `20261012050319_study_registration_cards`다. 다른 작업에서 이미 운영에 반영한 검토 조회·학습법 솔루션·게시 공동 편집 migration 3개는 최신 main을 합쳐 로컬 이력과 맞췄고 재적용/repair하지 않았다. 등록 카드 migration 한 개만 임시 시험·회귀·기존 데이터/권한/가이드 보존 검사 후 적용했으며, 적용 후 신규 SQL 회귀와 기존 조건 해제 회귀·dry-run 대기 없음을 확인했다. 새 보안 경고는 없고 기존 경고 4개가 유지된다. 앱 배포와 실제 브라우저 기능 확인은 별도다.
 
 선행 표형 응답 migration `20261011143258_question_answer_layouts`도 2026-10-12 운영 적용과 회귀 검증을 완료했다. 당시 검증 내용은 아래 표형 응답 절을 따른다.
 
-아래 날짜별 절과 이전 기록의 ‘운영 미적용/적용 대기’는 당시 상태이며 현재 운영 이력보다 우선하지 않는다. 이번 환경에서 로컬 DB 적용·SQL 회귀는 실행하지 않았고 실제 브라우저 테스트와 앱 배포 확인도 하지 않았다.
+아래 날짜별 절과 이전 기록의 ‘운영 미적용/적용 대기’는 당시 상태이며 현재 운영 이력보다 우선하지 않는다. 위 과거 기록의 검증 범위는 당시 환경 기준이며 이번 로컬 검증은 최신 절에 별도로 기록한다.
 
 과거 migration은 재현용으로 유지한다. 완료된 이전 절차를 재실행하지 않는다. 구형 질문지 import 함수는 폐기됐으며 관련 과거 SQL 스니펫은 현행 실행 안내가 아니다.
 
@@ -19,7 +25,7 @@
 1. 변경 내용을 저장하고 필요하면 운영 백업/복원 지점을 확인한다. 연결 대상과 이력을 점검한다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
 npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
 ```
@@ -53,16 +59,19 @@ npm run build
 
 질문·응답 DB 회귀는 아래 파일을 사용한다. 로컬 컨테이너 `supabase_db_system`에서 각 파일을 psql로 실행하며 테스트는 롤백된다.
 
+- `supabase/tests/questionnaire_workflow_v2.sql`
+- `supabase/tests/questionnaire_private_draft_access.sql`
+- `supabase/tests/review_questionnaire_collaboration.sql`
 - `supabase/tests/guide_answer_field_changes.sql`
 - `supabase/tests/guide_question_removal.sql`
 - `supabase/tests/question_responses.sql`
-- `supabase/tests/published_live_layout.sql`
+- `supabase/tests/review_live_layout.sql`
 - `supabase/tests/question_response_conditions.sql`
 - `supabase/tests/question_response_types.sql`
-- `supabase/tests/distributed_response_path.sql`
-- `supabase/tests/questionnaire_distribution_withdrawal.sql`
-- `supabase/tests/questionnaire_locked_distribution.sql`
-- `supabase/tests/distributed_response_submissions.sql`
+- `supabase/tests/published_response_path.sql`
+- `supabase/tests/questionnaire_publication_withdrawal.sql`
+- `supabase/tests/questionnaire_locked_publication.sql`
+- `supabase/tests/published_response_submissions.sql`
 
 과거 스키마 전용 SQL 테스트·이전 스니펫은 현재 DB에서 일괄 실행하지 않는다. migration 삭제·재작성이나 운영 데이터 초기화로 테스트를 맞추지 않는다.
 
@@ -115,7 +124,7 @@ npm run build
 앱 타입 검사·변경 파일 린트·관련 JS 회귀 29개·Webpack 빌드는 통과했다. 로컬 Docker/Podman과 PostgreSQL이 없는 실행 환경이므로 **로컬 migration 적용과 SQL 회귀는 미실행**이다. 실제 브라우저 테스트는 하지 않았으며 앱 배포·실사용 기능 확인은 별도 단계다. 로컬 DB가 있는 개발 환경에서 재현하려면 다음을 수행한다. `supabase start`만으로 앱 환경 변수는 바뀌지 않으므로 [로컬 연결](local-supabase.md)을 확인한다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase start
 npx supabase migration list --local
 npx supabase db push --local --dry-run --skip-vault
@@ -128,7 +137,7 @@ docker exec -i supabase_db_system psql -U postgres -d postgres -v ON_ERROR_STOP=
 일반 운영 적용 순서는 프로젝트 경로 이동 → 연결 대상·이력 확인 → dry-run/예상 파일 확인 → 실제 적용 → 대기 없음 확인 → 앱 배포 → 기능 확인이다. 이번 DB 적용은 완료됐으므로 아래 명령으로 대기 없음만 다시 확인하고 이미 적용한 파일을 재실행하지 않는다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
 npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
 # 현재 예상 대기는 없음. 새로운 대기 파일이 나오면 적용 전에 이력을 검토한다.
@@ -150,7 +159,7 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --ski
 먼저 사전 조회에서 운영 트리거·이벤트 트리거와 Realtime 함수 정의를 검토하여 외부 웹훅 등 트랜잭션 밖 부작용이 없는지 확인한다. `migration-trial.sql` 생성에는 그 조회의 `guideFunctionHash`를 세 번째 인수로 전달한다. 이후 가상 계정/질문지/응답과 테스트 가이드 함수 변경을 한 SQL 요청에서 수행하고 모두 롤백한다. 짧은 잠금/실행 시간 제한을 사용하며 시험 중 질문 저장이 잠시 대기할 수 있다. 적용 후에는 치환 대상 원문이 달라지므로 적용 전 compatibility 결과를 요구하거나 `migration-trial.sql`을 다시 실행하지 않는다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase login
 npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
 npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
@@ -215,7 +224,7 @@ npx supabase db push --linked --dry-run --skip-vault
 적용 또는 확인 순서는 프로젝트 이동 → 운영 대상/이력 확인 → dry-run의 예상 파일 확인 → 실제 적용 → 대기 없음 재확인 → 앱 배포 → 기능 확인이다. 현재 환경에서 앞의 DB 단계는 완료됐으며 아래 명령은 재현·확인용이다. 예상 외 migration이 나오면 먼저 이력을 검토하고 `migration repair`나 재적용으로 우회하지 않는다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
 npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --dry-run
 # 최초 적용 시 예상: 20261012050319_study_registration_cards.sql 한 개
@@ -239,7 +248,7 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault --
 적용 순서는 프로젝트 이동 → 운영 대상·이력 확인 → dry-run에서 예상 파일 확인 → 실제 적용 → 대기 없음 재확인 → 앱 배포 → 기능 확인이다. **이번 운영 DB 단계는 완료됐으므로 재적용할 필요가 없다.** 아래 적용 명령은 아직 적용하지 않은 별도 환경에서만 사용한다. 예상과 다른 migration이 나오면 실제 적용 전에 이력을 검토한다.
 
 ```bash
-cd /Users/jwg/MEA-System
+cd /Users/mealdm/Desktop/MEA/system
 npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
 npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
 # 최초 적용 예상: 20261013033907_question_flow_insertions.sql 한 개
@@ -473,3 +482,48 @@ npx supabase db push --linked
 npx supabase db push --linked --dry-run
 ```
 예상 밖 파일/이력 차이는 적용 전에 검토한다. 앱 배포 뒤 작성자·관리자의 초안 조회/수정, 타 리드의 목록·직접 URL·Data API 차단을 확인한다.
+
+
+## 검토·배포 명칭 전환 (2026-10-15)
+
+`20261015075725_questionnaire_review_publication_workflow.sql`을 로컬 DB에 적용했다. 기존 published(게시)는 in_review(검토 중), 기존 distributed(배포)는 published(배포)로 이전한다. 과거 migration을 수정하거나 재적용하지 않는다.
+
+### 보존과 중단 조건
+
+- 질문지·원본·섹션·배치·작성 답변·최종 제출·검토 요청·읽음·상태 요청 영수증의 행 수와 정렬 체크섬을 전후 비교한다. 지정한 상태/열 명칭 외의 ID·revision·본문·작성/수정/제출 시각 변화는 전체 롤백한다. 2주차 안내도 그대로 유지한다.
+- 검토/배포 시각은 열 rename으로 옮기므로 다시 생성하지 않는다. 이전 JSON 본문과 응답 값에 포함된 단어는 치환하지 않는다. 원본 질문의 잠금 시각도 보존한다.
+- 선행 함수 75개의 정의 지문이 예상과 다르거나 기존 응답 단계가 published/distributed 이외이면 중단한다. 지문 검사를 지우거나 데이터 삭제·원격 reset/migration repair로 우회하지 않는다. 선행 migration 적용 여부와 실제 정의 차이를 먼저 검토한다.
+- 함수 rename은 OID와 기존 ACL·보안 모드를 유지한다. 변경된 public 상태 RPC 두 개만 필수 workflow version 인자를 추가하고 authenticated/service_role 실행 권한을 명시한다. 환경별 guide_consultant_id는 수정하지 않는다.
+- 5초 lock_timeout, 120초 statement_timeout 및 한 트랜잭션을 사용한다. 잠금 중 대상 표의 트리거 enabled 상태를 저장하고 같은 트랜잭션에서 복구한다. 실패하면 DB는 이전 계약을 유지한다.
+
+### 구형 클라이언트와 배포 순서
+
+같은 `published` 문자열의 의미가 달라지므로 구형 앱과 새 DB를 섞어 서비스하지 않는다. 질문지 및 원본 질문 관련 요청을 막을 수 있는 점검 시간을 확보한다. 사용자는 저장을 마친 뒤 새로고침하도록 안내한다. 새 앱은 API header `X-Questionnaire-Workflow: 2`, public 상태 RPC는 `p_workflow_version=2`를 사용하며 구형 브라우저 요청은 426으로 차단한다. 같은 이름의 구형 RPC 시그니처는 제거한다. 새 앱의 SWR 캐시 범위도 workflow-2로 분리한다. 로컬 질문 초안·답변은 일괄 삭제하지 않는다.
+
+1. 아래 경로에서 연결된 운영 프로젝트와 현재 migration 이력을 확인한다.
+2. dry-run의 전체 대기 목록을 기존 운영 기록과 대조한다. 이번 새 파일은 `20261015075725_questionnaire_review_publication_workflow.sql` 하나이며, 아직 운영에 적용하지 않은 앞선 로컬 migration도 순서대로 필요하다. 예상 밖 파일이나 이력 차이가 나오면 적용 전에 검토한다.
+3. 질문지/질문 관련 요청을 차단한 점검 상태에서 DB를 적용한다. 특히 이전 시작 안내 migration의 응답 존재 중단 조건도 그대로 따른다.
+4. 적용 대기 없음 확인 후 같은 계약의 앱을 배포한다. 구형 앱 인스턴스/오래된 캐시를 더 이상 서비스하지 않는지 확인한다.
+5. 새로고침하고 역할별 기능을 확인한 뒤 요청 차단을 해제한다.
+
+```sh
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase projects list
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 대상/대기 목록을 확인하고 점검 상태로 전환한 뒤에만 실행
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+# 적용 대기 없음 → 새 앱 배포 → 새로고침·역할별 확인 → 서비스 재개
+```
+
+앱 배포 실패 시 점검 상태를 유지하고 수정된 앱을 배포한다. 새 DB에서 이전 앱만 되돌려 서비스하지 않는다. DB까지 되돌려야 한다면 점검 중 확보한 복원 지점과 상태·답변 보존을 포함한 별도 역이전 계획이 필요하며 운영 답변을 임의 삭제하지 않는다.
+
+### 검증 결과
+
+- 로컬 전환 시험은 전체 롤백으로 검증한 뒤 영구 적용했다. 질문지 6개와 응답 세션 12개의 상태/시각 이전 및 모든 관련 데이터 보존 검사를 통과했다. 적용 뒤 질문지 draft 1 / in_review 1 / published 4, 세션 in_review 4 / published 8이다.
+- 현재 스키마용 SQL 25개에서 초안 작성자/관리자 접근, 검토 공동 편집, 요청 권한, 미처리 요청 배포 차단, 원본 잠금, 저장 응답이 있는 배포 취소 차단, 가이드 동기화, 질문 필드/참조, 시작 안내, 배포 응답/제출과 집계를 검증했다. 가상 데이터는 모두 롤백했다.
+- 신규 `questionnaire_workflow_v2.sql`은 구형/누락 workflow version 거절, 검토/배포 시각 분리, 질문 공유, 타 리드 배포 거부, consultant의 검토본 차단/배포본 허용, 제출 세션 단계, Realtime 배포 채널, 멱등 재시도, 익명 실행 거부를 검사한다.
+- 관련 JS 회귀 164개·타입 검사·변경 파일 린트·Webpack 빌드 통과. DB lint(public/private)와 security advisor에서 오류/경고 없음. 로컬 dry-run 적용 대기 없음.
+- 전체 verify 스크립트 묶음에는 이전 리팩터링을 반영하지 않은 질문 schema/preview mock과 외부 실행 환경이 필요한 항목이 있어 전체 묶음 성공으로 간주하지 않는다. 이번 검증은 위 현재 스키마/관련 코드 회귀를 기준으로 한다. 과거 스키마 전용 SQL·migration 재실행 테스트는 그 시점 그대로 보존하며 최신 DB에 일괄 실행하지 않는다.
+- 운영 DB 조회/적용, 운영 앱 배포, 실제 브라우저 검증은 수행하지 않았다.

@@ -39,11 +39,11 @@ import type { QuestionnaireListItem as Item } from '../../lib/questionnaire/type
 
 import { ConsultantQuestionnaireList } from './ConsultantQuestionnaireList';
 import { DeleteQuestionnaireButton } from './DeleteQuestionnaireButton';
-import {
-  NewPublicationBadge,
-  usePublicationNotifications,
-} from './PublicationNotifications';
 import { questionnaireStatusColors } from './questionnaire-styles';
+import {
+  NewQuestionnaireBadge,
+  useQuestionnaireNotifications,
+} from './QuestionnaireNotifications';
 import {
   questionnaireStatusLabels,
   QuestionnaireStatusSelect,
@@ -56,8 +56,8 @@ const date = new Intl.DateTimeFormat('ko-KR', {
 });
 export function QuestionnaireList(props: {
   drafts: Item[];
+  inReview: Item[];
   published: Item[];
-  distributed: Item[];
   archived?: Item[];
   staff: boolean;
   loading?: boolean;
@@ -66,22 +66,22 @@ export function QuestionnaireList(props: {
     <StaffQuestionnaireList {...props} />
   ) : (
     <ConsultantQuestionnaireList
-      items={props.distributed}
+      items={props.published}
       loading={props.loading}
     />
   );
 }
 function StaffQuestionnaireList(props: {
   drafts: Item[];
+  inReview: Item[];
   published: Item[];
-  distributed: Item[];
   archived?: Item[];
   loading?: boolean;
 }) {
   const params = useSearchParams();
   const options = readQuestionnaireListOptions(params);
   const model = questionnaireListModel(props, options);
-  const { unreadIds } = usePublicationNotifications();
+  const { unreadIds } = useQuestionnaireNotifications();
   function update(values: Record<string, string>) {
     const url = new URL(window.location.href);
     Object.entries(values).forEach(([key, value]) =>
@@ -90,7 +90,7 @@ function StaffQuestionnaireList(props: {
     window.history.replaceState(null, '', url);
   }
   function selectStatus(status: string) {
-    update({ qStatus: status === 'all' ? '' : status, qPage: '' });
+    update({ qStage: status === 'all' ? '' : status, qStatus: '', qPage: '' });
   }
   const groups =
     options.status === 'all'
@@ -112,8 +112,8 @@ function StaffQuestionnaireList(props: {
           [
             'all',
             'draft',
+            'in_review',
             'published',
-            'distributed',
             'archived',
           ] as QuestionnaireListStatus[]
         ).map((status) => (
@@ -129,7 +129,7 @@ function StaffQuestionnaireList(props: {
         </span>
         {options.status !== 'all' && (
           <span>
-            {options.status === 'distributed' ? '최근 배포순' : '최근 수정순'}
+            {options.status === 'published' ? '최근 배포순' : '최근 수정순'}
           </span>
         )}
       </div>
@@ -294,10 +294,10 @@ function QuestionnaireListRow({
     !item.archivedAt &&
     ((!item.isOwner && unread) ||
       (QUESTIONNAIRE_REVIEWS_VISIBLE && (item.unreadReviewCount ?? 0) > 0));
-  const distributed = item.status === 'distributed';
+  const published = item.status === 'published';
   const day = date.format(
     new Date(
-      distributed ? (item.distributedAt ?? item.updatedAt) : item.updatedAt,
+      published ? (item.publishedAt ?? item.updatedAt) : item.updatedAt,
     ),
   );
   const creator = item.isOwner ? '나' : item.creatorName?.trim() || '—';
@@ -322,7 +322,7 @@ function QuestionnaireListRow({
             </Link>
           )}
           {!item.archivedAt && !item.isOwner && unread && (
-            <NewPublicationBadge />
+            <NewQuestionnaireBadge />
           )}
           {item.isOwner && (
             <>
@@ -334,7 +334,7 @@ function QuestionnaireListRow({
         <p className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
           <span>{creator}</span>
           <span className="whitespace-nowrap">
-            {distributed ? '배포' : '수정'} {day}
+            {published ? '배포' : '수정'} {day}
           </span>
           {item.archivedAt && (
             <span className="block">복원 후 내용을 열 수 있습니다.</span>
@@ -352,7 +352,7 @@ function QuestionnaireListRow({
               size="icon-sm"
               className="relative"
               title={
-                distributed
+                published
                   ? `제출된 응답 ${item.submittedResponseCount ?? 0}명 보기`
                   : item.status === 'draft'
                     ? '이어서 작성'
@@ -361,21 +361,21 @@ function QuestionnaireListRow({
               nativeButton={false}
               render={
                 <Link
-                  href={distributed ? responsesHref : href}
+                  href={published ? responsesHref : href}
                   prefetch={false}
                   scroll={false}
                 />
               }
-              aria-label={`${item.title || '제목 없는 질문지'} ${distributed ? `제출된 응답 ${item.submittedResponseCount ?? 0}명 보기` : item.status === 'draft' ? '이어서 작성' : '열기'}`}
+              aria-label={`${item.title || '제목 없는 질문지'} ${published ? `제출된 응답 ${item.submittedResponseCount ?? 0}명 보기` : item.status === 'draft' ? '이어서 작성' : '열기'}`}
             >
-              {distributed ? (
+              {published ? (
                 <MessageSquareText aria-hidden="true" />
               ) : item.status === 'draft' ? (
                 <Pencil aria-hidden="true" />
               ) : (
                 <Eye aria-hidden="true" />
               )}
-              {distributed && (
+              {published && (
                 <span
                   aria-hidden="true"
                   className="absolute -right-2 -top-2 min-w-4 rounded bg-muted px-1 text-[10px] font-semibold leading-4 text-foreground"
@@ -385,11 +385,11 @@ function QuestionnaireListRow({
               )}
             </Button>
           )}
-          {item.canDelete && !item.hasDistributed && !item.archivedAt && (
+          {item.canDelete && !item.hasPublished && !item.archivedAt && (
             <DeleteQuestionnaireButton
               questionnaireId={item.id}
               revision={item.revision}
-              hasDistributed={false}
+              hasPublished={false}
               title={item.title}
             />
           )}

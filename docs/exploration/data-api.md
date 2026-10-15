@@ -132,3 +132,8 @@ DB는 활성 행의 ID/updated_at과 검색 조건으로 개수를 구한 뒤 `u
 독립 `kind: exploration` 대신 서술형 `text`의 `explorationReference` mark로 탐구활동 UUID를 저장한다. 기존 첨부형 질문·작성/가이드/제출 답변도 같은 형식으로 변환한다. 탐구활동 원본·파일·API·RLS는 유지하며 가이드 예외는 표시 가능한 본문 참조 범위로 제한한다. 이전 절차와 검증은 [질문 운영 문서](../questions-operations.md#독립-첨부형-제거와-본문-참조-전환-2026-10-14)를 따른다.
 
 - 질문지 시작 안내의 등록 버튼은 ExplorationView registrationOnly로 기존 저장 경로를 재사용한다. 계정 문맥만 identityOnly로 조회하며 API·권한·저장 모델 변경은 없다.
+
+
+### 질문지 상태 명칭 연결 (2026-10-15)
+
+질문지 검토 단계는 `in_review`, 컨설턴트 배포는 `published`다. 가이드 답변에서 언급한 자료의 열람 권한은 지정 가이드의 in_review 세션을 기준으로 계산하며 개인 published 응답을 가이드로 공개하지 않는다. 기존 자료 ID·본문 참조·파일/소유자 권한은 유지한다. 연결된 질문지의 상태 명칭과 함수 이전은 [질문 저장 계약](../questionnaire-storage-design.md#검토배포-상태-저장-계약-2026-10-15), 적용 순서는 [질문 운영 안내](../questions-operations.md#검토배포-명칭-전환-2026-10-15)를 따른다.

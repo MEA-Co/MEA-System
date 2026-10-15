@@ -95,7 +95,7 @@ export async function loadQuestionnaireView(
   const { data, error } = await client
     .from('questionnaires')
     .select(
-      'id, title, status, published_at, distributed_at, revision, updated_at, archived_at, created_by',
+      'id, title, status, review_started_at, published_at, revision, updated_at, archived_at, created_by',
     )
     .order('updated_at', { ascending: false });
   if (error)
@@ -104,8 +104,8 @@ export async function loadQuestionnaireView(
     id: string;
     title: string;
     status: QuestionnaireListItem['status'];
+    review_started_at: string | null;
     published_at: string | null;
-    distributed_at: string | null;
     revision: number;
     updated_at: string;
     archived_at: string | null;
@@ -131,9 +131,9 @@ export async function loadQuestionnaireView(
   const submissionCounts = new Map<string, number>();
   if (
     staff &&
-    rows.some((row) => row.status === 'distributed' && !row.archived_at)
+    rows.some((row) => row.status === 'published' && !row.archived_at)
   ) {
-    const counts = await client.rpc('distributed_submission_counts');
+    const counts = await client.rpc('published_submission_counts');
     if (counts.error)
       throw new Error('제출 응답 개수를 불러오지 못했어요.', {
         cause: counts.error,
@@ -148,10 +148,10 @@ export async function loadQuestionnaireView(
   if (
     staff &&
     rows.some(
-      (row) => row.status === 'published' || row.status === 'distributed',
+      (row) => row.status === 'in_review' || row.status === 'published',
     )
   ) {
-    const result = await client.rpc('published_questionnaire_authors');
+    const result = await client.rpc('shared_questionnaire_authors');
     if (result.error)
       throw new Error('제작자 이름을 불러오지 못했어요.', {
         cause: result.error,
@@ -168,7 +168,7 @@ export async function loadQuestionnaireView(
         ? item.status !== 'draft' ||
           item.created_by === access.user.id ||
           viewRole === 'admin'
-        : item.status === 'distributed' && !item.archived_at,
+        : item.status === 'published' && !item.archived_at,
     )
     .map((item) => ({
       id: item.id,
@@ -179,11 +179,11 @@ export async function loadQuestionnaireView(
         : undefined,
       status: item.status,
       archivedAt: item.archived_at,
+      reviewStartedAt: item.review_started_at,
       publishedAt: item.published_at,
-      distributedAt: item.distributed_at,
       updatedAt: item.updated_at,
       revision: item.revision,
-      hasDistributed: item.status === 'distributed',
+      hasPublished: item.status === 'published',
       isOwner: staff && item.created_by === access.user.id,
       canEditDraft:
         staff &&
@@ -198,15 +198,15 @@ export async function loadQuestionnaireView(
         staff && (viewRole === 'admin' || item.created_by === access.user.id),
     }));
   const result = {
-    publishedSources: [] as QuestionBlockRow[],
+    sharedSources: [] as QuestionBlockRow[],
     drafts: questionnaires.filter(
       (item) => !item.archivedAt && item.status === 'draft',
     ),
+    inReview: questionnaires.filter(
+      (item) => !item.archivedAt && item.status === 'in_review',
+    ),
     published: questionnaires.filter(
       (item) => !item.archivedAt && item.status === 'published',
-    ),
-    distributed: questionnaires.filter(
-      (item) => !item.archivedAt && item.status === 'distributed',
     ),
     archived: questionnaires.filter((item) => !!item.archivedAt),
     staff,
@@ -214,7 +214,7 @@ export async function loadQuestionnaireView(
     reviews: [] as QuestionReview[],
     pendingReviewCount: 0,
     initialDraft: null as QuestionnaireDraft | null,
-    publishedDocument: null as QuestionnaireDraft | null,
+    sharedDocument: null as QuestionnaireDraft | null,
   };
   if (!requestedId) return result;
   if (requestedId === 'new') {
@@ -247,11 +247,11 @@ export async function loadQuestionnaireView(
       '보관된 질문지예요. 목록에서 상태를 복원한 뒤 열어 주세요.',
     );
   const editable =
-    (selected.isOwner && selected.status !== 'distributed') ||
+    (selected.isOwner && selected.status !== 'published') ||
     (viewRole === 'admin' && selected.status === 'draft') ||
-    (staff && selected.status === 'published');
+    (staff && selected.status === 'in_review');
   const documentResult = await client.rpc(
-    editable ? 'read_questionnaire_draft' : 'read_published_questionnaire',
+    editable ? 'read_questionnaire_draft' : 'read_shared_questionnaire',
     { p_questionnaire_id: requestedId },
   );
   if (documentResult.error || !documentResult.data)
@@ -271,22 +271,22 @@ export async function loadQuestionnaireView(
       }),
     );
   if (
-    (selected.status === 'distributed' ||
-      (staff && selected.status === 'published')) &&
+    (selected.status === 'published' ||
+      (staff && selected.status === 'in_review')) &&
     document.sections.some((section) =>
       section.questions.some((question) => question.sourceQuestionId),
     )
   ) {
-    const sources = await client.rpc('read_published_question_sources', {
+    const sources = await client.rpc('read_shared_question_sources', {
       p_questionnaire_id: requestedId,
     });
     if (sources.error)
-      throw new Error('게시된 질문지의 질문을 불러오지 못했어요.', {
+      throw new Error('질문지의 질문을 불러오지 못했어요.', {
         cause: sources.error,
       });
-    result.publishedSources = (sources.data ?? []) as QuestionBlockRow[];
+    result.sharedSources = (sources.data ?? []) as QuestionBlockRow[];
     if (!staff)
-      result.publishedSources.forEach((source) => {
+      result.sharedSources.forEach((source) => {
         source.details = source.details?.filter(
           (detail) => detail.visibleToConsultants,
         );
@@ -294,7 +294,7 @@ export async function loadQuestionnaireView(
   }
   result.selected = selected;
   if (editable) result.initialDraft = document;
-  else result.publishedDocument = document;
+  else result.sharedDocument = document;
   if (staff && selected.status !== 'draft') {
     const reviews = await client
       .from('question_review_requests')
@@ -433,10 +433,10 @@ export async function saveQuestionnaireDraft(
 }
 
 // This stage checks readiness only. Never mutate status or create responses.
-export async function checkQuestionnaireDistribution(input: unknown): Promise<{
+export async function checkQuestionnairePublication(input: unknown): Promise<{
   error?: string;
   status?: number;
-  distributionChecked?: boolean;
+  publicationChecked?: boolean;
 }> {
   const access = await getUserAccess();
   if (
@@ -482,10 +482,10 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
       status: 409,
       error: '질문지가 변경됐어요. 목록을 새로고침한 뒤 다시 확인해 주세요.',
     };
-  if (row.status !== 'published' || row.archived_at !== null)
+  if (row.status !== 'in_review' || row.archived_at !== null)
     return {
       status: 409,
-      error: '게시 중인 질문지만 배포 조건을 확인할 수 있어요.',
+      error: '검토 중인 질문지만 배포 조건을 확인할 수 있어요.',
     };
   // The existing RPC counts unresolved reviews by source question, across origins.
   const counts = await client.rpc('question_review_counts');
@@ -511,18 +511,18 @@ export async function checkQuestionnaireDistribution(input: unknown): Promise<{
       status: 409,
       error: `미처리 검토 요청이 ${remaining}건 남아 있어 배포할 수 없어요. 모두 처리한 뒤 다시 확인해 주세요.`,
     };
-  return { distributionChecked: true };
+  return { publicationChecked: true };
 }
 
-export async function publishQuestionnaireDraft(
+export async function transitionQuestionnaireDraft(
   input: unknown,
-  mode: 'publish' | 'distribute' = 'publish',
-): Promise<{ error?: string; status?: number; distributionChecked?: boolean }> {
-  if (mode === 'distribute') {
-    const check = await checkQuestionnaireDistribution(input);
+  mode: 'start_review' | 'publish' = 'start_review',
+): Promise<{ error?: string; status?: number; publicationChecked?: boolean }> {
+  if (mode === 'publish') {
+    const check = await checkQuestionnairePublication(input);
     if (check.error) return check;
   }
-  const label = mode === 'publish' ? '게시' : '배포';
+  const label = mode === 'start_review' ? '검토를 시작' : '배포';
   const access = await getUserAccess();
   if (
     !access.user ||
@@ -541,10 +541,11 @@ export async function publishQuestionnaireDraft(
     return { error: `질문지를 확인한 뒤 ${label}해 주세요.` };
   const client = createClient(await cookies());
   const { error } = await client.rpc(
-    mode === 'publish' ? 'publish_questionnaire' : 'distribute_questionnaire',
+    mode === 'start_review' ? 'start_questionnaire_review' : 'publish_questionnaire',
     {
       p_questionnaire_id: parsed.data.questionnaireId,
       p_expected_revision: parsed.data.revision,
+      ...(mode === 'publish' ? { p_workflow_version: 2 } : {}),
     },
   );
   if (error?.code === '40001')
@@ -555,7 +556,7 @@ export async function publishQuestionnaireDraft(
   if (error?.code === '42501')
     return {
       status: 403,
-      error: '질문지를 처음 만든 사람만 게시하거나 배포할 수 있어요.',
+      error: '질문지를 처음 만든 사람만 검토를 시작하거나 배포할 수 있어요.',
     };
   if (error?.message?.includes('Unresolved question reviews'))
     return {
@@ -567,7 +568,7 @@ export async function publishQuestionnaireDraft(
     return {
       status: 409,
       error:
-        '저장된 질문을 배치한 질문지는 현재 제작·게시·미리보기까지 지원해요. 배포는 질문 버전 고정과 응답 저장 연결 후 사용할 수 있어요.',
+        '저장된 질문을 배치한 질문지는 현재 제작·검토·미리보기까지 지원해요. 배포는 질문 버전 고정과 응답 저장 연결 후 사용할 수 있어요.',
     };
   if (error?.message?.includes('Question placement dependency'))
     return {
@@ -596,7 +597,7 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
   error?: string;
   status?: number;
   questionnaireId?: string;
-  distributionChecked?: boolean;
+  publicationChecked?: boolean;
 }> {
   const access = await getUserAccess();
   if (
@@ -609,16 +610,16 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
     .object({
       questionnaireId: z.uuid(),
       revision: z.number().int().positive(),
-      expectedStatus: z.enum(['draft', 'published', 'distributed']),
+      expectedStatus: z.enum(['draft', 'in_review', 'published']),
       archivedAt: z.string().nullable(),
-      status: z.enum(['draft', 'published', 'distributed', 'archived']),
+      status: z.enum(['draft', 'in_review', 'published', 'archived']),
       requestId: z.uuid(),
     })
     .safeParse(input);
   if (!parsed.success)
     return { status: 400, error: '변경할 상태를 확인해 주세요.' };
   const data = parsed.data;
-  // Existing request receipts make actual distribution retries idempotent.
+  // Existing request receipts make actual publication retries idempotent.
   // The database validates pending reviews in the same transaction as locking.
   const client = createClient(await cookies());
   const result = await client.rpc('change_questionnaire_status', {
@@ -628,10 +629,11 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
     p_expected_archived_at: data.archivedAt,
     p_status: data.status,
     p_request_id: data.requestId,
+    p_workflow_version: 2,
   });
   if (result.error) {
     const { code, message } = result.error;
-    if (message?.includes('Saved responses prevent distribution withdrawal'))
+    if (message?.includes('Saved responses prevent publication withdrawal'))
       return {
         status: 409,
         error:
@@ -670,7 +672,7 @@ export async function changeQuestionnaireStatus(input: unknown): Promise<{
       return {
         status: 409,
         error:
-          '현재 상태에서 변경할 수 없어요. 저장된 응답이 없는 배포본만 게시나 수정 중으로 되돌릴 수 있어요.',
+          '현재 상태에서 변경할 수 없어요. 저장된 응답이 없는 배포본만 검토 중이나 수정 중으로 되돌릴 수 있어요.',
       };
     return {
       status: mutationStatus(code),

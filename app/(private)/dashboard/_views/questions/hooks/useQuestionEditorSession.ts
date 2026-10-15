@@ -570,7 +570,7 @@ export function useQuestionEditorSession({
   }
 
   async function save(manual = true) {
-    if (editorData.detail.data?.distribution_locked_at) return;
+    if (editorData.detail.data?.publication_locked_at) return;
     if (
       !draft ||
       importOpen ||

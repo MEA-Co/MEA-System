@@ -372,7 +372,7 @@ test('server save checks actual role/onboarding and maps database conflicts with
   }
 });
 
-test('questionnaire loader permits published staff collaboration and keeps consultant presentation read-only', async () => {
+test('questionnaire loader permits inReview staff collaboration and keeps consultant presentation read-only', async () => {
   const ownerId = randomUUID();
   const otherId = randomUUID();
   const doc = document();
@@ -381,7 +381,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       actual: 'consultant_lead',
       visible: 'consultant_lead',
       user: ownerId,
-      status: 'published',
+      status: 'in_review',
       editable: true,
       details: 0,
     },
@@ -389,7 +389,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       actual: 'admin',
       visible: 'admin',
       user: otherId,
-      status: 'published',
+      status: 'in_review',
       editable: true,
       details: 0,
     },
@@ -397,7 +397,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       actual: 'consultant_lead',
       visible: 'consultant_lead',
       user: otherId,
-      status: 'published',
+      status: 'in_review',
       editable: true,
       details: 0,
     },
@@ -405,7 +405,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       actual: 'consultant',
       visible: 'consultant',
       user: otherId,
-      status: 'distributed',
+      status: 'published',
       editable: false,
       details: 0,
     },
@@ -413,7 +413,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       actual: 'admin',
       visible: 'consultant',
       user: ownerId,
-      status: 'distributed',
+      status: 'published',
       editable: false,
       details: 0,
     },
@@ -426,8 +426,8 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       status: scenario.status,
       revision: 2,
       updated_at: '2026-09-18T00:00:00Z',
-      published_at: '2026-09-18T00:00:00Z',
-      distributed_at: null,
+      review_started_at: '2026-09-18T00:00:00Z',
+      published_at: null,
       created_by: ownerId,
       archived_at: null,
       questionnaire_review_requests: [{ count: 2 }],
@@ -463,7 +463,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
             },
             rpc: async (name) => {
               calls.push(name);
-              if (name === 'read_published_question_sources')
+              if (name === 'read_shared_question_sources')
                 return { data: [], error: null };
               if (name === 'question_review_counts')
                 return {
@@ -472,7 +472,7 @@ test('questionnaire loader permits published staff collaboration and keeps consu
                   ],
                   error: null,
                 };
-              if (name === 'published_questionnaire_authors')
+              if (name === 'shared_questionnaire_authors')
                 return {
                   data: [{ questionnaireId: row.id, name: '제작자' }],
                   error: null,
@@ -516,9 +516,9 @@ test('questionnaire loader permits published staff collaboration and keeps consu
       calls.find((name) => name.startsWith('read_')),
       scenario.editable
         ? 'read_questionnaire_draft'
-        : 'read_published_questionnaire',
+        : 'read_shared_questionnaire',
     );
-    const loaded = result.initialDraft ?? result.publishedDocument;
+    const loaded = result.initialDraft ?? result.sharedDocument;
     assert.equal(
       loaded.sections[0].questions[0].details.length,
       scenario.details,
@@ -526,8 +526,8 @@ test('questionnaire loader permits published staff collaboration and keeps consu
     row.archived_at = '2026-09-28T00:00:00Z';
     const archiveList = await loadQuestionnaireView();
     assert.equal(
-      archiveList.distributed.length +
-        archiveList.published.length +
+      archiveList.published.length +
+        archiveList.inReview.length +
         archiveList.drafts.length,
       0,
     );

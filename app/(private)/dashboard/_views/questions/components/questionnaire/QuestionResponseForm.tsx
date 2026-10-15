@@ -22,6 +22,7 @@ import {
 } from '../../lib/question-responses';
 import {
   QUESTIONNAIRE_API,
+  QUESTIONNAIRE_HEADERS,
   QuestionnaireApiError,
 } from '../../lib/questionnaire/api-client';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
@@ -35,14 +36,14 @@ async function request(
   questionnaireId: string,
   method: string,
   body?: unknown,
-  distributed = false,
+  published = false,
 ): Promise<QuestionResponseSnapshot> {
   const response = await fetch(
-    `${QUESTIONNAIRE_API}/${questionnaireId}/${distributed ? 'distributed-responses' : 'question-responses'}`,
+    `${QUESTIONNAIRE_API}/${questionnaireId}/${published ? 'published-responses' : 'review-responses'}`,
     {
       method,
       cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...QUESTIONNAIRE_HEADERS, 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {}),
     },
   );
@@ -57,10 +58,10 @@ async function request(
 export function QuestionResponseForm({
   questionnaireId,
   onEditorState,
-  distributed = false,
+  published = false,
 }: {
   questionnaireId: string;
-  distributed?: boolean;
+  published?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
   const { mutate } = useSWRConfig();
@@ -69,11 +70,11 @@ export function QuestionResponseForm({
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void request(questionnaireId, 'POST', {}, distributed)
+    void request(questionnaireId, 'POST', {}, published)
       .then((data) => {
         if (!cancelled) {
           setRemote(data);
-          if (distributed) void mutate(`${QUESTIONNAIRE_API}/unread`);
+          if (published) void mutate(`${QUESTIONNAIRE_API}/unread`);
           setError('');
         }
       })
@@ -83,7 +84,7 @@ export function QuestionResponseForm({
     return () => {
       cancelled = true;
     };
-  }, [questionnaireId, attempt, distributed, mutate]);
+  }, [questionnaireId, attempt, published, mutate]);
   if (!remote)
     return error ? (
       <div role="alert" className="space-y-3">
@@ -98,7 +99,7 @@ export function QuestionResponseForm({
       key={remote.id}
       questionnaireId={questionnaireId}
       initial={remote}
-      distributed={distributed}
+      published={published}
       onEditorState={onEditorState}
     />
   );
@@ -107,10 +108,10 @@ function ResponseEditor({
   questionnaireId,
   initial,
   onEditorState,
-  distributed = false,
+  published = false,
 }: {
   questionnaireId: string;
-  distributed?: boolean;
+  published?: boolean;
   initial: QuestionResponseSnapshot;
   onEditorState?: (state: QuestionnaireEditorState) => void;
 }) {
@@ -252,7 +253,7 @@ function ResponseEditor({
         questionnaireId,
         'PUT',
         pending,
-        distributed,
+        published,
       );
       session.current.revision = result.revision;
       setSnapshot(result);
@@ -261,7 +262,7 @@ function ResponseEditor({
       session.current.retry = null;
       setPendingSave(null);
       setError('');
-      if (distributed) {
+      if (published) {
         void mutate(`${QUESTIONNAIRE_API}/responses`);
         void mutate(`${QUESTIONNAIRE_API}/unread`);
       }
@@ -283,7 +284,7 @@ function ResponseEditor({
               questionnaireId,
               'GET',
               undefined,
-              distributed,
+              published,
             );
             latestRemoteHandler.current?.(latest);
             if (latest.definitionToken !== snapshot.definitionToken) {
@@ -357,7 +358,7 @@ function ResponseEditor({
         questionnaireId,
         'GET',
         undefined,
-        distributed,
+        published,
       );
       if (
         session.current.busy ||
@@ -408,7 +409,7 @@ function ResponseEditor({
             >
               저장
             </Button>
-            {distributed && (
+            {published && (
               <Button
                 disabled={locked || saving || !!pendingSave}
                 onClick={() => void save(true)}
@@ -419,7 +420,7 @@ function ResponseEditor({
           </div>
         </div>
       )}
-      {distributed && hasResponseQuestions && (
+      {published && hasResponseQuestions && (
         <p className="text-sm text-muted-foreground">
           저장한 답변은 본인만 볼 수 있습니다. 제출하면 리드에게 공개되며, 제출
           후에도 수정할 수 있습니다.
@@ -447,14 +448,14 @@ function ResponseEditor({
       <QuestionnairePreview
         startNotice={snapshot.startNotice}
         reviewQuestionnaireId={
-          distributed || snapshot.sourceDeleted ? undefined : questionnaireId
+          published || snapshot.sourceDeleted ? undefined : questionnaireId
         }
         key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}
         library={snapshot.questions.map((q) => q.definition)}
-        showPrivateDetails={!distributed}
-        showGuideAnswers={distributed}
+        showPrivateDetails={!published}
+        showGuideAnswers={published}
         response={{
           rows,
           onChange: change,

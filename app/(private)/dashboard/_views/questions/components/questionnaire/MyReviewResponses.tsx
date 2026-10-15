@@ -22,7 +22,7 @@ type Item = {
   updated_at: string;
   source_deleted: boolean;
 };
-export function MyPublishedResponses() {
+export function MyReviewResponses() {
   const { data, error } = useSWR<Item[]>(
     '/api/questionnaires/my-responses',
     questionnaireFetcher,

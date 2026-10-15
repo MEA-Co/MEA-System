@@ -13,10 +13,10 @@ export async function questionResponseCommand(
   questionnaireId: string,
   mode: 'read' | 'open' | 'save',
   input?: unknown,
-  distributed = false,
+  published = false,
 ) {
   const access = await requireUserAccess({
-    allowedRoles: distributed
+    allowedRoles: published
       ? ['admin', 'consultant_lead', 'consultant']
       : ['admin', 'consultant_lead'],
   });
@@ -24,9 +24,9 @@ export async function questionResponseCommand(
   if (
     role !== 'admin' &&
     role !== 'consultant_lead' &&
-    !(distributed && role === 'consultant')
+    !(published && role === 'consultant')
   )
-    throw new QuestionnaireHttpError(403, '게시본 답변 권한이 없어요.');
+    throw new QuestionnaireHttpError(403, '검토본 답변 권한이 없어요.');
   const client = createClient(await cookies());
   const args: Record<string, unknown> = { p_questionnaire_id: questionnaireId };
   if (mode === 'save') {
@@ -73,7 +73,7 @@ export async function questionResponseCommand(
     });
   }
   const { data, error } = await client.rpc(
-    `${mode}_${distributed ? 'distributed_' : ''}question_response_session`,
+    published ? `${mode}_published_question_response_session` : `${mode}_review_response_session`,
     args,
   );
   if (error) {
@@ -101,7 +101,7 @@ export async function questionResponseCommand(
   return data;
 }
 
-export async function listMyPublishedResponses() {
+export async function listMyReviewResponses() {
   const access = await requireUserAccess({
     allowedRoles: ['admin', 'consultant_lead'],
   });
@@ -109,7 +109,7 @@ export async function listMyPublishedResponses() {
   if (role !== 'admin' && role !== 'consultant_lead')
     throw new QuestionnaireHttpError(403, '응답 조회 권한이 없어요.');
   const client = createClient(await cookies());
-  const { data, error } = await client.rpc('list_my_published_responses');
+  const { data, error } = await client.rpc('list_my_review_responses');
   if (error)
     throw new QuestionnaireHttpError(503, '내 응답을 불러오지 못했어요.');
   return data;

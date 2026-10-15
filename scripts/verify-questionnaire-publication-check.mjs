@@ -18,7 +18,7 @@ const source = readFileSync(
 function setup({
   role = 'consultant_lead',
   owner = actor,
-  status = 'published',
+  status = 'in_review',
   revision = 2,
   archived = null,
   counts = [],
@@ -53,7 +53,7 @@ function setup({
       calls.push(name);
       if (name === 'question_review_counts') return { data: counts, error };
       assert.ok(
-        ['distribute_questionnaire', 'change_questionnaire_status'].includes(
+        ['publish_questionnaire', 'change_questionnaire_status'].includes(
           name,
         ),
       );
@@ -87,11 +87,11 @@ function setup({
   return { api: exports, calls };
 }
 const input = { questionnaireId: id, revision: 2 };
-test('pending reviews reject distribution even when already read', async () => {
+test('pending reviews reject publication even when already read', async () => {
   const { api } = setup({
     counts: [{ questionnaire_id: id, count: 2, unread_count: 0 }],
   });
-  const result = await api.checkQuestionnaireDistribution(input);
+  const result = await api.checkQuestionnairePublication(input);
   assert.equal(result.status, 409);
   assert.match(result.error, /2건/);
 });
@@ -100,24 +100,24 @@ test('resolved or unrelated reviews allow check only', async () => {
     counts: [{ questionnaire_id: actor, count: 4 }],
   });
   assert.equal(
-    (await api.checkQuestionnaireDistribution(input)).distributionChecked,
+    (await api.checkQuestionnairePublication(input)).publicationChecked,
     true,
   );
   assert.deepEqual(calls, ['question_review_counts']);
 });
-test('both distribution API paths call the actual database command', async () => {
+test('both publication API paths call the actual database command', async () => {
   const { api, calls } = setup();
   assert.equal(
-    (await api.publishQuestionnaireDraft(input, 'distribute')).error,
+    (await api.transitionQuestionnaireDraft(input, 'publish')).error,
     undefined,
   );
   assert.equal(
     (
       await api.changeQuestionnaireStatus({
         ...input,
-        expectedStatus: 'published',
+        expectedStatus: 'in_review',
         archivedAt: null,
-        status: 'distributed',
+        status: 'published',
         requestId: actor,
       })
     ).questionnaireId,
@@ -125,7 +125,7 @@ test('both distribution API paths call the actual database command', async () =>
   );
   assert.deepEqual(calls, [
     'question_review_counts',
-    'distribute_questionnaire',
+    'publish_questionnaire',
     'change_questionnaire_status',
   ]);
 });
@@ -133,14 +133,14 @@ test('database pending-review rejection is shown to the caller', async () => {
   const { api } = setup({
     error: {
       code: '55000',
-      message: 'Unresolved question reviews prevent distribution',
+      message: 'Unresolved question reviews prevent publication',
     },
   });
   const result = await api.changeQuestionnaireStatus({
     ...input,
-    expectedStatus: 'published',
+    expectedStatus: 'in_review',
     archivedAt: null,
-    status: 'distributed',
+    status: 'published',
     requestId: actor,
   });
   assert.equal(result.status, 409);
@@ -153,19 +153,19 @@ test('consultant and non-owner staff cannot check', async () => {
     { role: 'admin', owner: id },
   ]) {
     const { api, calls } = setup(options);
-    assert.equal((await api.checkQuestionnaireDistribution(input)).status, 403);
+    assert.equal((await api.checkQuestionnairePublication(input)).status, 403);
     assert.equal(calls.length, 0);
   }
 });
-test('stale, draft, distributed and archived questionnaires reject checks', async () => {
+test('stale, draft, published and archived questionnaires reject checks', async () => {
   for (const options of [
     { revision: 3 },
     { status: 'draft' },
-    { status: 'distributed' },
+    { status: 'published' },
     { archived: '2026-10-02' },
   ]) {
     const { api, calls } = setup(options);
-    assert.equal((await api.checkQuestionnaireDistribution(input)).status, 409);
+    assert.equal((await api.checkQuestionnairePublication(input)).status, 409);
     assert.equal(calls.length, 0);
   }
 });
@@ -176,7 +176,7 @@ test('review lookup errors and invalid responses fail closed', async () => {
     { counts: [{ questionnaire_id: id, count: 'invalid' }] },
   ]) {
     const { api } = setup(options);
-    assert.equal((await api.checkQuestionnaireDistribution(input)).status, 503);
+    assert.equal((await api.checkQuestionnairePublication(input)).status, 503);
   }
 });
 
@@ -184,14 +184,14 @@ test('saved response prevents withdrawal with an actionable error', async () => 
   const { api } = setup({
     error: {
       code: '55000',
-      message: 'Saved responses prevent distribution withdrawal',
+      message: 'Saved responses prevent publication withdrawal',
     },
   });
   const result = await api.changeQuestionnaireStatus({
     ...input,
-    expectedStatus: 'distributed',
+    expectedStatus: 'published',
     archivedAt: null,
-    status: 'published',
+    status: 'in_review',
     requestId: actor,
   });
   assert.equal(result.status, 409);

@@ -1,7 +1,7 @@
 begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
-insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'검토 중 테스트' from publish_users;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
@@ -33,10 +33,10 @@ begin
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  perform public.read_shared_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 
 reset role;
@@ -46,20 +46,20 @@ do $$
 declare vid uuid; initial jsonb; result jsonb; again jsonb; qid text; fid text; payload jsonb; saveid uuid:=gen_random_uuid();
 begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- initial:=public.open_question_response_session(vid);
- again:=public.open_question_response_session(vid);
+ initial:=public.open_review_response_session(vid);
+ again:=public.open_review_response_session(vid);
  if initial->>'id'<>again->>'id' then raise exception 'Duplicate session'; end if;
  qid:=initial#>>'{questions,0,definition,id}'; fid:=initial#>>'{questions,0,definition,fields,0,id}';
  payload:=jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',-1,'answers',jsonb_build_object(fid,'::mea-rich-text:v1::{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"첫 답변","marks":[{"type":"highlight"}]}]}]}')),jsonb_build_object('id',2,'answers',jsonb_build_object(fid,'둘째 답변'))));
- result:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
+ result:=public.save_review_response_session(vid,payload,0,saveid,false,public.read_review_response_session(vid)->>'definitionToken');
  if result->>'revision'<>'1' or result#>>'{questions,0,rows,0,answers}' is null then raise exception 'Not saved'; end if;
- again:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
+ again:=public.save_review_response_session(vid,payload,0,saveid,false,public.read_review_response_session(vid)->>'definitionToken');
  if again->>'revision'<>'1' then raise exception 'Retry duplicated'; end if;
- begin perform public.save_question_response_session(vid,payload,0,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Accepted stale'; exception when serialization_failure then null; end;
- begin perform public.save_question_response_session(vid,jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(gen_random_uuid()::text,'foreign')))),1,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Accepted foreign field'; exception when invalid_parameter_value then null; end;
+ begin perform public.save_review_response_session(vid,payload,0,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken'); raise exception 'Accepted stale'; exception when serialization_failure then null; end;
+ begin perform public.save_review_response_session(vid,jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(gen_random_uuid()::text,'foreign')))),1,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken'); raise exception 'Accepted foreign field'; exception when invalid_parameter_value then null; end;
  begin update public.question_responses set body='tamper'; raise exception 'Direct write accepted'; exception when insufficient_privilege then null; end;
- perform public.save_question_response_session(vid,payload,1,gen_random_uuid(),true,public.read_question_response_session(vid)->>'definitionToken');
- perform public.save_question_response_session(vid,payload,2,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
+ perform public.save_review_response_session(vid,payload,1,gen_random_uuid(),true,public.read_review_response_session(vid)->>'definitionToken');
+ perform public.save_review_response_session(vid,payload,2,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken');
 end $$;
 reset role;
 
@@ -75,7 +75,7 @@ do $$ declare d jsonb; begin
  d:=jsonb_set(d,'{sections,0,questions,0,id}',to_jsonb(gen_random_uuid()));
  d:=jsonb_set(d,'{sections,0,questions,0,logicalKey}',to_jsonb(gen_random_uuid()));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
  insert into removal_docs values(d);
 end $$;
 reset role;
@@ -83,8 +83,8 @@ select set_config('request.jwt.claim.sub',(select id::text from publish_users wh
 set local role authenticated;
 do $$ declare snap jsonb; id uuid; begin
  select (doc->>'questionnaireId')::uuid into id from removal_docs;
- snap:=public.open_question_response_session(id);
- perform public.save_question_response_session(id,jsonb_build_object((select source_id::text from publish_docs),jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(snap#>>'{questions,0,definition,fields,0,id}','다른 질문지 유지')))),0,gen_random_uuid(),false,snap->>'definitionToken');
+ snap:=public.open_review_response_session(id);
+ perform public.save_review_response_session(id,jsonb_build_object((select source_id::text from publish_docs),jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(snap#>>'{questions,0,definition,fields,0,id}','다른 질문지 유지')))),0,gen_random_uuid(),false,snap->>'definitionToken');
  if snap#>'{questions,0}' ? 'previousResponses' or snap#>'{questions,0}' ? 'needsReview' then raise exception 'Old guide history contract'; end if;
 end $$;
 reset role;
@@ -107,7 +107,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare snap jsonb; begin
- snap:=public.read_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ snap:=public.read_review_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  if exists(select 1 from jsonb_array_elements(snap->'questions') q cross join lateral jsonb_array_elements(q->'rows') r where r->'answers'<>'{}') then raise exception 'Deleted answers resurrected';end if;
 end $$;
 reset role;

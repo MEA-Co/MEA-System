@@ -270,7 +270,7 @@ export function QuestionEditorContent({
           </div>
         ) : draft && draft.id === requestedId ? (
           <div className="space-y-6">
-            {editorData.detail.data?.distribution_locked_at && (
+            {editorData.detail.data?.publication_locked_at && (
               <p
                 role="status"
                 className="rounded-lg border bg-muted p-4 text-sm"
@@ -324,7 +324,7 @@ export function QuestionEditorContent({
               </TabsContent>
               <TabsContent
                 value="edit"
-                inert={!!editorData.detail.data?.distribution_locked_at}
+                inert={!!editorData.detail.data?.publication_locked_at}
                 keepMounted
                 className="space-y-6 data-hidden:hidden"
               >
@@ -835,7 +835,7 @@ export function QuestionEditorContent({
           </Button>
           <Button
             disabled={
-              !!editorData.detail.data?.distribution_locked_at ||
+              !!editorData.detail.data?.publication_locked_at ||
               !draft ||
               draft.id !== requestedId ||
               busy ||

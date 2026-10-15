@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { z } from 'zod';
 
 import {
-  listMyPublishedResponses,
+  listMyReviewResponses,
   loadGuideAnswers,
   loadSubmittedResponses,
   questionResponseCommand,
@@ -13,14 +13,14 @@ import {
   saveAnswers,
 } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/answers-server';
 import { QuestionnaireHttpError } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/http-error';
-import { loadUnreadQuestionnairePublications } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/publication-notifications';
 import {
   changeQuestionnaireStatus,
   deleteQuestionnaireDraft,
   loadQuestionnaireView,
-  publishQuestionnaireDraft,
   saveQuestionnaireDraft,
+  transitionQuestionnaireDraft,
 } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/server';
+import { loadUnreadQuestionnaireUpdates } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/update-notifications';
 import { getViewRole } from '@/lib/admin';
 import { type AuthorizedUserAccess, getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -47,6 +47,11 @@ async function handle(request: Request, context: Context) {
     const staff = viewRole === 'admin' || viewRole === 'consultant_lead';
     if (viewRole === 'student')
       return json({ error: '질문지 접근 권한이 없어요.' }, 403);
+    if (request.headers.get('X-Questionnaire-Workflow') !== '2')
+      return json(
+        { error: '질문지 관리가 업데이트되었어요. 새로고침 후 다시 이용해 주세요.' },
+        426,
+      );
     const path = (await context.params).path ?? [];
     const [id, resource] = path;
     const method = request.method;
@@ -92,7 +97,7 @@ async function handle(request: Request, context: Context) {
       }
 
       if (path.length === 1 && id === 'my-responses' && staff)
-        return json(await listMyPublishedResponses());
+        return json(await listMyReviewResponses());
       if (path.length === 1 && id === 'unread-reviews') {
         if (!staff) return json({ hasUnread: false });
         const client = createClient(await cookies());
@@ -111,7 +116,7 @@ async function handle(request: Request, context: Context) {
         return json({ hasUnread: !!data?.length });
       }
       if (path.length === 1 && id === 'unread')
-        return json(await loadUnreadQuestionnairePublications(!staff));
+        return json(await loadUnreadQuestionnaireUpdates(!staff));
       if (path.length === 1 && id === 'responses')
         return json(await loadAnswerStatuses());
       if (
@@ -122,16 +127,16 @@ async function handle(request: Request, context: Context) {
         return json(await loadAnswers(id));
       if (
         path.length === 2 &&
-        ['question-responses', 'distributed-responses'].includes(resource) &&
+        ['review-responses', 'published-responses'].includes(resource) &&
         z.uuid().safeParse(id).success &&
-        (staff || resource === 'distributed-responses')
+        (staff || resource === 'published-responses')
       )
         return json(
           await questionResponseCommand(
             id,
             'read',
             undefined,
-            resource === 'distributed-responses',
+            resource === 'published-responses',
           ),
         );
       if (path.length > 1)
@@ -155,7 +160,7 @@ async function handle(request: Request, context: Context) {
       z.uuid().safeParse(id).success &&
       ((method === 'PUT' && ['answers', 'read'].includes(resource)) ||
         (['POST', 'PUT'].includes(method) &&
-          resource === 'distributed-responses'));
+          resource === 'published-responses'));
     if (!staff && !memberCommand)
       return json({ error: '수정 권한이 없어요.' }, 403);
     if (!request.headers.get('content-type')?.startsWith('application/json'))
@@ -173,9 +178,9 @@ async function handle(request: Request, context: Context) {
       return json({ error: '요청을 확인해 주세요.' }, 400);
     if (
       path.length === 2 &&
-      ['question-responses', 'distributed-responses'].includes(resource) &&
+      ['review-responses', 'published-responses'].includes(resource) &&
       z.uuid().safeParse(id).success &&
-      (staff || resource === 'distributed-responses') &&
+      (staff || resource === 'published-responses') &&
       ['POST', 'PUT'].includes(method)
     )
       return json(
@@ -183,7 +188,7 @@ async function handle(request: Request, context: Context) {
           id,
           method === 'POST' ? 'open' : 'save',
           body,
-          resource === 'distributed-responses',
+          resource === 'published-responses',
         ),
       );
     if (memberCommand && resource === 'answers')
@@ -225,18 +230,18 @@ async function handle(request: Request, context: Context) {
     else if (
       method === 'POST' &&
       path.length === 2 &&
-      (resource === 'publication' || resource === 'distribution')
+      (resource === 'review' || resource === 'publication')
     )
-      result = await publishQuestionnaireDraft(
+      result = await transitionQuestionnaireDraft(
         { ...body, questionnaireId: id },
-        resource === 'publication' ? 'publish' : 'distribute',
+        resource === 'review' ? 'start_review' : 'publish',
       );
     else if (method === 'PUT' && path.length === 2 && resource === 'read') {
       const client = createClient(await cookies());
       const { error } = await client.rpc(
         staff
-          ? 'mark_questionnaire_publication_read'
-          : 'open_distributed_response',
+          ? 'mark_questionnaire_review_read'
+          : 'open_published_response',
         { p_questionnaire_id: id },
       );
       if (error) return json({ error: '확인 상태를 저장하지 못했어요.' }, 503);

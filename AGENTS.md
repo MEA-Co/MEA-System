@@ -25,6 +25,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 탐구활동 관련 작업은 [문서 목록](docs/exploration/README.md)을 먼저 확인하고, 변경 범위에 따라 `docs/exploration/`의 `ui.md`, `data-api.md`, `operations.md`를 같은 작업에서 반드시 수정·조정한다. 질문 참조·등록 계약은 질문 문서도 함께 갱신한다. 상세 구현·작업 이력은 AGENTS.md에 중복 기록하지 않는다.
 
+질문지 현행 상태 명칭은 `draft`(수정 중)·`in_review`(검토 중)·`published`(배포)이며, 과거 migration/작업 기록의 명칭과 구분한다. 변경 시 질문 기준 문서와 운영 문서의 최신 전환 계약을 따른다.
+
 ## 검증 방식
 
 - 사용자가 명시적으로 요청하지 않으면 실제 브라우저 테스트를 진행하지 않는다. 임시 검증 페이지나 예시 데이터로 수행하는 브라우저 테스트도 포함한다. 기본 검증은 타입 검사·린트 등으로 진행한다.

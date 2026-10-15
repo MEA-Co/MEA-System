@@ -12,7 +12,7 @@ export type QuestionResponseSnapshot = {
   sourceDeleted: boolean;
   revision: number;
   status: 'assigned' | 'in_progress' | 'submitted';
-  stage?: 'published' | 'distributed';
+  stage?: 'in_review' | 'published';
   submittedAt?: string | null;
   hasUnsubmittedChanges?: boolean;
   savedAt: string | null;

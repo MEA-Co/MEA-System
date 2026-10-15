@@ -26,6 +26,7 @@ import {
 } from '../../lib/questionnaire/answer-session';
 import {
   QUESTIONNAIRE_API,
+  QUESTIONNAIRE_HEADERS,
   useQuestionnaireApi,
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
@@ -165,7 +166,7 @@ function AnswerSession({
         `${QUESTIONNAIRE_API}/${questionnaireId}/answers`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...QUESTIONNAIRE_HEADERS, 'Content-Type': 'application/json' },
           body: JSON.stringify(request),
         },
       );

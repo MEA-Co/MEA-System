@@ -38,7 +38,7 @@ import { cn } from '@/lib/utils';
 import { useQuestionLibrary } from '../../hooks/questionnaire/useQuestionLibrary';
 import { useQuestionnaireSave } from '../../hooks/questionnaire/useQuestionnaireSave';
 import type { QuestionBlockRow } from '../../lib/question-blocks';
-import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
+import { QUESTIONNAIRE_HEADERS, useQuestionnaireResource } from '../../lib/questionnaire/api-client';
 import {
   createPlacement,
   placementError,
@@ -62,8 +62,8 @@ import { QuestionResponseForm } from './QuestionResponseForm';
 
 export function QuestionnaireComposer({
   initialDraft,
-  published = false,
-  publishedSources = [],
+  inReview = false,
+  sharedSources = [],
   remoteUnavailable = false,
   reviewContext,
   onEditorState,
@@ -74,13 +74,13 @@ export function QuestionnaireComposer({
   onEditorState?: (state: QuestionnaireEditorState) => void;
   paused?: boolean;
   initialDraft: QuestionnaireDraft;
-  published?: boolean;
-  publishedSources?: QuestionBlockRow[];
+  inReview?: boolean;
+  sharedSources?: QuestionBlockRow[];
   remoteUnavailable?: boolean;
   reviewContext?: QuestionnaireReviewContext;
 }) {
   const { data: guideAccess } = useQuestionnaireResource<{ canWrite: boolean }>(
-    published ? '/guide-access' : null,
+    inReview ? '/guide-access' : null,
   );
   const [tab, setTab] = useState('edit');
   const [responseState, setResponseState] = useState({
@@ -136,7 +136,7 @@ export function QuestionnaireComposer({
   const library = useQuestionLibrary();
   const questions = [
     ...new Map(
-      [...publishedSources, ...(library.data ?? [])].map((q) => [q.id, q]),
+      [...sharedSources, ...(library.data ?? [])].map((q) => [q.id, q]),
     ).values(),
   ];
   const hasPlacements = sections.some((s) =>
@@ -181,7 +181,7 @@ export function QuestionnaireComposer({
       if (initialDraft.revision > 0 && removed.length) {
         const response = await fetch(
           `/api/questionnaires/${initialDraft.questionnaireId}/guide-question-ids`,
-          { cache: 'no-store' },
+          { cache: 'no-store', headers: QUESTIONNAIRE_HEADERS },
         );
         const data = await response.json();
         if (!response.ok || !Array.isArray(data.questionIds)) throw new Error();
@@ -412,7 +412,7 @@ export function QuestionnaireComposer({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="preview" className="min-w-0">
-            {published && guideAccess?.canWrite ? (
+            {inReview && guideAccess?.canWrite ? (
               <QuestionResponseForm
                 questionnaireId={initialDraft.questionnaireId}
                 onEditorState={reportResponse}
@@ -421,7 +421,7 @@ export function QuestionnaireComposer({
               <QuestionnairePreview
                 startNotice={startNotice}
                 reviewQuestionnaireId={
-                  published ? initialDraft.questionnaireId : undefined
+                  inReview ? initialDraft.questionnaireId : undefined
                 }
                 title={title}
                 sections={sections}
@@ -891,7 +891,7 @@ export function QuestionnaireComposer({
                 key={`${editingQuestionId ?? 'new'}:${editorInstance}`}
                 embedded={{
                   questionId: editingQuestionId,
-                  allowSharedEdit: published,
+                  allowSharedEdit: inReview,
                   questionnaireId: initialDraft.questionnaireId,
                   sharedSources: questions,
                   actionLabel:

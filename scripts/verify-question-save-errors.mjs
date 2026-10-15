@@ -93,10 +93,10 @@ test('dependency rejections explain how to release the restriction and retry', a
   assert.match(result.error, /조건과 응답 참조를 해제하고 저장한 뒤/);
 });
 
-test('distribution restrictions stay explicit and are not revision conflicts', async () => {
+test('publication restrictions stay explicit and are not revision conflicts', async () => {
   const app = setup({
     code: '55000',
-    message: 'Distributed question is immutable',
+    message: 'Published question is immutable',
   });
   const response = await app.save();
   const result = await response.json();

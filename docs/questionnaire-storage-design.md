@@ -16,7 +16,7 @@
 | `question_responses` | 세션 안 원본 질문별 응답 ID·행·활성 행·본문 |
 | `question_review_requests` | 원본 질문별 검토 요청 |
 | `question_review_reads` | 요청별 제작자 읽음 기록 |
-| `questionnaire_publication_reads` | 게시본 확인 기록 |
+| `questionnaire_review_reads` | 검토본 확인 기록 |
 
 질문지 버전 테이블과 질문 버전 테이블은 제거했다. 질문지는 `questionnaireId`/`questionnaire_id`, 원본 질문은 `questions.id`로 식별한다. `questionnaire_questions.id`는 배치 ID이므로 원본 질문 ID와 다르다. `legacy_parent_id`는 과거 ID 추적용이며 현재 식별자로 사용하지 않는다.
 
@@ -26,25 +26,25 @@
 
 질문은 `save_question`, 질문지는 `save_questionnaire_draft`로 저장한다. `revision`과 요청 ID로 충돌·중복 재시도를 보호하고, DB가 실제 역할·작성자·배치 소속·선행 관계를 검사한다. 표시 역할 전환은 실제 권한을 바꾸지 않는다. 질문과 설명은 원자적으로 저장하며 details 생략은 보존, 빈 배열은 삭제다.
 
-독립 질문은 작성자·관리자가 조회한다. 게시본 공유 조회는 해당 질문지의 원본만 허용하는 별도 경로다. 작업 중 응답은 본인만 읽고 저장하며 게시 단계 실제 저장은 지정 가이드 계정에 제한한다. 다른 리드는 저장 없는 미리보기다.
+공유되지 않은 독립 질문은 작성자·관리자가 조회·수정한다. 활성 검토 질문지의 원본은 다른 리드도 조회·수정할 수 있다. 검토본 공유 조회는 해당 질문지의 원본만 허용하는 별도 경로다. 작업 중 응답은 본인만 읽고 저장하며 검토 중 단계 실제 저장은 지정 가이드 계정에 제한한다. 다른 리드는 저장 없는 미리보기다.
 
 가이드 응답은 최신 질문과 질문지 구성을 읽는다. 질문 변경 시 `OLD.fields`와 새 필드의 ID·유형을 비교해 호환 답변은 유지하고 삭제되거나 유형이 바뀐 필드의 답변만 지운다. 가이드 답변이 있으면 저장 API가 확인 동의를 검사한다. 이전 답변 보관·구조 변경 재작성 안내는 제공하지 않는다. `definitionToken`으로 오래된 구조의 저장을 거절한다.
 
 질문지에서 질문·섹션을 제거할 때 가이드 응답이 있으면 확인한다. 저장 시 해당 질문지 세션의 응답만 삭제하고 다른 질문지의 응답·원본은 유지한다. 재배치는 빈 응답으로 시작한다.
 
-배포 응답은 `question_responses`에 본인 작업 내용을 저장하고 제출 시 `response_submissions`에 활성 답변만 갱신한다. 제출 후 저장은 공개본을 바꾸지 않는다. 리드·관리자는 제출본만 조회할 수 있으며 원본 작업 응답 RLS는 본인 전용이다. 질문 정의는 잠긴 원본을 읽고 복제하지 않는다. 세션 유일성은 작성자·질문지·시작 단계 조합이며 가이드 게시 응답과 개인 배포 응답을 분리한다. 가이드 예시는 게시 단계 응답만 읽는다.
+배포 응답은 `question_responses`에 본인 작업 내용을 저장하고 제출 시 `response_submissions`에 활성 답변만 갱신한다. 제출 후 저장은 공개본을 바꾸지 않는다. 리드·관리자는 제출본만 조회할 수 있으며 원본 작업 응답 RLS는 본인 전용이다. 질문 정의는 잠긴 원본을 읽고 복제하지 않는다. 세션 유일성은 작성자·질문지·시작 단계 조합이며 가이드 검토 중 응답과 개인 배포 응답을 분리한다. 가이드 예시는 검토 중 단계 응답만 읽는다.
 
 ## 배포와 삭제
 
 배포는 원본 질문별 미처리 검토 요청이 없어야 가능하다. 배포된 질문지와 포함된 원본·설명은 수정/삭제가 차단된다. 같은 원본을 사용하는 다른 질문지에서도 원본을 바꿀 수 없다.
 
-저장된 배포 응답이 없으면 같은 질문지 ID로 게시/수정 중으로 돌아갈 수 있다. 빈 열람 세션과 게시 가이드 응답은 이 판정에서 제외한다. 다른 배포본이 사용하는 원본은 잠금을 유지한다.
+저장된 배포 응답이 없으면 같은 질문지 ID로 검토 중/수정 중으로 돌아갈 수 있다. 빈 열람 세션과 검토 중 가이드 응답은 이 판정에서 제외한다. 다른 배포본이 사용하는 원본은 잠금을 유지한다.
 
 질문 제거는 원본 삭제가 아니다. 원본 삭제 API는 archive 방식이며 배치·참조·배포 잠금 검사를 따른다. 질문지 삭제는 기존 응답 세션을 보존한다. 검토 요청은 원본에 귀속되며 출처 질문지 삭제로 사라지지 않는다.
 
 ## 구형 호환과 이력
 
-원본 없는 구형 배포 응답만 `legacy_question_id`와 `legacy_definition`으로 기존 정의를 보존한다. 새 원본 응답에는 두 열이 NULL이다. 구형 응답 테이블은 제거했지만 기존 공개 저장 RPC와 호환 경로는 유지한다. 새 배치형 배포본은 별도 distributed-responses API로 저장·제출한다.
+원본 없는 구형 배포 응답만 `legacy_question_id`와 `legacy_definition`으로 기존 정의를 보존한다. 새 원본 응답에는 두 열이 NULL이다. 구형 응답 테이블은 제거했지만 기존 공개 저장 RPC와 호환 경로는 유지한다. 새 배치형 배포본은 별도 published-responses API로 저장·제출한다.
 
 과거 migration·이전 장부·SQL 스니펫은 현재 기능과 구분한다. 폐기된 import 함수를 재실행하지 않는다. 미사용 구조 점검을 실제 질문지·응답 데이터 삭제 요청으로 해석하지 않는다. 과거 데이터 복원 기록은 Git 이력에서 확인할 수 있다.
 
@@ -66,11 +66,11 @@
 
 `questionnaires.start_notice`는 nullable JSONB `{title,body,buttonLabel}`이며 API의 조회 문서 및 작업 응답 스냅샷에서는 `startNotice`다. 기존 questions의 제목·prompt 서식 원문·button_label을 그대로 이전한다. 답변 모델과 독립적이며 학습법은 기존 study 저장 경로만 사용한다. 새 테이블/공개 RPC나 강제 등록 검증은 추가하지 않는다.
 
-기존 read_questionnaire_draft/read_published_questionnaire 및 private 작업 응답 조회 함수의 반환에 추가하되 소유자·역할·RLS·함수 ACL은 유지한다. 일반 저장 schema는 선택적인 startNotice를 전달한다. 미전달은 기존 안내 보존, null은 삭제, 객체는 교체한다. title 200자/body 20000자/buttonLabel 100자 이내이며 빈 buttonLabel은 등록 버튼 없는 일반 안내다. 기존 원자적 저장 함수의 최종 UPDATE에서 revision과 함께 저장한다. 저장 재시도 해시에 안내도 포함하며 원격 동기화/변경 감지 대상이다. 직접 변경은 guard_start_notice가 차단하고 기존 definer 저장 경로의 역할·소유자/게시 공유·배포/보관 잠금을 유지한다. 질문 제작에서 purpose 선택은 없애고 API 및 DB가 새 study_registration 저장을 거절한다. 원본 보관/과거 캐시 읽기 호환을 위해 기존 purpose 열·렌더러·빈 답변 처리 코드는 당장 제거하지 않는다.
+기존 read_questionnaire_draft/read_shared_questionnaire 및 private 작업 응답 조회 함수의 반환에 추가하되 소유자·역할·RLS·함수 ACL은 유지한다. 일반 저장 schema는 선택적인 startNotice를 전달한다. 미전달은 기존 안내 보존, null은 삭제, 객체는 교체한다. title 200자/body 20000자/buttonLabel 100자 이내이며 빈 buttonLabel은 등록 버튼 없는 일반 안내다. 기존 원자적 저장 함수의 최종 UPDATE에서 revision과 함께 저장한다. 저장 재시도 해시에 안내도 포함하며 원격 동기화/변경 감지 대상이다. 직접 변경은 guard_start_notice가 차단하고 기존 definer 저장 경로의 역할·소유자/검토 중 공유·배포/보관 잠금을 유지한다. 질문 제작에서 purpose 선택은 없애고 API 및 DB가 새 study_registration 저장을 거절한다. 원본 보관/과거 캐시 읽기 호환을 위해 기존 purpose 열·렌더러·빈 답변 처리 코드는 당장 제거하지 않는다.
 
 이전은 전체 트랜잭션·잠금 아래 안내마다 질문지 1개 안내, 부가 설명 없음, 대상 질문지 세션/안내 응답/제출 이력 없음 조건을 검사한다. 예상하지 못한 데이터가 있으면 롤백하고 별도 이전을 설계한다. 안내 배치 및 그 결과 비는 섹션만 삭제하며 원본은 archived_at으로 보관한다. 나머지 질문·섹션·답변 ID/내용·제출 시각을 유지하고 질문지 revision 증가로 기존 편집 캐시 충돌을 감지한다. 배포 보호 트리거는 대상 이전 동안만 잠금 아래 해제하고 같은 트랜잭션에서 복구한다.
 
-- 배포본 작성자 이름 누락 수정: 기존 published_questionnaire_authors RPC가 활성 게시·배포본의 created_by 이름을 반환한다. 관리자/리드만 호출 가능하며 초안·보관본은 제외한다. 서버도 배포본만 있을 때 RPC를 호출한다. 기존 RPC 이름/응답 계약 유지. 20261014064007_distributed_questionnaire_authors.sql 로컬 적용 및 SQL 회귀 통과(가상 데이터 롤백), 운영 미적용.
+- 배포본 작성자 이름 누락 수정: 기존 shared_questionnaire_authors RPC가 활성 검토 중·배포본의 created_by 이름을 반환한다. 관리자/리드만 호출 가능하며 초안·보관본은 제외한다. 서버도 배포본만 있을 때 RPC를 호출한다. 반환 구조는 유지하며 현행 RPC 이름은 shared_questionnaire_authors다. 20261014064007_distributed_questionnaire_authors.sql 로컬 적용 및 SQL 회귀 통과(가상 데이터 롤백), 운영 미적용.
 
 ### 이름 있는 비흐름표의 제출 투영
 
@@ -111,15 +111,32 @@
 ### 질문 귀속 검토·내용 복사 (2026-10-15)
 
 - `20261015055947_question_owned_reviews.sql`은 private can_request/request 함수를 교체하고 이전 단계 페이지 조회 RPC의 anon 실행 권한을 명시적으로 회수한다. 질문·요청·읽음·응답 테이블과 기존 행을 수정하지 않는다. 기존 origin_questionnaire_id 값은 과거 출처 정보로 보존하고 FK의 SET NULL도 유지한다. 새 요청은 항상 origin_questionnaire_id=NULL이다.
-- 기존 RPC의 출처 인자/signature는 구형 클라이언트 호환을 위해 유지하지만 권한과 중복 요청 검사에서는 무시한다. API는 항상 NULL로 전달한다. 원본 질문 작성자 제외 + admin/consultant_lead + 활성 게시본에 포함된 질문이라는 조건을 조회와 저장에 동일 적용한다. 질문지 작성자 제외 조건은 제거한다.
-- 저장 시 원본 질문과 활성 게시 배치를 잠가 상태 변경과 경합을 방지한다. 중복 요청 ID는 질문·요청자·본문이 같은 경우에만 재시도로 인정한다. 기존 요청 처리/읽음/조회 RLS와 권한은 유지한다.
+- 기존 RPC의 출처 인자/signature는 구형 클라이언트 호환을 위해 유지하지만 권한과 중복 요청 검사에서는 무시한다. API는 항상 NULL로 전달한다. 원본 질문 작성자 제외 + admin/consultant_lead + 활성 검토본에 포함된 질문이라는 조건을 조회와 저장에 동일 적용한다. 질문지 작성자 제외 조건은 제거한다.
+- 저장 시 원본 질문과 활성 검토 중 배치를 잠가 상태 변경과 경합을 방지한다. 중복 요청 ID는 질문·요청자·본문이 같은 경우에만 재시도로 인정한다. 기존 요청 처리/읽음/조회 RLS와 권한은 유지한다.
 - 새 질문 불러오기는 클라이언트에서 정의만 독립 복사한 뒤 기존 save_question에 revision 0으로 저장한다. 별도 복제 테이블이나 원본 연결을 만들지 않는다. 필드·선택지·설명 ID를 새로 만들며 응답/가이드/검토 이력은 전달하지 않는다. 외부 질문 연결은 복사하지 않는다.
 
 - startNotice에 선택 문자열 explorationButtonLabel(최대 100자)을 저장한다. 미지정/빈 문자열은 탐구활동 버튼 숨김이다. 기존 JSONB와 원자적 저장 경로를 그대로 사용하며 신규 migration은 없다.
 
 ### 기본 비공개 질문·질문지 초안 권한 (2026-10-15)
 
-- 별도 게시/배포가 없는 독립 질문은 작성자·관리자만 조회/수정한다. 기존 질문 정책을 유지한다.
+- 별도 검토 중/배포가 없는 독립 질문은 작성자·관리자만 조회/수정한다. 기존 질문 정책을 유지한다.
 - 수정 중인 질문지는 작성자·관리자만 조회/수정한다. questions와 달랐던 questionnaires SELECT RLS를 제한하며 하위 섹션·질문 배치는 부모 RLS를 따른다. 관리자 초안 조회/저장 RPC 및 안내 편집을 허용한다.
-- 서버 목록/상세와 공통 목록 모델은 관리자 초안을 표시한다. canEditDraft는 편집 권한 표시이며 isOwner는 실제 소유권으로 유지한다. 내 질문지 필터나 게시·배포 권한을 관리자 소유로 위장하지 않는다.
-- 게시/배포/보관 정책은 이번 변경에서 확대하지 않는다. 기존 데이터·ID·revision과 함수 ACL은 유지한다. migration은 기존 권한 정의가 예상과 다르면 중단한다.
+- 서버 목록/상세와 공통 목록 모델은 관리자 초안을 표시한다. canEditDraft는 편집 권한 표시이며 isOwner는 실제 소유권으로 유지한다. 내 질문지 필터나 검토 중·배포 권한을 관리자 소유로 위장하지 않는다.
+- 검토 중/배포/보관 정책은 이번 변경에서 확대하지 않는다. 기존 데이터·ID·revision과 함수 ACL은 유지한다. migration은 기존 권한 정의가 예상과 다르면 중단한다.
+
+
+## 검토·배포 상태 저장 계약 (2026-10-15)
+
+| 의미 | questions/questionnaires 연결 | DB 상태/시각 |
+| --- | --- | --- |
+| 비공개 제작 | 작성자·관리자만 초안 조회/수정 | `draft`, 시각 둘 다 NULL |
+| 검토 중 | 질문지와 원본을 다른 리드에게 공개, 공동 편집 | `in_review`, `review_started_at` |
+| 배포 | 컨설턴트 응답, 질문지·원본·설명 잠금 | `published`, `review_started_at`와 `published_at` |
+
+보관은 별도 상태값으로 저장하지 않고 `archived_at`으로 표시한다. 상태 변경 명령의 archived는 이 플래그를 설정한다. 질문 잠금 열은 `questions.publication_locked_at`, 응답 세션의 `started_stage`는 `in_review|published`다. 검토본 읽음 테이블은 `questionnaire_review_reads`이며 질문 검토 요청의 `question_review_reads`와 별개다. Realtime의 일반 컨설턴트 채널은 `questionnaires:published`다.
+
+`start_questionnaire_review`가 검토를 시작하고 `publish_questionnaire`가 배포한다. 공용 원본/문서 조회는 `read_shared_question_sources`/`read_shared_questionnaire`, 작성자 조회는 `shared_questionnaire_authors`다. 가이드 세션은 `open/read/save_review_response_session`, 배포 세션은 `open/read/save_published_question_response_session`이다. 구형 원본 없는 응답용 RPC는 `open/read/save_published_response`로 구별한다. 배포 집계/응답 상태는 `published_submission_counts`/`published_response_statuses`다.
+
+public `publish_questionnaire`와 `change_questionnaire_status`는 필수 `p_workflow_version integer` 인자를 추가하고 2만 받는다. 같은 이름의 구형 시그니처는 제거하여 이전 publish 요청을 배포로 오인하지 않는다. private 구현의 역할·소유권·권한 범위는 그대로다. 기존 함수는 OID·ACL·보안 속성을 유지하여 rename/recreate하고 새 시그니처의 public wrapper는 invoker·빈 search_path·authenticated/service_role EXECUTE만 허용한다.
+
+`20261015075725_questionnaire_review_publication_workflow.sql`은 한 트랜잭션에서 old published→in_review, old distributed→published를 CASE로 이전하고 시각 열을 rename한다. ID·revision·작성/수정/제출 시각·질문/답변/제출/검토/읽음·상태 요청 영수증은 보존한다. 본문 JSON은 일괄 문자열 치환하지 않는다. 원래 함수 75개의 정의 지문과 전후 모든 관련 행의 정렬 체크섬·개수를 검사하고 예상 밖 드리프트·단계·데이터 차이가 있으면 전체 롤백한다. 트리거는 전환 대상 표에서만 중지하고 기존 enabled 상태를 복구한다. 과거 요청 영수증은 그대로 보존하며 구형 상태 fingerprint와 충돌하는 재시도는 안전하게 거절한다.

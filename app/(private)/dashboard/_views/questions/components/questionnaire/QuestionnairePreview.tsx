@@ -46,7 +46,7 @@ export function QuestionnairePreview({
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
   renderQuestionFooter?: (questionId: string) => ReactNode;
-  /** Only the retained distributed-response screen renders inline questions. */
+  /** Only the retained published-response screen renders inline questions. */
   legacyResponsePreview?: boolean;
   submittedView?: boolean;
   showPrivateDetails?: boolean;

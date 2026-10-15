@@ -9,6 +9,8 @@ import type {
 } from './types';
 
 export const QUESTIONNAIRE_API = '/api/questionnaires';
+// published now means released, so an old browser must not interpret v2 data.
+export const QUESTIONNAIRE_HEADERS = { 'X-Questionnaire-Workflow': '2' };
 // Realtime handles changes; polling only recovers from missed notifications.
 export const QUESTIONNAIRE_REFRESH_INTERVAL = 60_000;
 export class QuestionnaireApiError extends Error {
@@ -21,6 +23,7 @@ export class QuestionnaireApiError extends Error {
 }
 export async function questionnaireFetcher<T>(url: string): Promise<T> {
   const response = await fetch(url, {
+    headers: QUESTIONNAIRE_HEADERS,
     cache: 'no-store',
     credentials: 'same-origin',
   });
@@ -45,7 +48,7 @@ export function useQuestionnaireResource<T>(
       revalidateOnReconnect: path?.split('?')[0] !== '/new',
       revalidateIfStale: path?.split('?')[0] !== '/new',
       dedupingInterval: 500,
-      shouldRetryOnError: (error) => ![401, 403, 404].includes(error.status),
+      shouldRetryOnError: (error) => ![401, 403, 404, 426].includes(error.status),
       errorRetryInterval: 2000,
       errorRetryCount: 3,
       keepPreviousData: true,
@@ -56,7 +59,7 @@ async function send(path: string, method: string, body: unknown) {
   const response = await fetch(`${QUESTIONNAIRE_API}${path}`, {
     method,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...QUESTIONNAIRE_HEADERS, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   const data = await response.json();
@@ -83,7 +86,7 @@ export function useQuestionnaireApi() {
       error?: string;
       mode?: 'deleted' | 'archived';
       questionnaireId?: string;
-      distributionChecked?: boolean;
+      publicationChecked?: boolean;
     }> => {
       const { response, data } = await send(path, method, body);
       if (!response.ok)

@@ -22,13 +22,13 @@ import {
   useQuestionnaireResource,
 } from '../../lib/questionnaire/api-client';
 
-const PublicationContext = createContext<{
+const QuestionnaireNotificationContext = createContext<{
   unreadIds: string[];
   hasUnreadReviews: boolean;
   markRead: (id: string) => Promise<void>;
 }>({ unreadIds: [], hasUnreadReviews: false, markRead: async () => {} });
 
-export function PublicationNotifications({
+export function QuestionnaireNotifications({
   enabled,
   realtimeAudience,
   userId,
@@ -43,17 +43,17 @@ export function PublicationNotifications({
   const config = useMemo(() => ({ provider: () => cache }), [cache]);
   return (
     <SWRConfig value={config}>
-      <PublicationState
+      <QuestionnaireNotificationState
         enabled={enabled}
         realtimeAudience={realtimeAudience}
         userId={userId}
       >
         {children}
-      </PublicationState>
+      </QuestionnaireNotificationState>
     </SWRConfig>
   );
 }
-function PublicationState({
+function QuestionnaireNotificationState({
   enabled,
   realtimeAudience,
   userId,
@@ -98,22 +98,22 @@ function PublicationState({
     [data, markRead, enabled, realtimeAudience, reviewNotifications],
   );
   return (
-    <PublicationContext.Provider value={value}>
+    <QuestionnaireNotificationContext.Provider value={value}>
       {children}
-    </PublicationContext.Provider>
+    </QuestionnaireNotificationContext.Provider>
   );
 }
 
-export function usePublicationNotifications() {
-  return useContext(PublicationContext);
+export function useQuestionnaireNotifications() {
+  return useContext(QuestionnaireNotificationContext);
 }
 
-export function PublicationReadMarker({
+export function QuestionnaireReadMarker({
   questionnaireId,
 }: {
   questionnaireId: string;
 }) {
-  const { unreadIds, markRead } = usePublicationNotifications();
+  const { unreadIds, markRead } = useQuestionnaireNotifications();
   const unread = unreadIds.includes(questionnaireId);
   useEffect(() => {
     if (unread) void markRead(questionnaireId);
@@ -121,7 +121,7 @@ export function PublicationReadMarker({
   return null;
 }
 
-export function NewPublicationBadge({ count }: { count?: number }) {
+export function NewQuestionnaireBadge({ count }: { count?: number }) {
   return (
     <Badge
       variant="secondary"

@@ -117,7 +117,7 @@ begin
   result:=public.save_question(src,source_revision,gen_random_uuid());
   source_revision:=(result->>'revision')::int;
 
-  -- Placement in a draft/published questionnaire alone does not freeze source edits.
+  -- Placement in a draft/in_review questionnaire alone does not freeze source edits.
   questionnaire:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','조건 해제 배포 잠금',
     'sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','검증',
       'questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),
@@ -126,31 +126,31 @@ begin
   src:=jsonb_set(src,'{prompt}','"배치된 초안의 원본 수정"'::jsonb);
   result:=public.save_question(src,source_revision,gen_random_uuid());
   source_revision:=(result->>'revision')::int;
-  perform public.change_questionnaire_status((questionnaire->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
-  src:=jsonb_set(src,'{prompt}','"게시 중 원본 수정"'::jsonb);
+  perform public.change_questionnaire_status((questionnaire->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
+  src:=jsonb_set(src,'{prompt}','"검토 중 원본 수정"'::jsonb);
   result:=public.save_question(src,source_revision,gen_random_uuid());
   source_revision:=(result->>'revision')::int;
-  perform public.change_questionnaire_status((questionnaire->>'questionnaireId')::uuid,2,'published',null,'distributed',gen_random_uuid());
+  perform public.change_questionnaire_status((questionnaire->>'questionnaireId')::uuid,2,'in_review',null,'published',gen_random_uuid(),2);
 
-  -- A separate editable dependent can clear its condition, but cannot lift A's distribution lock.
+  -- A separate editable dependent can clear its condition, but cannot lift A's publication lock.
   result:=public.save_question(reference_doc,reference_revision,gen_random_uuid());
   reference_revision:=(result->>'revision')::int;
   result:=public.save_question(reference_doc||cleared,reference_revision,gen_random_uuid());
-  if result#>>'{fields,0,id}' is distinct from child_field_id::text then raise exception 'Distributed-source removal changed child field ID'; end if;
+  if result#>>'{fields,0,id}' is distinct from child_field_id::text then raise exception 'Published-source removal changed child field ID'; end if;
   begin
     perform public.save_question(jsonb_set(src,'{prompt}','"배포 후 차단"'::jsonb),source_revision,gen_random_uuid());
-    raise exception 'Condition removal lifted distribution lock';
+    raise exception 'Condition removal lifted publication lock';
   exception when object_not_in_prerequisite_state then
-    if sqlerrm not like '%Distributed question is immutable%' then raise; end if;
+    if sqlerrm not like '%Published question is immutable%' then raise; end if;
   end;
-  if (select distribution_locked_at from public.questions where id=(src->>'id')::uuid) is null then
-    raise exception 'Distributed original lost its lock';
+  if (select publication_locked_at from public.questions where id=(src->>'id')::uuid) is null then
+    raise exception 'Published original lost its lock';
   end if;
   insert into condition_removal_fixture values(src,source_revision,(questionnaire->>'questionnaireId')::uuid);
 end $$;
 reset role;
 
--- Administrators retain the same distribution immutability after reference removal.
+-- Administrators retain the same publication immutability after reference removal.
 select set_config('request.jwt.claim.sub',
   (select id::text from condition_removal_users where role='admin'),true);
 set local role authenticated;
@@ -161,11 +161,11 @@ begin
   begin
     perform public.save_question(jsonb_set(fixture.source_doc,'{prompt}','"관리자 배포 수정 차단"'::jsonb),
       fixture.source_revision,gen_random_uuid());
-    raise exception 'Administrator bypassed distributed source lock';
+    raise exception 'Administrator bypassed published source lock';
   exception when object_not_in_prerequisite_state then
-    if sqlerrm not like '%Distributed question is immutable%' then raise; end if;
+    if sqlerrm not like '%Published question is immutable%' then raise; end if;
   end;
 end $$;
 reset role;
 rollback;
-select 'Question condition removal, stable field IDs, incoming references, chains and distribution locks passed' as result;
+select 'Question condition removal, stable field IDs, incoming references, chains and publication locks passed' as result;

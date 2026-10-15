@@ -2,26 +2,29 @@ import type { QuestionnaireListItem } from './types';
 
 export const questionnaireStages = [
   'draft',
+  'in_review',
   'published',
-  'distributed',
 ] as const;
 export type QuestionnaireListStatus =
   'all' | (typeof questionnaireStages)[number] | 'archived';
 export const questionnaireOverviewLimits = {
   draft: 2,
-  published: 2,
-  distributed: 10,
+  in_review: 2,
+  published: 10,
 } as const;
 export const QUESTIONNAIRE_LIST_PAGE_SIZE = 10;
 
 export function readQuestionnaireListOptions(
   params: Pick<URLSearchParams, 'get'>,
 ) {
-  const raw = params.get('qStatus');
+  // qStatus was used before published changed meaning. Preserve old bookmarks.
+  const legacy = params.get('qStatus');
+  const raw = params.get('qStage') ??
+    (legacy === 'published' ? 'in_review' : legacy === 'distributed' ? 'published' : legacy);
   const status: QuestionnaireListStatus =
     raw === 'draft' ||
+    raw === 'in_review' ||
     raw === 'published' ||
-    raw === 'distributed' ||
     raw === 'archived'
       ? raw
       : 'all';
@@ -38,19 +41,19 @@ export function readQuestionnaireListOptions(
 export function questionnaireListModel(
   source: {
     drafts: QuestionnaireListItem[];
+    inReview: QuestionnaireListItem[];
     published: QuestionnaireListItem[];
-    distributed: QuestionnaireListItem[];
     archived?: QuestionnaireListItem[];
   },
   options: ReturnType<typeof readQuestionnaireListOptions>,
 ) {
-  // Shared published/distributed rows come from the existing authorized API.
+  // Shared inReview/published rows come from the existing authorized API.
   // Private drafts and archived rows retain the previous author-only list scope.
   const unique = new Map<string, QuestionnaireListItem>();
   for (const item of [
     ...source.drafts,
+    ...source.inReview,
     ...source.published,
-    ...source.distributed,
     ...(source.archived ?? []),
   ]) {
     if (item.archivedAt && !item.isOwner) continue;
@@ -73,12 +76,12 @@ export function questionnaireListModel(
       )
       .sort((a, b) => {
         const dateA =
-          status === 'distributed'
-            ? (a.distributedAt ?? a.updatedAt)
+          status === 'published'
+            ? (a.publishedAt ?? a.updatedAt)
             : a.updatedAt;
         const dateB =
-          status === 'distributed'
-            ? (b.distributedAt ?? b.updatedAt)
+          status === 'published'
+            ? (b.publishedAt ?? b.updatedAt)
             : b.updatedAt;
         return dateB.localeCompare(dateA) || a.id.localeCompare(b.id);
       });

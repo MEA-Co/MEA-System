@@ -12,7 +12,6 @@ import type {
   QuestionnaireReviewContext,
 } from '../../lib/questionnaire/types';
 
-import { PublishedResponse } from './PublishedResponse';
 import { QuestionAnswerEditor } from './QuestionAnswerEditor';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { QuestionnaireAnswers } from './QuestionnaireAnswers';
@@ -22,12 +21,13 @@ import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionPlacementCard } from './QuestionPlacementCard';
 import { QuestionResponseForm } from './QuestionResponseForm';
+import { ReviewResponse } from './ReviewResponse';
 import { RichTextContent } from './RichTextContent';
 import { SubmittedQuestionnaireResponses } from './SubmittedQuestionnaireResponses';
-export function PublishedQuestionnaire({
+export function SharedQuestionnaire({
   document,
   sources = [],
-  distributed = false,
+  published = false,
   submittedResponseCount,
   staff = true,
   reviewContext,
@@ -35,7 +35,7 @@ export function PublishedQuestionnaire({
 }: {
   document: QuestionnaireDraft;
   sources?: QuestionBlockRow[];
-  distributed?: boolean;
+  published?: boolean;
   submittedResponseCount?: number;
   staff?: boolean;
   reviewContext?: QuestionnaireReviewContext;
@@ -45,20 +45,20 @@ export function PublishedQuestionnaire({
   const placements = document.sections.some((section) =>
     section.questions.some((question) => question.sourceQuestionId),
   );
-  if (staff && !distributed)
+  if (staff && !published)
     return (
-      <PublishedResponse
+      <ReviewResponse
         document={document}
         sources={sources}
         onEditorState={onEditorState}
       />
     );
-  if (!staff && distributed && placements)
+  if (!staff && published && placements)
     return (
       <QuestionResponseForm
-        key={`distributed:${document.questionnaireId}`}
+        key={`published:${document.questionnaireId}`}
         questionnaireId={document.questionnaireId}
-        distributed
+        published
         onEditorState={onEditorState}
       />
     );
@@ -66,12 +66,12 @@ export function PublishedQuestionnaire({
     <article className="mx-auto w-full min-w-0 max-w-6xl space-y-8 rounded-xl border bg-background p-5 sm:p-10">
       <header>
         <Badge variant="secondary">
-          {distributed ? '배포된 질문지' : '게시된 질문지'}
+          {published ? '배포된 질문지' : '검토 중인 질문지'}
         </Badge>
         <h1 className="mt-3 whitespace-pre-wrap wrap-break-word text-2xl font-semibold">
           {document.title}
         </h1>
-        {distributed && placements && (
+        {published && placements && (
           <p className="mt-3 text-sm text-muted-foreground">
             배포된 질문지와 질문 내용은 수정할 수 없습니다.
           </p>
@@ -119,14 +119,14 @@ export function PublishedQuestionnaire({
                   )}
                 />
               )}
-              {distributed && !staff && !placements && (
+              {published && !staff && !placements && (
                 <QuestionAnswerEditor question={question} />
               )}
             </div>
           ))}
         </section>
       ))}
-      {distributed && !staff && !placements && <QuestionnaireFreeResponse />}
+      {published && !staff && !placements && <QuestionnaireFreeResponse />}
     </article>
   );
   if (!staff && placements) return content;
@@ -144,11 +144,11 @@ export function PublishedQuestionnaire({
       value={
         params.get('questionnairePanel') === 'preview'
           ? 'preview'
-          : distributed &&
+          : published &&
               placements &&
               params.get('questionnairePanel') === 'responses'
             ? 'responses'
-            : distributed
+            : published
               ? 'preview'
               : 'detail'
       }
@@ -165,11 +165,11 @@ export function PublishedQuestionnaire({
         aria-label="질문지 보기 방식"
       >
         {[
-          ...(!distributed
+          ...(!published
             ? [{ value: 'detail', label: '질문지 상세', icon: FileText }]
             : []),
           { value: 'preview', label: '미리보기', icon: Eye },
-          ...(distributed && placements
+          ...(published && placements
             ? [
                 {
                   value: 'responses',
@@ -203,12 +203,12 @@ export function PublishedQuestionnaire({
           </TabsTrigger>
         ))}
       </TabsList>
-      {!distributed && (
+      {!published && (
         <TabsContent value="detail" keepMounted className="data-hidden:hidden">
           {content}
         </TabsContent>
       )}
-      {distributed && placements && (
+      {published && placements && (
         <TabsContent value="responses">
           <SubmittedQuestionnaireResponses
             key={document.questionnaireId}
@@ -222,8 +222,8 @@ export function PublishedQuestionnaire({
           title={document.title}
           sections={document.sections}
           library={sources}
-          legacyResponsePreview={distributed}
-          showGuideAnswers={distributed}
+          legacyResponsePreview={published}
+          showGuideAnswers={published}
         />
       </TabsContent>
     </Tabs>

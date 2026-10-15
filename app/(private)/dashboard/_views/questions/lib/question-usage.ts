@@ -5,7 +5,7 @@ import type { QuestionBlockRow } from './question-blocks';
 export type QuestionnaireUsage = {
   id: string;
   title: string;
-  status: 'draft' | 'published' | 'distributed' | 'archived';
+  status: 'draft' | 'in_review' | 'published' | 'archived';
 };
 
 type Placement = {
@@ -13,7 +13,7 @@ type Placement = {
   questionnaire: {
     id: string;
     title: string;
-    status: 'draft' | 'published' | 'distributed';
+    status: 'draft' | 'in_review' | 'published';
     updated_at: string;
     created_by: string;
     archived_at: string | null;

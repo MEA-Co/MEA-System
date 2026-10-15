@@ -9,7 +9,7 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 import { QuestionResponseForm } from './QuestionResponseForm';
 
-export function PublishedResponse({
+export function ReviewResponse({
   document,
   sources = [],
   onEditorState,

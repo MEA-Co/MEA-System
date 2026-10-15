@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 import { useQuestionnaireApi } from '../../lib/questionnaire/api-client';
 
-export type QuestionnaireRealtimeAudience = 'staff' | 'distributed' | null;
+export type QuestionnaireRealtimeAudience = 'staff' | 'published' | null;
 
 export function useQuestionnaireRealtime(
   audience: QuestionnaireRealtimeAudience,

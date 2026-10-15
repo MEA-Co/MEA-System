@@ -1,7 +1,7 @@
 begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant']) role;
 insert into auth.users(id) select id from publish_users;
-insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'검토 중 테스트' from publish_users;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
@@ -33,10 +33,10 @@ begin
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  perform public.read_shared_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 
 reset role;
@@ -46,20 +46,20 @@ do $$
 declare vid uuid; initial jsonb; result jsonb; again jsonb; qid text; fid text; payload jsonb; saveid uuid:=gen_random_uuid();
 begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
- initial:=public.open_question_response_session(vid);
- again:=public.open_question_response_session(vid);
+ initial:=public.open_review_response_session(vid);
+ again:=public.open_review_response_session(vid);
  if initial->>'id'<>again->>'id' then raise exception 'Duplicate session'; end if;
  qid:=initial#>>'{questions,0,definition,id}'; fid:=initial#>>'{questions,0,definition,fields,0,id}';
  payload:=jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',-1,'answers',jsonb_build_object(fid,'::mea-rich-text:v1::{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"첫 답변","marks":[{"type":"highlight"}]}]}]}')),jsonb_build_object('id',2,'answers',jsonb_build_object(fid,'둘째 답변'))));
- result:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
+ result:=public.save_review_response_session(vid,payload,0,saveid,false,public.read_review_response_session(vid)->>'definitionToken');
  if result->>'revision'<>'1' or result#>>'{questions,0,rows,0,answers}' is null then raise exception 'Not saved'; end if;
- again:=public.save_question_response_session(vid,payload,0,saveid,false,public.read_question_response_session(vid)->>'definitionToken');
+ again:=public.save_review_response_session(vid,payload,0,saveid,false,public.read_review_response_session(vid)->>'definitionToken');
  if again->>'revision'<>'1' then raise exception 'Retry duplicated'; end if;
- begin perform public.save_question_response_session(vid,payload,0,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Accepted stale'; exception when serialization_failure then null; end;
- begin perform public.save_question_response_session(vid,jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(gen_random_uuid()::text,'foreign')))),1,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken'); raise exception 'Accepted foreign field'; exception when invalid_parameter_value then null; end;
+ begin perform public.save_review_response_session(vid,payload,0,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken'); raise exception 'Accepted stale'; exception when serialization_failure then null; end;
+ begin perform public.save_review_response_session(vid,jsonb_build_object(qid,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(gen_random_uuid()::text,'foreign')))),1,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken'); raise exception 'Accepted foreign field'; exception when invalid_parameter_value then null; end;
  begin update public.question_responses set body='tamper'; raise exception 'Direct write accepted'; exception when insufficient_privilege then null; end;
- perform public.save_question_response_session(vid,payload,1,gen_random_uuid(),true,public.read_question_response_session(vid)->>'definitionToken');
- perform public.save_question_response_session(vid,payload,2,gen_random_uuid(),false,public.read_question_response_session(vid)->>'definitionToken');
+ perform public.save_review_response_session(vid,payload,1,gen_random_uuid(),true,public.read_review_response_session(vid)->>'definitionToken');
+ perform public.save_review_response_session(vid,payload,2,gen_random_uuid(),false,public.read_review_response_session(vid)->>'definitionToken');
 end $$;
 reset role;
 -- Canonical responses must keep their identity without a version indirection.
@@ -80,7 +80,7 @@ do $$ declare vid uuid; x jsonb; begin
  select (doc->>'questionnaireId')::uuid into vid from publish_docs;
  if exists(select 1 from public.response_sessions) or exists(select 1 from public.question_responses) then raise exception 'Other user responses leaked'; end if;
  if public.can_write_guide_answers() then raise exception 'Ordinary lead marked guide'; end if;
- begin x:=public.open_question_response_session(vid); raise exception 'Non-guide persisted response'; exception when insufficient_privilege then null; end;
+ begin x:=public.open_review_response_session(vid); raise exception 'Non-guide persisted response'; exception when insufficient_privilege then null; end;
  x:=public.read_guide_answers(array[(select source_id from publish_docs)]);
  if x#>>array[(select source_id::text from publish_docs),'rows','0','label']<>'첫째' or x#>>array[(select source_id::text from publish_docs),'rows','1','label']<>'둘째' or (x->(select source_id::text from publish_docs))::text not like '%첫 답변%' then raise exception 'Guide answer not visible'; end if;
  if x::text not like '%highlight%' then raise exception 'Guide formatting lost'; end if;
@@ -92,7 +92,7 @@ update public.questions set prompt='수정된 질문', revision=revision+1 where
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare x jsonb; begin
- x:=public.read_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
+ x:=public.read_review_response_session((select (doc->>'questionnaireId')::uuid from publish_docs));
  if exists(select 1 from jsonb_array_elements(x->'questions') q where not (q ? 'questionId') or q ? 'questionVersionId' or q ? 'versionId') then raise exception 'Direct question identifier missing'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q#>>'{definition,prompt}'='수정된 질문') then raise exception 'Live source not reflected'; end if;
 end $$;
@@ -100,12 +100,12 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
 set local role authenticated;
 do $$ begin
- begin perform public.open_question_response_session((select (doc->>'questionnaireId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
- if public.read_guide_answers(array[(select source_id from publish_docs)]) is distinct from '{}'::jsonb then raise exception 'Published-only guide leaked to consultant'; end if;
+ begin perform public.open_review_response_session((select (doc->>'questionnaireId')::uuid from publish_docs)); raise exception 'Consultant allowed'; exception when insufficient_privilege then null; end;
+ if public.read_guide_answers(array[(select source_id from publish_docs)]) is distinct from '{}'::jsonb then raise exception 'Review-only guide leaked to consultant'; end if;
  if exists(select 1 from public.response_sessions) then raise exception 'Consultant leaked'; end if;
 end $$;
 reset role;
--- Removing a published container preserves both completed and unfinished answers.
+-- Removing a in_review container preserves both completed and unfinished answers.
 create temp table preserved_sessions as select to_jsonb(s)-'origin_questionnaire_id' data from public.response_sessions s where origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs);
 create temp table preserved_answers as select to_jsonb(r) data from public.question_responses r join public.response_sessions s on s.id=r.session_id where s.origin_questionnaire_id=(select (doc->>'questionnaireId')::uuid from publish_docs);
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
@@ -122,46 +122,46 @@ end $$;
 -- Deleted questionnaire remains accessible only to its response owner.
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
-create temp table my_saved_response as select id from public.list_my_published_responses();
+create temp table my_saved_response as select id from public.list_my_review_responses();
 do $$ declare x jsonb; payload jsonb; begin
- x:=public.open_question_response_session((select id from my_saved_response));
+ x:=public.open_review_response_session((select id from my_saved_response));
  if not (x->>'sourceDeleted')::boolean then raise exception 'Deleted origin not reported'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
+ perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
 end $$;
 reset role;
-create temp table stale_snapshot as select private.read_question_response_session((select id from my_saved_response)) value;
+create temp table stale_snapshot as select private.read_review_response_session((select id from my_saved_response)) value;
 grant select on stale_snapshot to authenticated;
 -- Change the answer schema without touching the existing response rows.
 update public.questions set fields=jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'kind','text','label','새 열')),revision=revision+1 where id=(select source_id from publish_docs);
 set local role authenticated;
 do $$ declare x jsonb; old jsonb; payload jsonb; q jsonb; begin
  select value into old from stale_snapshot;
- x:=public.read_question_response_session((old->>'id')::uuid);
+ x:=public.read_review_response_session((old->>'id')::uuid);
  q:=x#>'{questions,0}';
  if q ? 'needsReview' or q ? 'previousResponses' or exists(select 1 from jsonb_array_elements(q->'rows') r where r->'answers'<>'{}') then raise exception 'Obsolete structure warning or answers returned'; end if;
  payload:=jsonb_build_object(q#>>'{definition,id}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(q#>>'{definition,fields,0,id}','새 응답'))));
- begin perform public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale definition accepted'; exception when serialization_failure then null; end;
- x:=public.save_question_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
+ begin perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale definition accepted'; exception when serialization_failure then null; end;
+ x:=public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
  if x#>'{questions,0}' ? 'previousResponses' or exists(select 1 from public.question_responses where session_id=(x->>'id')::uuid and previous_responses<>'[]') then raise exception 'Guide history retained'; end if;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ begin
- begin perform public.read_question_response_session((select (value->>'id')::uuid from stale_snapshot)); raise exception 'Foreign session exposed'; exception when insufficient_privilege then null; end;
+ begin perform public.read_review_response_session((select (value->>'id')::uuid from stale_snapshot)); raise exception 'Foreign session exposed'; exception when insufficient_privilege then null; end;
 end $$;
 -- Source deletion is still subject to existing placement/reference checks.
 select public.archive_question(id,revision) from public.questions where id=(select source_id from publish_docs);
 reset role;
 do $$ begin
- if exists(select 1 from public.question_responses r where r.question_id=(select source_id from publish_docs)) then raise exception 'Published answers survived source deletion'; end if;
+ if exists(select 1 from public.question_responses r where r.question_id=(select source_id from publish_docs)) then raise exception 'Review answers survived source deletion'; end if;
  if exists(select 1 from public.response_sessions where id in (select (data->>'id')::uuid from preserved_sessions) and last_payload is not null) then raise exception 'Deleted answers retained in retry payload'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);
 set local role authenticated;
 do $$ declare x jsonb; begin
- x:=public.read_question_response_session((select id from my_saved_response));
+ x:=public.read_review_response_session((select id from my_saved_response));
  if jsonb_array_length(x->'questions')<>0 or jsonb_array_length(x#>'{sections,0,questions}')<>0 then raise exception 'Deleted source still rendered'; end if;
 end $$;
 reset role;

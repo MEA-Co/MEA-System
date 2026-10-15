@@ -60,7 +60,7 @@ export function databaseValidationFields(message: string) {
 export function errorMessage(message: string, status: number) {
   const validation = databaseValidationFields(message)[0];
   if (validation) return validation.message;
-  if (message.includes('Distributed question is immutable'))
+  if (message.includes('Published question is immutable'))
     return '배포된 질문지에 사용된 질문은 수정하거나 삭제할 수 없어요.';
   if (message.includes('Question purpose is immutable'))
     return '저장된 카드 종류는 바꿀 수 없어요. 다른 종류는 새 카드로 만들어 주세요.';

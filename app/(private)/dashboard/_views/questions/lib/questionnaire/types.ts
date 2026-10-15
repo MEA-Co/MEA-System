@@ -67,7 +67,7 @@ export type SaveQuestionnaireResult =
       error: string;
     };
 
-export type QuestionnaireStatus = 'draft' | 'published' | 'distributed';
+export type QuestionnaireStatus = 'draft' | 'in_review' | 'published';
 export type QuestionnaireListItem = {
   creatorName?: string | null;
   submittedResponseCount?: number;
@@ -75,10 +75,10 @@ export type QuestionnaireListItem = {
   title: string;
   status: QuestionnaireStatus;
   updatedAt: string;
+  reviewStartedAt: string | null;
   publishedAt: string | null;
-  distributedAt: string | null;
   revision: number;
-  hasDistributed: boolean;
+  hasPublished: boolean;
   archivedAt?: string | null;
   isOwner: boolean;
   canEditDraft?: boolean;
@@ -94,15 +94,15 @@ export type QuestionnaireReviewContext = {
 };
 
 export type QuestionnaireViewData = {
-  publishedSources?: QuestionBlockRow[];
+  sharedSources?: QuestionBlockRow[];
   drafts: QuestionnaireListItem[];
+  inReview: QuestionnaireListItem[];
   published: QuestionnaireListItem[];
-  distributed: QuestionnaireListItem[];
   archived?: QuestionnaireListItem[];
   staff: boolean;
   selected: QuestionnaireListItem | null;
   reviews: QuestionReview[];
   pendingReviewCount?: number;
   initialDraft: QuestionnaireDraft | null;
-  publishedDocument: QuestionnaireDraft | null;
+  sharedDocument: QuestionnaireDraft | null;
 };

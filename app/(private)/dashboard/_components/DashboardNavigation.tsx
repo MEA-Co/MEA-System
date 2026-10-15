@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { MemberRole } from '@/lib/profile';
 
-import { usePublicationNotifications } from '../_views/questions/components/questionnaire/PublicationNotifications';
+import { useQuestionnaireNotifications } from '../_views/questions/components/questionnaire/QuestionnaireNotifications';
 
 const icons = {
   profile: UserRound,
@@ -58,7 +58,7 @@ export function DashboardNavigation({
 }: DashboardNavigationProps) {
   const { setOpenMobile } = useSidebar();
   const pages = getDashboardNavigation(role);
-  const { unreadIds, hasUnreadReviews } = usePublicationNotifications();
+  const { unreadIds, hasUnreadReviews } = useQuestionnaireNotifications();
   return (
     <nav aria-label="주 메뉴">
       {DASHBOARD_GROUPS.map((group) => {

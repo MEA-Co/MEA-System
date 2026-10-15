@@ -107,11 +107,11 @@ test('deduplicates repeated placements of one questionnaire and includes archive
   assert.equal(result[0].questionnaire_usage[0].title, 'new');
   assert.equal(result[0].questionnaire_usage[0].status, 'archived');
 });
-test('lead preview excludes another author draft but retains visible published questionnaire', async () => {
+test('lead preview excludes another author draft but retains visible inReview questionnaire', async () => {
   const result = await withQuestionnaireUsage(
     client([
       row('private', 'draft', 'other'),
-      row('public', 'published', 'other'),
+      row('public', 'in_review', 'other'),
     ]),
     [{ id: 'q' }],
     'me',

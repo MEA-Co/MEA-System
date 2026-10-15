@@ -208,3 +208,8 @@ study_queries/study_storage/study_guide_reference/study_solution_fields SQL 4개
 ### 질문지 시작 안내 연계 (2026-10-15)
 
 2주차의 학습법 등록 진입점은 질문이 아닌 questionnaires.start_notice 설정으로 이전했다. 안내 버튼은 기존 본인 학습법 등록 API·권한을 그대로 사용한다. 등록 완료/개수와 질문지 제출의 강제 연결은 없으며 study 테이블·저장 계약 변경은 없다. 자세한 이전/중단 조건은 질문 저장 구조 및 운영 문서를 따른다.
+
+
+### 질문지 상태 명칭 연결 (2026-10-15)
+
+질문지 검토 단계는 `in_review`, 컨설턴트 배포는 `published`다. 가이드 답변에서 언급한 자료의 열람 권한은 지정 가이드의 in_review 세션을 기준으로 계산하며 개인 published 응답을 가이드로 공개하지 않는다. 기존 자료 ID·본문 참조·파일/소유자 권한은 유지한다. 연결된 질문지의 상태 명칭과 함수 이전은 [질문 저장 계약](../questionnaire-storage-design.md#검토배포-상태-저장-계약-2026-10-15), 적용 순서는 [질문 운영 안내](../questions-operations.md#검토배포-명칭-전환-2026-10-15)를 따른다.

@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import { AdminRoleTabs } from '../_components/AdminRoleTabs';
 import { Dashboard } from '../_components/Dashboard';
-import { PublicationNotifications } from '../_views/questions/components/questionnaire/PublicationNotifications';
+import { QuestionnaireNotifications } from '../_views/questions/components/questionnaire/QuestionnaireNotifications';
 
 import 'server-only';
 
@@ -80,8 +80,8 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
   }
 
   return (
-    <PublicationNotifications
-      key={`${user.id}:${role}`}
+    <QuestionnaireNotifications
+      key={`questionnaire-workflow-2:${user.id}:${role}`}
       enabled={
         role === 'admin' || role === 'consultant_lead' || role === 'consultant'
       }
@@ -90,7 +90,7 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
         role === 'admin' || role === 'consultant_lead'
           ? 'staff'
           : role === 'consultant'
-            ? 'distributed'
+            ? 'published'
             : null
       }
     >
@@ -105,6 +105,6 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
         headerActions={roleTabs}
         questionnaireId={typeof draft === 'string' ? draft : undefined}
       />
-    </PublicationNotifications>
+    </QuestionnaireNotifications>
   );
 }

@@ -11,7 +11,7 @@ do $$ declare q uuid; v uuid; begin
  select qid,vid into q,v from review_page_fixture;
  perform public.save_question(jsonb_build_object('id',q,'title','','prompt','검토 대상','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','single','maxRows',null,'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null),0,gen_random_uuid());
  perform public.save_questionnaire_draft(jsonb_build_object('questionnaireId',v,'title','검토 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q,'text','','details','[]'::jsonb))))),0,gen_random_uuid());
- perform public.change_questionnaire_status(v,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status(v,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from review_page_users where role='reviewer'),true);

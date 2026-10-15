@@ -31,8 +31,8 @@ import {
 
 const usageStatusLabels = {
   draft: '수정 중',
-  published: '게시',
-  distributed: '배포',
+  in_review: '검토 중',
+  published: '배포',
   archived: '보관',
 };
 

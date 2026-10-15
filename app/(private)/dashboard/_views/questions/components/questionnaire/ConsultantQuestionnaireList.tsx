@@ -11,9 +11,9 @@ import { useQuestionnaireResource } from '../../lib/questionnaire/api-client';
 import type { QuestionnaireListItem } from '../../lib/questionnaire/types';
 
 import {
-  NewPublicationBadge,
-  usePublicationNotifications,
-} from './PublicationNotifications';
+  NewQuestionnaireBadge,
+  useQuestionnaireNotifications,
+} from './QuestionnaireNotifications';
 export function ConsultantQuestionnaireList({
   items,
   loading = false,
@@ -25,7 +25,7 @@ export function ConsultantQuestionnaireList({
     useQuestionnaireResource<{ questionnaire_id: string; status: string }[]>(
       '/responses',
     );
-  const { unreadIds } = usePublicationNotifications();
+  const { unreadIds } = useQuestionnaireNotifications();
   const pending = loading || (!data && !error);
   const complete = new Set(
     (data ?? [])
@@ -58,7 +58,7 @@ export function ConsultantQuestionnaireList({
             <Badge variant="count">{pending ? '–' : group.items.length}</Badge>
             {group.id === 'pending' &&
               group.items.some((i) => unreadIds.includes(i.id)) && (
-                <NewPublicationBadge
+                <NewQuestionnaireBadge
                   count={
                     group.items.filter((i) => unreadIds.includes(i.id)).length
                   }
@@ -101,7 +101,7 @@ export function ConsultantQuestionnaireList({
                         <span className="truncate font-medium">
                           {item.title}
                         </span>
-                        {unreadIds.includes(item.id) && <NewPublicationBadge />}
+                        {unreadIds.includes(item.id) && <NewQuestionnaireBadge />}
                         {saved.has(item.id) && (
                           <Badge variant="highlight">저장된 답변 있음</Badge>
                         )}

@@ -18,7 +18,7 @@ vm.runInNewContext(
   { exports: responseHelpers },
 );
 
-function mount(distributed = true, empty = false, registration = false) {
+function mount(published = true, empty = false, registration = false) {
   const calls = [];
   const state = [];
   let effects = [];
@@ -161,7 +161,7 @@ function mount(distributed = true, empty = false, registration = false) {
     const tree = exports.ResponseEditor({
       questionnaireId: 'questionnaire',
       initial,
-      distributed,
+      published,
     });
     effects.forEach((fn) => fn());
     return tree;
@@ -182,7 +182,7 @@ function mount(distributed = true, empty = false, registration = false) {
   };
 }
 
-test('a submitted distribution remains editable and has separate save and submit actions', async () => {
+test('a submitted publication remains editable and has separate save and submit actions', async () => {
   const view = mount();
   let tree = view.render();
   let preview = view.find(tree, 'Preview')[0];
@@ -201,7 +201,7 @@ test('a submitted distribution remains editable and has separate save and submit
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(
     view.calls[0].url,
-    '/api/questionnaires/questionnaire/distributed-responses',
+    '/api/questionnaires/questionnaire/published-responses',
   );
   assert.equal(view.calls[0].body.complete, false);
   tree = view.render();

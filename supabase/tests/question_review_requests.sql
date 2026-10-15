@@ -1,7 +1,7 @@
 begin;
 create temporary table publish_users as select gen_random_uuid() id, role from unnest(array['consultant_lead','other_lead','consultant','admin']) role;
 insert into auth.users(id) select id from publish_users;
-insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'게시 테스트' from publish_users;
+insert into public.profiles(id,role,name) select id,case when role='other_lead' then 'consultant_lead' else role end,'검토 중 테스트' from publish_users;
 create or replace function private.guide_consultant_id() returns uuid language sql stable set search_path='' as $$ select id from pg_temp.publish_users where role='other_lead'; $$;
 create temporary table publish_docs(doc jsonb, source_id uuid);
 grant all on publish_docs to authenticated;
@@ -32,10 +32,10 @@ begin
 
  insert into publish_docs values(d,(q->>'id')::uuid);
  begin
-  perform public.read_published_question_sources((d->>'questionnaireId')::uuid);
+  perform public.read_shared_question_sources((d->>'questionnaireId')::uuid);
   raise exception 'Draft source leaked';
  exception when insufficient_privilege then null; end;
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 
 
@@ -45,7 +45,7 @@ grant all on second_review_doc to authenticated;
 do $$ declare d jsonb; begin
  d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title','두 번째 질문지','sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'text','내용','details','[]'::jsonb,'sourceQuestionId',(select source_id from publish_docs))))));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
  insert into second_review_doc values(d);
 end $$;
 reset role;
@@ -130,7 +130,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
 set local role authenticated;
 do $$ begin
- if (public.read_question_reviews((select source_id from publish_docs))->>'canRequest')::boolean then raise exception 'Unpublished request allowed'; end if;
+ if (public.read_question_reviews((select source_id from publish_docs))->>'canRequest')::boolean then raise exception 'Unreview request allowed'; end if;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='other_lead'),true);

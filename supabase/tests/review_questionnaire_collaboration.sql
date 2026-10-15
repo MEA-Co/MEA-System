@@ -8,26 +8,26 @@ grant all on collaboration_docs to authenticated;
 select set_config('request.jwt.claim.sub',(select id::text from collaboration_users where role='owner'),true);
 set local role authenticated;
 do $$ declare q jsonb; d jsonb; n text; begin
- foreach n in array array['published','draft','distributed'] loop
+ foreach n in array array['in_review','draft','published'] loop
  q:=jsonb_build_object('id',gen_random_uuid(),'title',n,'prompt','원본','fields',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'label','답변','kind','text')),'rowMode','repeatable','maxRows',1,'minRows',1,'rowLabels','[]'::jsonb,'sourceBlockId',null,'sourceFieldId',null,'afterBlockId',null,'condition',null,'details',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','설명','text','설명','visibleToConsultants',true)));
  perform public.save_question(q,0,gen_random_uuid());
  d:=jsonb_build_object('questionnaireId',gen_random_uuid(),'title',n,'sections',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'title','섹션','questions',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'logicalKey',gen_random_uuid(),'sourceQuestionId',q->'id','text','원본','details','[]'::jsonb)))));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
- if n<>'draft' then perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid()); end if;
- if n='distributed' then perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,2,'published',null,'distributed',gen_random_uuid()); end if;
+ if n<>'draft' then perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2); end if;
+ if n='published' then perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,2,'in_review',null,'published',gen_random_uuid(),2); end if;
  insert into collaboration_docs values(n,q,d);
  end loop;
- -- The locked source is also present in a published questionnaire.
+ -- The locked source is also present in a in_review questionnaire.
  d:=jsonb_set(jsonb_set(d,'{questionnaireId}',to_jsonb(gen_random_uuid())),'{sections,0,id}',to_jsonb(gen_random_uuid()));
  d:=jsonb_set(d,'{sections,0,questions,0,id}',to_jsonb(gen_random_uuid()));
  perform public.save_questionnaire_draft(d,0,gen_random_uuid());
- perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'published',gen_random_uuid());
+ perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,1,'draft',null,'in_review',gen_random_uuid(),2);
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from collaboration_users where role='lead'),true);
 set local role authenticated;
 do $$ declare q jsonb; d jsonb; saved jsonb; n text; begin
- select c.q,c.d into q,d from collaboration_docs c where name='published';
+ select c.q,c.d into q,d from collaboration_docs c where name='in_review';
  if public.read_questionnaire_draft((d->>'questionnaireId')::uuid) is null then raise exception 'Shared editor unreadable'; end if;
  if not exists(select 1 from public.questions where id=(q->>'id')::uuid) then raise exception 'Shared source unreadable'; end if;
  saved:=public.save_questionnaire_draft(d||'{"title":"리드 수정"}',2,gen_random_uuid());
@@ -36,8 +36,8 @@ do $$ declare q jsonb; d jsonb; saved jsonb; n text; begin
  perform public.save_question(q||'{"prompt":"리드 원본 수정"}',1,gen_random_uuid());
  if (select created_by from public.questions where id=(q->>'id')::uuid)<>(select id from collaboration_users where role='owner') then raise exception 'Owner changed'; end if;
  begin perform public.save_question(q,1,gen_random_uuid()); raise exception 'Stale save accepted'; exception when serialization_failure then null; end;
- begin perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,3,'published',null,'draft',gen_random_uuid()); raise exception 'Other lead changed status'; exception when insufficient_privilege then null; end;
- foreach n in array array['draft','distributed'] loop
+ begin perform public.change_questionnaire_status((d->>'questionnaireId')::uuid,3,'in_review',null,'draft',gen_random_uuid(),2); raise exception 'Other lead changed status'; exception when insufficient_privilege then null; end;
+ foreach n in array array['draft','published'] loop
  select c.q,c.d into q,d from collaboration_docs c where name=n;
  begin perform public.save_questionnaire_draft(d,1,gen_random_uuid()); raise exception 'Protected questionnaire edited'; exception when insufficient_privilege or object_not_in_prerequisite_state then null; end;
  begin perform public.save_question(q,1,gen_random_uuid()); raise exception 'Protected source edited'; exception when insufficient_privilege or object_not_in_prerequisite_state then null; end;
@@ -47,7 +47,7 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from collaboration_users where role='consultant'),true);
 set local role authenticated;
 do $$ declare q jsonb; d jsonb; begin
- select c.q,c.d into q,d from collaboration_docs c where name='published';
+ select c.q,c.d into q,d from collaboration_docs c where name='in_review';
  begin perform public.save_questionnaire_draft(d,3,gen_random_uuid()); raise exception 'Consultant edited'; exception when insufficient_privilege then null; end;
  begin perform public.save_question(q,2,gen_random_uuid()); raise exception 'Consultant edited source'; exception when insufficient_privilege then null; end;
  if exists(select 1 from public.questions where id=(q->>'id')::uuid) then raise exception 'Consultant source leak'; end if;

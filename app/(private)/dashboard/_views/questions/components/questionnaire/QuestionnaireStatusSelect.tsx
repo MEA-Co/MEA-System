@@ -27,8 +27,8 @@ import { questionnaireStatusColors } from './questionnaire-styles';
 
 export const questionnaireStatusLabels = {
   draft: '수정 중',
-  published: '게시',
-  distributed: '배포',
+  in_review: '검토 중',
+  published: '배포',
   archived: '보관',
 } as const;
 type Status = keyof typeof questionnaireStatusLabels;
@@ -55,9 +55,9 @@ export function QuestionnaireStatusSelect({
     if (item.archivedAt) return value === item.status;
     return (
       value === 'draft' ||
-      (value === 'published' &&
-        (current === 'draft' || current === 'distributed')) ||
-      (value === 'distributed' && current === 'published')
+      (value === 'in_review' &&
+        (current === 'draft' || current === 'published')) ||
+      (value === 'published' && current === 'in_review')
     );
   }
   async function apply() {
@@ -67,7 +67,7 @@ export function QuestionnaireStatusSelect({
     const id = toast.add({
       type: 'loading',
       title:
-        !restoring && change.status === 'distributed'
+        !restoring && change.status === 'published'
           ? '질문지를 배포하고 있어요.'
           : '상태를 변경하고 있어요.',
       timeout: 0,
@@ -89,7 +89,7 @@ export function QuestionnaireStatusSelect({
       toast.update(id, {
         type: 'success',
         title:
-          !restoring && change.status === 'distributed'
+          !restoring && change.status === 'published'
             ? '질문지를 배포했어요.'
             : '질문지 상태를 변경했어요.',
         timeout: 3000,
@@ -147,27 +147,27 @@ export function QuestionnaireStatusSelect({
             <DialogTitle>
               {restoring
                 ? '질문지 보관을 해제할까요?'
-                : change?.status === 'distributed'
+                : change?.status === 'published'
                   ? '질문지를 배포할까요?'
-                  : change?.item.status === 'distributed' &&
+                  : change?.item.status === 'published' &&
                       (change.status === 'draft' ||
-                        change.status === 'published')
+                        change.status === 'in_review')
                     ? '배포를 취소하고 상태를 되돌릴까요?'
                     : `질문지를 ‘${change ? questionnaireStatusLabels[change.status] : ''}’ 상태로 변경할까요?`}
             </DialogTitle>
             <DialogDescription>
               {restoring
-                ? `보관 전 ‘${change ? questionnaireStatusLabels[change.item.status] : ''}’ 상태로 복원합니다.${change?.item.status === 'distributed' ? ' 컨설턴트에게 다시 표시되며 기존 답변을 이어서 작성할 수 있어요.' : ''}`
+                ? `보관 전 ‘${change ? questionnaireStatusLabels[change.item.status] : ''}’ 상태로 복원합니다.${change?.item.status === 'published' ? ' 컨설턴트에게 다시 표시되며 기존 답변을 이어서 작성할 수 있어요.' : ''}`
                 : change?.status === 'archived'
                   ? '내용과 기존 답변을 보존하고 컨설턴트에게 숨깁니다. 컨설턴트는 열람하거나 답변을 저장할 수 없으며, 보관 목록에서 다시 복원할 수 있어요.'
-                  : change?.item.status === 'distributed' &&
+                  : change?.item.status === 'published' &&
                       (change.status === 'draft' ||
-                        change.status === 'published')
+                        change.status === 'in_review')
                     ? '저장된 응답이 없을 때만 되돌릴 수 있습니다. 컨설턴트 목록에서 숨겨지고 다시 수정할 수 있습니다. 다른 배포본에서 사용 중인 질문은 잠금이 유지됩니다.'
-                    : change?.status === 'distributed'
+                    : change?.status === 'published'
                       ? '배포하면 컨설턴트에게 질문지가 공개됩니다. 배포 이후에는 배포된 질문과 질문지를 수정하거나 삭제할 수 없습니다.'
-                      : change?.status === 'published'
-                        ? '다른 컨설턴트 리드와 관리자의 대시보드에 표시되며 질문지 내용을 확인할 수 있습니다.'
+                      : change?.status === 'in_review'
+                        ? '다른 컨설턴트 리드와 관리자에게 질문지와 포함된 질문이 공개되며 함께 검토하고 수정할 수 있습니다.'
                         : '작성자의 수정 중 목록으로 이동합니다. 기존 질문과 설명은 유지됩니다.'}
             </DialogDescription>
           </DialogHeader>
@@ -184,7 +184,7 @@ export function QuestionnaireStatusSelect({
                 ? pending
                   ? '복원 중…'
                   : '복원'
-                : change?.status === 'distributed'
+                : change?.status === 'published'
                   ? pending
                     ? '배포 중…'
                     : '배포'

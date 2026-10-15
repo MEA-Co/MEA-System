@@ -17,14 +17,14 @@ async function answerClient() {
 }
 export async function loadAnswerStatuses() {
   const { client } = await answerClient();
-  const { data, error } = await client.rpc('distributed_response_statuses');
+  const { data, error } = await client.rpc('published_response_statuses');
   if (error)
     throw new QuestionnaireHttpError(503, '답변 상태를 불러오지 못했어요.');
   return data ?? [];
 }
 export async function loadAnswers(questionnaireId: string) {
   const { client } = await answerClient();
-  const { data, error } = await client.rpc('read_distributed_response', {
+  const { data, error } = await client.rpc('read_published_response', {
     p_questionnaire_id: questionnaireId,
   });
   if (error)
@@ -61,7 +61,7 @@ export async function saveAnswers(questionnaireId: string, input: unknown) {
   )
     throw new QuestionnaireHttpError(400, '모든 질문에 답변을 입력해 주세요.');
   const { client } = await answerClient();
-  const result = await client.rpc('save_distributed_response', {
+  const result = await client.rpc('save_published_response', {
     p_questionnaire_id: questionnaireId,
     p_answers: data.answers,
     p_revision: data.revision,

@@ -108,7 +108,7 @@ export async function handleQuestionReview(
     if (result.error)
       return json(
         {
-          error: '처리하지 못했어요. 질문의 게시 상태와 권한을 확인해 주세요.',
+          error: '처리하지 못했어요. 질문의 공유 상태와 권한을 확인해 주세요.',
         },
         result.error.code === '42501'
           ? 403

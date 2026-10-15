@@ -59,7 +59,7 @@ function setup({
             data:
               name === 'question_incoming_references'
                 ? []
-                : name === 'read_published_question_sources'
+                : name === 'read_shared_question_sources'
                   ? sharedSources
                   : {
                       blocks: [],
@@ -248,7 +248,7 @@ test('admin lead preview detail query includes author constraint', async () => {
   );
 });
 
-test('published source lookup supports admin lead preview without owner filter', async () => {
+test('inReview source lookup supports admin lead preview without owner filter', async () => {
   for (const role of ['admin', 'consultant_lead']) {
     const id = randomUUID();
     const questionnaireId = randomUUID();
@@ -270,7 +270,7 @@ test('published source lookup supports admin lead preview without owner filter',
     assert.equal(response.status, 200);
     assert.deepEqual((await response.json()).block, block);
     assert.equal(client.calls.length, 1);
-    assert.equal(client.calls[0].name, 'read_published_question_sources');
+    assert.equal(client.calls[0].name, 'read_shared_question_sources');
     assert.equal(client.calls[0].args.p_questionnaire_id, questionnaireId);
   }
 });
