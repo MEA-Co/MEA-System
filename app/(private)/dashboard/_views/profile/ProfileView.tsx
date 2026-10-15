@@ -1,7 +1,10 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { CollectionHeader } from '@/components/patterns/collection';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import {
   MEMBER_ROLE_LABELS,
   type MemberRole,
@@ -31,34 +34,48 @@ export function ProfileView({
         <ArrowLeft aria-hidden="true" />
         이전으로
       </Button>
-      <h1
+      <CollectionHeader
         id="my-profile-title"
-        className="text-2xl font-semibold tracking-tight"
-      >
-        내 정보
-      </h1>
-      <dl className="mt-6 max-w-xl divide-y rounded-xl border px-5">
-        <div className="grid grid-cols-[6rem_1fr] gap-4 py-4">
-          <dt className="text-sm text-muted-foreground">이름</dt>
-          <dd className="min-w-0 break-words text-sm font-medium">
+        title="내 정보"
+        description={
+          role === 'student'
+            ? '내 계정 정보를 확인하세요.'
+            : '내 계정 정보를 확인하고 이름을 관리하세요.'
+        }
+      />
+      <Card variant="accent" className="mt-6 max-w-2xl">
+        <CardHeader variant="emphasis">
+          <CardTitle>계정 정보</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor={role !== 'student' ? 'profile-name' : undefined}>
+              이름
+            </Label>
             {role !== 'student' ? (
               <ProfileNameForm key={name} name={name} />
             ) : (
-              name
+              <p className="rounded-md bg-muted px-3 py-3 text-sm">{name}</p>
             )}
-          </dd>
-        </div>
-        <div className="grid grid-cols-[6rem_1fr] gap-4 py-4">
-          <dt className="text-sm text-muted-foreground">회원 유형</dt>
-          <dd className="text-sm font-medium">{MEMBER_ROLE_LABELS[role]}</dd>
-        </div>
-        {role === 'student' && studentPeriod ? (
-          <div className="grid grid-cols-[6rem_1fr] gap-4 py-4">
-            <dt className="text-sm text-muted-foreground">학년·학기</dt>
-            <dd className="text-sm font-medium">{studentPeriod}</dd>
           </div>
-        ) : null}
-      </dl>
+          <dl className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <dt className="text-sm font-medium">회원 유형</dt>
+              <dd className="rounded-md bg-muted px-3 py-3 text-sm">
+                {MEMBER_ROLE_LABELS[role]}
+              </dd>
+            </div>
+            {role === 'student' && studentPeriod ? (
+              <div className="space-y-2">
+                <dt className="text-sm font-medium">학년·학기</dt>
+                <dd className="rounded-md bg-muted px-3 py-3 text-sm">
+                  {studentPeriod}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </CardContent>
+      </Card>
     </section>
   );
 }

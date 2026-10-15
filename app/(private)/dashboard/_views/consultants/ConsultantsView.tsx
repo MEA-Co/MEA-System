@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { CollectionHeader } from '@/components/patterns/collection';
 import type { ManagedMember } from '@/lib/admin';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
@@ -21,28 +15,22 @@ export function ConsultantsView({
   consultants,
 }: ConsultantsViewProps) {
   return (
-    <>
-      <div>
-        <DashboardPageCategory view="consultants" />
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
-          컨설턴트 관리
-        </h1>
+    <section aria-labelledby="consultants-title" className="space-y-6">
+      <CollectionHeader
+        id="consultants-title"
+        category={<DashboardPageCategory view="consultants" />}
+        title="컨설턴트 관리"
+        description="등록된 컨설턴트의 정보와 직책을 확인하세요."
+      />
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          등록된 컨설턴트 {consultants.length}명
+        </p>
+        <ConsultantManagementTable
+          consultants={consultants}
+          canManageRoles={canManageRoles}
+        />
       </div>
-
-      <Card className="mt-6 gap-0 rounded-lg border shadow-none ring-0">
-        <CardHeader className="pb-5">
-          <CardTitle>컨설턴트 관리 목록</CardTitle>
-          <CardDescription>
-            총 {consultants.length}명의 회원이 있습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <ConsultantManagementTable
-            consultants={consultants}
-            canManageRoles={canManageRoles}
-          />
-        </CardContent>
-      </Card>
-    </>
+    </section>
   );
 }

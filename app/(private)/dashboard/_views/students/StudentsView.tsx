@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { CollectionHeader } from '@/components/patterns/collection';
 import type { ManagedMember } from '@/lib/admin';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
@@ -17,25 +11,19 @@ type StudentsViewProps = {
 
 export function StudentsView({ students }: StudentsViewProps) {
   return (
-    <>
-      <div>
-        <DashboardPageCategory view="students" />
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
-          학생 관리
-        </h1>
+    <section aria-labelledby="students-title" className="space-y-6">
+      <CollectionHeader
+        id="students-title"
+        category={<DashboardPageCategory view="students" />}
+        title="학생 관리"
+        description="등록된 학생의 정보와 학년·학기를 확인하세요."
+      />
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          등록된 학생 {students.length}명
+        </p>
+        <StudentManagementTable students={students} />
       </div>
-
-      <Card className="mt-6 gap-0 rounded-lg border shadow-none ring-0">
-        <CardHeader className="pb-5">
-          <CardTitle>학생 관리 목록</CardTitle>
-          <CardDescription>
-            총 {students.length}명의 회원이 있습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <StudentManagementTable students={students} />
-        </CardContent>
-      </Card>
-    </>
+    </section>
   );
 }

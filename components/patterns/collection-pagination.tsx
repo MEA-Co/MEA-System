@@ -20,7 +20,10 @@ export function CollectionPagination({
   onPageChange: (page: number) => void;
 }) {
   return (
-    <nav aria-label={label} className="flex items-center justify-between gap-3">
+    <nav
+      aria-label={label}
+      className="flex items-center justify-between gap-3 pt-4"
+    >
       <p aria-live="polite" className="text-sm text-muted-foreground">
         {loading
           ? '불러오는 중'

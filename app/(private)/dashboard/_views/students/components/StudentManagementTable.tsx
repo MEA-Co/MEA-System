@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CollectionTable } from '@/components/patterns/collection-table';
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -22,45 +22,36 @@ export function StudentManagementTable({
 }: {
   students: ManagedMember[];
 }) {
-  if (students.length === 0) {
-    return (
-      <div className="flex min-h-56 items-center justify-center border-t text-center">
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            등록된 학생이 없습니다.
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            회원가입을 완료한 회원이 여기에 표시됩니다.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <Table>
+    <CollectionTable aria-label="학생 목록">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>이름</TableHead>
-          <TableHead>현재 시기</TableHead>
-          <TableHead className="hidden text-right md:table-cell">
+          <TableHead className="w-28 sm:w-40">학년·학기</TableHead>
+          <TableHead className="hidden w-36 text-right md:table-cell">
             가입일
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
+        {students.length === 0 && (
+          <CollectionTableState
+            colSpan={3}
+            title="등록된 학생가 없습니다"
+            description="회원가입을 완료한 회원이 여기에 표시됩니다."
+          />
+        )}
         {students.map((student) => (
           <TableRow key={student.id}>
             <TableCell>
-              <div className="flex items-center gap-3">
-                <Avatar size="sm">
-                  <AvatarFallback>
-                    {student.name.trim().charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-medium text-foreground">
-                  {student.name}
-                </span>
+              <div className="min-w-0 space-y-1.5">
+                <p className="wrap-anywhere font-semibold text-foreground">
+                  {student.name || '이름 미입력'}
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground md:hidden">
+                  가입{' '}
+                  {joinedDateFormatter.format(new Date(student.created_at))}
+                </p>
               </div>
             </TableCell>
             <TableCell>
@@ -74,6 +65,6 @@ export function StudentManagementTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </CollectionTable>
   );
 }

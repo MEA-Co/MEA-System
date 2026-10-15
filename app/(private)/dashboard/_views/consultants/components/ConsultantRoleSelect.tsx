@@ -84,7 +84,7 @@ export function ConsultantRoleSelect({
       aria-busy={pending}
       className="flex flex-col items-start gap-1.5"
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-col items-start gap-2">
         <Select
           value={role}
           disabled={pending}
@@ -96,7 +96,7 @@ export function ConsultantRoleSelect({
         >
           <SelectTrigger
             aria-label={`${memberName}의 직책`}
-            className="w-40 rounded-md border-border bg-background"
+            className="w-44 max-w-full"
           >
             <SelectValue>{MEMBER_ROLE_LABELS[role]}</SelectValue>
           </SelectTrigger>
@@ -114,7 +114,6 @@ export function ConsultantRoleSelect({
             <Button
               type="submit"
               size="sm"
-              className="rounded-md"
               disabled={pending}
               aria-label={`${memberName}의 직책 저장`}
             >
@@ -127,7 +126,6 @@ export function ConsultantRoleSelect({
               type="button"
               variant="ghost"
               size="sm"
-              className="rounded-md"
               disabled={pending}
               onClick={() => {
                 setRole(initialRole);

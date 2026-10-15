@@ -1,5 +1,6 @@
 'use client';
 
+import { LoaderCircle } from 'lucide-react';
 import { useActionState, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ export function ProfileNameForm({ name }: { name: string }) {
     <form action={action} className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Input
+          id="profile-name"
           name="name"
           aria-label="이름"
           value={value}
@@ -26,16 +28,20 @@ export function ProfileNameForm({ name }: { name: string }) {
         />
         <Button
           type="submit"
-          size="sm"
+          className="min-w-20"
+          aria-busy={pending}
           disabled={pending || !value.trim() || value.trim() === name}
         >
-          {pending ? '저장 중…' : '저장'}
+          {pending && (
+            <LoaderCircle aria-hidden="true" className="animate-spin" />
+          )}
+          저장
         </Button>
       </div>
       <p
         id="profile-name-message"
         role="status"
-        className={`text-xs ${state.error ? 'text-destructive' : 'text-muted-foreground'}`}
+        className={`min-h-4 text-xs ${state.error ? 'text-destructive' : 'text-muted-foreground'}`}
       >
         {state.error || state.success}
       </p>

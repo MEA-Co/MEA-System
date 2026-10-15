@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CollectionTable } from '@/components/patterns/collection-table';
+import { CollectionTableState } from '@/components/patterns/collection-table-state';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -27,48 +27,40 @@ export function ConsultantManagementTable({
   consultants: ManagedMember[];
   canManageRoles?: boolean;
 }) {
-  if (consultants.length === 0) {
-    return (
-      <div className="flex min-h-56 items-center justify-center border-t text-center">
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            등록된 컨설턴트이 없습니다.
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            회원가입을 완료한 회원이 여기에 표시됩니다.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <Table>
-      <TableHeader>
+    <CollectionTable aria-label="컨설턴트 목록" className="block sm:table">
+      <TableHeader className="hidden sm:table-header-group">
         <TableRow className="hover:bg-transparent">
           <TableHead>이름</TableHead>
-          <TableHead>직책</TableHead>
-          <TableHead className="hidden text-right md:table-cell">
+          <TableHead className="w-44 sm:w-64">직책</TableHead>
+          <TableHead className="hidden w-36 text-right md:table-cell">
             가입일
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className="block sm:table-row-group max-sm:[&>tr]:block max-sm:[&>tr>td:not(.hidden)]:block">
+        {consultants.length === 0 && (
+          <CollectionTableState
+            colSpan={3}
+            title="등록된 컨설턴트가 없습니다"
+            description="회원가입을 완료한 회원이 여기에 표시됩니다."
+          />
+        )}
         {consultants.map((consultant) => (
           <TableRow key={consultant.id}>
             <TableCell>
-              <div className="flex items-center gap-3">
-                <Avatar size="sm">
-                  <AvatarFallback>
-                    {consultant.name.trim().charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-medium text-foreground">
-                  {consultant.name}
-                </span>
+              <div className="min-w-0 space-y-1.5">
+                <p className="wrap-anywhere font-semibold text-foreground">
+                  {consultant.name || '이름 미입력'}
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground md:hidden">
+                  가입{' '}
+                  {joinedDateFormatter.format(new Date(consultant.created_at))}
+                </p>
               </div>
             </TableCell>
             <TableCell>
+              <span className="mb-2 block text-xs text-muted-foreground sm:hidden">직책</span>
               {canManageRoles &&
               (consultant.role === 'consultant' ||
                 consultant.role === 'consultant_lead') ? (
@@ -89,6 +81,6 @@ export function ConsultantManagementTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </CollectionTable>
   );
 }
