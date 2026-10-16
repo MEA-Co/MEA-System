@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 
 const testCase = process.argv[2] ?? 'preserve';
+const emergencyPatched = process.argv.includes('--emergency-patched');
 const mutations = {
   preserve: '',
   orphan_reference: `update public.response_sessions set last_payload=coalesce(last_payload,'{}'::jsonb)
@@ -43,6 +44,8 @@ const sql = ['begin;', `do $$ begin
     or exists(select 1 from public.response_sessions) or exists(select 1 from auth.users)
   then raise exception 'Use an empty isolated verification database, never production or the development database'; end if;
 end $$;`];
+if (emergencyPatched) sql.push(readFileSync(`${directory}/20261016012233_prevent_business_conflict_retries.sql`, 'utf8')
+  .replace(/^begin;\s*/im, '').replace(/commit;\s*$/i, ''));
 for (const name of files) {
   if (name === '20261015034458_questionnaire_start_notice.sql') {
     sql.push(readFileSync('supabase/tests/fixtures/questionnaire_notice_sessions.sql', 'utf8'));
@@ -88,5 +91,15 @@ for (const name of files) {
   }
 }
 if (testCase === 'preserve') sql.push(readFileSync('supabase/tests/questionnaire_notice_session_resume.sql', 'utf8'));
+if (testCase === 'preserve' && emergencyPatched) {
+  for (const name of readdirSync(directory).filter((name) => name > '20261015105318_questionnaire_paged_list_reads.sql' && name <= '20261016014123_response_poll_versions.sql').sort()) {
+    sql.push(readFileSync(`${directory}/${name}`, 'utf8').replace(/^begin;\s*/im, '').replace(/commit;\s*$/i, ''));
+  }
+  sql.push(`do $$ begin
+    if exists(select 1 from pg_proc where pronamespace='private'::regnamespace
+      and prosrc ~ $pattern$errcode\\s*=\\s*'40001'$pattern$)
+    then raise exception 'Retryable business conflict remains'; end if;
+  end $$;`);
+}
 sql.push('rollback;');
 process.stdout.write(`${sql.join('\n')}\n`);

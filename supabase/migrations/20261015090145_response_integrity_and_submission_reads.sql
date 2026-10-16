@@ -3,13 +3,15 @@ begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '60s';
 
-do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_question') is distinct from 'e7461031c1a8bfaa731fab5a1ea71860' then raise exception 'Unexpected function drift: save_question'; end if; end $$;
+-- Accept only the original definition or its verified emergency conflict-transport rewrite.
+-- Both complete hashes are checked; unrelated edits still abort.
+do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_question') is null or (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_question') not in ('e7461031c1a8bfaa731fab5a1ea71860','91ec5ebc5e1786608de467be461fe02e') then raise exception 'Unexpected function drift: save_question'; end if; end $$;
 
 do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='read_shared_question_sources') is distinct from 'a0cc8b901a3f34d32ce7d9ab648ad965' then raise exception 'Unexpected function drift: read_shared_question_sources'; end if; end $$;
 
-do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_review_response_session') is distinct from 'b62c955b49eb36d9a041b50db46b1813' then raise exception 'Unexpected function drift: save_review_response_session'; end if; end $$;
+do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_review_response_session') is null or (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_review_response_session') not in ('b62c955b49eb36d9a041b50db46b1813','b5a267f1df6162c3b2b857167aa2a875') then raise exception 'Unexpected function drift: save_review_response_session'; end if; end $$;
 
-do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_published_question_response_session') is distinct from '0acf2d8e170ad868f39a4ea3d122caa0' then raise exception 'Unexpected function drift: save_published_question_response_session'; end if; end $$;
+do $$ begin if (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_published_question_response_session') is null or (select md5(pg_get_functiondef(oid)) from pg_proc where pronamespace='private'::regnamespace and proname='save_published_question_response_session') not in ('0acf2d8e170ad868f39a4ea3d122caa0','31512b266896c26a3f2cf16b22d81b1b') then raise exception 'Unexpected function drift: save_published_question_response_session'; end if; end $$;
 
 alter table public.questions add column response_requirements jsonb;
 comment on column public.questions.response_requirements is 'Optional question-owned completion preset; field IDs are remapped when importing a question.';
