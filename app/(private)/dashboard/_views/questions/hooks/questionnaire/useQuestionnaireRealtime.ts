@@ -1,5 +1,6 @@
 'use client';
 
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -41,16 +42,31 @@ export function useQuestionnaireRealtime(
     const topics = [`questionnaires:${audience}`];
     topics.push(`questionnaires:user:${userId}`);
 
-    const channels = topics.map((topic) =>
-      supabase
-        .channel(topic, { config: { private: true } })
-        .on('broadcast', { event: 'changed' }, invalidate)
-        .subscribe((status) => {
-          // Catch changes between initial fetch and subscription, including
-          // reconnects. supabase-js supplies and refreshes the session JWT.
+    const channels: RealtimeChannel[] = [];
+    const subscribe = async () => {
+      // Resolve the session before constructing private-channel join payloads.
+      const { data, error } = await supabase.auth.getSession();
+      if (disposed || error || !data.session || data.session.user.id !== userId) return;
+      await supabase.realtime.setAuth();
+      if (disposed) return;
+      for (const topic of topics) {
+        const channel = supabase
+          .channel(topic, { config: { private: true } })
+          .on('broadcast', { event: 'changed' }, invalidate);
+        channels.push(channel);
+        channel.subscribe((status, error) => {
           if (status === 'SUBSCRIBED') invalidate();
-        }),
-    );
+          // A denied private topic must not continuously rejoin. Existing HTTP
+          // refresh remains available and still checks server permissions.
+          if (status === 'CHANNEL_ERROR' && /unauthorized|permissions|forbidden/i.test(error?.message ?? '')) {
+            void supabase.removeChannel(channel);
+          }
+        });
+      }
+    };
+    void subscribe().catch(() => {
+      // Keep the existing polling fallback if session initialization fails.
+    });
 
     document.addEventListener('visibilitychange', resume);
     window.addEventListener('online', resume);
