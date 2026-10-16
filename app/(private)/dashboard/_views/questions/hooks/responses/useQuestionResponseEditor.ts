@@ -24,7 +24,11 @@ import {
   QuestionnaireApiError,
 } from '../../lib/questionnaire/api-client';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
-import { requestQuestionResponse } from '../../lib/responses/api-client';
+import {
+  requestQuestionResponse,
+  requestResponseVersion,
+} from '../../lib/responses/api-client';
+import { refreshResponseIfChanged } from '../../lib/responses/polling';
 import { validateResponseSubmission } from '../../lib/responses/submission-validation';
 import { richTextPlainText } from '../../lib/rich-text';
 export function useQuestionResponseEditor({
@@ -56,9 +60,12 @@ export function useQuestionResponseEditor({
   const [saved, setSaved] = useState(() =>
     JSON.stringify(snapshotRows(initial)),
   );
+  const mounted = useRef(false);
   const session = useRef({
     revision: initial.revision,
     busy: false,
+    saveGeneration: 0,
+    refreshing: false,
     retry: null as QuestionResponseSave | null,
   });
   const [pendingSave, setPendingSave] = useState<QuestionResponseSave | null>(
@@ -150,6 +157,7 @@ export function useQuestionResponseEditor({
       }
     }
     session.current.busy = true;
+    session.current.saveGeneration++;
     session.current.retry ??= {
       answers: structuredClone(rows),
       revision: session.current.revision,
@@ -272,40 +280,60 @@ export function useQuestionResponseEditor({
     latestRemoteHandler.current = applyRemote;
   });
   const refresh = useEffectEvent(async () => {
-    if (session.current.busy || locked || session.current.retry) return;
+    if (
+      document.visibilityState !== 'visible' ||
+      session.current.refreshing ||
+      session.current.busy ||
+      locked ||
+      session.current.retry
+    )
+      return;
+    session.current.refreshing = true;
+    const generation = session.current.saveGeneration;
     try {
-      const next = await requestQuestionResponse(
-        questionnaireId,
-        'GET',
-        undefined,
-        published,
-      );
-      if (
-        session.current.busy ||
-        session.current.retry ||
-        next.revision < session.current.revision
-      )
-        return;
-      latestRemoteHandler.current?.(next);
+      await refreshResponseIfChanged({
+        current: snapshot,
+        readVersion: () => requestResponseVersion(questionnaireId, published),
+        readSnapshot: () =>
+          requestQuestionResponse(questionnaireId, 'GET', undefined, published),
+        isCurrent: () =>
+          mounted.current &&
+          generation === session.current.saveGeneration &&
+          !session.current.busy &&
+          !session.current.retry &&
+          document.visibilityState === 'visible',
+        apply: (next) => {
+          if (next.revision >= session.current.revision)
+            latestRemoteHandler.current?.(next);
+        },
+      });
     } catch (error) {
       if (
+        mounted.current &&
+        generation === session.current.saveGeneration &&
         error instanceof QuestionnaireApiError &&
         [401, 403, 404].includes(error.status)
       ) {
         setBlocked(true);
         setError(error.message);
       }
+    } finally {
+      session.current.refreshing = false;
     }
   });
   useEffect(() => {
+    mounted.current = true;
     const timer = setInterval(tick, 10000);
-    const poll = setInterval(() => void refresh(), 5000);
+    const poll = setInterval(() => void refresh(), 30_000);
     const focus = () => void refresh();
     window.addEventListener('focus', focus);
+    document.addEventListener('visibilitychange', focus);
     return () => {
+      mounted.current = false;
       clearInterval(timer);
       clearInterval(poll);
       window.removeEventListener('focus', focus);
+      document.removeEventListener('visibilitychange', focus);
     };
   }, []);
   return {

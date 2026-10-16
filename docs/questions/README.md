@@ -7,6 +7,7 @@
 | [데이터·API·권한](data-api.md) | 저장 모델·식별자, 요청/응답, 역할, 충돌·삭제, 코드 책임, 남은 개선 과제 |
 | [입력과 UI](ui.md) | 질문 편집 Drawer, 질문지 제작·목록, 응답·가이드·제출 표시 |
 | [운영과 검증](operations.md) | 로컬/운영 적용 상태, migration 순서, 검증 방법 |
+| [사용량 사고와 재발 방지](usage-reliability.md) | 로그/Egress 원인 구분, 구현·검증 규칙, 운영 점검과 미구현 경보 과제 |
 | [이전 작업 기록](history.md) | AGENTS.md에서 옮긴 과거 기록. 현행 계약으로 사용하지 않음 |
 
 공통 UI 개선 진행 상태는 [UI UX 개선 기록](../ui-ux-refinement.md)에 기록한다. 학습법·탐구활동의 등록/본문 참조 계약은 [학습법 문서](../study/README.md)와 [탐구활동 문서](../exploration/README.md)를 함께 갱신한다.

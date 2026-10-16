@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { ManagedMember } from '@/lib/admin';
 import type { MemberRole, StudentPeriod } from '@/lib/profile';
 
+import { AnnouncementsView } from '../_views/announcements/AnnouncementsView';
 import { ConsultantsView } from '../_views/consultants/ConsultantsView';
 import { ConsultingView } from '../_views/consulting/ConsultingView';
 import { ExplorationView } from '../_views/exploration/ExplorationView';
@@ -28,6 +29,7 @@ type ViewContext = {
 
 // Keep server view imports out of the policy shared with client navigation.
 const DASHBOARD_VIEWS = {
+  announcements: () => <AnnouncementsView />,
   profile: ({ name, role, studentPeriod }) => (
     <ProfileView name={name} role={role} studentPeriod={studentPeriod} />
   ),

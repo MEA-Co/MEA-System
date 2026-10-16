@@ -8,6 +8,7 @@ export const DASHBOARD_GROUPS = [
 ] as const;
 
 export const DASHBOARD_PAGES = {
+  announcements: { label: '서비스 공지', group: 'other' },
   profile: { label: '내 정보', group: 'personal' },
   students: { label: '학생 관리', group: 'members' },
   consultants: { label: '컨설턴트 관리', group: 'members' },
@@ -42,6 +43,7 @@ export const DASHBOARD_ROLES = {
     consulting: { sidebar: true },
   },
   admin: {
+    announcements: { sidebar: true },
     students: { sidebar: true },
     consultants: { sidebar: true },
     questions: { sidebar: true },

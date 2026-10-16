@@ -166,13 +166,20 @@ insert into workflow_functions(schema_name,old_name,args,expected_hash) values
 ('public','unread_distributed_questionnaires','','982b275b7d1c79850844b0f837734523'),
 ('public','unread_questionnaire_publications','','4e92f3b2154e5000bfb0c507700f05d8');
 
-do $$ declare r record; target oid; definition text; begin
+do $$ declare r record; target oid; definition text; canonical text; marker text[]; begin
  for r in select * from workflow_functions loop
   select p.oid into target from pg_proc p join pg_namespace n on n.oid=p.pronamespace
    where n.nspname=r.schema_name and p.proname=r.old_name and pg_get_function_identity_arguments(p.oid)=r.args;
   if target is null then raise exception 'Missing workflow function %.%',r.schema_name,r.old_name; end if;
   definition := pg_get_functiondef(target);
-  if md5(definition) <> r.expected_hash then
+  -- Accept only the exact emergency transport rewrite, preserving drift checks.
+  -- Decode the original RAISE for fingerprint comparison; execute the patched definition.
+  canonical := definition;
+  for marker in select regexp_matches(definition,
+   $transport$(raise sqlstate 'PGRST' using message = pg_catalog.json_build_object\('code', '40001', 'message', '(?:[^']|'')*', 'details', null, 'hint', null\)::text, detail = '\{"status":409,"headers":\{\}\}'; /\* business-conflict-v1:([A-Za-z0-9+/=]+) \*/)$transport$, 'g') loop
+   canonical := replace(canonical,marker[1],convert_from(decode(marker[2],'base64'),'UTF8'));
+  end loop;
+  if md5(canonical) <> r.expected_hash then
    raise exception 'Workflow function drift: %.%. Compare prerequisite migrations before applying.',r.schema_name,r.old_name;
   end if;
   update workflow_functions set function_oid=target,definition=pg_get_functiondef(target),

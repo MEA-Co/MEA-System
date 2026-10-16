@@ -2,6 +2,15 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+  // These Route Handlers perform getUser + profile authorization themselves,
+  // and can write refreshed cookies. Never trust forwarded identity headers.
+  if (
+    /^\/api\/questionnaires\/[^/]+\/(published-responses|review-responses)\/?$/.test(
+      request.nextUrl.pathname,
+    )
+  ) {
+    return NextResponse.next({ request });
+  }
   let supabaseResponse = NextResponse.next({
     request,
   });

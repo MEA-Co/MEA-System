@@ -658,3 +658,67 @@ npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --ski
 ```
 
 기능 확인은 관리자/리드의 검색·상태·작성자·페이지, 목록 외 ID 상세, 컨설턴트 제출 전/완료, 기존 추가 서술 응답 뒤의 조건 질문 표시를 포함한다. 실제 운영 데이터를 삭제하거나 가상 답변을 제출해 검증하지 않는다. 1번(가이드 답변과 설정 축소), 2번(공유 질문 의존 관계의 배치 영향)은 [남은 개선 과제](data-api.md#남은-개선-과제-이번-작업-제외)로 유지한다.
+
+## 업무 충돌 무한 재시도 긴급 수정 (2026-10-16)
+
+### 원인과 운영 조치
+
+PostgREST 14.5에서 업무 충돌을 SQLSTATE `40001`로 발생시키면 내부에서 같은 트랜잭션을 무한 재시도할 수 있다. 운영 로그의 `private.save_question` revision 충돌과 PID 1929655에서 이를 확인했다. 로그 표시 시각은 소수점이 생략돼 있으므로 연결 종료 대상을 찾을 때 실제 `pg_stat_activity.backend_start`를 읽어야 한다. 이번 연결의 실제 시작 시각은 `2026-10-11 16:18:48.424906+00`이었다. PID·사용자·application_name·실제 시작 시각을 함께 확인하여 해당 연결만 종료했다.
+
+`20261016012233_prevent_business_conflict_retries.sql`을 로컬 migration으로 적용하고 운영 `epwlcallocdjkmgdmtlv`에는 같은 SQL을 **단독 긴급 적용**했다. 운영 함수 15개에서 실제 SQLSTATE를 `PGRST`로 바꿨다. 응답 본문 code는 구형 앱과 호환되는 `40001`, HTTP 상태는 409다. 기존 앱 재배포·브라우저 새로고침은 필요 없다. 테이블 DML/데이터 삭제/권한 변경은 없다. 이미 실패 중이던 요청의 미저장 내용을 DB가 복구했다는 의미는 아니다.
+
+운영 2026-10-16 10:27:38~10:28:17 KST 관찰: 문제 PID 없음, 업무 SQLSTATE40001 함수 0개, set_config 계열 누적 호출 195964418→195964421(약 39초간 3회). 이전 약 522회/초에서 급감했다. 누적 사용량은 되돌아가지 않으므로 대시보드 총량보다 이후 증가율을 확인한다. 이후 장시간 모니터링은 별도 수행해야 한다.
+
+### 검증
+
+- `supabase/tests/business_conflict_transport.sql`: 로컬 가상 계정·질문을 트랜잭션 롤백. 최초 저장, stale revision 거절, 기존 내용 보존, 정상 revision 수정, SQLSTATE PGRST/JSON40001/HTTP409 계약 확인.
+- 실제 로컬 PostgREST 임시 RPC: HTTP409/code40001, 16ms 반환 확인 후 함수 제거. 실제 브라우저 테스트는 하지 않았다.
+- 로컬 16개와 운영 15개 함수 정의를 수정 전 스냅샷과 비교하여 오류 처리 구문 외 동일함을 확인했다. migration 자체에서 소유자·ACL·security definer·설정 보존을 검사한다.
+- `20261015075725_questionnaire_review_publication_workflow.sql`의 정의 지문 검사는 긴급 수정 구문에 포함된 원래 RAISE(base64)를 비교 시에만 복원한다. 실행할 정의는 수정본을 유지한다. 일반 드리프트 검사는 유지하며 전체 후속 migration 체인은 운영 반영 전에 별도로 검증한다.
+
+### 다음 전체 배포와 이력
+
+운영 긴급 적용은 `db query --file`로 실행했으므로 **20261016012233의 migration 이력은 아직 미기록**이다. 순서를 앞당겨 이력을 repair하지 않았다. 다른 대기 migration도 적용하지 않았다. 이후 정상 체인의 마지막에서 이 파일이 실행되어, 앞선 migration이 재생성한 구형 오류 처리도 함께 보완하고 이력을 기록한다. 이미 수정된 함수에는 재적용하지 않는 멱등 구조다.
+
+현재 즉시 전체 `db push`를 실행하지 않는다. 예정된 전체 배포 때 구형 앱 차단·작성 중 데이터 보호 조건과 전체 대기 목록을 검토한 뒤 아래 순서를 따른다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 기존 대기 파일 전체 + 20261016010233_service_announcements.sql
+# + 20261016012233_prevent_business_conflict_retries.sql 확인
+# 예상과 다른 파일/이력이 있으면 적용 전에 중단하고 검토
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 적용 대기 없음 확인 → 앱 배포 → 저장/충돌/임시저장 복구 기능 확인
+```
+
+긴급 수정만 별도 적용한 상태와 전체 체인 적용을 혼동하지 않는다. 전체 상태 전환 migration의 점검 시간·구형 앱 차단 요건은 유지한다.
+
+## 응답 조회 Egress 절감 — 로컬만 적용 (2026-10-16)
+
+추가 파일: `20261016014123_response_poll_versions.sql`. 기존 테이블/답변/세션/revision/권한 정책을 변경하지 않고 private/public 버전 조회 함수만 추가한다. 질문지 상태 전환·응답 무결성·긴급 충돌 수정 이후 적용한다. 로컬 적용 완료, **이번 변경의 운영 migration 및 앱 배포는 미실행**이다.
+
+검증: 타입 검사·변경 파일 린트, `scripts/verify-response-polling.mjs` 6개(변경 없음/동일 revision 정의 변경/저장 또는 숨김 경쟁/오래된 결과/제출·안내 변경), SQL `response_integrity_and_submission_reads.sql`과 `review_live_layout.sql`(가상 데이터 전체 롤백), 로컬 security advisor 통과. 기존 SQL 테스트의 serialization_failure 기대값은 앞선 긴급 수정의 PGRST/code40001 계약에 맞췄다. 브라우저 검증은 수행하지 않았다.
+
+향후 승인된 전체 배포 때만 실행한다. 지금은 아래 명령을 운영에 실행하지 않는다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 기존 대기 파일 전체와 20261016014123_response_poll_versions.sql 확인
+# 예상과 다른 목록이면 적용 전 이력 검토; 긴급 단독 적용 및 지문 정규화 주의
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --skip-vault
+npx supabase migration list --linked --project-ref epwlcallocdjkmgdmtlv
+npx supabase db push --linked --project-ref epwlcallocdjkmgdmtlv --dry-run --skip-vault
+# 대기 없음 확인 → 앱 배포 → 정상 작성/임시저장/제출/다른 탭 충돌/복귀/쿠키 갱신 확인
+```
+
+migration을 먼저 적용한 뒤 앱을 배포한다. 이전 앱은 새 함수를 사용하지 않아 기존 조회 동작을 계속하며 데이터 마이그레이션은 없다. 새 앱을 DB 함수 없이 먼저 배포하면 정기 변경 확인이 실패하므로 순서를 지킨다. 전체 대기 체인에 포함된 기존 상태 전환의 점검 시간·구형 앱 차단 요건은 그대로 유지한다.
+
+## 사용량 재발 방지 기준
+
+이번 로그/Egress 사고의 원인·조치 범위·검증 규칙·운영 점검은 [사용량 사고와 재발 방지](usage-reliability.md)에 정리했다. AGENTS.md에서 관련 작업 전에 읽도록 연결한다. 자동 경보 및 장기 관측은 아직 미구현이며, Egress 개선은 운영 배포 전이다.

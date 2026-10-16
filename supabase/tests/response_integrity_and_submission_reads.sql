@@ -43,11 +43,18 @@ do $$ declare u record; x jsonb; payload jsonb; d record; f jsonb; sid uuid; beg
   perform set_config('request.jwt.claim.sub',u.id::text,true);
   set local role authenticated;
   x:=public.open_published_question_response_session(d.qid);
+  if public.read_published_question_response_version(d.qid)->>'definitionToken' is distinct from x->>'definitionToken'
+   or public.read_published_question_response_version(d.qid)->>'revision' is distinct from x->>'revision'
+   or public.read_published_question_response_version(d.qid) ? 'questions'
+   or public.read_published_question_response_version(d.qid) ? 'sections' then
+   raise exception 'Version contract mismatch';
+  end if;
   payload:=jsonb_build_object(d.question_id::text,jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(d.fields#>>'{3,id}','선택 시기만 답변'))));
   x:=public.save_published_question_response_session(d.qid,payload,0,gen_random_uuid(),false,x->>'definitionToken');
   begin
    perform public.save_published_question_response_session(d.qid,payload,1,gen_random_uuid(),true,x->>'definitionToken'); raise exception 'Only optional period submitted';
   exception when invalid_parameter_value then if sqlerrm<>'Missing career flow required periods' then raise; end if; end;
+  if public.read_published_question_response_version(d.qid)->>'revision'<>'1' then raise exception 'Saved revision not detected'; end if;
   payload:=jsonb_set(payload,array[d.question_id::text,'0','answers',d.fields#>>'{0,id}'],'"중등 답변"');
   begin
    perform public.save_published_question_response_session(d.qid,payload,1,gen_random_uuid(),true,x->>'definitionToken'); raise exception 'Missing admission accepted';
@@ -81,7 +88,7 @@ do $$ declare d record; page1 jsonb; page2 jsonb; detail jsonb; sid uuid; begin
  exception when no_data_found then null; end;
  begin
   perform public.read_submitted_response(d.qid,sid,1); raise exception 'Export revision mismatch accepted';
- exception when serialization_failure then null; end;
+ exception when sqlstate 'PGRST' then if sqlerrm::jsonb->>'code'<>'40001' then raise; end if; end;
  begin
   perform public.read_submitted_response_page(d.qid,0); raise exception 'Invalid page accepted';
  exception when invalid_parameter_value then null; end;
@@ -98,5 +105,21 @@ do $$ begin
  has_function_privilege('anon','public.read_submitted_response_page(uuid,integer)','execute') or
  has_function_privilege('anon','public.read_submitted_response_manifest(uuid)','execute') then raise exception 'Anonymous access granted'; end if;
  if has_table_privilege('authenticated','public.response_submissions','update') then raise exception 'Direct writes granted'; end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+set local role authenticated;
+do $$ begin
+ begin
+  perform public.read_published_question_response_version((select qid from response_test_docs));
+  raise exception 'Unauthenticated version read accepted';
+ exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+ if has_function_privilege('anon','public.read_published_question_response_version(uuid)','execute')
+ or has_function_privilege('anon','public.read_review_response_version(uuid)','execute')
+ or has_function_privilege('authenticated','private.response_poll_version(jsonb)','execute') then
+ raise exception 'Version helper ACL exposed'; end if;
 end $$;
 rollback;

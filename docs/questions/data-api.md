@@ -245,3 +245,17 @@ flowchart LR
 2. **공유 원본의 의존 관계 변경과 기존 배치**: 순환/참조 대상은 검사하지만, 이미 사용 중인 모든 질문지에 선행 질문이 올바르게 배치돼 있는지 원본 저장 시 동시에 확인하지 않는다. 조건을 변경하면 사용 중인 질문지의 선행 배치·순서를 모두 점검해야 한다. 질문지 저장/배포 검사가 잘못된 배치를 막더라도 원본 수정 직후의 구성을 자동 복구하지는 않는다. 전체 영향 검사/잠금은 후속 과제다.
 
 두 과제는 사용자가 이번 수정에서 제외했다. 검증 완료나 구조적 보호 완료로 기록하지 않는다.
+
+## 업무 충돌 오류 전달 (2026-10-16)
+
+revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키고, PostgREST에 HTTP 409와 기존 JSON `code: "40001"`을 명시한다. 실제 PostgreSQL SQLSTATE `40001`은 직렬화 실패용이므로 업무 충돌에 사용하지 않는다. PostgREST 14.5에서는 이를 내부 재시도로 처리하여 같은 실패가 무한 반복될 수 있다. 기존 앱의 `error.code === "40001"` 분기는 그대로 유지한다. 충돌 검사·잠금·권한·저장 데이터 계약은 바뀌지 않는다.
+
+공통 migration은 `20261016012233_prevent_business_conflict_retries.sql`이며 검토한 private 함수의 리터럴 RAISE만 변경한다. 예상하지 못한 함수/구문은 전체 롤백하며 함수 소유자·권한·실행 설정도 전후 비교한다. 적용 상태와 후속 배포는 [질문 운영 문서](../questions/operations.md#업무-충돌-무한-재시도-긴급-수정-2026-10-16)를 따른다.
+
+## 응답 변경 확인·요청 내 인증 재사용 (2026-10-16)
+
+응답 GET 경로에 `?version=1`을 추가했다. `read_review_response_version` / `read_published_question_response_version` RPC는 기존 read RPC의 소유권·역할·질문 정의·검토 배치 동기화 판정을 그대로 거쳐 id, revision, definitionToken, status, savedAt, submittedAt, sourceDeleted, hasUnsubmittedChanges, startNotice만 반환한다. questions/sections/답변 본문은 전송하지 않는다. SQL read 내부의 스냅샷 계산 비용은 남으며 이번 변경의 주목적은 Egress·호출 빈도 절감이다. 별도 버전 저장 열·트리거·기존 데이터 보정은 추가하지 않는다.
+
+클라이언트는 위 메타데이터를 비교하여 변경될 때만 전체 스냅샷을 읽고 기존 applyRemote의 정의 변경 병합·미저장 충돌 처리를 사용한다. 저장을 시작할 때 세대 번호를 올려 저장 전 시작한 조회가 이후 상태를 덮어쓰지 못하게 한다. 조회는 하나만 진행하며 숨겨짐·unmount·저장/재시도 중에는 결과를 적용하지 않는다. GET은 30초 timeout 후 다음 주기에 재시도하고 PUT/저장 ID/저장 재시도 계약은 유지한다.
+
+정확히 `/api/questionnaires/:id/{review-responses|published-responses}` 경로에서는 Proxy의 getUser를 생략하고 Route Handler의 getUser·프로필 검사를 사용한다. Route Handler는 갱신 쿠키를 기록할 수 있다. 서버에서 검사한 AuthorizedUserAccess를 questionResponseCommand에 전달하여 중복 조회만 생략하고 실제 역할·관리자 표시 역할·DB 소유권 판정은 유지한다. 전달된 헤더나 요청 body를 인증 결과로 신뢰하지 않으며 사용자 간 전역 캐시는 없다. 다른 경로의 Proxy 처리는 유지한다.

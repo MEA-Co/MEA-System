@@ -32,6 +32,7 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
       'consulting',
     ],
     admin: [
+      'announcements',
       'students',
       'consultants',
       'questions',
@@ -52,6 +53,7 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
       views,
     );
     for (const view of [
+      'announcements',
       'profile',
       'students',
       'consultants',

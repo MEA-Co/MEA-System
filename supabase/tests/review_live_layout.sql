@@ -48,6 +48,7 @@ do $$ declare x jsonb; payload jsonb; begin
  payload:=jsonb_build_object(x#>>'{questions,0,definition,id}',jsonb_build_array(jsonb_build_object('id',1,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','기존 답변 보존'))));
  payload:=jsonb_set(payload,array[x#>>'{questions,0,definition,id}'],(payload->(x#>>'{questions,0,definition,id}'))||jsonb_build_array(jsonb_build_object('id',2,'answers',jsonb_build_object(x#>>'{questions,0,definition,fields,0,id}','두 번째 답변'))));
  x:=public.save_review_response_session((x->>'id')::uuid,payload,0,gen_random_uuid(),true,x->>'definitionToken');
+ if public.read_review_response_version((x->>'id')::uuid)->>'definitionToken' is distinct from x->>'definitionToken' then raise exception 'Review version mismatch'; end if;
  insert into layout_snapshots values('initial',x);
  begin perform private.sync_review_response_layout((x->>'id')::uuid); raise exception 'Internal helper exposed'; exception when insufficient_privilege then null; end;
 end $$;
@@ -75,7 +76,7 @@ do $$ declare x jsonb; old jsonb; payload jsonb; vid uuid; begin
  if x->>'definitionToken'=old->>'definitionToken' then raise exception 'Layout token unchanged'; end if;
  if not exists(select 1 from jsonb_array_elements(x->'questions') q where q->>'responseId'=old#>>'{questions,0,responseId}' and q->'rows'=old#>'{questions,0,rows}') then raise exception 'Old answer overwritten'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- begin perform public.save_review_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Old layout accepted'; exception when serialization_failure then null; end;
+ begin perform public.save_review_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Old layout accepted'; exception when sqlstate 'PGRST' then if sqlerrm::jsonb->>'code'<>'40001' then raise; end if; end;
  x:=public.save_review_response_session(vid,payload,(x->>'revision')::int,gen_random_uuid(),false,x->>'definitionToken');
  insert into layout_snapshots values('added',x);
  if public.read_review_response_session(vid)<>public.read_review_response_session(vid) then raise exception 'Read not idempotent'; end if;
@@ -141,7 +142,7 @@ do $$ declare x jsonb; old jsonb; payload jsonb; begin
  x:=public.read_review_response_session((old->>'id')::uuid);
  if x->>'definitionToken'=old->>'definitionToken' or x#>>'{sections,0,title}'<>'순서 변경 섹션' or x#>>'{sections,0,questions,0,sourceQuestionId}'<>(select source_id::text from publish_docs) then raise exception 'Reorder was not reflected'; end if;
  select jsonb_object_agg(q#>>'{definition,id}',q->'rows') into payload from jsonb_array_elements(x->'questions') q;
- begin perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale order accepted'; exception when serialization_failure then null; end;
+ begin perform public.save_review_response_session((x->>'id')::uuid,payload,(x->>'revision')::int,gen_random_uuid(),false,old->>'definitionToken'); raise exception 'Stale order accepted'; exception when sqlstate 'PGRST' then if sqlerrm::jsonb->>'code'<>'40001' then raise; end if; end;
 end $$;
 reset role;
 -- An ordinary non-author lead sees the same latest in_review layout but cannot save.
@@ -156,6 +157,14 @@ do $$ declare x jsonb; vid uuid; begin
  if jsonb_array_length(public.read_shared_question_sources(vid))<>2 then raise exception 'Ordinary lead saw stale sources'; end if;
  begin perform public.read_review_response_session(vid); raise exception 'Other response exposed'; exception when insufficient_privilege then null; end;
  begin perform public.open_review_response_session(vid); raise exception 'Other lead persisted answers'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant'),true);
+set local role authenticated;
+do $$ begin
+ begin perform public.read_review_response_version((select (doc->>'questionnaireId')::uuid from publish_docs));
+ raise exception 'Consultant read review metadata'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 rollback;

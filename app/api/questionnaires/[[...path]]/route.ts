@@ -167,9 +167,12 @@ async function handle(request: Request, context: Context) {
         return json(
           await questionResponseCommand(
             id,
-            'read',
+            new URL(request.url).searchParams.get('version') === '1'
+              ? 'version'
+              : 'read',
             undefined,
             resource === 'published-responses',
+            access as AuthorizedUserAccess,
           ),
         );
       if (path.length > 1)
@@ -226,6 +229,7 @@ async function handle(request: Request, context: Context) {
           method === 'POST' ? 'open' : 'save',
           body,
           resource === 'published-responses',
+          access as AuthorizedUserAccess,
         ),
       );
     if (memberCommand && resource === 'answers')

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { getViewRole } from '@/lib/admin';
-import { requireUserAccess } from '@/lib/auth';
+import { type AuthorizedUserAccess, requireUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 import { QuestionnaireHttpError } from './questionnaire/http-error';
@@ -12,15 +12,26 @@ import 'server-only';
 
 export async function questionResponseCommand(
   questionnaireId: string,
-  mode: 'read' | 'open' | 'save',
+  mode: 'read' | 'open' | 'save' | 'version',
   input?: unknown,
   published = false,
+  requestAccess?: AuthorizedUserAccess,
 ) {
-  const access = await requireUserAccess({
-    allowedRoles: published
-      ? ['admin', 'consultant_lead', 'consultant']
-      : ['admin', 'consultant_lead'],
-  });
+  const access =
+    requestAccess ??
+    (await requireUserAccess({
+      allowedRoles: published
+        ? ['admin', 'consultant_lead', 'consultant']
+        : ['admin', 'consultant_lead'],
+    }));
+  if (
+    ![
+      'admin',
+      'consultant_lead',
+      ...(published ? ['consultant'] : []),
+    ].includes(access.role)
+  )
+    throw new QuestionnaireHttpError(403, '답변 접근 권한이 없어요.');
   const role = await getViewRole(access.role);
   if (
     role !== 'admin' &&
@@ -43,9 +54,11 @@ export async function questionResponseCommand(
     });
   }
   const { data, error } = await client.rpc(
-    published
-      ? `${mode}_published_question_response_session`
-      : `${mode}_review_response_session`,
+    mode === 'version'
+      ? `read_${published ? 'published_question' : 'review'}_response_version`
+      : published
+        ? `${mode}_published_question_response_session`
+        : `${mode}_review_response_session`,
     args,
   );
   if (error) {

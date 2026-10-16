@@ -3,6 +3,7 @@
 import {
   BriefcaseBusiness,
   GraduationCap,
+  Megaphone,
   MessagesSquare,
   UserRound,
 } from 'lucide-react';
@@ -34,6 +35,7 @@ import type { MemberRole } from '@/lib/profile';
 import { useQuestionnaireNotifications } from '../_views/questions/components/questionnaire/QuestionnaireNotifications';
 
 const icons = {
+  announcements: Megaphone,
   profile: UserRound,
   students: GraduationCap,
   consultants: BriefcaseBusiness,

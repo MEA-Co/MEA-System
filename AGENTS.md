@@ -17,6 +17,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 | 범주 | 먼저 읽을 기준 문서 | 보조 문서 |
 | --- | --- | --- |
+| 서비스 공지 | [문서 목록](docs/announcements/README.md), [데이터·API·권한](docs/announcements/data-api.md) | [UI](docs/announcements/ui.md), [운영](docs/announcements/operations.md) |
 | 학습법 | [데이터·API·권한](docs/study/data-api.md) | [입력/UI](docs/study/ui.md), [운영](docs/study/operations.md) |
 | 탐구활동 | [데이터·API·권한](docs/exploration/data-api.md) | [입력/UI](docs/exploration/ui.md), [운영](docs/exploration/operations.md) |
 | 질문·질문지·응답 | [문서 목록](docs/questions/README.md), [데이터·API·권한](docs/questions/data-api.md) | [입력/UI](docs/questions/ui.md), [운영](docs/questions/operations.md) |
@@ -28,6 +29,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 질문·질문지·응답 관련 작업은 [문서 목록](docs/questions/README.md)을 먼저 확인하고, UI·사용 흐름은 `ui.md`, 데이터·API·권한·코드 책임은 `data-api.md`, migration·검증·적용 상태는 `operations.md`를 같은 작업에서 갱신한다. 학습법·탐구활동 참조 계약을 변경하면 해당 도메인 문서도 함께 갱신한다. 과거 작업 기록은 `history.md`로 분리하고 이곳에는 중복 기록하지 않는다.
 
 질문지 현행 상태 명칭은 `draft`(수정 중)·`in_review`(검토 중)·`published`(배포)이며, 과거 migration/작업 기록의 명칭과 구분한다. 변경 시 질문 기준 문서와 운영 문서의 최신 전환 계약을 따른다.
+
+## Supabase 사용량·재시도 재발 방지
+
+DB 함수·자동 저장·polling·인증 경로 변경 전 [사용량 사고와 재발 방지](docs/questions/usage-reliability.md)를 읽는다. 적용 상태는 질문 운영 문서에 기록한다.
+
+- 업무 충돌을 실제 SQLSTATE `40001`로 발생시키지 않는다. 기존 HTTP409/JSON code40001 호환과 DB SQLSTATE는 구분한다. 후속 migration이 구형 오류 처리를 재도입하지 않는지 최종 DB 함수와 충돌 회귀로 확인한다.
+- 반복 조회는 변경 확인 후 필요한 본문만 가져오고, 숨긴 탭 중지·복귀 확인·중복 요청 방지·timeout을 둔다. 자동 저장과 조회 주기를 분리하고 저장 ID·미저장 입력·충돌 보호를 유지한다.
+- 인증 최적화는 동일 요청에서 검증된 결과만 재사용한다. 역할·소유권·쿠키 갱신 검사를 생략하거나 사용자 간 캐시/클라이언트 헤더를 신뢰하지 않는다.
+- 반복 요청 변경은 사용자 수 × 탭 수 × 유지 시간 × 요청 빈도 × 응답 크기로 전송 규모를 검토한다. 동시 접속 수만으로 정상 사용량이라고 판단하지 않는다.
+- 장애 조사에서는 로그 수집량과 Egress를 별도 집계하고, 적용 전후 증가율·오류 빈도를 확인한다. 조치 후 장시간 관찰/알림이 미구현이면 완료로 쓰지 않는다. 운영 긴급 수정·로컬 검증·배포 대기를 명확히 구분한다.
 
 ## 검증 방식
 
