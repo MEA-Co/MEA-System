@@ -45,6 +45,7 @@ import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnaireReadMarker } from './QuestionnaireNotifications';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import { SharedQuestionnaire } from './SharedQuestionnaire';
+import { SubmittedResponsesLoading } from './SubmittedResponsesLoading';
 
 export type QuestionnaireEditorState = {
   dirty: boolean;
@@ -214,6 +215,15 @@ function QuestionnairePanel({
   if (creation.id !== id)
     setCreation({ id, key: id === 'new' ? crypto.randomUUID() : creation.key });
   const searchParams = useSearchParams();
+  const loadingView =
+    staff && searchParams.get('questionnairePanel') === 'responses' ? (
+      <SubmittedResponsesLoading
+        withTabs
+        detail={!!searchParams.get(SUBMITTED_RESPONSE_PARAM)}
+      />
+    ) : (
+      <QuestionnaireLoading editor />
+    );
   const newKey = creation.key;
   const path =
     id === 'new'
@@ -245,7 +255,7 @@ function QuestionnairePanel({
     );
   }
   if (!data || (id === 'new' && isLoading)) {
-    if (!error) return <QuestionnaireLoading editor />;
+    if (!error) return loadingView;
     return (
       <div role="alert" className="space-y-3">
         <p>{error.message}</p>
@@ -257,11 +267,7 @@ function QuestionnairePanel({
   }
   const document = data.initialDraft ?? data.sharedDocument;
   if (id && id !== 'new' && document?.questionnaireId !== id)
-    return error ? (
-      <p role="alert">{error.message}</p>
-    ) : (
-      <QuestionnaireLoading editor />
-    );
+    return error ? <p role="alert">{error.message}</p> : loadingView;
   return (
     <QuestionnaireContent
       key={document?.questionnaireId ?? 'list'}

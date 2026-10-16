@@ -34,8 +34,8 @@ import type {
 } from '../../lib/responses/submissions';
 import type { SubmittedResponse } from '../../lib/submitted-response-export';
 
-import { QuestionnaireLoading } from './QuestionnaireLoading';
 import { QuestionnairePreview } from './QuestionnairePreview';
+import { SubmittedResponsesLoading } from './SubmittedResponsesLoading';
 
 const readOnly = () => {};
 const submittedDate = new Intl.DateTimeFormat('ko-KR', {
@@ -131,7 +131,8 @@ function SubmittedResponses({
     </>
   );
   if (error) return <p role="alert">{error.message}</p>;
-  if (selectedId ? !selected : !data) return <QuestionnaireLoading />;
+  if (selectedId ? !selected : !data)
+    return <SubmittedResponsesLoading detail={!!selectedId} />;
   if (selected)
     return (
       <div className="space-y-4">
@@ -175,7 +176,7 @@ function SubmittedResponses({
         />
       </div>
     );
-  if (!data) return <QuestionnaireLoading />;
+  if (!data) return <SubmittedResponsesLoading />;
   return (
     <section className="space-y-4">
       <div className="space-y-3 rounded-lg border bg-background p-4 sm:p-5">
