@@ -25,16 +25,29 @@ create temporary table notice_moves on commit drop as
  from public.questions q join public.questionnaire_questions p on p.source_question_id=q.id
  where q.purpose='study_registration' and q.archived_at is null;
 
+-- Unplaced legacy notice templates have no destination. Preserve their content
+-- by archiving only after proving that no response/layout/dependency uses them.
+create temporary table notice_orphans on commit drop as
+ select q.id from public.questions q where q.purpose='study_registration'
+ and q.archived_at is null and not exists(select 1 from notice_moves m where m.source_id=q.id);
+
 -- This migration is not yet deployed to production. Existing response sessions
 -- may contain the registration card as an EMPTY identity row. Remove only those
 -- empty placeholders; preserve all actual answers and submission/retry metadata.
 do $$
 begin
  if exists(select 1 from notice_moves group by questionnaire_id having count(*)>1)
- or exists(select 1 from public.questions q where q.purpose='study_registration' and q.archived_at is null
-   and not exists(select 1 from notice_moves m where m.source_id=q.id))
  or exists(select 1 from public.question_details d join notice_moves m on m.source_id=d.question_id)
  then raise exception 'Start notice migration requires review of additional cards or details'; end if;
+
+ if exists(select 1 from notice_orphans o where
+   exists(select 1 from public.question_responses r where r.question_id=o.id)
+   or exists(select 1 from public.response_sessions r where r.layout::text like '%'||o.id::text||'%'
+     or r.last_payload::text like '%'||o.id::text||'%' or r.legacy_response::text like '%'||o.id::text||'%')
+   or exists(select 1 from public.response_submissions r where r.answers::text like '%'||o.id::text||'%')
+   or exists(select 1 from public.questions q where q.source_block_id=o.id or q.after_block_id=o.id
+     or q.condition::text like '%'||o.id::text||'%'))
+ then raise exception 'Unplaced registration template has references; preserve and review manually'; end if;
 
  if exists(select 1 from public.question_responses r join public.response_sessions s on s.id=r.session_id
    where r.question_id in(select source_id from notice_moves) and (
@@ -110,7 +123,7 @@ insert into notice_preserved(target,expression,predicate) values
  ('public.question_responses','to_jsonb(t)','question_id is null or question_id not in(select source_id from notice_moves)'),
  ('public.response_sessions',$expr$to_jsonb(t)||jsonb_build_object('layout',pg_temp.notice_layout(t.layout),'last_payload',pg_temp.notice_payload(t.last_payload))$expr$,'true'),
  ('public.response_submissions',$expr$to_jsonb(t)||jsonb_build_object('answers',t.answers-array(select source_id::text from notice_moves))$expr$,'true'),
- ('public.questions',$expr$case when id in(select source_id from notice_moves) then to_jsonb(t)-'archived_at' else to_jsonb(t) end$expr$,'true'),
+ ('public.questions',$expr$case when id in(select source_id from notice_moves union select id from notice_orphans) then to_jsonb(t)-'archived_at' else to_jsonb(t) end$expr$,'true'),
  ('public.question_details','to_jsonb(t)','true');
 update notice_preserved set fingerprint=pg_temp.notice_fingerprint(target,expression,predicate);
 
@@ -142,9 +155,28 @@ delete from public.questionnaire_sections s where s.id in(select section_id from
  and not exists(select 1 from public.questionnaire_questions p where p.section_id=s.id);
 alter table public.questionnaire_sections enable trigger guard_published_section;
 
+-- Keep validate_question and its dependency checks active. It touches updated_at,
+-- so restore that one value after validation for this archive-only operation.
+-- The table is exclusively locked and the helper is removed before commit.
+create function pg_temp.notice_preserve_question_timestamp() returns trigger language plpgsql as $$
+begin
+ if old.archived_at is not null or new.archived_at is null
+   or not exists(select 1 from notice_moves where source_id=old.id
+     union all select 1 from notice_orphans where id=old.id)
+   or (to_jsonb(new)-array['archived_at','updated_at','search_text'])
+     is distinct from (to_jsonb(old)-array['archived_at','updated_at','search_text'])
+ then raise exception 'Unexpected notice archive mutation'; end if;
+ -- Generated search_text is computed after BEFORE triggers; the final fingerprint checks it.
+ new.updated_at:=old.updated_at;
+ return new;
+end $$;
+create trigger zz_notice_preserve_question_timestamp before update on public.questions
+ for each row execute function pg_temp.notice_preserve_question_timestamp();
 alter table public.questions disable trigger a_distributed_question_lock;
-update public.questions set archived_at=now() where id in(select source_id from notice_moves);
+update public.questions set archived_at=now() where id in(select source_id from notice_moves union select id from notice_orphans);
 alter table public.questions enable trigger a_distributed_question_lock;
+drop trigger zz_notice_preserve_question_timestamp on public.questions;
+drop function pg_temp.notice_preserve_question_timestamp();
 
 do $$
 declare item record; begin

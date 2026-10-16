@@ -5,6 +5,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 const testCase = process.argv[2] ?? 'preserve';
 const mutations = {
   preserve: '',
+  orphan_reference: `update public.response_sessions set last_payload=coalesce(last_payload,'{}'::jsonb)
+    ||jsonb_build_object('orphanReference',(select id from notice_test_orphan));`,
   response: `update public.question_responses set body='unexpected saved answer'
     where question_id in(select notice_id from notice_test_docs);`,
   rows: `update public.question_responses set rows='[{"id":1,"answers":{"text":"inactive answer"}}]'
@@ -43,11 +45,28 @@ const sql = ['begin;', `do $$ begin
 end $$;`];
 for (const name of files) {
   if (name === '20261015034458_questionnaire_start_notice.sql') {
-    sql.push(readFileSync('supabase/tests/fixtures/questionnaire_notice_sessions.sql', 'utf8'), mutations[testCase]);
+    sql.push(readFileSync('supabase/tests/fixtures/questionnaire_notice_sessions.sql', 'utf8'));
+    sql.push(`select set_config('request.jwt.claim.sub',(select id::text from notice_test_users where name='owner'),true);
+      set local role authenticated;
+      select public.save_question(jsonb_build_object('id',gen_random_uuid(),'title','Unplaced notice',
+        'prompt','Preserve this unplaced original','purpose','study_registration','buttonLabel','학습법 추가',
+        'fields','[]'::jsonb,'rowMode','single','minRows',1,'initialRows',1,'answerLayout','cards',
+        'rowLabels','[]'::jsonb),0,gen_random_uuid());
+      reset role;
+      -- Age persisted notices: now() is transaction-stable, so fresh fixtures hide timestamp mutations.
+      alter table public.questions disable trigger a_distributed_question_lock;
+      alter table public.questions disable trigger validate_question;
+      alter table public.questions disable trigger reconcile_guide_question_update;
+      update public.questions set updated_at=now()-interval '7 days' where purpose='study_registration';
+      alter table public.questions enable trigger validate_question;
+      alter table public.questions enable trigger reconcile_guide_question_update;
+      alter table public.questions enable trigger a_distributed_question_lock;
+      create temporary table notice_test_orphan as select * from public.questions where title='Unplaced notice';`);
+    sql.push(mutations[testCase]);
     sql.push(`create temporary table before_notice_questions as select * from public.questions where purpose<>'study_registration';
       create temporary table before_notice_answers as select * from public.question_responses;
       create temporary table before_notice_submissions as select * from public.response_submissions;
-      create temporary table before_notice_source as select * from public.questions where purpose='study_registration' and archived_at is null;`);
+      create temporary table before_notice_source as select * from public.questions where purpose='study_registration' and archived_at is null and id not in(select id from notice_test_orphan);`);
   }
   // Keep one outer transaction so fixtures and each migration are all rolled
   // back, including the synthetic guide account override.
@@ -61,6 +80,11 @@ for (const name of files) {
     }
     sql.push(readFileSync('supabase/tests/questionnaire_notice_session_preservation.sql', 'utf8'));
     sql.push(readFileSync('supabase/tests/questionnaire_start_notice.sql', 'utf8'));
+    sql.push(`do $$ begin
+      if not exists(select 1 from public.questions q join notice_test_orphan o using(id)
+        where q.archived_at is not null and to_jsonb(q)-'archived_at'=to_jsonb(o)-'archived_at')
+      then raise exception 'Unplaced notice original was not preserved'; end if;
+    end $$;`);
   }
 }
 if (testCase === 'preserve') sql.push(readFileSync('supabase/tests/questionnaire_notice_session_resume.sql', 'utf8'));
