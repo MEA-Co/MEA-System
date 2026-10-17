@@ -8,3 +8,5 @@ export async function readAnnouncement(): Promise<Announcement> {
   if (!response.ok) throw new Error('공지를 불러오지 못했습니다.');
   return response.json();
 }
+
+export const ANNOUNCEMENT_UPDATED_EVENT = 'mea:announcement-updated';

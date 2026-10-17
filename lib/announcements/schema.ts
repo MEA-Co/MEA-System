@@ -5,6 +5,7 @@ export const announcementInput = z
     title: z.string().trim().max(100),
     body: z.string().trim().max(1000),
     enabled: z.boolean(),
+    color: z.enum(['red', 'yellow', 'green']).optional(),
     starts_at: z.iso.datetime({ offset: true }).nullable(),
     ends_at: z.iso.datetime({ offset: true }).nullable(),
     revision: z.number().int().nonnegative(),

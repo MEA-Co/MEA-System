@@ -5,8 +5,8 @@ import { ServiceAnnouncement } from '@/components/announcements/ServiceAnnouncem
 export default function PrivateLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      {children}
       <ServiceAnnouncement />
+      {children}
     </>
   );
 }

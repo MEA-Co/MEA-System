@@ -44,7 +44,7 @@ export function AdminRoleTabs({ role }: { role: MemberRole }) {
   return (
     <div
       aria-busy={pending}
-      className="fixed top-2 right-4 z-40 max-w-[calc(100vw-5rem)] md:top-4"
+      className="fixed top-[calc(var(--service-announcement-height,0px)+0.5rem)] right-4 z-40 max-w-[calc(100vw-5rem)] md:top-[calc(var(--service-announcement-height,0px)+1rem)]"
     >
       <div className="md:hidden">
         <Select

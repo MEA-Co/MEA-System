@@ -1,8 +1,9 @@
 'use client';
 
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { CollectionHeader } from '@/components/patterns/collection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { readAnnouncement } from '@/lib/announcements/client';
+import {
+  ANNOUNCEMENT_UPDATED_EVENT,
+  readAnnouncement,
+} from '@/lib/announcements/client';
+import {
+  type AnnouncementColor,
+  announcementColors,
+} from '@/lib/announcements/colors';
 import {
   type Announcement,
   announcementInput,
@@ -34,6 +42,9 @@ function AnnouncementForm({
 }) {
   const [title, setTitle] = useState(notice.title);
   const [body, setBody] = useState(notice.body);
+  const [color, setColor] = useState<AnnouncementColor>(
+    notice.color ?? 'yellow',
+  );
   const [enabled, setEnabled] = useState(notice.enabled);
   const [starts, setStarts] = useState(localTime(notice.starts_at));
   const [ends, setEnds] = useState(localTime(notice.ends_at));
@@ -47,6 +58,7 @@ function AnnouncementForm({
       value ? new Date(value).toISOString() : null;
     const input = stop
       ? {
+          color: notice.color ?? 'yellow',
           title: notice.title,
           body: notice.body,
           enabled: false,
@@ -55,6 +67,7 @@ function AnnouncementForm({
           revision: notice.revision,
         }
       : {
+          color,
           title,
           body,
           enabled,
@@ -141,6 +154,35 @@ function AnnouncementForm({
                 required={enabled}
               />
             </div>
+            <fieldset className="space-y-2">
+              <legend className="mb-2 text-sm font-medium">공지 색상</legend>
+              <div className="flex flex-wrap gap-3">
+                {(
+                  Object.entries(announcementColors) as [
+                    AnnouncementColor,
+                    (typeof announcementColors)[AnnouncementColor],
+                  ][]
+                ).map(([value, theme]) => (
+                  <label
+                    key={value}
+                    className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 ${theme.surface}`}
+                  >
+                    <input
+                      type="radio"
+                      name="announcement-color"
+                      value={value}
+                      checked={color === value}
+                      onChange={() => setColor(value)}
+                    />
+                    <Megaphone
+                      className={`size-4 ${theme.icon}`}
+                      aria-hidden="true"
+                    />
+                    {theme.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="notice-start">표시 시작 (선택)</Label>
@@ -185,10 +227,7 @@ function AnnouncementForm({
             <CardTitle>미리보기</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold wrap-anywhere">{title}</p>
-            <p className="mt-2 text-sm leading-6 whitespace-pre-wrap wrap-anywhere">
-              {body}
-            </p>
+            <AnnouncementBanner title={title} body={body} color={color} />
           </CardContent>
         </Card>
       )}
@@ -274,6 +313,7 @@ export function AnnouncementsView() {
           notice={notice}
           onSaved={(value) => {
             setNotice(value);
+            window.dispatchEvent(new Event(ANNOUNCEMENT_UPDATED_EVENT));
             setMessage('최신 공지가 반영되었습니다.');
           }}
         />
