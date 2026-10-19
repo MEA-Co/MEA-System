@@ -9,11 +9,14 @@ export function confirmedContent(value: LinkContent): LinkContent {
   const used = new Set(content.graph.edges.map((e) => e.skillId));
   if (!content.name.trim() || !connected.size)
     throw new Error('이름과 하나 이상의 탐구활동 연결이 필요합니다.');
+  if (!content.description.trim())
+    throw new Error('연계 포인트를 입력해 주세요.');
   if (content.graph.edges.some((edge) => !edge.skillId))
     throw new Error('모든 연결에 연계 스킬을 할당해 주세요.');
   return {
     ...content,
     name: content.name.trim(),
+    description: content.description.trim(),
     graph: {
       ...content.graph,
       nodes: content.graph.nodes.filter((n) => connected.has(n.explorationId)),
@@ -28,6 +31,10 @@ export const confirmLinkSchema = z
     saveId: z.uuid(),
   })
   .refine((v) => !!v.content.name.trim() && v.content.graph.edges.length > 0)
+  .refine((v) => !!v.content.description.trim(), {
+    message: '연계 포인트를 입력해 주세요.',
+    path: ['content', 'description'],
+  })
   .refine((v) => v.content.graph.edges.every((edge) => !!edge.skillId), {
     message: '모든 연결에 연계 스킬을 할당해 주세요.',
   });

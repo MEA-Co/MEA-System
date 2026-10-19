@@ -22,7 +22,7 @@ try {
   const saved=await client.rpc('save_exploration',{p_id:id,p_values:{grade:'1',semester:'1',recordType:'세특',recordArea:'국어',schoolContext:'수업',topic:`활동 ${i}`,record:'내용',competencies:'역량',motivation:'기획',story:'수행',result:'결과',followup:'',references:[]},p_reports:[],p_expected_revision:0,p_save_id:randomUUID()});if(saved.error)throw saved.error;
  }
  const id=randomUUID(),skillId=randomUUID();
- const content={name:'HTTP 회귀',description:'',graph:{nodes,edges:[{from:nodes[0].explorationId,to:nodes[1].explorationId,skillId}],skills:[{id:skillId,name:'분석',description:'근거 비교'}]}};
+ const content={name:'HTTP 회귀',description:'근거 비교로 연결',graph:{nodes,edges:[{from:nodes[0].explorationId,to:nodes[1].explorationId,skillId}],skills:[{id:skillId,name:'분석',description:'근거 비교'}]}};
  const args={p_id:id,p_content:content,p_expected_revision:0,p_save_id:randomUUID()};
  const incomplete=structuredClone(args);delete incomplete.p_content.graph.edges[0].skillId;
  const denied=await client.rpc('save_exploration_link',incomplete).abortSignal(AbortSignal.timeout(5000));assert.equal(denied.status,400);

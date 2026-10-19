@@ -595,9 +595,11 @@ function LinkEditor({
       ? '작성 중인 연계 스킬을 먼저 적용해 주세요.'
       : !name.trim()
         ? '탐구줄기 이름을 입력해 주세요.'
-        : !graph.edges.length
-          ? '탐구활동을 하나 이상 연결해 주세요.'
-          : null;
+        : !description.trim()
+          ? '연계 포인트를 입력해 주세요.'
+          : !graph.edges.length
+            ? '탐구활동을 하나 이상 연결해 주세요.'
+            : null;
     if (validationMessage) {
       toast.add({ title: validationMessage, type: 'error' });
       return;
@@ -860,10 +862,7 @@ function LinkEditor({
                 htmlFor="link-description"
                 className="text-base font-semibold"
               >
-                설명{' '}
-                <span className="text-sm font-normal text-muted-foreground">
-                  (선택)
-                </span>
+                연계 포인트 <span className="text-destructive">*</span>
               </Label>
             </CardTitle>
           </CardHeader>
@@ -871,7 +870,8 @@ function LinkEditor({
             <Textarea
               id="link-description"
               readOnly={readOnly}
-              placeholder="필요하다면 탐구줄기에 대한 설명을 남겨 주세요."
+              required
+              placeholder="탐구활동들이 어떤 관심사와 질문으로 이어지는지 작성해 주세요."
               maxLength={5000}
               value={description}
               onChange={(event) => setDescription(event.target.value)}

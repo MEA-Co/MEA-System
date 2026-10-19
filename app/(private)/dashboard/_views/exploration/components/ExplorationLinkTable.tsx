@@ -114,7 +114,7 @@ export function ExplorationLinkTable({
             setPage(1);
           }}
           aria-label="탐구줄기 검색"
-          placeholder="탐구줄기 이름, 설명 검색"
+          placeholder="탐구줄기 이름, 연계 포인트 검색"
           containerClassName="sm:w-auto sm:flex-1"
         />
         <Select

@@ -187,7 +187,7 @@ localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`
 
 - `public.exploration_links`: id, owner_id(FK profiles CASCADE), name, description, graph `{nodes,edges}`, node_count, revision, save_id, request_hash, created_at, updated_at, deleted_at. 노드/간선 테이블은 만들지 않는다. graph에는 좌표·column·viewport·스킬 본문이 없다.
 - `public.exploration_link_skills`: id, owner_id(FK profiles CASCADE), name, description, created_at, updated_at. 스킬 버전/이력은 없다. 간선 skillId로 재사용하며 참조 해제나 줄기 삭제로 스킬을 지우지 않는다. 재사용 목록은 본인 스킬만 제공한다.
-- 확정은 이름(공백 제외 필수, 최대 200자), 설명(선택, 5,000자), 연결 1개 이상과 **모든 간선의 유효한 skillId**가 필요하다. 스킬 미할당은 UI에서 토스트 후 요청을 중단하고, API는 400, DB는 SQLSTATE22023으로 쓰기 전에 거절한다. 브라우저 초안은 스킬 없이 저장할 수 있다. 노드 300·간선 1,000·스킬 500·요청 및 정규화 그래프 약 2.5MB 한도를 적용한다. DB에도 타입·중복·존재·스킬 설명 필수·자기 참조·순환을 검사한다. 순환 검사는 경로를 모두 펼치지 않는 Kahn 방식이다.
+- 확정은 이름(공백 제외 필수, 최대 200자), 연계 포인트(description, 공백 제외 필수, 5,000자), 연결 1개 이상과 **모든 간선의 유효한 skillId**가 필요하다. 스킬 미할당은 UI에서 토스트 후 요청을 중단하고, API는 400, DB는 SQLSTATE22023으로 쓰기 전에 거절한다. 브라우저 초안은 스킬 없이 저장할 수 있다. 노드 300·간선 1,000·스킬 500·요청 및 정규화 그래프 약 2.5MB 한도를 적용한다. DB에도 타입·중복·존재·스킬 설명 필수·자기 참조·순환을 검사한다. 순환 검사는 경로를 모두 펼치지 않는 Kahn 방식이다.
 - 연결된 노드만 저장한다. 노드 title은 해당 활동의 현재 주제로 서버에서 교체한다. 고립 노드와 사용하지 않은 초안 스킬은 DB에 새로 저장하지 않는다. 기존 DB 스킬은 유지한다. 저장한 제목은 확정 당시 스냅샷이며 원본 삭제를 차단하거나 질문 답변을 검사하지 않는다. 이후 원본 활동이 삭제되면 줄기는 이전 제목으로 열리지만 다시 확정하려면 그 활동을 제거해야 한다.
 - `save_exploration_link` 한 RPC/트랜잭션 안에서 스킬 및 줄기를 저장한다. ID advisory lock, 줄기 revision 비교, save_id+요청 지문으로 중복 저장을 방지한다. 동일 요청 재시도는 revision을 증가시키지 않는다. 삭제된 ID는 재생성하지 않는다.
 - 기존 스킬 내용이 달라지면 전달한 updatedAt과 DB 시각을 비교한다. 일치할 때만 공유 스킬을 수정한다. 충돌 시 줄기·스킬 변경 전체를 롤백한다. 스킬 잠금 순서는 UUID 순으로 통일한다. 업무 충돌은 **SQLSTATE PGRST + HTTP409/JSON code40001**이며 실제 SQLSTATE40001을 발생시키지 않는다. 앱의 자동 재시도는 없다.
@@ -219,3 +219,7 @@ localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`
 `lib/exploration-links/drafts.ts`: 순수 그래프/초안 스키마·로컬 저장·배치. `model.ts`: 확정 정규화·DB 타입 변환. `app/api/exploration-links/[[...path]]/route.ts`: 인증·권한·요청 검증·RPC/단건 조회. 화면 `link-api.ts`: timeout·HTTP 오류. `ExplorationLinkView`: 확정·초안 정리·이탈 보호. `ExplorationLinkTable`: 서버 페이지와 로컬 초안 병합. `ExplorationLinkSkillPicker`: 팝업 한정 스킬 페이지. DB migration과 회귀는 운영 문서를 따른다.
 
 질문지 안내의 탐구줄기 등록 버튼은 현재 질문지 구성 또는 작성 답변의 저장 성공을 확인한 후 기존 탐구줄기 새 편집 URL로 이동한다. 탐구줄기 생성/저장 API·권한은 변경하지 않는다. 안내 위치와 버튼 문구는 질문지 notices 계약에 속한다.
+
+### 탐구줄기 연계 포인트 필수 (2026-10-20)
+
+탐구줄기의 description 표시명을 연계 포인트로 통일한다. 확정 시 UI·confirmedContent·confirmLinkSchema·DB save_exploration_link가 빈 값과 공백만 있는 값을 거절한다. API 필드/DB 열 이름은 description을 유지하며 기존 내용과 빈 값의 열람은 보존한다. 로컬 임시저장은 미완성 입력을 허용하고 기존 빈 확정본은 다음 확정 때 입력해야 한다. 연계 스킬의 별도 설명 필드는 변경하지 않는다.

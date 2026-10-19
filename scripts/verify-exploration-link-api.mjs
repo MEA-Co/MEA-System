@@ -12,7 +12,7 @@ function load(path,imports) {
 const drafts=load('lib/exploration-links/drafts.ts',{});
 const model=load('lib/exploration-links/model.ts',{'./drafts':drafts});
 const userId=randomUUID(),id=randomUUID(),a=randomUUID(),b=randomUUID(),c=randomUUID(),skill=randomUUID();
-const content=()=>({name:' 줄기 ',description:'',graph:{nodes:[a,b,c].map(explorationId=>({explorationId,title:'탐구',position:{x:55,y:66}})),edges:[{from:a,to:b,skillId:skill}],skills:[{id:skill,name:'분석',description:'연결 설명'}]}});
+const content=()=>({name:' 줄기 ',description:'관심 주제 확장',graph:{nodes:[a,b,c].map(explorationId=>({explorationId,title:'탐구',position:{x:55,y:66}})),edges:[{from:a,to:b,skillId:skill}],skills:[{id:skill,name:'분석',description:'연결 설명'}]}});
 function harness({role='consultant',view=role,user=true,rpcError=null}={}) {
  const calls=[];
  const route=load('app/api/exploration-links/[[...path]]/route.ts',{
@@ -28,7 +28,7 @@ test('unauthenticated, students and cross-origin writes never reach DB',async()=
  for(const options of [{user:false},{role:'student'},{}]) {const h=harness(options);const response=await h.send('PUT',{},[id],options.user===false||options.role?'https://test.local':'https://evil.test');assert.ok([401,403].includes(response.status));assert.equal(h.calls.length,0);}
 });
 test('missing name, empty connections and invalid skills are rejected without RPC',async()=>{
- for(const change of [c=>c.name=' ',c=>c.graph.edges=[],c=>c.graph.skills[0].description=' ',c=>delete c.graph.edges[0].skillId]) {const h=harness();const value=content();change(value);assert.equal((await h.send('PUT',{content:value,expectedRevision:0,saveId:randomUUID()})).status,400);assert.equal(h.calls.length,0);}
+ for(const change of [c=>c.name=' ',c=>c.description='',c=>c.description=' \n\t ',c=>c.graph.edges=[],c=>c.graph.skills[0].description=' ',c=>delete c.graph.edges[0].skillId]) {const h=harness();const value=content();change(value);assert.equal((await h.send('PUT',{content:value,expectedRevision:0,saveId:randomUUID()})).status,400);assert.equal(h.calls.length,0);}
 });
 test('preview role restricts others list and list metadata remains bounded',async()=>{
  const h=harness({role:'admin',view:'consultant'});assert.equal((await h.send('POST',{scope:'others'},[])).status,403);assert.equal(h.calls.length,0);
@@ -45,3 +45,5 @@ test('server revision and skill timestamp survive local draft roundtrip',()=>{
  const saved=drafts.writeLinkDraft(storage,'test:',userId,id,0,value,7);
  assert.equal(saved.serverRevision,7);assert.equal(saved.content.graph.skills[0].updatedAt,value.graph.skills[0].updatedAt);assert.equal(saved.content.graph.nodes.length,3);
 });
+
+test('draft permits empty linking point while confirmation rejects it',()=>{const v=content();v.description='';assert.equal(drafts.linkContentSchema.safeParse(v).success,true);assert.throws(()=>model.confirmedContent(v),/연계 포인트/);});
