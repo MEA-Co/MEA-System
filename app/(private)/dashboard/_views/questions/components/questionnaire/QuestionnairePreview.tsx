@@ -22,6 +22,11 @@ import { questionCanvasClass } from '../question/question-styles';
 import { QuestionBlockPreview } from '../question/QuestionBlockPreview';
 import { QuestionReviews } from '../question/QuestionReviews';
 
+import {
+  BRANDING_QUESTIONNAIRE_ID,
+  BrandingMaterialSummary,
+  MATERIAL_TABLES,
+} from './BrandingMaterialSummary';
 import { QuestionChoiceInput } from './QuestionChoiceInput';
 import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionnaireStartNotice } from './QuestionnaireStartNotice';
@@ -78,6 +83,33 @@ export function QuestionnairePreview({
         : { ...current, [id]: rows },
     );
   }, []);
+  const [materialRows, setMaterialRows] = useState<
+    Record<string, PreviewAnswerRow[]>
+  >({});
+  const [materialVersions, setMaterialVersions] = useState<
+    Record<string, number>
+  >({});
+  const storeMaterialRows = useCallback(
+    (id: string, rows: PreviewAnswerRow[]) => {
+      setMaterialRows((current) =>
+        JSON.stringify(current[id]) === JSON.stringify(rows)
+          ? current
+          : { ...current, [id]: rows },
+      );
+    },
+    [],
+  );
+  const isBranding = questionnaireId === BRANDING_QUESTIONNAIRE_ID;
+  const materialIds = new Set(
+    MATERIAL_TABLES.flatMap((table) =>
+      table.items.map((item) => item.question),
+    ),
+  );
+  const materialResponse = response ?? {
+    rows: materialRows,
+    onChange: storeMaterialRows,
+    disabled: false,
+  };
   const guideIds = [
     ...new Set(
       sections.flatMap((section) =>
@@ -170,6 +202,7 @@ export function QuestionnairePreview({
                   className="space-y-3 scroll-mt-24 rounded-lg focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <PlacedPreview
+                    key={materialVersions[question.sourceQuestionId] ?? 0}
                     validationMessages={submissionIssues
                       .filter(
                         (issue) =>
@@ -183,7 +216,11 @@ export function QuestionnairePreview({
                     answers={answers}
                     onRows={onRows}
                     showPrivateDetails={showPrivateDetails}
-                    response={response}
+                    response={
+                      isBranding && materialIds.has(question.sourceQuestionId)
+                        ? materialResponse
+                        : response
+                    }
                     submittedView={submittedView}
                   />
                   {reviewQuestionnaireId && (
@@ -230,6 +267,21 @@ export function QuestionnairePreview({
         </section>
       ))}
       {renderNotices('end')}
+      {isBranding && (
+        <BrandingMaterialSummary
+          rows={materialResponse.rows}
+          availableIds={new Set(placedLibrary.map((question) => question.id))}
+          disabled={submittedView || materialResponse.disabled}
+          onChange={(id, rows) => {
+            if (submittedView || materialResponse.disabled) return;
+            materialResponse.onChange(id, rows);
+            setMaterialVersions((current) => ({
+              ...current,
+              [id]: (current[id] ?? 0) + 1,
+            }));
+          }}
+        />
+      )}
     </div>
   );
 }
