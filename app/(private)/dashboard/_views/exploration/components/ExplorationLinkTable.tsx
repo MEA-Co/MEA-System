@@ -147,7 +147,7 @@ export function ExplorationLinkTable({
           </SelectContent>
         </Select>
       </div>
-      <div className="relative h-[862px] overflow-hidden rounded-lg border border-border sm:h-[662px]">
+      <div className="relative h-215.5 overflow-hidden rounded-lg border border-border sm:h-165.5">
         <Table className="table-fixed">
           <TableHeader className="bg-muted">
             <TableRow className="h-10">
@@ -169,7 +169,7 @@ export function ExplorationLinkTable({
                 <TableRow
                   key={draft.id}
                   tabIndex={-1}
-                  className="h-[80px] cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-[60px]"
+                  className="h-20 cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15"
                   onClick={(event) => {
                     if (
                       busy ||
@@ -233,7 +233,7 @@ export function ExplorationLinkTable({
                 <TableRow
                   key={item.id}
                   tabIndex={-1}
-                  className="h-[80px] cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-[60px]"
+                  className="h-20 cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15"
                   onClick={(event) => {
                     if (
                       busy ||

@@ -49,7 +49,7 @@ export function ExplorationNavigation({ links }: { links: boolean }) {
               aria-hidden="true"
               className="pointer-events-none absolute top-1 right-1 size-2"
             >
-              <span className="absolute inset-0 rounded-full bg-blue-400/40 motion-safe:animate-ping motion-safe:[animation-duration:2.5s]" />
+              <span className="absolute inset-0 rounded-full bg-blue-400/40 motion-safe:animate-ping motion-safe:animation-duration-[2.5s]" />
               <span className="absolute inset-0 rounded-full bg-blue-500" />
             </span>
           </TooltipTrigger>

@@ -27,7 +27,7 @@ export function ExplorationWritingGuide({
         작성 가이드
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner sideOffset={8} align="end" className="z-[60]">
+        <Popover.Positioner sideOffset={8} align="end" className="z-60">
           <Popover.Popup className="max-h-[min(70dvh,var(--available-height))] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-lg outline-none">
             <div className="mb-3 flex items-start justify-between gap-3">
               <Popover.Title className="flex items-center gap-2 text-sm font-semibold">
