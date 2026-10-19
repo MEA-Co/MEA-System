@@ -258,24 +258,26 @@ export function QuestionnairePreview({
               {renderNotices(question.id)}
             </Fragment>
           ))}
+          {isBranding && sectionIndex === 5 && (
+            <BrandingMaterialSummary
+              rows={materialResponse.rows}
+              availableIds={
+                new Set(placedLibrary.map((question) => question.id))
+              }
+              disabled={submittedView || materialResponse.disabled}
+              onChange={(id, rows) => {
+                if (submittedView || materialResponse.disabled) return;
+                materialResponse.onChange(id, rows);
+                setMaterialVersions((current) => ({
+                  ...current,
+                  [id]: (current[id] ?? 0) + 1,
+                }));
+              }}
+            />
+          )}
         </section>
       ))}
       {renderNotices('end')}
-      {isBranding && (
-        <BrandingMaterialSummary
-          rows={materialResponse.rows}
-          availableIds={new Set(placedLibrary.map((question) => question.id))}
-          disabled={submittedView || materialResponse.disabled}
-          onChange={(id, rows) => {
-            if (submittedView || materialResponse.disabled) return;
-            materialResponse.onChange(id, rows);
-            setMaterialVersions((current) => ({
-              ...current,
-              [id]: (current[id] ?? 0) + 1,
-            }));
-          }}
-        />
-      )}
     </div>
   );
 }
