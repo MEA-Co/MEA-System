@@ -414,11 +414,13 @@ export function QuestionnaireComposer({
           <TabsContent value="preview" className="min-w-0">
             {inReview && guideAccess?.canWrite ? (
               <QuestionResponseForm
+                embedded
                 questionnaireId={initialDraft.questionnaireId}
                 onEditorState={reportResponse}
               />
             ) : (
               <QuestionnairePreview
+                embedded
                 startNotice={startNotice}
                 reviewQuestionnaireId={
                   inReview ? initialDraft.questionnaireId : undefined
@@ -550,7 +552,7 @@ export function QuestionnaireComposer({
             ) : (
               <Button
                 variant="outline"
-                className="h-11 w-full border-dashed bg-muted/60"
+                className="h-11 w-full border-dashed"
                 disabled={blocked || saving}
                 onClick={() =>
                   setStartNotice({ title: '', body: '', buttonLabel: '' })

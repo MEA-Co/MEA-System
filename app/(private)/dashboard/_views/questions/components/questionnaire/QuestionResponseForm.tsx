@@ -16,6 +16,7 @@ import { QuestionnairePreview } from './QuestionnairePreview';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
 
 export function QuestionResponseForm(props: {
+  embedded?: boolean;
   questionnaireId: string;
   published?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
@@ -31,7 +32,9 @@ function ResponseSession({
   questionnaireId,
   onEditorState,
   published = false,
+  embedded = false,
 }: {
+  embedded?: boolean;
   questionnaireId: string;
   published?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
@@ -70,6 +73,7 @@ function ResponseSession({
     <ResponseEditor
       key={remote.id}
       questionnaireId={questionnaireId}
+      embedded={embedded}
       initial={remote}
       published={published}
       onEditorState={onEditorState}
@@ -81,7 +85,9 @@ function ResponseEditor({
   initial,
   onEditorState,
   published = false,
+  embedded = false,
 }: {
+  embedded?: boolean;
   questionnaireId: string;
   published?: boolean;
   initial: QuestionResponseSnapshot;
@@ -220,6 +226,7 @@ function ResponseEditor({
         </p>
       )}
       <QuestionnairePreview
+        embedded={embedded}
         submissionIssues={submissionIssues}
         startNotice={snapshot.startNotice}
         reviewQuestionnaireId={

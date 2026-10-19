@@ -753,3 +753,21 @@ migration을 먼저 적용한 뒤 앱을 배포한다. 이전 앱은 새 함수�
 `node scripts/prepare-questionnaire-notice-session-check.mjs preserve --emergency-patched`는 기준 스키마에 긴급 수정을 먼저 적용한 뒤 후속 18개 파일 전체(공지·최종 충돌 패치·폴링 버전 포함)를 롤백 검증한다. 답변/제출 보존과 후속 저장 회귀, 최종 retryable 40001 부재를 통과했다. 원본 상태의 15개 체인도 통과했고, 의도적으로 함수 내용을 다르게 변경하면 drift 검사에서 중단되는 것도 확인했다. 운영 적용은 수행하지 않았다.
 
 현재 dry-run 대기는 `20261015090145`, `20261015105318`, `20261016010233`, `20261016012233`, `20261016014123`의 5개다. 프로젝트 이동 → 연결 대상/이력 확인 → dry-run 예상 5개 확인 → push → 이력/대기 없음 확인 → 앱 배포 → 기존 답변/임시저장/제출 확인 순서를 따른다. 예상 외 파일은 적용 전 검토한다. 이전 성공 파일의 재실행이나 repair/reset은 하지 않는다.
+
+
+## 2026-10-17 사용량 사고 재점검 (운영 읽기 전용)
+
+11:57~11:59 KST에 `epwlcallocdjkmgdmtlv`를 확인했다. 위의 10월 16일 배포 대기 기록은 당시 상태이며, 현재 운영 이력에는 `20261016014123`까지 기록되어 있다. 긴급 충돌 수정 `20261016012233`도 포함된다. 이번 조사에서 migration/데이터/설정을 변경하거나 앱을 배포하지 않았다.
+
+- public/private 함수의 업무용 retryable SQLSTATE40001 잔존 0개, private PGRST/JSON40001 처리 함수 16개, 과거 문제 PID 1929655 없음. 40001 문자열이 있으면서 PGRST 처리가 없는 함수도 0개다.
+- 11:57:54~11:58:33 KST set_config 누적 호출은 196058364→196058418(약39초간54회, 약1.4회/초). 사고 당시 약522회/초와 달리 폭주 징후가 없다. 누적 통계는 날짜별 과금 사용량이 아니다.
+- 11:00~조회 시점(11:58경) Postgres 31건, PostgREST 17건, Realtime 14건. 메시지의 error/40001/Unauthorized 검색 일치 0건. 요청한 종료 경계는 12:00이지만 조회 당시 미래 구간은 관측한 것으로 취급하지 않는다. 장기 관측이나 모든 오류의 부재를 뜻하지 않는다.
+- 11:50~11:58 API 로그에서 read_published_question_response_version 11회, save_published_question_response_session 14회 모두 HTTP200. 버전 조회 함수는 public/private 모두 존재한다. 새 조회 경로의 실제 사용은 확인했으나 모든 클라이언트의 배포 버전은 확인하지 않았다.
+- 같은 8분에 auth user 423회, profiles 212회, read_shared_questionnaire 77회, questionnaire_list_items 77회, read_shared_question_sources 74회, read_guide_answers 41회. 상위 집계 경로는 모두 HTTP200이었다. 바이트 집계와 사용자별 기여율은 미확인이다.
+- 응답 버전 조회 로컬 회귀 6개 통과. 실제 브라우저 테스트 및 운영 데이터 쓰기 회귀는 수행하지 않았다.
+
+**판정:** 기존 DB 무한 재시도 원인은 운영에서 제거됐고 현재 재발 징후가 없다. 응답 Egress 최적화도 운영에서 사용되고 있지만 전체 Egress 문제는 부분 해결이다. QuestionnaireView.tsx:237의 상세 5초 조회가 남아 있으며 loadQuestionnaireView가 질문지 본문과 공유 질문 원본을 다시 읽는다. 해당 GET은 응답 경로 전용 Proxy 인증 생략 대상이 아니어서 Proxy와 Route Handler 인증이 각각 실행된다. 이 경로의 변경 감지/조회량 절감은 후속 과제다. 기존 답변·배치·권한·충돌 보호를 유지해야 한다.
+
+Log Query는 일반 DB SQL 호출 수가 아니라 로그 조회가 스캔한 바이트다. 사고로 쌓인 큰 로그를 Studio/API/MCP에서 반복 검색하면 조사 자체가 사용량을 늘릴 수 있다. 어제 조회 주체별 이력과 청구용 일별 수치는 이번 연결 도구로 확인하지 못해 정확한 기여율은 미확정이다. 이번 조사는 좁은 시간·source 조건으로 제한했고 과거 폭주 구간 전체 재스캔을 하지 않았다. LIMIT만으로 스캔량이 줄지는 않는다. [공식 사용량 설명](https://supabase.com/docs/guides/platform/manage-your-usage/logs-query), [조회 범위 지침](https://supabase.com/docs/guides/observability/advanced-log-filtering).
+
+Advisor도 확인했다. 다중 허용 정책(study/exploration), 외래키 인덱스 등의 성능 권고가 있으나 이번 폭주의 원인으로 입증되지 않았다. SECURITY DEFINER 경고 중 rls_auto_enable의 반환형은 event_trigger여서 일반 RPC 호출 가능성을 경고 문구만으로 단정하지 않는다. 역할 변경 함수는 별도 권한 검증 계약을 따른다. [정책 성능 권고](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies), [함수 실행 권고](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [암호 보호 권고](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). 자동 사용량 경보·장기 관측은 여전히 미구현이다.

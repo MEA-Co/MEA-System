@@ -29,6 +29,7 @@ import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
 
 export function QuestionnairePreview({
+  embedded = false,
   startNotice,
   title,
   reviewQuestionnaireId,
@@ -43,6 +44,7 @@ export function QuestionnairePreview({
   submissionIssues = [],
 }: {
   submissionIssues?: SubmissionIssue[];
+  embedded?: boolean;
   startNotice?: StartNotice | null;
   reviewQuestionnaireId?: string;
   title: string;
@@ -97,6 +99,7 @@ export function QuestionnairePreview({
       className={cn(
         questionCanvasClass,
         'min-w-0 max-w-full space-y-5 rounded-lg sm:space-y-8',
+        embedded && 'px-0 sm:px-0',
       )}
     >
       <header className="space-y-3 border-b-2 border-foreground pb-4 sm:pb-5">
