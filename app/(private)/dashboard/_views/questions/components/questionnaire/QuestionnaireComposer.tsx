@@ -85,6 +85,7 @@ export function QuestionnaireComposer({
     inReview ? '/guide-access' : null,
   );
   const [tab, setTab] = useState('edit');
+  const [noticeUploading, setNoticeUploading] = useState(false);
   const [responseState, setResponseState] = useState({
     dirty: false,
     saving: false,
@@ -163,11 +164,19 @@ export function QuestionnaireComposer({
           (hasPlacements && (!library.data || library.error)
             ? '배치한 질문을 확인할 수 없어요. 질문 목록을 다시 불러와 주세요.'
             : null)),
-    paused || pickerSection !== null || checkingRemoval,
-    pickerSection !== null,
+    paused || pickerSection !== null || checkingRemoval || noticeUploading,
+    pickerSection !== null || noticeUploading,
     confirmedRemovedGuideQuestions,
   );
-  const { save, saving, dirty, savedAt, blocked, error } = saveState;
+  const {
+    save,
+    saving: documentSaving,
+    dirty,
+    savedAt,
+    blocked,
+    error,
+  } = saveState;
+  const saving = documentSaving || noticeUploading;
   function noticeEditors(position: string) {
     const ids = new Set(
       sections.flatMap((section) => section.questions.map((q) => q.id)),
@@ -187,6 +196,9 @@ export function QuestionnaireComposer({
             <QuestionnaireNoticeEditor
               key={notice.id}
               notice={notice}
+              questionnaireId={initialDraft.questionnaireId}
+              beforeUpload={() => save()}
+              onBusyChange={setNoticeUploading}
               sections={sections}
               disabled={blocked || saving || checkingRemoval}
               onChange={(next) =>
@@ -448,7 +460,7 @@ export function QuestionnaireComposer({
         <Tabs
           value={tab}
           onValueChange={(value) => {
-            if (responseState.saving) return;
+            if (responseState.saving || noticeUploading) return;
             if (
               responseState.dirty &&
               !window.confirm('저장되지 않은 답변을 버리고 화면을 전환할까요?')
@@ -479,6 +491,7 @@ export function QuestionnaireComposer({
             ) : (
               <QuestionnairePreview
                 embedded
+                questionnaireId={initialDraft.questionnaireId}
                 notices={notices}
                 beforeLinkRegistration={() => save()}
                 registrationDisabled={blocked || saving || checkingRemoval}

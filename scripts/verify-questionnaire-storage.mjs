@@ -24,6 +24,7 @@ function load(path, imports = {}, globals = {}) {
       structuredClone,
       ...globals,
       require: (name) => {
+        if (name === '@/lib/questionnaire-notice-images/model') return load('lib/questionnaire-notice-images/model.ts');
         if (name === 'zod') return require('zod');
         if (name === 'server-only') return {};
         if (name === './list-server' || name === './list-model')

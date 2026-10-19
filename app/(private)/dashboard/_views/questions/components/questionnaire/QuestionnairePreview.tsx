@@ -31,6 +31,7 @@ import { RichTextContent } from './RichTextContent';
 export function QuestionnairePreview({
   embedded = false,
   notices = [],
+  questionnaireId,
   beforeLinkRegistration,
   registrationDisabled,
   title,
@@ -48,6 +49,7 @@ export function QuestionnairePreview({
   submissionIssues?: SubmissionIssue[];
   embedded?: boolean;
   notices?: QuestionnaireNotice[];
+  questionnaireId?: string;
   beforeLinkRegistration?: () => Promise<boolean>;
   registrationDisabled?: boolean;
   reviewQuestionnaireId?: string;
@@ -116,6 +118,7 @@ export function QuestionnairePreview({
         <QuestionnaireStartNotice
           key={notice.id}
           notice={notice}
+          questionnaireId={questionnaireId}
           beforeLinkRegistration={beforeLinkRegistration}
           registrationDisabled={registrationDisabled}
         />

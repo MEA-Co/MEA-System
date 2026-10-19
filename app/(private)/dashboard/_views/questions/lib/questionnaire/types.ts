@@ -1,3 +1,5 @@
+import type { NoticeImage } from '@/lib/questionnaire-notice-images/model';
+
 import type { QuestionBlockRow } from '../question-blocks';
 import type { QuestionDetail } from '../question-details';
 import type { QuestionReview } from '../reviews/types';
@@ -34,6 +36,7 @@ export type QuestionnaireSection = {
 };
 
 export type QuestionnaireNotice = {
+  images?: NoticeImage[];
   id: string;
   /** start, end, or the preceding placement ID. */
   position: string;

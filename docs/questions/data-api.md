@@ -263,3 +263,19 @@ revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키�
 클라이언트는 위 메타데이터를 비교하여 변경될 때만 전체 스냅샷을 읽고 기존 applyRemote의 정의 변경 병합·미저장 충돌 처리를 사용한다. 저장을 시작할 때 세대 번호를 올려 저장 전 시작한 조회가 이후 상태를 덮어쓰지 못하게 한다. 조회는 하나만 진행하며 숨겨짐·unmount·저장/재시도 중에는 결과를 적용하지 않는다. GET은 30초 timeout 후 다음 주기에 재시도하고 PUT/저장 ID/저장 재시도 계약은 유지한다.
 
 정확히 `/api/questionnaires/:id/{review-responses|published-responses}` 경로에서는 Proxy의 getUser를 생략하고 Route Handler의 getUser·프로필 검사를 사용한다. Route Handler는 갱신 쿠키를 기록할 수 있다. 서버에서 검사한 AuthorizedUserAccess를 questionResponseCommand에 전달하여 중복 조회만 생략하고 실제 역할·관리자 표시 역할·DB 소유권 판정은 유지한다. 전달된 헤더나 요청 body를 인증 결과로 신뢰하지 않으며 사용자 간 전역 캐시는 없다. 다른 경로의 Proxy 처리는 유지한다.
+
+## 안내 사진 저장·접근 계약 (2026-10-19)
+
+`notices[].images?: {id: UUID, name: string}[]`를 추가한다. 항목당 최대 10개, 파일명 1~200자, 중복 사진 ID 금지다. 순서는 배열 순서이며 이미지 바이트·공개 URL·signed URL은 질문지 JSON에 저장하지 않는다. 미지정은 사진 없음, `[]`는 참조 전체 해제다. 기존 noticesToken은 JSON 변경에 따라 사진 추가/제거/정렬도 감지하며 폴링으로 이미지 본문을 전달하지 않는다.
+
+비공개 `questionnaire-notice-images` 버킷의 경로는 `<questionnaire UUID>/<notice UUID>/<image UUID>.webp`다. Storage 한 파일 최대 2MiB·image/webp이며 upsert/일반 사용자 UPDATE·DELETE는 허용하지 않는다. INSERT는 저장된 안내가 존재하고 해당 질문지를 편집할 수 있는 관리자/리드에게 허용한다. draft는 작성자·관리자, in_review는 기존 공동 편집 권한이다. SELECT는 기존 questionnaires RLS를 적용한다. 편집자는 해당 안내의 업로드 파일, 일반 열람자는 활성 공유/배포 질문지의 안내에서 실제 참조한 파일만 읽는다. 익명·학생·타인의 비공개 초안·보관된 질문지는 읽을 수 없다. 새 private 헬퍼는 invoker로 기존 질문지 RLS를 유지하고 공개 RPC/새 definer는 없다.
+
+`GET /api/questionnaire-notice-images/:questionnaireId/:noticeId/:imageId`는 로그인·온보딩·실제/표시 역할을 확인하고 사용자 세션의 Storage 다운로드를 거쳐 image/webp를 반환한다. 응답은 private,no-store 및 nosniff다. Next 이미지 최적화 프록시는 사용자 쿠키를 전달하지 않으므로 공통 갤러리는 인증된 동일 출처 img를 사용한다.
+
+같은 경로의 `PUT`은 리드/관리자, `X-Questionnaire-Workflow: 2`, 동일 출처, 편집 가능한 질문지를 검사한다. 브라우저가 압축한 raw WebP를 받으며 Content-Length 유무와 무관하게 스트림 수신을 2MiB로 제한한다. 서버 sharp가 실제 형식·4000만 화소 상한·단일 프레임을 확인하고 2000px WebP로 재인코딩하여 메타데이터를 제거한다. SVG/실행 가능한 원문은 받지 않는다. 서버가 사용자 세션으로 Storage INSERT를 수행하며 service key로 권한을 우회하지 않는다. 자동 재시도는 없고 클라이언트 업로드 timeout은 파일당 60초다.
+
+질문지 원자적 저장은 새 사진 참조 각각이 해당 질문지/안내 경로에 존재하는지 `storage.objects(bucket_id,name)`의 기존 인덱스로 검사한다. 다른 질문지 사진 ID·없는 업로드는 거절하며 기존 revision/saveId/권한·충돌 전달은 유지한다. 기존 파일 불변 정책 때문에 동시 편집에서 사진 bytes가 덮어써지지 않는다.
+
+책임: `lib/questionnaire-notice-images/{model,prepare,process}.ts`는 메타데이터/브라우저 압축/서버 재인코딩, 전용 API는 인증·Storage 전달, `QuestionnaireNoticeImages`는 업로드·진행 보호·순서/제거, 공통 `components/ui/image-gallery.tsx`는 단일 큰 사진/여러 사진 썸네일/확대를 담당한다.
+
+안내에서 제거하거나 저장 전에 이탈한 파일은 즉시 물리 삭제하지 않는다. 참조가 사라진 파일은 일반 열람자에게 제공되지 않지만 저장소에 남을 수 있다. 미참조 파일 수명주기/정리 작업은 아직 없으며 별도 검토 대상이다. 임의의 SQL DELETE나 저장 중 파일 삭제로 대체하지 않는다.

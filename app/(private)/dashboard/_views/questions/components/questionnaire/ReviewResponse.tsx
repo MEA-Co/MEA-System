@@ -36,6 +36,7 @@ export function ReviewResponse({
     </>
   ) : (
     <QuestionnairePreview
+      questionnaireId={document.questionnaireId}
       notices={document.notices}
       reviewQuestionnaireId={document.questionnaireId}
       title={document.title}

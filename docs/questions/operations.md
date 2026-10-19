@@ -814,3 +814,27 @@ npx supabase db push --linked --dry-run
 ```
 
 이번 파일은 `20261019131346_questionnaire_positioned_notices.sql`이다. 이전 탐구줄기 작업이 운영 미반영이면 `20261019104839_exploration_links.sql`, `20261019110548_require_exploration_link_skills.sql`이 먼저 나올 수 있다. 예상과 다른 migration은 적용 전에 연결 대상·이력을 검토한다. 적용 대기 없음 확인 → 앱 배포 → 기존 안내 보존, 질문 사이/마지막 안내, 등록 버튼의 저장 성공 이동·실패 시 잔류를 확인한다. 원격 reset/임의 history repair는 하지 않는다.
+
+## 안내 사진·캐러셀·확대 (2026-10-19)
+
+`20261019142422_questionnaire_notice_images.sql`: 비공개 Storage 버킷(2MiB, WebP), 읽기/업로드 RLS, 사진 메타데이터 검증 및 질문지 저장 시 객체 존재 검사를 추가한다. 기존 문서·답변 행은 일괄 변경하지 않는다. 사진 원본은 브라우저와 서버에서 최대 2000px로 줄이고 서버에서 메타데이터를 제거한다. 기존 Next 간접 의존성이던 sharp 0.35.4를 정확한 버전의 직접 의존성으로 등록했다.
+
+로컬 적용·이력 등록 완료, dry-run 적용 대기 없음. 함수 정의·ACL은 이전 함수부터 최종 migration 재실행으로 동등성을 확인했고 버킷 설정은 Storage 보호를 유지한 채 읽기 검증했다. 운영 적용·앱 배포·실제 브라우저 검증은 수행하지 않았다.
+
+검증: 타입·변경 파일 린트, 이미지 UI/처리/API 7개와 기존 질문지/안내/응답 회귀 37개 통과. `supabase/tests/questionnaire_notice_images.sql`은 초안 비공개·공동 편집·배포 시 참조 사진만 조회·익명 거부·없는 파일/중복 참조 거절을 롤백 검증한다. `questionnaire_positioned_notices.sql`, `business_conflict_transport.sql`도 통과했다. `node scripts/verify-notice-images-local.mjs`는 로컬 URL 강제 확인 후 임시 계정/질문지/사진으로 실제 Storage HTTP 업로드·읽기·타인 거절·덮어쓰기 거절·참조 저장을 확인했고 모두 정리했다. 로컬 security advisor 경고·오류 없음.
+
+반복 조회는 추가하지 않는다. 여러 사진은 썸네일 목록에서 지연 로드하며 각 이미지 요청은 최대 2MiB다. 별도 썸네일 파일 없이 기존 압축 이미지를 사용하므로 한 안내의 사진 10장을 모두 읽으면 최대 20MiB가 전송될 수 있다. 확대 팝업은 동일 사진을 별도 표시하므로 private,no-store 정책상 재요청할 수 있다. 사진 메타데이터만 기존 문서/지문 조회에 포함한다. 미참조 파일 자동 정리는 미구현이며, 저장 실패/다른 창 입력을 보호하기 위해 현재 제거는 참조 해제로 한정한다.
+
+전체 UI 개선 완료 후 운영 반영 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 예상 파일·연결 대상을 확인한 다음에만
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+이번 예상 파일은 `20261019142422_questionnaire_notice_images.sql`이다. 선행 `20261019131346_questionnaire_positioned_notices.sql` 및 이전 탐구줄기 2개가 미적용이면 먼저 포함되어야 한다. 예상과 다른 migration은 적용 전에 이력을 검토한다. 적용 대기 없음 확인 → 앱 배포 → 한 장/여러 장 첨부·순서 변경·썸네일 목록·확대·저장/재조회·컨설턴트 열람·권한 거부를 확인한다. 운영 reset/임의 repair는 실행하지 않는다.

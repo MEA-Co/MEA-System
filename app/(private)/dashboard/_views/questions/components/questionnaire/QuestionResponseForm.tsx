@@ -242,6 +242,7 @@ function ResponseEditor({
         </p>
       )}
       <QuestionnairePreview
+        questionnaireId={questionnaireId}
         embedded={embedded}
         submissionIssues={submissionIssues}
         notices={snapshot.notices}

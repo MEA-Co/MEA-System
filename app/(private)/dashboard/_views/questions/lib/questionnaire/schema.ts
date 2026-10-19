@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { noticeImagesSchema } from '@/lib/questionnaire-notice-images/model';
+
 import {
   QUESTION_DETAIL_LIMITS,
   questionDetailSchema,
@@ -66,6 +68,7 @@ const sectionSchema = z.object({
   questions: z.array(questionSchema).max(100),
 });
 export const questionnaireNoticeSchema = z.object({
+  images: noticeImagesSchema.optional(),
   id: z.uuid(),
   position: z.union([z.literal('start'), z.literal('end'), z.uuid()]),
   title: z.string().max(200),

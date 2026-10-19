@@ -21,14 +21,22 @@ import type {
 } from '../../lib/questionnaire/types';
 import { QuestionRichTextEditor } from '../question/QuestionRichTextEditor';
 
+import { QuestionnaireNoticeImages } from './QuestionnaireNoticeImages';
+
 export function QuestionnaireNoticeEditor({
   notice,
+  questionnaireId,
+  beforeUpload,
+  onBusyChange,
   sections,
   disabled,
   onChange,
   onDelete,
 }: {
   notice: QuestionnaireNotice;
+  questionnaireId: string;
+  beforeUpload: () => Promise<boolean>;
+  onBusyChange: (busy: boolean) => void;
   sections: QuestionnaireSection[];
   disabled: boolean;
   onChange: (notice: QuestionnaireNotice) => void;
@@ -97,6 +105,15 @@ export function QuestionnaireNoticeEditor({
           value={notice.body}
           disabled={disabled}
           onChange={(body) => onChange({ ...notice, body })}
+        />
+        <QuestionnaireNoticeImages
+          questionnaireId={questionnaireId}
+          noticeId={notice.id}
+          images={notice.images ?? []}
+          disabled={disabled}
+          beforeUpload={beforeUpload}
+          onBusyChange={onBusyChange}
+          onChange={(images) => onChange({ ...notice, images })}
         />
         {(
           [
