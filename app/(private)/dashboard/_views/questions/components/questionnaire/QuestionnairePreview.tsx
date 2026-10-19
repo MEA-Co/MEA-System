@@ -20,7 +20,6 @@ import type { PreviewAnswerRow } from '../../lib/reference-rows';
 import type { SubmissionIssue } from '../../lib/responses/submission-validation';
 import { questionCanvasClass } from '../question/question-styles';
 import { QuestionBlockPreview } from '../question/QuestionBlockPreview';
-import { QuestionReviews } from '../question/QuestionReviews';
 
 import {
   BRANDING_QUESTIONNAIRE_ID,
@@ -40,7 +39,6 @@ export function QuestionnairePreview({
   beforeLinkRegistration,
   registrationDisabled,
   title,
-  reviewQuestionnaireId,
   sections,
   library = [],
   renderQuestionFooter,
@@ -57,7 +55,6 @@ export function QuestionnairePreview({
   questionnaireId?: string;
   beforeLinkRegistration?: () => Promise<boolean>;
   registrationDisabled?: boolean;
-  reviewQuestionnaireId?: string;
   title: string;
   sections: QuestionnaireSection[];
   library?: QuestionBlockRow[];
@@ -223,9 +220,6 @@ export function QuestionnairePreview({
                     }
                     submittedView={submittedView}
                   />
-                  {reviewQuestionnaireId && (
-                    <QuestionReviews questionId={question.sourceQuestionId} />
-                  )}
                   {renderQuestionFooter?.(question.id)}
                 </div>
               ) : legacyResponsePreview ? (

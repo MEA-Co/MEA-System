@@ -250,9 +250,6 @@ function ResponseEditor({
         registrationDisabled={
           locked || saving || registrationSaving || !!pendingSave
         }
-        reviewQuestionnaireId={
-          published || snapshot.sourceDeleted ? undefined : questionnaireId
-        }
         key={remoteAnswerVersion}
         title={snapshot.title}
         sections={snapshot.sections}

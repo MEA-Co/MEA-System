@@ -495,9 +495,6 @@ export function QuestionnaireComposer({
                 notices={notices}
                 beforeLinkRegistration={() => save()}
                 registrationDisabled={blocked || saving || checkingRemoval}
-                reviewQuestionnaireId={
-                  inReview ? initialDraft.questionnaireId : undefined
-                }
                 title={title}
                 sections={sections}
                 library={questions}
