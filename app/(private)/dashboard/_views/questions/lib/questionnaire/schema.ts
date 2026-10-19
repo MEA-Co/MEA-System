@@ -65,22 +65,31 @@ const sectionSchema = z.object({
   title: z.string().max(500),
   questions: z.array(questionSchema).max(100),
 });
+export const questionnaireNoticeSchema = z.object({
+  id: z.uuid(),
+  position: z.union([z.literal('start'), z.literal('end'), z.uuid()]),
+  title: z.string().max(200),
+  body: z.string().max(20000).transform(normalizeRichTextValue),
+  buttonLabel: z.string().max(100),
+  explorationButtonLabel: z.string().max(100).optional(),
+  linkButtonLabel: z.string().max(100).optional(),
+});
 export const questionnaireDocumentSchema = z
   .object({
-    startNotice: z
-      .object({
-        title: z.string().max(200),
-        body: z.string().max(20000).transform(normalizeRichTextValue),
-        buttonLabel: z.string().max(100),
-        explorationButtonLabel: z.string().max(100).optional(),
-      })
-      .nullable()
-      .optional(),
+    notices: z.array(questionnaireNoticeSchema).max(50).optional(),
     questionnaireId: z.uuid(),
     title: z.string().max(500),
     sections: z.array(sectionSchema).max(50),
   })
   .superRefine((document, context) => {
+    const noticeIds = document.notices?.map((notice) => notice.id) ?? [];
+    if (new Set(noticeIds).size !== noticeIds.length)
+      context.addIssue({
+        code: 'custom',
+        path: ['notices'],
+        message: '안내 ID가 중복됩니다.',
+      });
+
     const ids = document.sections.flatMap((section) => [
       section.id,
       ...section.questions.flatMap((question) => [
@@ -147,18 +156,6 @@ export const savedDraftSchema = questionnaireDocumentSchema
       )
       .max(50),
   })
-  .and(
-    z.object({
-      startNotice: z
-        .object({
-          title: z.string(),
-          body: z.string(),
-          buttonLabel: z.string(),
-          explorationButtonLabel: z.string().max(100).optional(),
-        })
-        .nullish(),
-    }),
-  )
   .and(
     z.object({
       revision: z.number().int().nonnegative(),

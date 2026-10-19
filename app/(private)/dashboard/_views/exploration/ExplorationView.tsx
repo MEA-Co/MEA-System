@@ -31,7 +31,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { type Exploration } from '@/lib/exploration/fields';
 import { hasInput, missingFields } from '@/lib/exploration/storage-model';
 
@@ -39,6 +38,7 @@ import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
 import { ExplorationDetails } from './components/ExplorationDetails';
 import { ExplorationFields } from './components/ExplorationFields';
+import { ExplorationLinkView } from './components/ExplorationLinkView';
 import { ExplorationNavigation } from './components/ExplorationNavigation';
 import { ExplorationReferencesInput } from './components/ExplorationReferencesInput';
 import { ExplorationReportInput } from './components/ExplorationReportInput';
@@ -47,23 +47,40 @@ import { ExplorationTable } from './components/ExplorationTable';
 import { useExplorationStorage } from './hooks/useExplorationStorage';
 import { exampleExplorationValues } from './lib/example-exploration';
 
-export function ExplorationView({
-  userId,
-  canViewOthers = false,
-  onSelect,
-  onEditorOpenChange,
-  registrationOnly = false,
-  registrationLabel = '탐구활동 추가',
-}: {
+type ExplorationViewProps = {
   registrationOnly?: boolean;
   registrationLabel?: string;
   userId: string;
   canViewOthers?: boolean;
   onSelect?: (activity: Exploration) => void;
   onEditorOpenChange?: (open: boolean) => void;
-}) {
+};
+
+export function ExplorationView(props: ExplorationViewProps) {
   const params = useSearchParams();
-  const stems = !onSelect && !registrationOnly && params.get('tab') === 'stems';
+  const links =
+    !props.onSelect &&
+    !props.registrationOnly &&
+    ['links', 'stems'].includes(params.get('tab') ?? '');
+  if (links)
+    return (
+      <ExplorationLinkView
+        key={props.userId}
+        userId={props.userId}
+        canViewOthers={props.canViewOthers ?? false}
+      />
+    );
+  return <ExplorationActivitiesView key={props.userId} {...props} />;
+}
+
+function ExplorationActivitiesView({
+  userId,
+  canViewOthers = false,
+  onSelect,
+  onEditorOpenChange,
+  registrationOnly = false,
+  registrationLabel = '탐구활동 추가',
+}: ExplorationViewProps) {
   const opener = useRef<HTMLElement | null>(null);
   const continueWritingRef = useRef<HTMLButtonElement | null>(null);
   const {
@@ -133,32 +150,28 @@ export function ExplorationView({
         <CollectionHeader
           id="exploration-management-title"
           category={<DashboardPageCategory view="exploration" />}
-          title={stems ? '탐구줄기 관리' : '탐구활동 관리'}
-          description={
-            stems
-              ? undefined
-              : '나의 탐구 경험을 기록하고, 필요한 답변에 연결하세요.'
-          }
+          title="탐구활동 관리"
+          description="나의 탐구 경험을 기록하고, 필요한 답변에 연결하세요."
           action={
-            !stems && (
-              <Button
-                type="button"
-                disabled={!ready || busy}
-                aria-label="탐구활동 추가"
-                onClick={(event) => {
-                  opener.current = event.currentTarget;
-                  create();
-                }}
-              >
-                <Plus aria-hidden="true" />
-                <span className="hidden sm:inline">탐구활동 추가</span>
-                <span className="sm:hidden">추가</span>
-              </Button>
-            )
+            <Button
+              type="button"
+              disabled={!ready || busy}
+              aria-label="탐구활동 추가"
+              onClick={(event) => {
+                opener.current = event.currentTarget;
+                create();
+              }}
+            >
+              <Plus aria-hidden="true" />
+              <span className="hidden sm:inline">탐구활동 추가</span>
+              <span className="sm:hidden">추가</span>
+            </Button>
           }
         />
       )}
-      {!onSelect && !registrationOnly && <ExplorationNavigation stems={stems} />}
+      {!onSelect && !registrationOnly && (
+        <ExplorationNavigation links={false} />
+      )}
       {localError && (
         <p role="alert" className="text-sm text-destructive">
           {localError}
@@ -325,13 +338,6 @@ export function ExplorationView({
             create();
           }}
         />
-      ) : stems ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>탐구줄기</EmptyTitle>
-            <EmptyDescription>탐구줄기 기능을 준비 중입니다.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
       ) : (
         <ExplorationTable
           userId={userId}

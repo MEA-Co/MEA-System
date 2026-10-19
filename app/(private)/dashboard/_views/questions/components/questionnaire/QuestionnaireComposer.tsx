@@ -10,11 +10,10 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +37,10 @@ import { cn } from '@/lib/utils';
 import { useQuestionLibrary } from '../../hooks/questionnaire/useQuestionLibrary';
 import { useQuestionnaireSave } from '../../hooks/questionnaire/useQuestionnaireSave';
 import type { QuestionBlockRow } from '../../lib/question-blocks';
-import { QUESTIONNAIRE_HEADERS, useQuestionnaireResource } from '../../lib/questionnaire/api-client';
+import {
+  QUESTIONNAIRE_HEADERS,
+  useQuestionnaireResource,
+} from '../../lib/questionnaire/api-client';
 import {
   createPlacement,
   placementError,
@@ -51,9 +53,9 @@ import type {
 } from '../../lib/questionnaire/types';
 import { questionCanvasClass } from '../question/question-styles';
 import { QuestionLibraryView } from '../question/QuestionLibraryView';
-import { QuestionRichTextEditor } from '../question/QuestionRichTextEditor';
 
 import { QuestionLibraryPicker } from './QuestionLibraryPicker';
+import { QuestionnaireNoticeEditor } from './QuestionnaireNoticeEditor';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { QuestionnaireReviews } from './QuestionnaireReviews';
 import type { QuestionnaireEditorState } from './QuestionnaireView';
@@ -95,9 +97,7 @@ export function QuestionnaireComposer({
     );
   }, []);
   const [title, setTitle] = useState(initialDraft.title);
-  const [startNotice, setStartNotice] = useState(
-    initialDraft.startNotice ?? null,
-  );
+  const [notices, setNotices] = useState(initialDraft.notices ?? []);
   const [sections, setSections] = useState(initialDraft.sections);
   const [checkingRemoval, setCheckingRemoval] = useState(false);
   const removalLock = useRef(false);
@@ -148,12 +148,12 @@ export function QuestionnaireComposer({
       questionnaireId: initialDraft.questionnaireId,
       title,
       sections,
-      startNotice,
+      notices,
     },
     initialDraft,
     (draft) => {
       setTitle(draft.title);
-      setStartNotice(draft.startNotice ?? null);
+      setNotices(draft.notices ?? []);
       setSections(draft.sections);
     },
     remoteUnavailable,
@@ -168,6 +168,63 @@ export function QuestionnaireComposer({
     confirmedRemovedGuideQuestions,
   );
   const { save, saving, dirty, savedAt, blocked, error } = saveState;
+  function noticeEditors(position: string) {
+    const ids = new Set(
+      sections.flatMap((section) => section.questions.map((q) => q.id)),
+    );
+    return (
+      <div className="space-y-3">
+        {notices
+          .filter(
+            (notice) =>
+              (notice.position === 'start' ||
+              notice.position === 'end' ||
+              ids.has(notice.position)
+                ? notice.position
+                : 'end') === position,
+          )
+          .map((notice) => (
+            <QuestionnaireNoticeEditor
+              key={notice.id}
+              notice={notice}
+              sections={sections}
+              disabled={blocked || saving || checkingRemoval}
+              onChange={(next) =>
+                setNotices(
+                  notices.map((item) => (item.id === notice.id ? next : item)),
+                )
+              }
+              onDelete={() =>
+                setNotices(notices.filter((item) => item.id !== notice.id))
+              }
+            />
+          ))}
+        <Button
+          variant="outline"
+          className="w-full border-dashed"
+          disabled={
+            blocked || saving || checkingRemoval || notices.length >= 50
+          }
+          onClick={() =>
+            setNotices([
+              ...notices,
+              {
+                id: crypto.randomUUID(),
+                position,
+                title: '',
+                body: '',
+                buttonLabel: '',
+              },
+            ])
+          }
+        >
+          <Plus />
+          {position === 'end' ? '마지막에 안내 추가' : '안내 추가'}
+        </Button>
+      </div>
+    );
+  }
+
   async function removeQuestions(
     next: QuestionnaireSection[],
     removed: QuestionnaireSection['questions'],
@@ -417,11 +474,14 @@ export function QuestionnaireComposer({
                 embedded
                 questionnaireId={initialDraft.questionnaireId}
                 onEditorState={reportResponse}
+                beforeLinkRegistration={() => save()}
               />
             ) : (
               <QuestionnairePreview
                 embedded
-                startNotice={startNotice}
+                notices={notices}
+                beforeLinkRegistration={() => save()}
+                registrationDisabled={blocked || saving || checkingRemoval}
                 reviewQuestionnaireId={
                   inReview ? initialDraft.questionnaireId : undefined
                 }
@@ -456,112 +516,7 @@ export function QuestionnaireComposer({
                 />
               </CardContent>
             </Card>
-            {startNotice ? (
-              <Card variant="accent">
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="notice-title">질문지 시작 안내</Label>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="시작 안내 삭제"
-                      disabled={blocked || saving}
-                      onClick={() => setStartNotice(null)}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                  <Input
-                    id="notice-title"
-                    aria-label="안내 제목"
-                    placeholder="안내 제목"
-                    maxLength={200}
-                    value={startNotice.title}
-                    disabled={blocked || saving}
-                    onChange={(e) =>
-                      setStartNotice({ ...startNotice, title: e.target.value })
-                    }
-                  />
-                  <QuestionRichTextEditor
-                    id="notice-body"
-                    ariaLabel="안내 내용"
-                    value={startNotice.body}
-                    disabled={blocked || saving}
-                    onChange={(body) =>
-                      setStartNotice({ ...startNotice, body })
-                    }
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={!!startNotice.buttonLabel}
-                      disabled={blocked || saving}
-                      onCheckedChange={(checked) =>
-                        setStartNotice({
-                          ...startNotice,
-                          buttonLabel: checked ? '학습법 추가' : '',
-                        })
-                      }
-                    />
-                    학습법 등록 버튼 표시
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={!!startNotice.explorationButtonLabel}
-                      disabled={blocked || saving}
-                      onCheckedChange={(checked) =>
-                        setStartNotice({
-                          ...startNotice,
-                          explorationButtonLabel: checked
-                            ? '탐구활동 추가'
-                            : '',
-                        })
-                      }
-                    />
-                    탐구활동 등록 버튼 표시
-                  </label>
-                  {startNotice.explorationButtonLabel && (
-                    <Input
-                      aria-label="탐구활동 등록 버튼 문구"
-                      maxLength={100}
-                      value={startNotice.explorationButtonLabel}
-                      disabled={blocked || saving}
-                      onChange={(e) =>
-                        setStartNotice({
-                          ...startNotice,
-                          explorationButtonLabel: e.target.value,
-                        })
-                      }
-                    />
-                  )}
-                  {startNotice.buttonLabel && (
-                    <Input
-                      aria-label="학습법 등록 버튼 문구"
-                      maxLength={100}
-                      value={startNotice.buttonLabel}
-                      disabled={blocked || saving}
-                      onChange={(e) =>
-                        setStartNotice({
-                          ...startNotice,
-                          buttonLabel: e.target.value,
-                        })
-                      }
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <Button
-                variant="outline"
-                className="h-11 w-full border-dashed"
-                disabled={blocked || saving}
-                onClick={() =>
-                  setStartNotice({ title: '', body: '', buttonLabel: '' })
-                }
-              >
-                <Plus />
-                시작 안내 추가
-              </Button>
-            )}
+            {noticeEditors('start')}
             {sections.map((section, si) => (
               <Card
                 variant="accent"
@@ -643,108 +598,112 @@ export function QuestionnaireComposer({
                       (q) => q.id === question.sourceQuestionId,
                     );
                     return (
-                      <div
-                        key={question.id}
-                        className="space-y-3 rounded-lg border border-t-2 border-t-brand bg-background p-4 sm:p-5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            질문 {qi + 1}
-                          </span>
-                          <div className="flex gap-1">
-                            {[-1, 1].map((direction) => (
-                              <Button
-                                key={direction}
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={
-                                  blocked ||
-                                  (direction < 0
-                                    ? si === 0 && qi === 0
-                                    : si === sections.length - 1 &&
-                                      qi === section.questions.length - 1)
-                                }
-                                aria-label={`섹션 ${si + 1} 질문 ${qi + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
-                                onClick={() =>
-                                  moveQuestion(
-                                    section.id,
-                                    question.id,
-                                    direction,
-                                  )
-                                }
-                              >
-                                {direction < 0 ? <ArrowUp /> : <ArrowDown />}
-                              </Button>
-                            ))}
-                            {source && (
+                      <Fragment key={question.id}>
+                        <div className="space-y-3 rounded-lg border border-t-2 border-t-brand bg-background p-4 sm:p-5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              질문 {qi + 1}
+                            </span>
+                            <div className="flex gap-1">
+                              {[-1, 1].map((direction) => (
+                                <Button
+                                  key={direction}
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={
+                                    blocked ||
+                                    (direction < 0
+                                      ? si === 0 && qi === 0
+                                      : si === sections.length - 1 &&
+                                        qi === section.questions.length - 1)
+                                  }
+                                  aria-label={`섹션 ${si + 1} 질문 ${qi + 1} ${direction < 0 ? '위로' : '아래로'} 이동`}
+                                  onClick={() =>
+                                    moveQuestion(
+                                      section.id,
+                                      question.id,
+                                      direction,
+                                    )
+                                  }
+                                >
+                                  {direction < 0 ? <ArrowUp /> : <ArrowDown />}
+                                </Button>
+                              ))}
+                              {source && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={
+                                    blocked || checkingRemoval || saving
+                                  }
+                                  aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 수정`}
+                                  title="질문 수정"
+                                  onClick={(event) => {
+                                    addTrigger.current = event.currentTarget;
+                                    setEditingQuestionId(source.id);
+                                    setAddMode('new');
+                                    setPickerSection(section.id);
+                                  }}
+                                >
+                                  <PencilLine aria-hidden="true" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
                                 disabled={blocked || checkingRemoval || saving}
-                                aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 수정`}
-                                title="질문 수정"
-                                onClick={(event) => {
-                                  addTrigger.current = event.currentTarget;
-                                  setEditingQuestionId(source.id);
-                                  setAddMode('new');
-                                  setPickerSection(section.id);
-                                }}
+                                aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
+                                onClick={() =>
+                                  void removeQuestions(
+                                    sections.map((s) =>
+                                      s.id === section.id
+                                        ? {
+                                            ...s,
+                                            questions: s.questions.filter(
+                                              (q) => q.id !== question.id,
+                                            ),
+                                          }
+                                        : s,
+                                    ),
+                                    [question],
+                                  )
+                                }
                               >
-                                <PencilLine aria-hidden="true" />
+                                <Trash2 />
                               </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={blocked || checkingRemoval || saving}
-                              aria-label={`섹션 ${si + 1} 질문 ${qi + 1} 배치 제거`}
-                              onClick={() =>
-                                void removeQuestions(
-                                  sections.map((s) =>
-                                    s.id === section.id
-                                      ? {
-                                          ...s,
-                                          questions: s.questions.filter(
-                                            (q) => q.id !== question.id,
-                                          ),
-                                        }
-                                      : s,
-                                  ),
-                                  [question],
-                                )
-                              }
-                            >
-                              <Trash2 />
-                            </Button>
+                            </div>
                           </div>
+                          {source ? (
+                            <QuestionPlacementCard
+                              question={source}
+                              showSourceLink={false}
+                            />
+                          ) : (
+                            <p
+                              role="alert"
+                              className="text-sm text-muted-foreground"
+                            >
+                              {library.error
+                                ? '질문을 불러오지 못했어요.'
+                                : library.isLoading
+                                  ? '질문을 불러오고 있어요.'
+                                  : '원본 질문을 찾을 수 없어요. 원본 질문을 저장한 뒤 다시 배치해 주세요.'}
+                            </p>
+                          )}
+                          {reviewContext && (
+                            <QuestionnaireReviews
+                              {...reviewContext}
+                              questionId={
+                                question.sourceQuestionId ?? undefined
+                              }
+                              initialReviews={reviewContext.initialReviews.filter(
+                                (review) => review.question_id === question.id,
+                              )}
+                            />
+                          )}
                         </div>
-                        {source ? (
-                          <QuestionPlacementCard
-                            question={source}
-                            showSourceLink={false}
-                          />
-                        ) : (
-                          <p
-                            role="alert"
-                            className="text-sm text-muted-foreground"
-                          >
-                            {library.error
-                              ? '질문을 불러오지 못했어요.'
-                              : library.isLoading
-                                ? '질문을 불러오고 있어요.'
-                                : '원본 질문을 찾을 수 없어요. 원본 질문을 저장한 뒤 다시 배치해 주세요.'}
-                          </p>
-                        )}
-                        {reviewContext && (
-                          <QuestionnaireReviews
-                            {...reviewContext}
-                            questionId={question.sourceQuestionId ?? undefined}
-                            initialReviews={reviewContext.initialReviews.filter(
-                              (review) => review.question_id === question.id,
-                            )}
-                          />
-                        )}
-                      </div>
+                        {noticeEditors(question.id)}
+                      </Fragment>
                     );
                   })}
                   <Button
@@ -761,6 +720,7 @@ export function QuestionnaireComposer({
                 </CardContent>
               </Card>
             ))}
+            {noticeEditors('end')}
             <Button
               variant="outline"
               className="h-11 w-full bg-background"

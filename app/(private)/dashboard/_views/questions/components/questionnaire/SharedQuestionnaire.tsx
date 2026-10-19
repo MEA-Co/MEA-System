@@ -218,7 +218,7 @@ export function SharedQuestionnaire({
       )}
       <TabsContent value="preview" className="rounded-xl border bg-background">
         <QuestionnairePreview
-          startNotice={document.startNotice}
+          notices={document.notices}
           title={document.title}
           sections={document.sections}
           library={sources}

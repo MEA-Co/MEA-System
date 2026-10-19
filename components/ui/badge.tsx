@@ -12,6 +12,8 @@ const badgeVariants = cva(
         count: 'min-w-5 bg-foreground/10 px-1.5 font-semibold tabular-nums',
         subtle: 'bg-muted text-muted-foreground',
         highlight: 'bg-brand/20 text-foreground',
+        success:
+          'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
         default: 'bg-primary text-primary-foreground [a]:hover:bg-primary/80',
         secondary:
           'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',

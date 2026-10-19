@@ -33,7 +33,11 @@ export type QuestionnaireSection = {
   questions: Question[];
 };
 
-export type QuestionnaireStartNotice = {
+export type QuestionnaireNotice = {
+  id: string;
+  /** start, end, or the preceding placement ID. */
+  position: string;
+  linkButtonLabel?: string;
   title: string;
   body: string;
   buttonLabel: string;
@@ -41,7 +45,7 @@ export type QuestionnaireStartNotice = {
 };
 
 export type QuestionnaireDocument = {
-  startNotice?: QuestionnaireStartNotice | null;
+  notices?: QuestionnaireNotice[];
   questionnaireId: string;
   title: string;
   sections: QuestionnaireSection[];

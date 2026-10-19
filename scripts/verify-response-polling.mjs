@@ -4,7 +4,7 @@ import { refreshResponseIfChanged, responseVersionKey } from '../app/(private)/d
 const initial={id:'session',revision:1,definitionToken:'one',status:'in_progress',savedAt:null,sourceDeleted:false,questions:[],sections:[],title:'test'};
 test('unchanged version does not fetch answers or apply state',async()=>{
  let reads=0,applied=0;
- await refreshResponseIfChanged({current:initial,readVersion:async()=>({...initial,hasUnsubmittedChanges:false,submittedAt:null,startNotice:null}),readSnapshot:async()=>{reads++;return initial},isCurrent:()=>true,apply:()=>applied++});
+ await refreshResponseIfChanged({current:initial,readVersion:async()=>({...initial,hasUnsubmittedChanges:false,submittedAt:null,notices:[]}),readSnapshot:async()=>{reads++;return initial},isCurrent:()=>true,apply:()=>applied++});
  assert.equal(reads,0);assert.equal(applied,0);
 });
 test('definition changes with same revision still fetch',async()=>{
@@ -24,5 +24,13 @@ test('older response is never adopted',async()=>{
  await refreshResponseIfChanged({current:initial,readVersion:async()=>({...initial,revision:2}),readSnapshot:async()=>({...initial,revision:0}),isCurrent:()=>true,apply:()=>assert.fail()});
 });
 test('submission and notice changes are visible',()=>{
- for(const patch of [{submittedAt:'now'},{hasUnsubmittedChanges:true},{sourceDeleted:true},{startNotice:{title:'new'}},{status:'submitted'}]) assert.notEqual(responseVersionKey(initial),responseVersionKey({...initial,...patch}));
+ for(const patch of [{submittedAt:'now'},{hasUnsubmittedChanges:true},{sourceDeleted:true},{notices:[{id:'notice',position:'end',title:'new'}]},{status:'submitted'}]) assert.notEqual(responseVersionKey(initial),responseVersionKey({...initial,...patch}));
+});
+
+test('notice fingerprint changes trigger refresh without notice bodies in version payload', async()=>{
+ const current={...initial,noticesToken:'old',notices:[{body:'large body'}]};
+ let reads=0;
+ await refreshResponseIfChanged({current,readVersion:async()=>({...initial,noticesToken:'old'}),readSnapshot:async()=>{reads++;return current},isCurrent:()=>true,apply:()=>assert.fail()});
+ assert.equal(reads,0);
+ assert.notEqual(responseVersionKey(current),responseVersionKey({...initial,noticesToken:'new'}));
 });

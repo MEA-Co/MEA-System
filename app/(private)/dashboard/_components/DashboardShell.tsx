@@ -1,9 +1,7 @@
-import { LogOut } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { MEMBER_ROLE_LABELS, type MemberRole } from '@/lib/profile';
 
-import { signOut } from '../../_actions/sign-out';
+import { DashboardSignOut } from './DashboardSignOut';
 
 type DashboardShellProps = {
   name: string;
@@ -74,17 +72,7 @@ export function DashboardShell({
                 {MEMBER_ROLE_LABELS[role]}
               </p>
             </div>
-            <form action={signOut}>
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                aria-label="로그아웃"
-              >
-                <LogOut />
-              </Button>
-            </form>
+            <DashboardSignOut />
           </div>
         </SidebarFooter>
       </Sidebar>

@@ -35,6 +35,10 @@ export function useQuestionnaireSave(
       mounted.current = false;
     };
   }, []);
+  const latestDocument = useRef(document);
+  useEffect(() => {
+    latestDocument.current = document;
+  }, [document]);
   const dirty = session.hasChanges(document);
 
   const applyRemote = useEffectEvent(() => {
@@ -45,9 +49,9 @@ export function useQuestionnaireSave(
       );
       return;
     }
-    const { questionnaireId, title, sections, startNotice } = initialDraft;
+    const { questionnaireId, title, sections, notices } = initialDraft;
     const result = session.reconcileRemote(
-      { questionnaireId, title, sections, startNotice: startNotice ?? null },
+      { questionnaireId, title, sections, notices: notices ?? [] },
       initialDraft.revision,
       document,
     );
@@ -133,7 +137,7 @@ export function useQuestionnaireSave(
         // Update the URL without refetching/remounting the actively edited draft.
         window.history.replaceState(null, '', url);
       }
-      return !session.hasChanges(document);
+      return !session.hasChanges(latestDocument.current);
     } catch {
       if (!mounted.current) {
         toast.close(toastId);

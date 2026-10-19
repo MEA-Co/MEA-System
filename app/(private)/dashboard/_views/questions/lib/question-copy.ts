@@ -10,7 +10,7 @@ export function copyQuestionContent(
   targetId: string,
 ): QuestionBlockDocument {
   if (source.purpose === 'study_registration')
-    throw new Error('질문지 시작 안내는 불러올 수 없어요.');
+    throw new Error('질문지 안내는 불러올 수 없어요.');
   const document = structuredClone(documentFromRow(source));
   const fieldIds = new Map(
     document.fields.map((field) => [field.id, crypto.randomUUID()]),

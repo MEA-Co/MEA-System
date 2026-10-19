@@ -9,7 +9,8 @@ export type ResponseVersion = Pick<
   | 'submittedAt'
   | 'sourceDeleted'
   | 'hasUnsubmittedChanges'
-  | 'startNotice'
+  | 'notices'
+  | 'noticesToken'
 >;
 
 export function responseVersionKey(value: ResponseVersion): string {
@@ -22,7 +23,7 @@ export function responseVersionKey(value: ResponseVersion): string {
     value.submittedAt ?? null,
     value.sourceDeleted,
     value.hasUnsubmittedChanges ?? false,
-    value.startNotice ?? null,
+    value.noticesToken ?? JSON.stringify(value.notices ?? []),
   ]);
 }
 

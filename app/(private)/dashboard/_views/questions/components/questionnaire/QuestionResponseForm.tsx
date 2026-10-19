@@ -20,6 +20,7 @@ export function QuestionResponseForm(props: {
   questionnaireId: string;
   published?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
+  beforeLinkRegistration?: () => Promise<boolean>;
 }) {
   return (
     <ResponseSession
@@ -31,6 +32,7 @@ export function QuestionResponseForm(props: {
 function ResponseSession({
   questionnaireId,
   onEditorState,
+  beforeLinkRegistration,
   published = false,
   embedded = false,
 }: {
@@ -38,6 +40,7 @@ function ResponseSession({
   questionnaireId: string;
   published?: boolean;
   onEditorState?: (state: QuestionnaireEditorState) => void;
+  beforeLinkRegistration?: () => Promise<boolean>;
 }) {
   const { mutate } = useSWRConfig();
   const [remote, setRemote] = useState<QuestionResponseSnapshot | null>(null);
@@ -77,6 +80,7 @@ function ResponseSession({
       initial={remote}
       published={published}
       onEditorState={onEditorState}
+      beforeLinkRegistration={beforeLinkRegistration}
     />
   );
 }
@@ -84,6 +88,7 @@ function ResponseEditor({
   questionnaireId,
   initial,
   onEditorState,
+  beforeLinkRegistration,
   published = false,
   embedded = false,
 }: {
@@ -92,6 +97,7 @@ function ResponseEditor({
   published?: boolean;
   initial: QuestionResponseSnapshot;
   onEditorState?: (state: QuestionnaireEditorState) => void;
+  beforeLinkRegistration?: () => Promise<boolean>;
 }) {
   const {
     submissionIssues,
@@ -114,6 +120,16 @@ function ResponseEditor({
     onEditorState,
     published,
   });
+  const [registrationSaving, setRegistrationSaving] = useState(false);
+  async function saveBeforeRegistration() {
+    setRegistrationSaving(true);
+    try {
+      if (!(await save())) return false;
+      return beforeLinkRegistration ? await beforeLinkRegistration() : true;
+    } finally {
+      setRegistrationSaving(false);
+    }
+  }
   const container = useRef<HTMLDivElement>(null);
   function goToQuestion(questionId: string) {
     focusResponseQuestion(
@@ -228,7 +244,11 @@ function ResponseEditor({
       <QuestionnairePreview
         embedded={embedded}
         submissionIssues={submissionIssues}
-        startNotice={snapshot.startNotice}
+        notices={snapshot.notices}
+        beforeLinkRegistration={saveBeforeRegistration}
+        registrationDisabled={
+          locked || saving || registrationSaving || !!pendingSave
+        }
         reviewQuestionnaireId={
           published || snapshot.sourceDeleted ? undefined : questionnaireId
         }
@@ -241,7 +261,7 @@ function ResponseEditor({
         response={{
           rows,
           onChange: change,
-          disabled: locked || !!pendingSave?.complete,
+          disabled: locked || registrationSaving || !!pendingSave?.complete,
         }}
       />
     </div>

@@ -779,3 +779,38 @@ Advisor도 확인했다. 다중 허용 정책(study/exploration), 외래키 인�
 ### 첨부 로딩 보완·가이드 표시 복원 (2026-10-19)
 
 선택기 진입 전 사용자 확인과 참조 상세 Drawer의 문구형 로딩도 스켈레톤으로 교체했다. 가이드 답변의 추가 로딩/오류 UI는 사용자 요청으로 제거하고 기존 데이터가 있을 때만 표시하도록 복원했다. 이번 보완의 타입 검사·변경 파일 린트·첨부 선택 회귀 2개 통과. 실제 브라우저 테스트·운영 배포는 수행하지 않았다.
+
+
+## 탐구줄기 변경 영향 점검 (2026-10-19)
+
+질문 편집·질문지 저장/닫기·답변·제출 화면 이동 등 64개 통과. question-exploration 시작 단계 mock 누락 1개와 questionnaire-realtime 세션 초기화 mock/대기 누락 4개는 HEAD에서도 동일 실패했다. 기존 데이터/저장 API/자동 저장 주기/이탈 정책은 변경하지 않았다. 탐구줄기 편집기의 이벤트 해제 후 공통 로그아웃·역할 전환이 원래대로 실행되는 것을 경계 어댑터로 검사했다. 사용자 브라우저/DB 변경 및 실제 브라우저 테스트 없음. 전체 범위와 미해결 기존 테스트는 [탐구활동 운영 문서](../exploration/operations.md#저장화면-이동-영향-범위-점검-2026-10-19)를 따른다.
+
+## 다중 안내·탐구줄기 등록 (2026-10-19)
+
+`20261019131346_questionnaire_positioned_notices.sql`은 기존 start_notice 열의 단일 객체를 보존하면서 새 notices 배열의 DB 검증·읽기·원자적 저장을 연결한다. 기존 안내는 읽을 때 처음 위치로 변환한다. 기존 행/답변/제출본을 UPDATE하지 않으며 새 테이블·인덱스·공개 RPC·SECURITY DEFINER 함수는 추가하지 않는다. 새 private 헬퍼 2개는 데이터 접근 없는 immutable invoker이며 PUBLIC/anon 실행을 회수한다. 기존 역할·소유자·배포 잠금·함수 ACL과 HTTP409/PGRST 업무 충돌 처리를 보존한다.
+
+로컬에 직접 적용·검증한 뒤 migration 전체를 이전 정의에서 재실행하는 롤백 검사로 최종 함수 8개 및 ACL의 완전 동일성을 확인했다. 검증된 최종 파일만 로컬 migration 이력에 등록했고 `db push --local --dry-run`은 적용 대기가 없다. 운영 DB 조회·적용·앱 배포는 수행하지 않았다.
+
+검증:
+- 타입 검사 및 변경 파일 린트 통과.
+- `verify-questionnaire-notices.mjs` 7개: 안내 위치/질문 이동·삭제/제출본 제외, 저장 대기/중복 클릭/실패 차단, 실제 응답 저장 훅의 최신 입력 일치와 실패 후 보존.
+- `verify-response-polling.mjs`, `verify-questionnaire-storage.mjs`, `verify-published-response-form.mjs` 30개 통과. 기존 답변 저장/제출/충돌/재시도/미저장 입력 보호 포함.
+- `supabase/tests/questionnaire_positioned_notices.sql`: 다중 안내·버튼 문구 왕복, 기존 객체 호환, 미전달 보존, 중복·잘못된 입력 거절, 재시도/충돌, 타인/컨설턴트 쓰기 거절, 공유/배포 응답 안내와 버전 지문 검증(전부 롤백). 과거 단일 startNotice 계약용 `questionnaire_editable_notice.sql`의 현행 대체 검사다.
+- `business_conflict_transport.sql`, `review_live_layout.sql` 회귀 통과(롤백). 최종 업무 SQLSTATE40001 재도입 없음.
+- 로컬 security advisor 경고·오류 없음. 실제 브라우저 검증은 요청이 없어 수행하지 않았다.
+
+추가 polling은 없다. 안내 관련 주기 전송은 최대 50개 본문 대신 32자 noticesToken 하나다. 30초 주기·보이는 탭 기준 안내 지문 내용만의 시간당 전송 상한 예시는 100명 × 2탭 × 120회 × 32바이트 ≈ 0.77MB이며 JSON/HTTP/다른 메타데이터는 별도다. 기존 응답 읽기 내부 계산 및 상위 질문지 상세 조회 비용은 그대로 남고 전체 Egress 해결로 해석하지 않는다. 장시간 운영 관측은 미수행이다.
+
+운영은 UI 개선 전체 완료 시 기존 합의에 따라 반영한다. 새 앱은 notices 계약을 사용하므로 DB migration 적용 후 앱을 배포한다. 구형 RPC startNotice 쓰기는 거절되어 새 안내를 덮어쓰지 않는다. 사용자에게 열린 편집 화면은 배포 후 새로고침하도록 안내한다.
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 아래 예상 파일 및 기존 미적용 목록과 일치하는지 확인한 다음에만 실행
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+이번 파일은 `20261019131346_questionnaire_positioned_notices.sql`이다. 이전 탐구줄기 작업이 운영 미반영이면 `20261019104839_exploration_links.sql`, `20261019110548_require_exploration_link_skills.sql`이 먼저 나올 수 있다. 예상과 다른 migration은 적용 전에 연결 대상·이력을 검토한다. 적용 대기 없음 확인 → 앱 배포 → 기존 안내 보존, 질문 사이/마지막 안내, 등록 버튼의 저장 성공 이동·실패 시 잔류를 확인한다. 원격 reset/임의 history repair는 하지 않는다.

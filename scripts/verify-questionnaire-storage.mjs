@@ -679,30 +679,33 @@ test('server refuses whitespace-only questionnaire titles before database writes
   assert.match(result.error, /제목이 비어/);
 });
 
-test('start notice and independent registration buttons survive reads and validated saves', () => {
+test('positioned notices and independent registration buttons survive reads and validated saves', () => {
   const { savedDraftSchema, questionnaireDocumentSchema } = load(
     'app/(private)/dashboard/_views/questions/lib/questionnaire/schema.ts',
   );
-  const startNotice = {
+  const notices = [{
+    id: randomUUID(),
+    position: 'end',
+    linkButtonLabel: '탐구줄기 등록',
     title: '학습법 등록',
     body: '서식 원문',
     buttonLabel: '학습법 추가',
     explorationButtonLabel: '탐구활동 추가',
-  };
+  }];
   const document = {
     questionnaireId: randomUUID(),
     title: '질문지',
     sections: [],
-    startNotice,
+    notices,
   };
   const read = savedDraftSchema.parse({
     ...document,
     revision: 1,
     savedAt: '2026-10-15T00:00:00Z',
   });
-  assert.deepEqual(read.startNotice, startNotice);
+  assert.deepEqual(read.notices, notices);
   assert.equal(
-    'startNotice' in questionnaireDocumentSchema.parse(document),
+    'notices' in questionnaireDocumentSchema.parse(document),
     true,
   );
 });

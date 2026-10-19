@@ -145,15 +145,19 @@ export function useQuestionResponseEditor({
       document.removeEventListener('click', navigate, true);
     };
   }, [dirty, saving]);
-  async function save(complete = false) {
-    if (!hasResponseQuestions) return;
-    if (session.current.busy || locked || (!dirty && !complete)) return;
+  const currentAnswers = useRef(rows);
+  useEffect(() => {
+    currentAnswers.current = rows;
+  }, [rows]);
+  async function save(complete = false): Promise<boolean> {
+    if (session.current.busy || locked) return false;
+    if (!hasResponseQuestions || (!dirty && !complete)) return true;
     if (complete && !session.current.retry) {
       setSubmissionAttempted(true);
       const issues = validateResponseSubmission(snapshot, rows);
       if (issues.length) {
         setInvalidSubmission({ questionId: issues[0].questionId });
-        return;
+        return false;
       }
     }
     session.current.busy = true;
@@ -193,6 +197,11 @@ export function useQuestionResponseEditor({
             ? '답변을 제출했어요. 리드가 제출 내용을 확인할 수 있어요.'
             : '이전 저장을 확인했어요. 제출을 다시 눌러 주세요.',
         });
+      return (
+        mounted.current &&
+        JSON.stringify(currentAnswers.current) ===
+          JSON.stringify(pending.answers)
+      );
     } catch (error) {
       if (error instanceof QuestionnaireApiError && error.status < 500) {
         session.current.retry = null;
@@ -207,7 +216,8 @@ export function useQuestionResponseEditor({
               published,
             );
             latestRemoteHandler.current?.(latest);
-            if (latest.definitionToken !== snapshot.definitionToken) return;
+            if (latest.definitionToken !== snapshot.definitionToken)
+              return false;
           } catch {
             setBlocked(true);
           }
@@ -219,6 +229,7 @@ export function useQuestionResponseEditor({
           : '저장 결과를 확인하지 못했어요. 다시 저장해 주세요.';
       setError(message);
       toast.add({ type: 'error', title: message });
+      return false;
     } finally {
       session.current.busy = false;
       setSaving(false);

@@ -12,6 +12,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
+import {
+  navigationExitFailed,
+  requestNavigationExit,
+} from '@/lib/navigation/exit-request';
 import { MEMBER_ROLE_LABELS, type MemberRole } from '@/lib/profile';
 
 import { setAdminView } from '../_actions/set-admin-view';
@@ -24,21 +28,25 @@ export function AdminRoleTabs({ role }: { role: MemberRole }) {
 
   function switchRole(candidate: MemberRole) {
     if (candidate === role || pending) return;
-    startTransition(async () => {
-      try {
-        const result = await setAdminView(candidate);
-        if (result.error) {
-          toast.add({ type: 'error', title: result.error });
-          return;
+    requestNavigationExit(() =>
+      startTransition(async () => {
+        try {
+          const result = await setAdminView(candidate);
+          if (result.error) {
+            navigationExitFailed();
+            toast.add({ type: 'error', title: result.error });
+            return;
+          }
+          router.replace('/dashboard');
+        } catch {
+          navigationExitFailed();
+          toast.add({
+            type: 'error',
+            title: '화면을 전환하지 못했어요. 다시 시도해 주세요.',
+          });
         }
-        router.replace('/dashboard');
-      } catch {
-        toast.add({
-          type: 'error',
-          title: '화면을 전환하지 못했어요. 다시 시도해 주세요.',
-        });
-      }
-    });
+      }),
+    );
   }
 
   return (

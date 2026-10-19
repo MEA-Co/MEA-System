@@ -131,7 +131,7 @@ DB는 활성 행의 ID/updated_at과 검색 조건으로 개수를 구한 뒤 `u
 
 독립 `kind: exploration` 대신 서술형 `text`의 `explorationReference` mark로 탐구활동 UUID를 저장한다. 기존 첨부형 질문·작성/가이드/제출 답변도 같은 형식으로 변환한다. 탐구활동 원본·파일·API·RLS는 유지하며 가이드 예외는 표시 가능한 본문 참조 범위로 제한한다. 이전 절차와 검증은 [질문 운영 문서](../questions/operations.md#독립-첨부형-제거와-본문-참조-전환-2026-10-14)를 따른다.
 
-- 질문지 시작 안내의 등록 버튼은 ExplorationView registrationOnly로 기존 저장 경로를 재사용한다. 계정 문맥만 identityOnly로 조회하며 API·권한·저장 모델 변경은 없다.
+- 질문지 안내의 탐구활동 등록 버튼은 ExplorationView registrationOnly로 기존 저장 경로를 재사용한다. 계정 문맥만 identityOnly로 조회하며 API·권한·저장 모델 변경은 없다.
 
 
 ### 질문지 상태 명칭 연결 (2026-10-15)
@@ -143,3 +143,79 @@ DB는 활성 행의 ID/updated_at과 검색 조건으로 개수를 구한 뒤 `u
 revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키고, PostgREST에 HTTP 409와 기존 JSON `code: "40001"`을 명시한다. 실제 PostgreSQL SQLSTATE `40001`은 직렬화 실패용이므로 업무 충돌에 사용하지 않는다. PostgREST 14.5에서는 이를 내부 재시도로 처리하여 같은 실패가 무한 반복될 수 있다. 기존 앱의 `error.code === "40001"` 분기는 그대로 유지한다. 충돌 검사·잠금·권한·저장 데이터 계약은 바뀌지 않는다.
 
 공통 migration은 `20261016012233_prevent_business_conflict_retries.sql`이며 검토한 private 함수의 리터럴 RAISE만 변경한다. 예상하지 못한 함수/구문은 전체 롤백하며 함수 소유자·권한·실행 설정도 전후 비교한다. 적용 상태와 후속 배포는 [질문 운영 문서](../questions/operations.md#업무-충돌-무한-재시도-긴급-수정-2026-10-16)를 따른다.
+
+## 탐구줄기 브라우저 임시저장 (2026-10-19)
+
+내부 명칭은 `link`로 통일한다. 초기 브라우저 임시저장에 이어 아래 **탐구줄기 DB 확정 저장** 계약을 구현했다. `exploration_links`에 기본 정보와 graph JSON을 저장하고 `exploration_link_skills`를 별도 재사용한다. 자동 저장·polling·스킬 버전은 두지 않는다.
+
+### 저장 모델과 범위
+
+localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`다. 한 초안은 `{schemaVersion:1,id,ownerId,localRevision,serverRevision?,updatedAt,content:{name,description,graph:{nodes,edges,skills}}}` 한 JSON 값으로 저장한다. serverRevision은 이 초안이 수정하기 시작한 DB 확정본 revision이며 기존 초안은 0으로 처리한다.
+
+- nodes: `{explorationId,title}`. title은 브라우저 복원용 표시명 캐시다. 전체 활동 본문·첨부·보고서는 복사하지 않는다.
+- edges: `{from,to,skillId?}`. 활동 ID로 방향을 나타내며 여러 간선이 같은 스킬을 참조할 수 있다.
+- skills: `{id,name,description}`. 이름/설명은 모두 공백을 제외하고 필수이며 각각 최대 200/5,000자다. 브라우저 초안의 스킬과 본인이 DB에 확정한 스킬을 재사용한다. DB에서 읽은 스킬은 선택적 updatedAt으로 동시 수정만 검사한다. 간선의 X는 skillId만 해제하고 재사용 가능한 스킬 원본을 유지한다.
+- 탐구줄기 이름 최대 200자, 설명 최대 5,000자. 초안의 이름은 비워도 저장한다. 활동 최대 300개, 간선 1,000개, 스킬 500개, 초안 JSON UTF-8 최대 2MB로 제한한다.
+- 좌표·column·뷰포트·핸들·선택 상태는 저장하지 않는다. 열기는 위상 정렬의 최장 선행 경로에 따라 열을 만들고 같은 열의 노드를 순서대로 세로 배치한다. 직접/간접 참조가 공존하는 1→2, 1→3, 2→3을 지원한다.
+
+### 충돌·오류·삭제
+
+`lib/exploration-links/drafts.ts`는 공유 Zod 검증·저장·삭제·복원 배치를 담당하며 화면 lib/link-drafts.ts는 이를 재노출한다. 중복 노드/간선/스킬, 자기 참조, 순환, 없는 활동/스킬 참조를 거부한다. `hooks/useLinkDrafts.ts`는 Web Locks로 초안별 탭 간 쓰기를 직렬화하고 localRevision 비교로 오래된 저장·삭제를 거부한다. localRevision은 브라우저 초안 충돌 검사값이며 스킬 버전이 아니다. 잠금 대기는 최대 5초이며 미지원 브라우저에서는 쓰기를 거부한다. storage 이벤트와 같은 탭의 custom 이벤트로 목록을 갱신하며 polling은 없다.
+
+저장 공간 부족·검증·충돌 실패 시 입력과 이전 저장본을 유지한다. 읽기 불가 데이터는 원본을 삭제하지 않고 목록에 오류를 표시한다. 계정·환경별 키와 ownerId를 함께 검사한다. 이는 같은 브라우저의 계정별 표시 분리이며 서버 권한 경계나 암호화 저장소가 아니다. 다른 기기로 동기화되지 않고 브라우저 데이터 삭제 시 사라진다.
+
+초안 삭제는 해당 키만 제거한다. 원본 탐구활동과 삭제 정책은 바꾸지 않는다. 복원 시 원본 활동을 재조회하지 않으므로 표시명은 저장 당시 값이며 원본의 삭제/수정은 확인하지 않는다. 확정 시 서버가 연결된 활동의 존재·본인 소유·활성 여부와 스킬 참조를 검증한다.
+
+### UI 연결과 조회
+
+`ExplorationLinkView`는 목록·편집 페이지와 저장 기준을, `ExplorationLinkTable`은 로컬 검색·상태 필터·10개 페이지를 담당한다. `ExplorationLinkGraph`와 `lib/link-graph.ts`는 캔버스와 연결 규칙을 담당한다. 메모리에서는 활동 표시용 Exploration과 좌표를 사용하고 저장 시 순수 content로 변환한다. 다른 탭의 변경 이벤트가 현재 편집 상태를 덮어쓰지 않는다.
+
+기존 본인 확정 활동 목록 조회는 배치 선택창이 열린 동안만 사용한다(검색 300ms 디바운스, 10개 페이지). 임시저장·복원·목록·삭제에는 DB 조회나 쓰기가 없다. 전체 질문지/답변 조회도 추가하지 않았다. 확정 목록과 다른 사람의 목록은 아래 DB 페이지 계약을 사용한다.
+
+
+### 편집 이탈 연결 책임
+
+`lib/link-history-guard.ts`는 히스토리 이동, `lib/link-exit-policy.ts`는 현재 창을 떠나는 링크 판정을 담당한다. `lib/navigation/exit-request.ts`는 로그아웃/역할 전환 UI의 실행 전 확인 요청만 전달하며 인증/권한/서버 저장 계약을 변경하지 않는다. `useSkillDiscard`는 팝업 미적용 입력과 버리기 확인을 관리한다. 이탈 확인은 자동 저장이나 DB 쓰기를 발생시키지 않는다.
+
+
+화면 실행 격리: `ExplorationView`는 탐색 분기를, `ExplorationActivitiesView`는 기존 활동 저장 훅과 Drawer를 담당한다. 탐구줄기 표시 중에는 활동 저장 훅이 마운트되지 않는다. 기존 저장 키·본문·첨부 저장 모델·API는 그대로 유지한다.
+
+
+## 탐구줄기 DB 확정 저장 (2026-10-19)
+
+### 모델·원자성
+
+- `public.exploration_links`: id, owner_id(FK profiles CASCADE), name, description, graph `{nodes,edges}`, node_count, revision, save_id, request_hash, created_at, updated_at, deleted_at. 노드/간선 테이블은 만들지 않는다. graph에는 좌표·column·viewport·스킬 본문이 없다.
+- `public.exploration_link_skills`: id, owner_id(FK profiles CASCADE), name, description, created_at, updated_at. 스킬 버전/이력은 없다. 간선 skillId로 재사용하며 참조 해제나 줄기 삭제로 스킬을 지우지 않는다. 재사용 목록은 본인 스킬만 제공한다.
+- 확정은 이름(공백 제외 필수, 최대 200자), 설명(선택, 5,000자), 연결 1개 이상과 **모든 간선의 유효한 skillId**가 필요하다. 스킬 미할당은 UI에서 토스트 후 요청을 중단하고, API는 400, DB는 SQLSTATE22023으로 쓰기 전에 거절한다. 브라우저 초안은 스킬 없이 저장할 수 있다. 노드 300·간선 1,000·스킬 500·요청 및 정규화 그래프 약 2.5MB 한도를 적용한다. DB에도 타입·중복·존재·스킬 설명 필수·자기 참조·순환을 검사한다. 순환 검사는 경로를 모두 펼치지 않는 Kahn 방식이다.
+- 연결된 노드만 저장한다. 노드 title은 해당 활동의 현재 주제로 서버에서 교체한다. 고립 노드와 사용하지 않은 초안 스킬은 DB에 새로 저장하지 않는다. 기존 DB 스킬은 유지한다. 저장한 제목은 확정 당시 스냅샷이며 원본 삭제를 차단하거나 질문 답변을 검사하지 않는다. 이후 원본 활동이 삭제되면 줄기는 이전 제목으로 열리지만 다시 확정하려면 그 활동을 제거해야 한다.
+- `save_exploration_link` 한 RPC/트랜잭션 안에서 스킬 및 줄기를 저장한다. ID advisory lock, 줄기 revision 비교, save_id+요청 지문으로 중복 저장을 방지한다. 동일 요청 재시도는 revision을 증가시키지 않는다. 삭제된 ID는 재생성하지 않는다.
+- 기존 스킬 내용이 달라지면 전달한 updatedAt과 DB 시각을 비교한다. 일치할 때만 공유 스킬을 수정한다. 충돌 시 줄기·스킬 변경 전체를 롤백한다. 스킬 잠금 순서는 UUID 순으로 통일한다. 업무 충돌은 **SQLSTATE PGRST + HTTP409/JSON code40001**이며 실제 SQLSTATE40001을 발생시키지 않는다. 앱의 자동 재시도는 없다.
+
+### API·권한
+
+| 요청 | 계약 |
+| --- | --- |
+| POST /api/exploration-links | `{scope,query,page,excluded,localCount}` → `{items,total,page}`. 10개 요약만 반환. scope own/others, 검색은 이름·설명의 리터럴 부분 일치 |
+| GET /api/exploration-links/:id | `{link}`. graph와 해당 간선에서 사용한 스킬만 조회. 목록에서 확정본을 열 때마다 새로 조회 |
+| PUT /api/exploration-links/:id | `{content,expectedRevision,saveId}` → `{link}`. 원자적 확정 |
+| DELETE /api/exploration-links/:id | `{expectedRevision}` → `{ok:true}`. tombstone 유지, graph 비우기, 스킬·원본 활동 유지 |
+| GET /api/exploration-links/skills?q=...&page=1 | 본인 스킬 이름의 리터럴 부분 일치, 10개 + total. 팝업을 열 때만 조회 |
+
+로그인·온보딩·실제 consultant/consultant_lead/admin 역할을 API와 DB 양쪽에서 검사한다. 본인 쓰기만 가능하고, 리드·관리자는 타인 줄기를 읽을 수 있다. 관리자 표시 역할은 API 조회 범위를 추가 제한한다. 비GET Origin 검사, private/no-store, API 조회 timeout과 브라우저 20초 timeout을 사용한다. 입력400·로그인401·권한403·상세404·충돌409·일반실패503으로 구분한다.
+
+두 테이블은 RLS를 활성화하고 authenticated에 SELECT만 부여한다. 직접 INSERT/UPDATE/DELETE와 anon 접근은 차단한다. 쓰기는 public invoker → private definer(빈 search_path·실제 권한/소유권 재검사), 목록은 invoker RPC다. owner_id/updated_at/id 인덱스 및 활성 줄기 updated_at/id 인덱스를 사용한다.
+
+목록은 로컬 초안 ID(최대 10,000개)와 검색에 맞는 개수만 전달해 같은 확정본을 제외하고 10개 단위로 병합한다. 초안 본문을 목록 API에 보내지 않는다. 확정 필터에서는 초안 제외 없이 DB 확정본을 직접 열 수 있다(`linkSource=confirmed`). 타인 목록은 서버 요약만 표시한다. 정확한 count·부분 일치 검색은 데이터 규모에 따라 비용이 증가하며 상수 시간으로 보장하지 않는다. 전체 graph/질문지/답변 조회와 polling은 없다.
+
+### 브라우저 저장과 실패
+
+임시저장은 고립 노드까지 유지한다. 확정 성공 시 현재 캔버스에서도 고립 노드를 제외하고 남은 노드의 화면 좌표는 유지한다. 해당 초안의 localRevision을 확인한 후 삭제한다. 다른 탭이 수정했거나 브라우저 저장소 정리에 실패하면 DB 성공은 유지하고 초안은 보존한 채 경고한다. 서버 실패 시 입력·초안·좌표는 유지한다. timeout 등 응답 불명확 시 같은 입력 재시도는 동일 saveId를 사용한다. 새로고침 뒤에는 확정 목록에서 서버 반영 여부를 확인할 수 있다.
+
+`serverRevision`과 `localRevision`은 별개다. DB에 이미 저장한 줄기의 임시저장은 기존 DB revision을 함께 보존한다. 옛 초안이 최신 확정본을 덮어쓰지 못한다. 확정 필터의 단건 조회는 이전 SWR 상세 캐시로 편집기를 초기화하지 않는다. 편집 중 백그라운드 응답으로 입력을 덮어쓰지 않는다.
+
+### 코드 책임
+
+`lib/exploration-links/drafts.ts`: 순수 그래프/초안 스키마·로컬 저장·배치. `model.ts`: 확정 정규화·DB 타입 변환. `app/api/exploration-links/[[...path]]/route.ts`: 인증·권한·요청 검증·RPC/단건 조회. 화면 `link-api.ts`: timeout·HTTP 오류. `ExplorationLinkView`: 확정·초안 정리·이탈 보호. `ExplorationLinkTable`: 서버 페이지와 로컬 초안 병합. `ExplorationLinkSkillPicker`: 팝업 한정 스킬 페이지. DB migration과 회귀는 운영 문서를 따른다.
+
+질문지 안내의 탐구줄기 등록 버튼은 현재 질문지 구성 또는 작성 답변의 저장 성공을 확인한 후 기존 탐구줄기 새 편집 URL로 이동한다. 탐구줄기 생성/저장 API·권한은 변경하지 않는다. 안내 위치와 버튼 문구는 질문지 notices 계약에 속한다.

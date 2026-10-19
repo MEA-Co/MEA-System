@@ -1,0 +1,47 @@
+{
+  "base_commit": "164a6c23df796177b0d135cc591fd3f22c72cdfe",
+  "tracked": [
+    "app/(private)/dashboard/_views/exploration/ExplorationView.tsx",
+    "app/(private)/dashboard/_views/study/StudyView.tsx",
+    "app/api/exploration/[[...path]]/route.ts",
+    "app/api/study/[[...path]]/route.ts",
+    "docs/exploration/data-api.md",
+    "docs/exploration/operations.md",
+    "docs/exploration/ui.md",
+    "docs/questions/data-api.md",
+    "docs/questions/operations.md",
+    "docs/questions/ui.md",
+    "docs/study/data-api.md",
+    "docs/study/operations.md",
+    "docs/study/ui.md",
+    "docs/ui-ux-refinement.md"
+  ],
+  "untracked": [
+    "scripts/verify-material-delete-api.mjs",
+    "scripts/verify-material-delete-concurrency.py",
+    "supabase/migrations/20261019083549_protect_referenced_learning_materials.sql",
+    "supabase/migrations/20261019084019_index_learning_material_references.sql",
+    "supabase/tests/learning_material_delete_protection.sql"
+  ],
+  "sha256": {
+    "app/(private)/dashboard/_views/exploration/ExplorationView.tsx": "ad71728dc0d17757155c0ddc8140cf5cfbbba68826a0c17884ad2d19af27e888",
+    "app/(private)/dashboard/_views/study/StudyView.tsx": "2e819ddc36565bc5d79e5013648ce98956772cb87c1c34ac2c9a73fe45bfd755",
+    "app/api/exploration/[[...path]]/route.ts": "d6263923639a81bb8eb0d67040034b4104c4bf10e43043280416d0ae123421c8",
+    "app/api/study/[[...path]]/route.ts": "ca28f131c8364cc01be894a2b760c8bbc1845fa901e29606a993eccf9627b8ae",
+    "docs/exploration/data-api.md": "08d7636413c499f1169998157d47361cb622be8b2c945c724fa2f118b7069f8b",
+    "docs/exploration/operations.md": "2627b614f8a53c73ff55f82d90f320cbee7a75ec8da18aad9fb4b0733719a178",
+    "docs/exploration/ui.md": "bb5c64f7bd927a676aba2478c026a0aa811149a8d1fd4cdd69efeb0cf0b44f2f",
+    "docs/questions/data-api.md": "0de672fe65e03b63d49994657cfe1c98a42261b3d278dff39ac2ab0156d40e18",
+    "docs/questions/operations.md": "36ac4f00c866ddd03e2cd6d47834aa9bc4873d36eed0126c6ca598b701a890c6",
+    "docs/questions/ui.md": "08710202544e258154a9298efc19743f6b60be740b91806a728d6d7cc53e6127",
+    "docs/study/data-api.md": "abf77efc03d8dcedbd8d9773ed9a3021dfbbe58b6804a6f0a9d4c2ca08452399",
+    "docs/study/operations.md": "571c1622367f2162c50eefbbde8236bee4bd5128277ff9372e01cefa6f09bc96",
+    "docs/study/ui.md": "deb96df9284edcfecf90393ece8e0be5490b9ccc9dcbd650cc7e15f6f5ad32bb",
+    "docs/ui-ux-refinement.md": "bf52e9b5ad6076d05a0ef22a31a7adc74ea905127627bd8e207d8d4f7291920e",
+    "scripts/verify-material-delete-api.mjs": "2b9c0fbd912673fc8558db5ba06b0893abaf0275ea9237638d78f3cd758ab70f",
+    "scripts/verify-material-delete-concurrency.py": "cd4736dcd280f51caf3606513a08881f59911946a86314b82f568f99e1e24754",
+    "supabase/migrations/20261019083549_protect_referenced_learning_materials.sql": "2559c3598a96eeef13fda912d3460dda4a738c4381873d7def7c6967c447e66d",
+    "supabase/migrations/20261019084019_index_learning_material_references.sql": "57b3420f4c50a8afd08eb0ba8da46e0c813808376a8778f82b4667e8745eb3ca",
+    "supabase/tests/learning_material_delete_protection.sql": "1c7c0b9a07aab924dcbd53fc2800201d8d04a96dcd34681792c85f9bd7ff28b2"
+  }
+}

@@ -433,7 +433,7 @@ export function StudyTableRows({
                       ) : (
                         <Badge
                           variant={
-                            target.status === 'draft' ? 'highlight' : 'subtle'
+                            target.status === 'draft' ? 'highlight' : 'success'
                           }
                           className="shrink-0 text-[10px]"
                         >
@@ -462,7 +462,7 @@ export function StudyTableRows({
                     ) : (
                       <Badge
                         variant={
-                          target.status === 'draft' ? 'highlight' : 'subtle'
+                          target.status === 'draft' ? 'highlight' : 'success'
                         }
                       >
                         {target.status === 'draft'

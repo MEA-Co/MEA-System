@@ -319,7 +319,7 @@ export function ExplorationTable({
 function Status({ activity }: { activity: Exploration }) {
   return (
     <Badge
-      variant={activity.status === 'draft' ? 'highlight' : 'subtle'}
+      variant={activity.status === 'draft' ? 'highlight' : 'success'}
       className="shrink-0 text-[10px] sm:text-xs"
     >
       {activity.status === 'draft'

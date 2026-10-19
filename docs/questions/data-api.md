@@ -62,11 +62,15 @@
 
 추가 위치 해제 후에는 저장된 추가 행의 같은 ID·위치만 계속 편집할 수 있고 신규 추가는 거절한다. 저장된 시기 metadata가 있으면 원본의 기본 시기 수 또는 흐름표 표시 방식을 바꾸는 수정은 `55000`으로 차단한다. 답변이 있는 추가 시기는 완료 시 공백이 아닌 이름이 필요하고, 이름만 있는 행은 활성 행·최소 작성 수에서 제외한다. 제출본은 빈 고정·추가 자리의 metadata를 보존하고 비활성 답변은 `{}`로 정리한다. 흐름표의 활성 행이 하나도 없으면 추가 시기 이름도 빈 문자열로 정리하여 조건상 숨겨진 입력을 공개하지 않는다. 가이드 이름은 이동한 배열 위치 대신 고정 번호 또는 추가 이름으로 계산한다. 새 migration은 `20261013033907_question_flow_insertions.sql`이며 기존 ID·RLS·가이드 계정·원본 및 배포 잠금을 유지한다.
 
-## 질문지 시작 안내 (2026-10-15)
+## 질문지 안내 (2026-10-19)
 
-`questionnaires.start_notice`는 nullable JSONB `{title,body,buttonLabel}`이며 API의 조회 문서 및 작업 응답 스냅샷에서는 `startNotice`다. 기존 questions의 제목·prompt 서식 원문·button_label을 그대로 이전한다. 답변 모델과 독립적이며 학습법은 기존 study 저장 경로만 사용한다. 새 테이블/공개 RPC나 강제 등록 검증은 추가하지 않는다.
+API의 문서·작업 응답에는 `notices` 배열을 사용한다. 항목은 `{id, position, title, body, buttonLabel, explorationButtonLabel?, linkButtonLabel?}`이며 `position`은 `start`, `end`, 또는 선행 질문의 **배치 ID**다. 안내 ID는 질문/응답 ID와 독립적이다. 최대 50개, title 200자/body 20000자/각 버튼 문구 100자이며 전체 문서의 기존 700000자 한도를 유지한다. ID 중복과 잘못된 자료형/위치는 API와 DB에서 거절한다. 비어 있는 버튼 문구는 해당 버튼을 숨긴다. 삭제된 배치의 안내는 마지막에 표시한다.
 
-기존 read_questionnaire_draft/read_shared_questionnaire 및 private 작업 응답 조회 함수의 반환에 추가하되 소유자·역할·RLS·함수 ACL은 유지한다. 일반 저장 schema는 선택적인 startNotice를 전달한다. 미전달은 기존 안내 보존, null은 삭제, 객체는 교체한다. title 200자/body 20000자/buttonLabel 100자 이내이며 빈 buttonLabel은 등록 버튼 없는 일반 안내다. 기존 원자적 저장 함수의 최종 UPDATE에서 revision과 함께 저장한다. 저장 재시도 해시에 안내도 포함하며 원격 동기화/변경 감지 대상이다. 직접 변경은 guard_start_notice가 차단하고 기존 definer 저장 경로의 역할·소유자/검토 중 공유·배포/보관 잠금을 유지한다. 질문 제작에서 purpose 선택은 없애고 API 및 DB가 새 study_registration 저장을 거절한다. 원본 보관/과거 캐시 읽기 호환을 위해 기존 purpose 열·렌더러·빈 답변 처리 코드는 당장 제거하지 않는다.
+저장 열은 기존 `questionnaires.start_notice` JSONB를 재사용한다. 기존 단일 객체는 변경하지 않고 `private.questionnaire_notices`가 고정 안내 ID 및 start 위치를 가진 배열로 읽는다. 새 저장은 배열이며 미전달은 보존, `[]`는 전체 삭제다. 구형 `startNotice` 직접 RPC 저장은 거절한다. 새로운 테이블·공개 RPC·답변 항목은 추가하지 않는다. 기존 원자적 `save_questionnaire_draft`의 최종 UPDATE와 revision/saveId 해시 안에서 저장하며 권한·RLS·배포 잠금·PGRST HTTP409 충돌 전달을 유지한다.
+
+작업 응답은 notices와 함께 noticesToken을 반환한다. 30초 변경 확인 API는 안내 본문 대신 noticesToken만 전달하고, 토큰 변경 때 전체 스냅샷을 읽는다. 기존 숨김 중지·중복 요청 방지·저장 경쟁 보호를 유지한다. 새 polling이나 전체 응답 조회는 추가하지 않는다. UI 책임은 QuestionnaireNoticeEditor(편집), QuestionnaireStartNotice/QuestionnairePreview(배치 표시), LinkRegistrationAction(저장 성공 후 이동), 각 질문지/응답 저장 훅(실제 저장 및 최신 입력 일치 확인)이다.
+
+아래는 과거 단일 안내 이전의 보존 규칙이며 신규 다중 안내는 기존 데이터를 일괄 수정하지 않는다.
 
 이전은 전체 트랜잭션·잠금 아래 질문지당 안내 1개, 배치된 안내의 부가 설명 없음 조건을 검사한다. 미배치 안내는 응답·세션 layout/재시도/legacy 값·제출본·질문 의존 참조가 모두 없을 때만 원문과 설명을 그대로 보관(archived_at)하며, 참조가 있으면 중단한다. 기존 세션·응답·제출 이력은 허용하지만 안내에 연결된 작업 응답·제출 항목·저장 재시도 값이 비어 있고 출처/배치 연결이 일치해야 한다. 실제 답변·과거 답변·들어오는 응답 참조·예상 밖 값은 삭제하지 않고 롤백한다. 빈 안내 응답 자리만 삭제하고 세션 layout에서 안내 배치와 그 결과 비는 섹션, 제출본/재시도 payload에서 안내 키만 제거한다. 원본은 archived_at으로 보관한다. 보관 이전 시 validate_question 검증은 유지하고, 잠금 아래 임시 트리거로 기존 updated_at을 복원한 뒤 임시 객체를 제거한다. 최종 지문은 수정 시각과 생성 검색 열까지 검사한다. 나머지 질문·섹션·답변 ID/내용/시각과 세션 revision·저장 ID·자유 응답·최종 제출 시각을 보존하며 제출 후 비공개 수정분을 제출본으로 복사하지 않는다. 질문지 자체 revision 증가로 기존 편집 캐시 충돌을 감지한다. 관련 보호 트리거는 대상 이전 동안만 잠금 아래 해제하고 같은 트랜잭션에서 복구하며 전후 데이터 지문을 비교한다. 운영에 미적용인 시작 안내 migration의 데이터 이전만 보완했으며 이미 적용된 로컬 DB의 재실행·이력 repair는 필요 없다. 검증·적용 순서는 [운영 문서](operations.md)의 최종 사전 점검을 따른다.
 
@@ -115,7 +119,7 @@
 - 저장 시 원본 질문과 활성 검토 중 배치를 잠가 상태 변경과 경합을 방지한다. 중복 요청 ID는 질문·요청자·본문이 같은 경우에만 재시도로 인정한다. 기존 요청 처리/읽음/조회 RLS와 권한은 유지한다.
 - 새 질문 불러오기는 클라이언트에서 정의만 독립 복사한 뒤 기존 save_question에 revision 0으로 저장한다. 별도 복제 테이블이나 원본 연결을 만들지 않는다. 필드·선택지·설명 ID를 새로 만들며 응답/가이드/검토 이력은 전달하지 않는다. 외부 질문 연결은 복사하지 않는다.
 
-- startNotice에 선택 문자열 explorationButtonLabel(최대 100자)을 저장한다. 미지정/빈 문자열은 탐구활동 버튼 숨김이다. 기존 JSONB와 원자적 저장 경로를 그대로 사용하며 신규 migration은 없다.
+- 각 notices 항목에 선택 문자열 explorationButtonLabel(최대 100자)을 저장한다. 미지정/빈 문자열은 탐구활동 버튼 숨김이다. 기존 JSONB와 원자적 저장 경로를 그대로 사용하며 신규 migration은 없다.
 
 ### 기본 비공개 질문·질문지 초안 권한 (2026-10-15)
 
@@ -196,7 +200,7 @@ flowchart LR
 ```
 
 - 질문 내용을 같은 원본으로 **연결**하면 수정·설명·검토 요청이 공유된다. 새 질문의 **질문 불러오기**는 내용만 복사하고 질문/필드/설명 ID를 새로 발급한다. 답변·검토 요청·배포 잠금은 복사하지 않으며 원본과 내용이 같으면 저장하지 않는다.
-- 질문지의 안내·섹션·순서·배치는 질문지에 귀속된다. 배치 ID로 원본 질문을 대신 식별하지 않는다. 안내는 답변이 없는 시작 안내이며 등록을 강제하지 않는다.
+- 질문지의 안내·섹션·순서·배치는 질문지에 귀속된다. 배치 ID로 원본 질문을 대신 식별하지 않는다. 안내는 답변이 없는 배치 요소이며 등록을 강제하지 않는다.
 - 같은 질문을 다른 질문지에서 사용해도 작업 답변은 `(respondent_id, origin_questionnaire_id, started_stage)`별 세션에서 분리된다. 세션 안 질문별 답변은 `(session_id, question_id)`로 유일하다. 응답 ID·행 ID·필드 ID는 순서 번호가 아니다.
 - 저장은 본인 작업 내용만 갱신한다. 제출은 전체 질문지를 DB에서 원자적으로 검증하고 마지막 제출본을 갱신한다. 재제출 전의 비공개 편집을 리드/관리자의 제출 조회·PDF에 섞지 않는다.
 
@@ -254,7 +258,7 @@ revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키�
 
 ## 응답 변경 확인·요청 내 인증 재사용 (2026-10-16)
 
-응답 GET 경로에 `?version=1`을 추가했다. `read_review_response_version` / `read_published_question_response_version` RPC는 기존 read RPC의 소유권·역할·질문 정의·검토 배치 동기화 판정을 그대로 거쳐 id, revision, definitionToken, status, savedAt, submittedAt, sourceDeleted, hasUnsubmittedChanges, startNotice만 반환한다. questions/sections/답변 본문은 전송하지 않는다. SQL read 내부의 스냅샷 계산 비용은 남으며 이번 변경의 주목적은 Egress·호출 빈도 절감이다. 별도 버전 저장 열·트리거·기존 데이터 보정은 추가하지 않는다.
+응답 GET 경로에 `?version=1`을 추가했다. `read_review_response_version` / `read_published_question_response_version` RPC는 기존 read RPC의 소유권·역할·질문 정의·검토 배치 동기화 판정을 그대로 거쳐 id, revision, definitionToken, status, savedAt, submittedAt, sourceDeleted, hasUnsubmittedChanges, noticesToken만 반환한다(2026-10-19부터 안내 본문 대신 지문). questions/sections/답변 본문은 전송하지 않는다. SQL read 내부의 스냅샷 계산 비용은 남으며 이번 변경의 주목적은 Egress·호출 빈도 절감이다. 별도 버전 저장 열·트리거·기존 데이터 보정은 추가하지 않는다.
 
 클라이언트는 위 메타데이터를 비교하여 변경될 때만 전체 스냅샷을 읽고 기존 applyRemote의 정의 변경 병합·미저장 충돌 처리를 사용한다. 저장을 시작할 때 세대 번호를 올려 저장 전 시작한 조회가 이후 상태를 덮어쓰지 못하게 한다. 조회는 하나만 진행하며 숨겨짐·unmount·저장/재시도 중에는 결과를 적용하지 않는다. GET은 30초 timeout 후 다음 주기에 재시도하고 PUT/저장 ID/저장 재시도 계약은 유지한다.
 
