@@ -5,6 +5,10 @@ import { useState } from 'react';
 import { ExplorationDetails } from '@/app/(private)/dashboard/_views/exploration/components/ExplorationDetails';
 import { ExplorationView } from '@/app/(private)/dashboard/_views/exploration/ExplorationView';
 import { useExplorationList } from '@/app/(private)/dashboard/_views/exploration/hooks/useExplorationList';
+import {
+  AttachmentDetailsSkeleton,
+  AttachmentPickerSkeleton,
+} from '@/components/patterns/attachment-list-skeleton';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { fromRow } from '@/lib/exploration/storage-model';
@@ -28,7 +32,10 @@ export function ExplorationPicker({
         </Button>
       </div>
     );
-  if (!data) return <p role="status">탐구활동을 불러오는 중이에요.</p>;
+  if (!data)
+    return (
+      <AttachmentPickerSkeleton label="탐구활동 목록을 불러오는 중입니다" />
+    );
   return (
     <ExplorationView
       userId={data.userId}
@@ -70,9 +77,7 @@ export function ExplorationReferenceContent({
               </Button>
             </div>
           ) : !data ? (
-            <p role="status" className="p-6">
-              불러오는 중이에요.
-            </p>
+            <AttachmentDetailsSkeleton label="탐구활동 상세를 불러오는 중입니다" />
           ) : activity ? (
             <ExplorationDetails
               activity={fromRow(activity)}

@@ -1,4 +1,5 @@
 import { CollectionHeader } from '@/components/patterns/collection';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ManagedMember } from '@/lib/admin';
 
 import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
@@ -7,9 +8,10 @@ import { StudentManagementTable } from './components/StudentManagementTable';
 
 type StudentsViewProps = {
   students: ManagedMember[];
+  loading?: boolean;
 };
 
-export function StudentsView({ students }: StudentsViewProps) {
+export function StudentsView({ students, loading = false }: StudentsViewProps) {
   return (
     <section aria-labelledby="students-title" className="space-y-6">
       <CollectionHeader
@@ -19,10 +21,14 @@ export function StudentsView({ students }: StudentsViewProps) {
         description="등록된 학생의 정보와 학년·학기를 확인하세요."
       />
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          등록된 학생 {students.length}명
-        </p>
-        <StudentManagementTable students={students} />
+        <div className="text-sm text-muted-foreground">
+          {loading ? (
+            <Skeleton className="h-5 w-32" />
+          ) : (
+            <>등록된 학생 {students.length}명</>
+          )}
+        </div>
+        <StudentManagementTable students={students} loading={loading} />
       </div>
     </section>
   );

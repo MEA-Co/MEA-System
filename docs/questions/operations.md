@@ -771,3 +771,11 @@ migration을 먼저 적용한 뒤 앱을 배포한다. 이전 앱은 새 함수�
 Log Query는 일반 DB SQL 호출 수가 아니라 로그 조회가 스캔한 바이트다. 사고로 쌓인 큰 로그를 Studio/API/MCP에서 반복 검색하면 조사 자체가 사용량을 늘릴 수 있다. 어제 조회 주체별 이력과 청구용 일별 수치는 이번 연결 도구로 확인하지 못해 정확한 기여율은 미확정이다. 이번 조사는 좁은 시간·source 조건으로 제한했고 과거 폭주 구간 전체 재스캔을 하지 않았다. LIMIT만으로 스캔량이 줄지는 않는다. [공식 사용량 설명](https://supabase.com/docs/guides/platform/manage-your-usage/logs-query), [조회 범위 지침](https://supabase.com/docs/guides/observability/advanced-log-filtering).
 
 Advisor도 확인했다. 다중 허용 정책(study/exploration), 외래키 인덱스 등의 성능 권고가 있으나 이번 폭주의 원인으로 입증되지 않았다. SECURITY DEFINER 경고 중 rls_auto_enable의 반환형은 event_trigger여서 일반 RPC 호출 가능성을 경고 문구만으로 단정하지 않는다. 역할 변경 함수는 별도 권한 검증 계약을 따른다. [정책 성능 권고](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies), [함수 실행 권고](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [암호 보호 권고](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). 자동 사용량 경보·장기 관측은 여전히 미구현이다.
+
+## 로딩 UI 검증 (2026-10-19)
+
+회원 관리 서버 조회 대기, 질문지 가이드 답변 조회, 학습법·탐구활동 첨부 선택 목록의 로딩 UI를 보완했다. 타입 검사·변경 파일 린트·관련 회귀 8개·Webpack 프로덕션 빌드 통과. DB migration·API·권한 변경은 없으며 실제 브라우저 테스트와 운영 배포는 수행하지 않았다.
+
+### 첨부 로딩 보완·가이드 표시 복원 (2026-10-19)
+
+선택기 진입 전 사용자 확인과 참조 상세 Drawer의 문구형 로딩도 스켈레톤으로 교체했다. 가이드 답변의 추가 로딩/오류 UI는 사용자 요청으로 제거하고 기존 데이터가 있을 때만 표시하도록 복원했다. 이번 보완의 타입 검사·변경 파일 린트·첨부 선택 회귀 2개 통과. 실제 브라우저 테스트·운영 배포는 수행하지 않았다.

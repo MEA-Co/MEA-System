@@ -5,6 +5,10 @@ import { useState } from 'react';
 import { StudyDetails } from '@/app/(private)/dashboard/_views/study/components/StudyDetails';
 import { useStudyList } from '@/app/(private)/dashboard/_views/study/hooks/useStudyList';
 import { StudyView } from '@/app/(private)/dashboard/_views/study/StudyView';
+import {
+  AttachmentDetailsSkeleton,
+  AttachmentPickerSkeleton,
+} from '@/components/patterns/attachment-list-skeleton';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { studyTitle } from '@/lib/study/fields';
@@ -29,7 +33,8 @@ export function StudyPicker({
         </Button>
       </div>
     );
-  if (!data) return <p role="status">학습법을 불러오는 중이에요.</p>;
+  if (!data)
+    return <AttachmentPickerSkeleton label="학습법 목록을 불러오는 중입니다" />;
   return (
     <StudyView
       userId={data.userId}
@@ -71,9 +76,7 @@ export function StudyReferenceContent({
               </Button>
             </div>
           ) : !data ? (
-            <p role="status" className="p-6">
-              불러오는 중이에요.
-            </p>
+            <AttachmentDetailsSkeleton label="학습법 상세를 불러오는 중입니다" />
           ) : activity ? (
             <StudyDetails
               study={fromRow(activity)}

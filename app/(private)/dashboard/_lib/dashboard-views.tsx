@@ -22,6 +22,7 @@ type ViewContext = {
   role: MemberRole;
   studentPeriod?: StudentPeriod | null;
   students: ManagedMember[];
+  membersLoading?: boolean;
   consultants: ManagedMember[];
   completedConsultingIds?: ReadonlyArray<string>;
   questionnaireId?: string;
@@ -33,11 +34,14 @@ const DASHBOARD_VIEWS = {
   profile: ({ name, role, studentPeriod }) => (
     <ProfileView name={name} role={role} studentPeriod={studentPeriod} />
   ),
-  students: ({ students }) => <StudentsView students={students} />,
-  consultants: ({ role, consultants }) => (
+  students: ({ students, membersLoading }) => (
+    <StudentsView students={students} loading={membersLoading} />
+  ),
+  consultants: ({ role, consultants, membersLoading }) => (
     <ConsultantsView
       canManageRoles={role === 'admin'}
       consultants={consultants}
+      loading={membersLoading}
     />
   ),
   consulting: ({ role, completedConsultingIds }) => (

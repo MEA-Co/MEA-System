@@ -1,6 +1,10 @@
 import { cookies } from 'next/headers';
+import { type ReactNode,Suspense } from 'react';
 
-import { resolveDashboardView } from '@/app/(private)/dashboard/_lib/dashboard-access';
+import {
+  type DashboardView,
+  resolveDashboardView,
+} from '@/app/(private)/dashboard/_lib/dashboard-access';
 import {
   TEMP_STUDENT_CONSULTING_RESULTS_TABLE,
   type TempStudentConsultingResultRow,
@@ -8,7 +12,7 @@ import {
 import type { ManagedMember } from '@/lib/admin';
 import { getViewRole } from '@/lib/admin';
 import { requireUserAccess } from '@/lib/auth';
-import { MEMBER_ROLES } from '@/lib/profile';
+import { MEMBER_ROLES,type MemberRole } from '@/lib/profile';
 import { createClient } from '@/lib/supabase/server';
 
 import { AdminRoleTabs } from '../_components/AdminRoleTabs';
@@ -25,7 +29,8 @@ export type DashboardPageProps = {
 };
 
 export async function renderDashboard({ searchParams }: DashboardPageProps) {
-  const { profile, role: actualRole, user } = await requireUserAccess();
+  const access = await requireUserAccess();
+  const { profile, role: actualRole, user } = access;
   const role = await getViewRole(actualRole);
   const roleTabs =
     actualRole === 'admin' ? <AdminRoleTabs role={role} /> : null;
@@ -33,6 +38,51 @@ export async function renderDashboard({ searchParams }: DashboardPageProps) {
 
   const view = resolveDashboardView(role, requestedView);
 
+  const content = (
+    <DashboardData
+      access={access}
+      role={role}
+      roleTabs={roleTabs}
+      view={view}
+      draft={draft}
+    />
+  );
+  if (view !== 'students' && view !== 'consultants') return content;
+  return (
+    <Suspense
+      key={`${role}:${view}`}
+      fallback={
+        <Dashboard
+          userId={user.id}
+          name={profile.name}
+          role={role}
+          studentPeriod={profile.student_period}
+          members={[]}
+          membersLoading
+          view={view}
+          headerActions={roleTabs}
+        />
+      }
+    >
+      {content}
+    </Suspense>
+  );
+}
+
+async function DashboardData({
+  access,
+  role,
+  roleTabs,
+  view,
+  draft,
+}: {
+  access: Awaited<ReturnType<typeof requireUserAccess>>;
+  role: MemberRole;
+  roleTabs: ReactNode;
+  view: DashboardView;
+  draft?: string | string[];
+}) {
+  const { profile, user } = access;
   let members: ManagedMember[] = [];
   let completedConsultingIds: string[] = [];
 

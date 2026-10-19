@@ -3,6 +3,7 @@
 import { Eye, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { AttachmentListSkeleton } from '@/components/patterns/attachment-list-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { type Study, studySummary, studyTitle } from '@/lib/study/fields';
@@ -57,7 +58,7 @@ export function StudySelectList({
           </Button>
         </div>
       ) : loading ? (
-        <p role="status">불러오는 중이에요.</p>
+        <AttachmentListSkeleton label="학습법 목록을 불러오는 중입니다" />
       ) : (
         <ul className="divide-y">
           {data?.activities.map((row) => {

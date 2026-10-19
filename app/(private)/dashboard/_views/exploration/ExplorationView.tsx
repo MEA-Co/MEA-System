@@ -1,6 +1,7 @@
 'use client';
 
 import { BookOpen, Plus } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { CollectionHeader } from '@/components/patterns/collection';
@@ -30,6 +31,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { type Exploration } from '@/lib/exploration/fields';
 import { hasInput, missingFields } from '@/lib/exploration/storage-model';
 
@@ -37,6 +39,7 @@ import { DashboardPageCategory } from '../../_components/DashboardPageCategory';
 
 import { ExplorationDetails } from './components/ExplorationDetails';
 import { ExplorationFields } from './components/ExplorationFields';
+import { ExplorationNavigation } from './components/ExplorationNavigation';
 import { ExplorationReferencesInput } from './components/ExplorationReferencesInput';
 import { ExplorationReportInput } from './components/ExplorationReportInput';
 import { ExplorationSelectList } from './components/ExplorationSelectList';
@@ -59,6 +62,8 @@ export function ExplorationView({
   onSelect?: (activity: Exploration) => void;
   onEditorOpenChange?: (open: boolean) => void;
 }) {
+  const params = useSearchParams();
+  const stems = !onSelect && !registrationOnly && params.get('tab') === 'stems';
   const opener = useRef<HTMLElement | null>(null);
   const continueWritingRef = useRef<HTMLButtonElement | null>(null);
   const {
@@ -128,25 +133,32 @@ export function ExplorationView({
         <CollectionHeader
           id="exploration-management-title"
           category={<DashboardPageCategory view="exploration" />}
-          title="탐구활동 관리"
-          description="나의 탐구 경험을 기록하고, 필요한 답변에 연결하세요."
+          title={stems ? '탐구줄기 관리' : '탐구활동 관리'}
+          description={
+            stems
+              ? undefined
+              : '나의 탐구 경험을 기록하고, 필요한 답변에 연결하세요.'
+          }
           action={
-            <Button
-              type="button"
-              disabled={!ready || busy}
-              aria-label="탐구활동 추가"
-              onClick={(event) => {
-                opener.current = event.currentTarget;
-                create();
-              }}
-            >
-              <Plus aria-hidden="true" />
-              <span className="hidden sm:inline">탐구활동 추가</span>
-              <span className="sm:hidden">추가</span>
-            </Button>
+            !stems && (
+              <Button
+                type="button"
+                disabled={!ready || busy}
+                aria-label="탐구활동 추가"
+                onClick={(event) => {
+                  opener.current = event.currentTarget;
+                  create();
+                }}
+              >
+                <Plus aria-hidden="true" />
+                <span className="hidden sm:inline">탐구활동 추가</span>
+                <span className="sm:hidden">추가</span>
+              </Button>
+            )
           }
         />
       )}
+      {!onSelect && !registrationOnly && <ExplorationNavigation stems={stems} />}
       {localError && (
         <p role="alert" className="text-sm text-destructive">
           {localError}
@@ -313,6 +325,13 @@ export function ExplorationView({
             create();
           }}
         />
+      ) : stems ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>탐구줄기</EmptyTitle>
+            <EmptyDescription>탐구줄기 기능을 준비 중입니다.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <ExplorationTable
           userId={userId}

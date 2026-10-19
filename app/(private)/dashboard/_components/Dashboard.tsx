@@ -17,6 +17,7 @@ type DashboardProps = {
   name: string;
   role: MemberRole;
   members: ManagedMember[];
+  membersLoading?: boolean;
   studentPeriod?: StudentPeriod | null;
   completedConsultingIds?: ReadonlyArray<string>;
   view: DashboardView;
@@ -29,6 +30,7 @@ export function Dashboard({
   name,
   role,
   members,
+  membersLoading = false,
   view,
   headerActions,
   questionnaireId,
@@ -50,8 +52,8 @@ export function Dashboard({
       navigation={
         <DashboardNavigation
           role={role}
-          consultantCount={consultants.length}
-          studentCount={students.length}
+          consultantCount={membersLoading ? undefined : consultants.length}
+          studentCount={membersLoading ? undefined : students.length}
           view={activeView}
         />
       }
@@ -61,6 +63,7 @@ export function Dashboard({
         name,
         studentPeriod,
         students,
+        membersLoading,
         consultants,
         completedConsultingIds,
         questionnaireId,
