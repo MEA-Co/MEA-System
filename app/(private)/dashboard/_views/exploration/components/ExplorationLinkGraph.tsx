@@ -335,12 +335,12 @@ function SkillConnection(props: EdgeProps<SkillEdge>) {
                   </Button>
                 </>
               ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger render={skillButton} />
-                    <TooltipContent>연계 스킬 추가</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-background/90 px-2 py-1 text-xs font-medium text-blue-700">
+                    스킬셋 추가하기
+                  </span>
+                  {skillButton}
+                </>
               )}
             </div>
           </motion.div>
@@ -558,7 +558,7 @@ export function ExplorationLinkGraph({
         readOnly,
         label: skill
           ? `${fromTitle}에서 ${toTitle} 연계 스킬 ${skill.name} 수정`
-          : `${fromTitle}에서 ${toTitle} 연계 스킬 추가`,
+          : `${fromTitle}에서 ${toTitle} 스킬셋 추가하기`,
         hideControls:
           draggingIds.includes(edge.from) || draggingIds.includes(edge.to),
         skillsetName: skill?.name,
