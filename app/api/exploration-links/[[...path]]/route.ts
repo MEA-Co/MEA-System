@@ -45,6 +45,7 @@ async function handle(req: Request, context: Context) {
     const parsed = z
       .object({
         scope: z.enum(['own', 'others']).default('own'),
+        countsOnly: z.boolean().default(false),
         query: z.string().trim().max(200).default(''),
         page: z.number().int().min(1).max(100000).default(1),
         excluded: z.array(z.uuid()).max(10000).default([]),
@@ -56,6 +57,29 @@ async function handle(req: Request, context: Context) {
     const d = parsed.data;
     if (d.scope === 'others' && !others)
       return json({ error: '조회 권한이 없습니다.' }, 403);
+    if (d.countsOnly) {
+      let ownQuery = client
+        .from('exploration_links')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_id', access.user.id)
+        .is('deleted_at', null);
+      if (d.excluded.length)
+        ownQuery = ownQuery.not('id', 'in', `(${d.excluded.join(',')})`);
+      const [own, other] = await Promise.all([
+        ownQuery.abortSignal(AbortSignal.timeout(10000)),
+        others
+          ? client
+              .from('exploration_links')
+              .select('id', { count: 'exact', head: true })
+              .neq('owner_id', access.user.id)
+              .is('deleted_at', null)
+              .abortSignal(AbortSignal.timeout(10000))
+          : Promise.resolve({ count: 0, error: null }),
+      ]);
+      if (own.error) throw own.error;
+      if (other.error) throw other.error;
+      return json({ own: own.count ?? 0, others: other.count ?? 0 });
+    }
     const { data, error } = await client
       .rpc('read_exploration_link_page', {
         p_scope: d.scope,
@@ -223,4 +247,4 @@ async function route(req: Request, context: Context) {
     );
   }
 }
-export { route as DELETE,route as GET, route as POST, route as PUT };
+export { route as DELETE, route as GET, route as POST, route as PUT };

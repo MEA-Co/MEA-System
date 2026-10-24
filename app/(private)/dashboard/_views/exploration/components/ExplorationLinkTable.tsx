@@ -98,6 +98,21 @@ export function ExplorationLinkTable({
       ),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
+  const draftIds = JSON.stringify(drafts.map((draft) => draft.id).sort());
+  const { data: counts, mutate: mutateCounts } = useSWR(
+    canViewOthers
+      ? ['exploration-link-counts', userId, canViewOthers, draftIds]
+      : null,
+    () =>
+      linkRequest<{ own: number; others: number }>('/api/exploration-links', {
+        method: 'POST',
+        body: JSON.stringify({
+          countsOnly: true,
+          excluded: JSON.parse(draftIds),
+        }),
+      }),
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
   const loading = search !== query.trim() || (!localOnly && isLoading);
   const total = localOnly ? matches.length : (data?.total ?? 0);
   const pages = Math.max(1, Math.ceil(total / 10));
@@ -130,7 +145,15 @@ export function ExplorationLinkTable({
               scope === 'others' ? '탐구줄기 작성자 필터' : '탐구줄기 저장 상태'
             }
           >
-            <SelectValue />
+            <SelectValue>
+              {scope === 'others'
+                ? '전체 작성자'
+                : status === 'confirmed'
+                  ? '확정된 탐구줄기'
+                  : status === 'drafts'
+                    ? `임시저장 (${drafts.length})`
+                    : '전체 탐구줄기'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {scope === 'others' ? (
@@ -361,7 +384,7 @@ export function ExplorationLinkTable({
                     }),
                   });
                   setDeleting(null);
-                  await mutate();
+                  await Promise.all([mutate(), mutateCounts()]);
                 } catch (e) {
                   toast.add({
                     title:
@@ -407,6 +430,9 @@ export function ExplorationLinkTable({
       >
         <TabsTrigger value="own" className="min-w-0 px-3 sm:flex-none sm:px-4">
           나의 탐구줄기
+          <Badge variant="count">
+            {counts ? counts.own + drafts.length : '—'}
+          </Badge>
         </TabsTrigger>
         <TabsTrigger
           value="others"
@@ -415,6 +441,7 @@ export function ExplorationLinkTable({
         >
           <span className="sm:hidden">다른 사람</span>
           <span className="hidden sm:inline">다른 사람의 탐구줄기</span>
+          <Badge variant="count">{counts?.others ?? '—'}</Badge>
         </TabsTrigger>
       </TabsList>
       {['own', 'others'].map((value) => (

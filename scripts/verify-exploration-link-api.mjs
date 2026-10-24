@@ -17,7 +17,7 @@ function harness({role='consultant',view=role,user=true,rpcError=null}={}) {
  const calls=[];
  const route=load('app/api/exploration-links/[[...path]]/route.ts',{
  'next/headers':{cookies:async()=>({})},'@/lib/admin':{getViewRole:async()=>view},'@/lib/auth':{getUserAccess:async()=>({user:user?{id:userId}:null,isOnboarded:true,role})},'@/lib/exploration-links/model':model,
- '@/lib/supabase/server':{createClient:()=>({rpc:(name,args)=>{calls.push({name,args});return {abortSignal:async()=>({data:{id,revision:1},error:rpcError})};}})}});
+ '@/lib/supabase/server':{createClient:()=>({from:(table)=>{const call={table,filters:[]};calls.push(call);const q={select:(columns,options)=>{call.options=options;return q},eq:(...v)=>{call.filters.push(['eq',...v]);return q},neq:(...v)=>{call.filters.push(['neq',...v]);return q},is:(...v)=>{call.filters.push(['is',...v]);return q},not:(...v)=>{call.filters.push(['not',...v]);return q},abortSignal:async()=>({count:3,error:null})};return q},rpc:(name,args)=>{calls.push({name,args});return {abortSignal:async()=>({data:{id,revision:1},error:rpcError})};}})}});
  return {calls,send:(method,body,path=[id],origin='https://test.local')=>route[method](new Request(`https://test.local/api/exploration-links/${path.join('/')}`,{method,headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)}),{params:Promise.resolve({path})})};
 }
 test('confirmation prunes isolated nodes and coordinates before one atomic RPC',async()=>{
@@ -47,3 +47,15 @@ test('server revision and skill timestamp survive local draft roundtrip',()=>{
 });
 
 test('draft permits empty linking point while confirmation rejects it',()=>{const v=content();v.description='';assert.equal(drafts.linkContentSchema.safeParse(v).success,true);assert.throws(()=>model.confirmedContent(v),/연계 포인트/);});
+
+test('tab counts fetch no bodies, exclude draft IDs and respect displayed role',async()=>{
+ for(const view of ['admin','consultant']) {
+  const h=harness({role:'admin',view});
+  const response=await h.send('POST',{countsOnly:true,excluded:[id]},[]);
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{own:3,others:view==='admin'?3:0});
+  assert.equal(h.calls.length,view==='admin'?2:1);
+  for(const call of h.calls) assert.equal(call.options.head,true);
+  assert.ok(h.calls[0].filters.some(f=>f[0]==='not'&&f[3]===`(${id})`));
+ }
+});

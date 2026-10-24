@@ -223,3 +223,7 @@ localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`
 ### 탐구줄기 연계 포인트 필수 (2026-10-20)
 
 탐구줄기의 description 표시명을 연계 포인트로 통일한다. 확정 시 UI·confirmedContent·confirmLinkSchema·DB save_exploration_link가 빈 값과 공백만 있는 값을 거절한다. API 필드/DB 열 이름은 description을 유지하며 기존 내용과 빈 값의 열람은 보존한다. 로컬 임시저장은 미완성 입력을 허용하고 기존 빈 확정본은 다음 확정 때 입력해야 한다. 연계 스킬의 별도 설명 필드는 변경하지 않는다.
+
+### 탐구줄기 필터 표시·탭 개수 (2026-10-24)
+
+필터 선택값을 한국어로 명시하여 all/confirmed/drafts 내부 값 노출을 수정했다. 내/다른 사람 탭에 검색·상태 필터와 독립된 총개수를 표시한다. POST /api/exploration-links의 `{countsOnly:true,excluded:초안ID[]}`는 `{own,others}`를 반환한다. own은 초안 ID와 중복된 확정본을 제외한 DB 개수이며 화면에서 초안 수를 더한다. 실제 권한/RLS·표시 역할 검사를 유지하고, 타인 열람 불가 시 타인 집계는 실행하지 않는다. head/count 전용 조회라 본문을 전송하지 않는다. 초기 목록 진입·초안 ID 변경·삭제 후에 갱신하고 검색/페이지 변경에는 재조회하지 않으며 polling·자동 재시도는 없다. 정확한 집계 비용은 활성 데이터 수에 비례할 수 있다. DB 스키마/migration 변경·운영 반영·브라우저 테스트는 없다.
