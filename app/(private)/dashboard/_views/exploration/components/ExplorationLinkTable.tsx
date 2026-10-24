@@ -170,7 +170,9 @@ export function ExplorationLinkTable({
           </SelectContent>
         </Select>
       </div>
-      <div className="relative h-215.5 overflow-hidden rounded-lg border border-border sm:h-165.5">
+      <div
+        className={`relative overflow-hidden rounded-lg border border-border sm:h-165.5 ${scope === 'others' ? 'h-290' : 'h-215.5'}`}
+      >
         <Table className="table-fixed">
           <TableHeader className="bg-muted">
             <TableRow className="h-10">
@@ -182,7 +184,11 @@ export function ExplorationLinkTable({
                 {scope === 'others' ? '작성자' : '상태'}
               </TableHead>
               <TableHead className="hidden sm:table-cell">수정일</TableHead>
-              <TableHead className="w-24 text-right sm:w-[14%]">관리</TableHead>
+              <TableHead
+                className={`${scope === 'others' ? 'w-12' : 'w-24'} text-right sm:w-[14%]`}
+              >
+                관리
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -192,7 +198,7 @@ export function ExplorationLinkTable({
                 <TableRow
                   key={draft.id}
                   tabIndex={-1}
-                  className="h-20 cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15"
+                  className={`${scope === 'others' ? 'h-28' : 'h-20'} cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15`}
                   onClick={(event) => {
                     if (
                       busy ||
@@ -256,7 +262,7 @@ export function ExplorationLinkTable({
                 <TableRow
                   key={item.id}
                   tabIndex={-1}
-                  className="h-20 cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15"
+                  className={`${scope === 'others' ? 'h-28' : 'h-20'} cursor-pointer focus-visible:outline-2 focus-visible:outline-ring sm:h-15`}
                   onClick={(event) => {
                     if (
                       busy ||
@@ -272,11 +278,30 @@ export function ExplorationLinkTable({
                     <button
                       type="button"
                       disabled={busy}
-                      className="block w-full cursor-pointer truncate text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+                      className={`w-full cursor-pointer text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${scope === 'others' ? 'line-clamp-2 whitespace-normal break-words sm:block sm:truncate' : 'block truncate'}`}
                       onClick={() => onOpenConfirmed(item.id)}
                     >
                       {item.name}
                     </button>
+                    {scope === 'others' && (
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground sm:hidden">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="min-w-0 truncate">
+                            {item.owner_name ?? '작성자'}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span className="shrink-0">
+                            탐구활동 {item.node_count}개 연결
+                          </span>
+                        </div>
+                        <p>
+                          수정{' '}
+                          {new Date(item.updated_at).toLocaleDateString(
+                            'ko-KR',
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {item.node_count}개
