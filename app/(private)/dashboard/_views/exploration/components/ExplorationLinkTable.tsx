@@ -278,7 +278,7 @@ export function ExplorationLinkTable({
                     <button
                       type="button"
                       disabled={busy}
-                      className={`w-full cursor-pointer text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${scope === 'others' ? 'line-clamp-2 whitespace-normal break-words sm:block sm:truncate' : 'block truncate'}`}
+                      className={`w-full cursor-pointer text-left font-semibold hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${scope === 'others' ? 'line-clamp-2 whitespace-normal wrap-break-word sm:block sm:truncate' : 'block truncate'}`}
                       onClick={() => onOpenConfirmed(item.id)}
                     >
                       {item.name}
