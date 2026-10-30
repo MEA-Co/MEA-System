@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatKoreanDate } from '@/lib/date-time';
 import type { Exploration } from '@/lib/exploration/fields';
 import {
   EXPLORATION_PAGE_SIZE,
@@ -461,7 +462,7 @@ export function ExplorationTableRows({
                     )}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {activity.updatedAt.slice(0, 10)}
+                    {formatKoreanDate(activity.updatedAt)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">

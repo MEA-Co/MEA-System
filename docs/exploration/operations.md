@@ -294,3 +294,27 @@ npx supabase db push --linked --dry-run
 ### 탐구줄기 필터 표시·탭 개수 (2026-10-24)
 
 필터 선택값을 한국어로 명시하여 all/confirmed/drafts 내부 값 노출을 수정했다. 내/다른 사람 탭에 검색·상태 필터와 독립된 총개수를 표시한다. POST /api/exploration-links의 `{countsOnly:true,excluded:초안ID[]}`는 `{own,others}`를 반환한다. own은 초안 ID와 중복된 확정본을 제외한 DB 개수이며 화면에서 초안 수를 더한다. 실제 권한/RLS·표시 역할 검사를 유지하고, 타인 열람 불가 시 타인 집계는 실행하지 않는다. head/count 전용 조회라 본문을 전송하지 않는다. 초기 목록 진입·초안 ID 변경·삭제 후에 갱신하고 검색/페이지 변경에는 재조회하지 않으며 polling·자동 재시도는 없다. 정확한 집계 비용은 활성 데이터 수에 비례할 수 있다. DB 스키마/migration 변경·운영 반영·브라우저 테스트는 없다.
+
+
+## 사람별 탐구줄기·타임스탬프 점검 (2026-10-30)
+
+원인: 작성자 선택은 전체 항목만 구현되어 있었고 API/RPC에 owner 조건이 없었다. 탐구활동·학습법은 UTC 날짜 부분을 그대로 표시했고 탐구줄기·일부 질문 화면은 기기 시간대를 사용했다.
+
+연결된 운영 DB 읽기 전용 점검: TimeZone=UTC, public 시각 열 77개 모두 timestamptz(시간대 없는 timestamp 0개). public/private 함수에서 timezone()/AT TIME ZONE 변환은 발견되지 않았다. 탐구줄기 저장은 DB now()/clock_timestamp(), 브라우저 초안은 toISOString()이다. 저장 시간 혼합 오류를 입증하는 증거는 없으며 UTC/KST 표현 차이와 화면 표시 불일치를 구분한다. 과거 수동 입력·모든 JSON 시각의 의미까지 검증한 것은 아니다. 운영 행/시각을 일괄 보정하지 않았다.
+
+`20261030043337_exploration_link_owner_filter.sql`은 조회 함수만 변경한다. 테이블/저장값/쓰기 함수/정책 변경은 없다. 로컬 DB에서 migration + `supabase/tests/exploration_link_owner_filter.sql`을 한 트랜잭션으로 실행해 작성자별 12개/2페이지, 검색·본인 제외·삭제 제외·권한·기존 5인수 호출·초안 병합을 검증한 뒤 전부 롤백했다. 로컬 영구 적용·운영 적용·앱 배포는 대기다. 실제 브라우저 테스트는 수행하지 않았다.
+
+운영 반영 순서:
+
+```bash
+cd /Users/mealdm/Desktop/MEA/system
+cat supabase/.temp/project-ref
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+# 예상: 20261030043337_exploration_link_owner_filter.sql
+# 다른 migration이 나오면 여기서 중단하고 이력·객체 동등성을 검토한다.
+npx supabase db push --linked
+npx supabase db push --linked --dry-run
+```
+
+연결된 대상이 의도한 운영 프로젝트인지 확인한다. 마지막 dry-run에서 적용 대기가 없음을 확인한 다음 앱을 배포하고, 리드/관리자의 사람별 목록·검색·페이지·일반 컨설턴트의 타인 접근 차단·한국 날짜 경계를 확인한다. 기존 운영 개선 작업의 최종 반영 시점까지 임의 적용하지 않는다.

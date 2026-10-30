@@ -219,3 +219,10 @@ study_queries/study_storage/study_guide_reference/study_solution_fields SQL 4개
 revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키고, PostgREST에 HTTP 409와 기존 JSON `code: "40001"`을 명시한다. 실제 PostgreSQL SQLSTATE `40001`은 직렬화 실패용이므로 업무 충돌에 사용하지 않는다. PostgREST 14.5에서는 이를 내부 재시도로 처리하여 같은 실패가 무한 반복될 수 있다. 기존 앱의 `error.code === "40001"` 분기는 그대로 유지한다. 충돌 검사·잠금·권한·저장 데이터 계약은 바뀌지 않는다.
 
 공통 migration은 `20261016012233_prevent_business_conflict_retries.sql`이며 검토한 private 함수의 리터럴 RAISE만 변경한다. 예상하지 못한 함수/구문은 전체 롤백하며 함수 소유자·권한·실행 설정도 전후 비교한다. 적용 상태와 후속 배포는 [질문 운영 문서](../questions/operations.md#업무-충돌-무한-재시도-긴급-수정-2026-10-16)를 따른다.
+
+
+## 공통 시간대 기준
+
+**DB 저장은 UTC, 사용자 화면 표시는 한국 시간(`Asia/Seoul`)**으로 통일한다. 로컬과 프로덕션 모두 같은 규칙을 따른다. 시점은 `timestamptz`에 저장하고 API·브라우저 저장에는 시간대가 명시된 문자열을 사용한다. 표시를 위해 저장값에 9시간을 더하거나 원본 시각·충돌 토큰을 변경하지 않는다.
+
+날짜·시각 표시는 공통 `lib/date-time.ts`를 우선 사용하고 별도 표시 형식에도 `timeZone: 'Asia/Seoul'`을 명시한다. `ko-KR`만 지정하거나 UTC 문자열의 날짜 부분만 잘라 표시하지 않는다. 날짜·시간 입력은 한국 시간으로 해석하여 UTC로 변환하며 날짜 전용 값은 제외한다. 한국 자정 전후와 해외 기기 시간대에서도 검증한다. 전체 작업 규칙은 [AGENTS.md 공통 시각 저장·표시 규칙](../../AGENTS.md#공통-시각-저장표시-규칙)을 따른다. 이 절은 필수 구현 기준이며 개별 화면의 적용·검증 상태는 해당 운영 문서와 구분한다.

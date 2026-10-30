@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
 
 import { Button } from '@/components/ui/button';
+import { formatKoreanDateTime } from '@/lib/date-time';
 
 import { useQuestionResponseEditor } from '../../hooks/responses/useQuestionResponseEditor';
 import type { QuestionResponseSnapshot } from '../../lib/question-responses';
@@ -193,7 +194,7 @@ function ResponseEditor({
           {snapshot.submittedAt && (
             <span className="block mt-1">
               마지막 제출:{' '}
-              {new Date(snapshot.submittedAt).toLocaleString('ko-KR')}
+              {formatKoreanDateTime(snapshot.submittedAt)}
               {(dirty || snapshot.hasUnsubmittedChanges) &&
                 ' · 수정 내용은 다시 제출해야 공개됩니다.'}
             </span>

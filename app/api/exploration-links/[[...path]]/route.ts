@@ -46,6 +46,8 @@ async function handle(req: Request, context: Context) {
       .object({
         scope: z.enum(['own', 'others']).default('own'),
         countsOnly: z.boolean().default(false),
+        peopleOnly: z.boolean().default(false),
+        owner: z.uuid().nullable().default(null),
         query: z.string().trim().max(200).default(''),
         page: z.number().int().min(1).max(100000).default(1),
         excluded: z.array(z.uuid()).max(10000).default([]),
@@ -55,8 +57,15 @@ async function handle(req: Request, context: Context) {
     if (!parsed.success)
       return json({ error: '목록 조건을 확인해 주세요.' }, 400);
     const d = parsed.data;
-    if (d.scope === 'others' && !others)
+    if ((d.scope === 'others' || d.peopleOnly) && !others)
       return json({ error: '조회 권한이 없습니다.' }, 403);
+    if (d.peopleOnly) {
+      const { data, error } = await client
+        .rpc('read_exploration_link_people')
+        .abortSignal(AbortSignal.timeout(10000));
+      if (error) throw error;
+      return json({ people: data });
+    }
     if (d.countsOnly) {
       let ownQuery = client
         .from('exploration_links')
@@ -83,6 +92,7 @@ async function handle(req: Request, context: Context) {
     const { data, error } = await client
       .rpc('read_exploration_link_page', {
         p_scope: d.scope,
+        p_owner: d.scope === 'others' ? d.owner : null,
         p_query: d.query,
         p_page: d.page,
         p_excluded: d.excluded,

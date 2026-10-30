@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatKoreanDate } from '@/lib/date-time';
 
 import { questionnaireFetcher } from '../../lib/questionnaire/api-client';
 
@@ -69,7 +70,7 @@ export function MyReviewResponses() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {new Date(item.updated_at).toLocaleDateString('ko-KR')}
+                    {formatKoreanDate(item.updated_at)}
                   </TableCell>
                   <TableCell>
                     {item.source_deleted ? '삭제됨 · 응답 보관 중' : '연결됨'}

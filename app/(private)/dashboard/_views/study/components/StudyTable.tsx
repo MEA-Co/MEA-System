@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatKoreanDate } from '@/lib/date-time';
 import { type Study, studyTitle } from '@/lib/study/fields';
 import { matchesStudySearch, STUDY_PAGE_SIZE } from '@/lib/study/list-query';
 import { fromRow, type StudyRow } from '@/lib/study/storage-model';
@@ -474,7 +475,7 @@ export function StudyTableRows({
                     )}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {study.updatedAt.slice(0, 10)}
+                    {formatKoreanDate(study.updatedAt)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">

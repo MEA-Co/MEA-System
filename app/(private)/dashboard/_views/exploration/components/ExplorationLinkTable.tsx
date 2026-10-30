@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
+import { formatKoreanDate } from '@/lib/date-time';
 import type { LinkSummary } from '@/lib/exploration-links/model';
 
 import { linkRequest } from '../lib/link-api';
@@ -57,6 +58,7 @@ export function ExplorationLinkTable({
 }) {
   const [selectedScope, setScope] = useState('own');
   const scope = canViewOthers ? selectedScope : 'own';
+  const [owner, setOwner] = useState('all');
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
@@ -81,6 +83,7 @@ export function ExplorationLinkTable({
   const localOnly = scope === 'own' && status === 'drafts';
   const request = {
     scope,
+    owner: scope === 'others' && owner !== 'all' ? owner : null,
     query: search,
     page,
     excluded:
@@ -113,6 +116,22 @@ export function ExplorationLinkTable({
       }),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
+  const {
+    data: peopleData,
+    error: peopleError,
+    isLoading: peopleLoading,
+    mutate: mutatePeople,
+  } = useSWR(
+    scope === 'others'
+      ? ['exploration-link-people', userId, canViewOthers]
+      : null,
+    () =>
+      linkRequest<{ people: { id: string; label: string; count: number }[] }>(
+        '/api/exploration-links',
+        { method: 'POST', body: JSON.stringify({ peopleOnly: true }) },
+      ),
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
   const loading = search !== query.trim() || (!localOnly && isLoading);
   const total = localOnly ? matches.length : (data?.total ?? 0);
   const pages = Math.max(1, Math.ceil(total / 10));
@@ -133,9 +152,10 @@ export function ExplorationLinkTable({
           containerClassName="sm:w-auto sm:flex-1"
         />
         <Select
-          value={scope === 'others' ? 'all' : status}
+          value={scope === 'others' ? owner : status}
           onValueChange={(value) => {
-            setStatus(value ?? 'all');
+            if (scope === 'others') setOwner(value ?? 'all');
+            else setStatus(value ?? 'all');
             setPage(1);
           }}
         >
@@ -147,7 +167,10 @@ export function ExplorationLinkTable({
           >
             <SelectValue>
               {scope === 'others'
-                ? '전체 작성자'
+                ? owner === 'all'
+                  ? '전체 작성자'
+                  : (peopleData?.people.find((person) => person.id === owner)
+                      ?.label ?? '선택한 작성자')
                 : status === 'confirmed'
                   ? '확정된 탐구줄기'
                   : status === 'drafts'
@@ -157,7 +180,14 @@ export function ExplorationLinkTable({
           </SelectTrigger>
           <SelectContent>
             {scope === 'others' ? (
-              <SelectItem value="all">전체 작성자</SelectItem>
+              <>
+                <SelectItem value="all">전체 작성자</SelectItem>
+                {peopleData?.people.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.label} ({person.count})
+                  </SelectItem>
+                ))}
+              </>
             ) : (
               <>
                 <SelectItem value="all">전체 탐구줄기</SelectItem>
@@ -170,6 +200,19 @@ export function ExplorationLinkTable({
           </SelectContent>
         </Select>
       </div>
+      {scope === 'others' && peopleLoading && (
+        <p role="status" className="text-sm text-muted-foreground">
+          작성자를 불러오는 중입니다.
+        </p>
+      )}
+      {scope === 'others' && peopleError && (
+        <div role="alert" className="text-sm">
+          작성자 목록을 불러오지 못했습니다.
+          <Button variant="outline" onClick={() => void mutatePeople()}>
+            작성자 다시 불러오기
+          </Button>
+        </div>
+      )}
       <div
         className={`relative overflow-hidden rounded-lg border border-border sm:h-165.5 ${scope === 'others' ? 'h-290' : 'h-215.5'}`}
       >
@@ -227,7 +270,7 @@ export function ExplorationLinkTable({
                     <Badge variant="secondary">임시저장</Badge>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {new Date(draft.updatedAt).toLocaleDateString('ko-KR')}
+                    {formatKoreanDate(draft.updatedAt)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
@@ -294,12 +337,7 @@ export function ExplorationLinkTable({
                             탐구활동 {item.node_count}개 연결
                           </span>
                         </div>
-                        <p>
-                          수정{' '}
-                          {new Date(item.updated_at).toLocaleDateString(
-                            'ko-KR',
-                          )}
-                        </p>
+                        <p>수정 {formatKoreanDate(item.updated_at)}</p>
                       </div>
                     )}
                   </TableCell>
@@ -314,7 +352,7 @@ export function ExplorationLinkTable({
                     )}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {new Date(item.updated_at).toLocaleDateString('ko-KR')}
+                    {formatKoreanDate(item.updated_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
@@ -443,6 +481,7 @@ export function ExplorationLinkTable({
       onValueChange={(value) => {
         if (value === 'own' || value === 'others') {
           setScope(value);
+          setOwner('all');
           setPage(1);
           setQuery('');
           setStatus('all');

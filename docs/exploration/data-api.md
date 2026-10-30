@@ -196,7 +196,7 @@ localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`
 
 | 요청 | 계약 |
 | --- | --- |
-| POST /api/exploration-links | `{scope,query,page,excluded,localCount}` → `{items,total,page}`. 10개 요약만 반환. scope own/others, 검색은 이름·설명의 리터럴 부분 일치 |
+| POST /api/exploration-links | `{scope,query,page,excluded,localCount,owner?}` → `{items,total,page}`. 10개 요약만 반환. scope own/others, 검색은 이름·설명의 리터럴 부분 일치 |
 | GET /api/exploration-links/:id | `{link}`. graph와 해당 간선에서 사용한 스킬만 조회. 목록에서 확정본을 열 때마다 새로 조회 |
 | PUT /api/exploration-links/:id | `{content,expectedRevision,saveId}` → `{link}`. 원자적 확정 |
 | DELETE /api/exploration-links/:id | `{expectedRevision}` → `{ok:true}`. tombstone 유지, graph 비우기, 스킬·원본 활동 유지 |
@@ -227,3 +227,21 @@ localStorage 키는 `mea:exploration-links:v1:<Supabase URL>:<userId>:<draftId>`
 ### 탐구줄기 필터 표시·탭 개수 (2026-10-24)
 
 필터 선택값을 한국어로 명시하여 all/confirmed/drafts 내부 값 노출을 수정했다. 내/다른 사람 탭에 검색·상태 필터와 독립된 총개수를 표시한다. POST /api/exploration-links의 `{countsOnly:true,excluded:초안ID[]}`는 `{own,others}`를 반환한다. own은 초안 ID와 중복된 확정본을 제외한 DB 개수이며 화면에서 초안 수를 더한다. 실제 권한/RLS·표시 역할 검사를 유지하고, 타인 열람 불가 시 타인 집계는 실행하지 않는다. head/count 전용 조회라 본문을 전송하지 않는다. 초기 목록 진입·초안 ID 변경·삭제 후에 갱신하고 검색/페이지 변경에는 재조회하지 않으며 polling·자동 재시도는 없다. 정확한 집계 비용은 활성 데이터 수에 비례할 수 있다. DB 스키마/migration 변경·운영 반영·브라우저 테스트는 없다.
+
+
+## 사람별 탐구줄기 조회·시각 계약 (2026-10-30)
+
+목록 POST의 owner는 UUID 또는 null(전체)이며 잘못된 값은 400이다. others 범위에서만 `read_exploration_link_page`의 마지막 선택 인수 p_owner로 전달한다. own 범위는 owner를 무시하고 기존 본인/초안 병합 계약을 유지한다. 작성자 조건은 개수와 페이지 본문에 동일하게 적용하며 최신순·10개 페이지를 유지한다. 기존 5개 RPC 인수 호출은 마지막 인수 기본값으로 호환된다.
+
+`{peopleOnly:true}` POST는 `{people:[{id,label,count}]}`를 반환한다. `read_exploration_link_people`가 활성 타인 줄기를 작성자 UUID별로 집계한다. 본인·삭제된 줄기는 제외하고 검색/페이지와 독립된 작성자 목록을 제공한다. 두 RPC는 SECURITY INVOKER·빈 search_path·기존 RLS를 유지하고 실제 리드/관리자 권한을 검사한다. API는 관리자 표시 역할도 제한한다. 작성자 본문·graph를 가져오지 않으며 동명이인도 UUID로 구분한다.
+
+작성자 집계는 타인 탭 진입 시 별도 SWR 키(사용자·표시 권한)로 조회하며 검색/페이지마다 재조회하지 않는다. 오류는 별도 안내와 재시도로 표시한다. polling은 없으며 사용자 수 × 탭 수 × 진입/재접속 횟수 × 작성자 요약 크기가 추가 전송 규모다. 전체 본문 전송은 없지만 GROUP BY 비용은 활성 줄기 수에 비례할 수 있다.
+
+DB 시각은 timestamptz, DB 생성/수정은 now()/clock_timestamp(), 브라우저 임시저장은 toISOString() UTC 문자열을 유지한다. UI만 `lib/date-time.ts`의 Asia/Seoul 표시를 사용한다. 원본 시각 문자열과 스킬 updatedAt 충돌 토큰은 변환하거나 정밀도를 줄이지 않는다.
+
+
+## 공통 시간대 기준
+
+**DB 저장은 UTC, 사용자 화면 표시는 한국 시간(`Asia/Seoul`)**으로 통일한다. 로컬과 프로덕션 모두 같은 규칙을 따른다. 시점은 `timestamptz`에 저장하고 API·브라우저 저장에는 시간대가 명시된 문자열을 사용한다. 표시를 위해 저장값에 9시간을 더하거나 원본 시각·충돌 토큰을 변경하지 않는다.
+
+날짜·시각 표시는 공통 `lib/date-time.ts`를 우선 사용하고 별도 표시 형식에도 `timeZone: 'Asia/Seoul'`을 명시한다. `ko-KR`만 지정하거나 UTC 문자열의 날짜 부분만 잘라 표시하지 않는다. 날짜·시간 입력은 한국 시간으로 해석하여 UTC로 변환하며 날짜 전용 값은 제외한다. 한국 자정 전후와 해외 기기 시간대에서도 검증한다. 전체 작업 규칙은 [AGENTS.md 공통 시각 저장·표시 규칙](../../AGENTS.md#공통-시각-저장표시-규칙)을 따른다. 이 절은 필수 구현 기준이며 개별 화면의 적용·검증 상태는 해당 운영 문서와 구분한다.

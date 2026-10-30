@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { formatKoreanDate } from '@/lib/date-time';
 
 import { useQuestionReviews } from '../../hooks/useQuestionReviews';
 import { richTextPlainText } from '../../lib/rich-text';
@@ -156,7 +157,7 @@ function QuestionReviewsContent({ questionId, disabled = false }: Props) {
                 )}
                 <p className="text-xs text-green-700 dark:text-green-300">
                   {review.requester_name} ·{' '}
-                  {new Date(review.created_at).toLocaleDateString('ko-KR')}
+                  {formatKoreanDate(review.created_at)}
                 </p>
                 {isOwner && (
                   <Button
@@ -204,9 +205,7 @@ function QuestionReviewsContent({ questionId, disabled = false }: Props) {
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
                         {review.requester_name} ·{' '}
-                        {new Date(review.created_at).toLocaleDateString(
-                          'ko-KR',
-                        )}
+                        {formatKoreanDate(review.created_at)}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Check className="size-3" aria-hidden="true" />

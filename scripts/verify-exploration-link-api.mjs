@@ -59,3 +59,24 @@ test('tab counts fetch no bodies, exclude draft IDs and respect displayed role',
   assert.ok(h.calls[0].filters.some(f=>f[0]==='not'&&f[3]===`(${id})`));
  }
 });
+
+test('owner filter validates UUID and reaches page RPC only for others',async()=>{
+ const h=harness({role:'admin'});
+ assert.equal((await h.send('POST',{scope:'others',owner:'bad'},[])).status,400);
+ assert.equal(h.calls.length,0);
+ assert.equal((await h.send('POST',{scope:'others',owner:id,page:2},[])).status,200);
+ assert.equal(h.calls[0].args.p_owner,id);
+ assert.equal(h.calls[0].args.p_page,2);
+ await h.send('POST',{scope:'own',owner:id},[]);
+ assert.equal(h.calls[1].args.p_owner,null);
+});
+test('people summary checks real and displayed roles',async()=>{
+ for(const options of [{role:'consultant'},{role:'admin',view:'consultant'},{role:'student'}]) {
+  const h=harness(options);
+  assert.equal((await h.send('POST',{peopleOnly:true},[])).status,403);
+  assert.equal(h.calls.length,0);
+ }
+ const h=harness({role:'consultant_lead'});
+ assert.equal((await h.send('POST',{peopleOnly:true},[])).status,200);
+ assert.equal(h.calls[0].name,'read_exploration_link_people');
+});
