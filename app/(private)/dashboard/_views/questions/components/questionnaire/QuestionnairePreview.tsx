@@ -45,6 +45,7 @@ export function QuestionnairePreview({
   legacyResponsePreview = false,
   showPrivateDetails = false,
   showGuideAnswers = false,
+  published = false,
   response,
   submittedView = false,
   submissionIssues = [],
@@ -64,6 +65,7 @@ export function QuestionnairePreview({
   submittedView?: boolean;
   showPrivateDetails?: boolean;
   showGuideAnswers?: boolean;
+  published?: boolean;
   response?: {
     rows: Record<string, PreviewAnswerRow[]>;
     onChange: (id: string, rows: PreviewAnswerRow[]) => void;
@@ -121,7 +123,11 @@ export function QuestionnairePreview({
       ? `/api/questionnaires/guide-answers?questions=${guideIds.join(',')}`
       : null,
     questionnaireFetcher,
-    { refreshInterval: 10000 },
+    {
+      refreshInterval: published ? 0 : 10_000,
+      revalidateOnFocus: !published,
+      revalidateOnReconnect: !published,
+    },
   );
   const placedLibrary = sections.flatMap((section) =>
     section.questions.flatMap((q) => {

@@ -256,6 +256,7 @@ function ResponseEditor({
         sections={snapshot.sections}
         library={snapshot.questions.map((q) => q.definition)}
         showPrivateDetails={!published}
+        published={published}
         showGuideAnswers={published}
         response={{
           rows,

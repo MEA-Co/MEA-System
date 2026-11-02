@@ -224,6 +224,7 @@ export function SharedQuestionnaire({
           sections={document.sections}
           library={sources}
           legacyResponsePreview={published}
+          published={published}
           showGuideAnswers={published}
         />
       </TabsContent>
