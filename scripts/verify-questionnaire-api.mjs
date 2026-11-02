@@ -489,3 +489,26 @@ test('submission summaries, detail and export manifest route separately with bou
   }
   assert.equal(consultant.calls.length, 0);
 });
+
+test('detail GET enforces actual and displayed roles before loading with verified access', async () => {
+  const id = randomUUID();
+  for (const [options, status] of [
+    [{ authenticated: false }, 401],
+    [{ role: 'student', visibleRole: 'admin' }, 403],
+    [{ role: 'admin', visibleRole: 'student' }, 403],
+    [{ role: 'admin', visibleRole: 'consultant' }, 200],
+    [{ role: 'consultant' }, 200],
+  ]) {
+    const client = route(options);
+    assert.equal((await client.request('GET', [id])).status, status);
+    if (status === 200) {
+      assert.equal(client.calls.length, 1);
+      const [name, requestedId, access] = client.calls[0];
+      assert.equal(name, 'loadQuestionnaireView');
+      assert.equal(requestedId, id);
+      assert.equal(access.role, options.role);
+    } else {
+      assert.equal(client.calls.length, 0);
+    }
+  }
+});

@@ -262,7 +262,7 @@ revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키�
 
 클라이언트는 위 메타데이터를 비교하여 변경될 때만 전체 스냅샷을 읽고 기존 applyRemote의 정의 변경 병합·미저장 충돌 처리를 사용한다. 저장을 시작할 때 세대 번호를 올려 저장 전 시작한 조회가 이후 상태를 덮어쓰지 못하게 한다. 조회는 하나만 진행하며 숨겨짐·unmount·저장/재시도 중에는 결과를 적용하지 않는다. GET은 30초 timeout 후 다음 주기에 재시도하고 PUT/저장 ID/저장 재시도 계약은 유지한다.
 
-정확히 `/api/questionnaires/:id/{review-responses|published-responses}` 경로에서는 Proxy의 getUser를 생략하고 Route Handler의 getUser·프로필 검사를 사용한다. Route Handler는 갱신 쿠키를 기록할 수 있다. 서버에서 검사한 AuthorizedUserAccess를 questionResponseCommand에 전달하여 중복 조회만 생략하고 실제 역할·관리자 표시 역할·DB 소유권 판정은 유지한다. 전달된 헤더나 요청 body를 인증 결과로 신뢰하지 않으며 사용자 간 전역 캐시는 없다. 다른 경로의 Proxy 처리는 유지한다.
+정확히 `/api/questionnaires/:id/{review-responses|published-responses}` 경로에서는 Proxy의 getUser를 생략하고 Route Handler의 getUser·프로필 검사를 사용한다. Route Handler는 갱신 쿠키를 기록할 수 있다. 서버에서 검사한 AuthorizedUserAccess를 questionResponseCommand에 전달하여 중복 조회만 생략하고 실제 역할·관리자 표시 역할·DB 소유권 판정은 유지한다. 전달된 헤더나 요청 body를 인증 결과로 신뢰하지 않으며 사용자 간 전역 캐시는 없다. 기존 질문지 상세 GET(/api/questionnaires/{UUID})도 Proxy 인증을 생략하고 Route Handler에서 검증한 접근 정보를 loadQuestionnaireView에 전달한다. 상세 PUT·신규·목록 경로는 기존 Proxy 검사를 유지한다.
 
 ## 안내 사진 저장·접근 계약 (2026-10-19)
 
