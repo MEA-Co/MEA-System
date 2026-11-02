@@ -234,9 +234,7 @@ function QuestionnairePanel({
   const { data, error, mutate, isLoading } =
     useQuestionnaireResource<QuestionnaireViewData>(
       path,
-      id && id !== 'new'
-        ? (latest) => (latest?.selected?.status === 'in_review' ? 5_000 : 0)
-        : undefined,
+      id ? 0 : undefined,
       !!id,
     );
   if (!data && !id) {
