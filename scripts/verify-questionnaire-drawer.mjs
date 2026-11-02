@@ -487,7 +487,7 @@ test('legacy drawer URL opens full page and closing preserves list filters', () 
   assert.equal(params.get('qStatus'), 'draft');
 });
 
-test('published preview stops detail polling for consultant and staff views', () => {
+test('only in-review details poll for consultant and staff views', () => {
   const id = randomUUID();
   for (const staff of [false, true]) {
     let interval;
@@ -508,7 +508,7 @@ test('published preview stops detail polling for consultant and staff views', ()
     const panel = app.find('QuestionnairePanel', (props) => props.id === id);
     panel.type(panel.props);
     for (const status of ['draft', 'in_review', 'published']) {
-      assert.equal(interval({ selected: { status } }), status === 'published' ? 0 : 5000);
+      assert.equal(interval({ selected: { status } }), status === 'in_review' ? 5_000 : 0);
     }
   }
 });
