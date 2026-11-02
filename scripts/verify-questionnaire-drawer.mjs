@@ -486,3 +486,29 @@ test('legacy drawer URL opens full page and closing preserves list filters', () 
   assert.equal(params.get('qPage'), '2');
   assert.equal(params.get('qStatus'), 'draft');
 });
+
+test('published preview stops detail polling for consultant and staff views', () => {
+  const id = randomUUID();
+  for (const staff of [false, true]) {
+    let interval;
+    const app = mount({
+      href: `https://example.test/dashboard?draft=${id}&questionnairePanel=preview`,
+      props: { staff },
+      imports: {
+        '../../lib/questionnaire/api-client': {
+          useQuestionnaireResource(path, refreshInterval) {
+            assert.equal(path, '/' + id);
+            interval = refreshInterval;
+            return { isLoading: true };
+          },
+        },
+      },
+    });
+    app.flush();
+    const panel = app.find('QuestionnairePanel', (props) => props.id === id);
+    panel.type(panel.props);
+    for (const status of ['draft', 'in_review', 'published']) {
+      assert.equal(interval({ selected: { status } }), status === 'published' ? 0 : 5000);
+    }
+  }
+});

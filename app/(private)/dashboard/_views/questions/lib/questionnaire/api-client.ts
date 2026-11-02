@@ -37,7 +37,9 @@ export async function questionnaireFetcher<T>(url: string): Promise<T> {
 }
 export function useQuestionnaireResource<T>(
   path: string | null,
-  refreshInterval = QUESTIONNAIRE_REFRESH_INTERVAL,
+  refreshInterval:
+    | number
+    | ((latest: T | undefined) => number) = QUESTIONNAIRE_REFRESH_INTERVAL,
   keepPreviousData = true,
 ) {
   return useSWR<T, QuestionnaireApiError>(

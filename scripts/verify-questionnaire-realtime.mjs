@@ -26,7 +26,7 @@ function compile(file, imports, globals = {}) {
   );
   return exports;
 }
-function setup(audience = 'staff') {
+async function setup(audience = 'staff') {
   const channels = [];
   const removed = [];
   const timers = new Map();
@@ -65,7 +65,11 @@ function setup(audience = 'staff') {
       removed.push(channel);
       return Promise.resolve();
     },
+    realtime: { setAuth: async () => {} },
     auth: {
+      getSession: async () => ({
+        data: { session: { user: { id: 'user-id' } } },
+      }),
       onAuthStateChange(fn) {
         authChanged = fn;
         return {
@@ -111,6 +115,7 @@ function setup(audience = 'staff') {
     },
   );
   subject.useQuestionnaireRealtime(audience, 'user-id');
+  await new Promise((resolve) => setImmediate(resolve));
   return {
     channels,
     removed,
@@ -134,8 +139,8 @@ function setup(audience = 'staff') {
   };
 }
 
-test('staff uses private role and own receipt channels; notification bursts coalesce', () => {
-  const s = setup();
+test('staff uses private role and own receipt channels; notification bursts coalesce', async () => {
+  const s = await setup();
   assert.deepEqual(
     s.channels.map((c) => c.topic),
     ['questionnaires:staff', 'questionnaires:user:user-id'],
@@ -159,20 +164,20 @@ test('staff uses private role and own receipt channels; notification bursts coal
   s.cleanup();
 });
 
-test('consultants subscribe to published and own response changes; students do not connect', () => {
-  const consultant = setup('published');
+test('consultants subscribe to published and own response changes; students do not connect', async () => {
+  const consultant = await setup('published');
   assert.deepEqual(
     consultant.channels.map((c) => c.topic),
     ['questionnaires:published', 'questionnaires:user:user-id'],
   );
   consultant.cleanup();
-  const student = setup(null);
+  const student = await setup(null);
   assert.equal(student.channels.length, 0);
   assert.equal(student.listeners.size, 0);
 });
 
-test('hidden and offline clients defer changes and catch up on resume', () => {
-  const s = setup();
+test('hidden and offline clients defer changes and catch up on resume', async () => {
+  const s = await setup();
   s.document.hidden = true;
   s.channels[0].event();
   s.flush();
@@ -192,13 +197,13 @@ test('hidden and offline clients defer changes and catch up on resume', () => {
   s.cleanup();
 });
 
-test('unmount, sign-out and account switch stop pending and late callbacks', () => {
+test('unmount, sign-out and account switch stop pending and late callbacks', async () => {
   for (const stop of [
     (s) => s.cleanup(),
     (s) => s.authChanged('SIGNED_OUT', null),
     (s) => s.authChanged('SIGNED_IN', { user: { id: 'other-user' } }),
   ]) {
-    const s = setup();
+    const s = await setup();
     s.channels[0].event();
     stop(s);
     s.channels[0].event();
@@ -210,7 +215,7 @@ test('unmount, sign-out and account switch stop pending and late callbacks', () 
     assert.equal(s.listeners.size, 0);
     assert.ok(s.unsubscribeCount > 0);
   }
-  const s = setup();
+  const s = await setup();
   s.authChanged('TOKEN_REFRESHED', { user: { id: 'user-id' } });
   s.channels[0].event();
   s.flush();
