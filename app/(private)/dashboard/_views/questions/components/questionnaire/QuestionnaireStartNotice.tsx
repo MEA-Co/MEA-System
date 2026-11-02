@@ -12,13 +12,16 @@ import { RichTextContent } from '../question/RichTextContent';
 import { StudyRegistrationAction } from '../question/StudyRegistrationAction';
 
 import { LinkRegistrationAction } from './LinkRegistrationAction';
+import { SubmissionReferencePanel } from './SubmissionReferencePanel';
 
 export function QuestionnaireStartNotice({
+  sessionId,
   notice,
   questionnaireId,
   beforeLinkRegistration,
   registrationDisabled,
 }: {
+  sessionId?: string;
   notice: QuestionnaireNotice;
   questionnaireId?: string;
   beforeLinkRegistration?: () => Promise<boolean>;
@@ -36,6 +39,14 @@ export function QuestionnaireStartNotice({
             src: noticeImageUrl(questionnaireId, notice.id, image.id),
             alt: image.name,
           }))}
+        />
+      )}
+      {notice.submissionReference && (
+        <SubmissionReferencePanel
+          questionnaireId={questionnaireId}
+          sessionId={sessionId}
+          noticeId={notice.id}
+          selection={notice.submissionReference}
         />
       )}
       <div className="flex flex-wrap gap-3">

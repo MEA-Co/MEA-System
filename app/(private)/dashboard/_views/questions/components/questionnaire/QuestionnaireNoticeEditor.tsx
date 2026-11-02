@@ -22,6 +22,7 @@ import type {
 import { QuestionRichTextEditor } from '../question/QuestionRichTextEditor';
 
 import { QuestionnaireNoticeImages } from './QuestionnaireNoticeImages';
+import { SubmissionReferencePicker } from './SubmissionReferencePicker';
 
 export function QuestionnaireNoticeEditor({
   notice,
@@ -105,6 +106,14 @@ export function QuestionnaireNoticeEditor({
           value={notice.body}
           disabled={disabled}
           onChange={(body) => onChange({ ...notice, body })}
+        />
+        <SubmissionReferencePicker
+          questionnaireId={questionnaireId}
+          value={notice.submissionReference}
+          disabled={disabled}
+          onChange={(submissionReference) =>
+            onChange({ ...notice, submissionReference })
+          }
         />
         <QuestionnaireNoticeImages
           questionnaireId={questionnaireId}

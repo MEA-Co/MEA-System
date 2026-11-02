@@ -68,6 +68,17 @@ const sectionSchema = z.object({
   questions: z.array(questionSchema).max(100),
 });
 export const questionnaireNoticeSchema = z.object({
+  submissionReference: z
+    .object({
+      questionnaireId: z.uuid(),
+      questionId: z.uuid(),
+      fieldIds: z
+        .array(z.uuid())
+        .min(1)
+        .max(20)
+        .refine((ids) => new Set(ids).size === ids.length),
+    })
+    .optional(),
   images: noticeImagesSchema.optional(),
   id: z.uuid(),
   position: z.union([z.literal('start'), z.literal('end'), z.uuid()]),

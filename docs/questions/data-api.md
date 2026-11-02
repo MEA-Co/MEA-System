@@ -290,3 +290,8 @@ revision/save_id 등 업무 충돌은 DB에서 SQLSTATE `PGRST`로 발생시키�
 **DB 저장은 UTC, 사용자 화면 표시는 한국 시간(`Asia/Seoul`)**으로 통일한다. 로컬과 프로덕션 모두 같은 규칙을 따른다. 시점은 `timestamptz`에 저장하고 API·브라우저 저장에는 시간대가 명시된 문자열을 사용한다. 표시를 위해 저장값에 9시간을 더하거나 원본 시각·충돌 토큰을 변경하지 않는다.
 
 날짜·시각 표시는 공통 `lib/date-time.ts`를 우선 사용하고 별도 표시 형식에도 `timeZone: 'Asia/Seoul'`을 명시한다. `ko-KR`만 지정하거나 UTC 문자열의 날짜 부분만 잘라 표시하지 않는다. 날짜·시간 입력은 한국 시간으로 해석하여 UTC로 변환하며 날짜 전용 값은 제외한다. 한국 자정 전후와 해외 기기 시간대에서도 검증한다. 전체 작업 규칙은 [AGENTS.md 공통 시각 저장·표시 규칙](../../AGENTS.md#공통-시각-저장표시-규칙)을 따른다. 이 절은 필수 구현 기준이며 개별 화면의 적용·검증 상태는 해당 운영 문서와 구분한다.
+
+### 안내의 이전 제출 답변 참조
+`notices[].submissionReference`는 선택 속성이며 원본 질문지 ID인 questionnaireId, 원본 질문 ID인 questionId, 고유한 열 ID 1~20개인 fieldIds를 보관한다. 질문지 문서 저장의 기존 권한·revision·saveId·배포 잠금을 적용한다. DB는 저장 시 배포되고 보관되지 않은 다른 질문지에 해당 질문이 배치됐는지와 열 소속을 확인한다. 연결 해제·안내 삭제 시 참조를 조회할 수 없다.
+
+리드·관리자 편집기는 GET /api/questionnaires/:id/reference-sources에서 배포 목록을 읽고 source 쿼리로 선택한 질문지의 질문·열 메타데이터를 조회한다. GET /api/questionnaires/:id/notice-reference/:noticeId는 해당 안내에 저장된 설정과 배포 세션 소유권을 서버에서 확인한다. 다른 작성자 ID나 임의의 열 목록을 받지 않는다. 마지막 제출본의 활성 행 중 선택 항목에 값이 있는 행만 표시한다. 최초로 읽은 비어 있지 않은 결과는 private.notice_response_references에 응답 세션·안내 ID·설정별로 보존한다. 응답 세션 삭제 시 함께 삭제된다. 미제출 상태는 고정하지 않는다. 참고 답변은 자동 저장·주기적 변경 확인·제출 내보내기에 포함하지 않는다.

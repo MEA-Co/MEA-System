@@ -60,6 +60,45 @@ async function handle(request: Request, context: Context) {
     const method = request.method;
     if (method === 'GET') {
       if (
+        resource === 'reference-sources' &&
+        path.length === 2 &&
+        z.uuid().safeParse(id).success &&
+        staff
+      ) {
+        const source = new URL(request.url).searchParams.get('source');
+        if (source && !z.uuid().safeParse(source).success)
+          return json({ error: '질문지를 확인해 주세요.' }, 400);
+        const client = createClient(await cookies());
+        const { data, error } = await client.rpc('notice_reference_sources', {
+          target_id: id,
+          source_id: source,
+        });
+        return error
+          ? json(
+              { error: '참조 목록을 읽지 못했어요.' },
+              error.code === '42501' ? 403 : 503,
+            )
+          : json(data);
+      }
+      if (
+        resource === 'notice-reference' &&
+        path.length === 3 &&
+        z.uuid().safeParse(id).success &&
+        z.uuid().safeParse(path[2]).success
+      ) {
+        const client = createClient(await cookies());
+        const { data, error } = await client.rpc('my_notice_reference', {
+          qid: id,
+          notice_id: path[2],
+        });
+        return error
+          ? json(
+              { error: '이전 제출 답변을 읽지 못했어요.' },
+              error.code === '42501' ? 403 : 503,
+            )
+          : json({ reference: data });
+      }
+      if (
         resource === 'submitted-responses' &&
         staff &&
         z.uuid().safeParse(id).success

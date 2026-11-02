@@ -193,8 +193,7 @@ function ResponseEditor({
           후에도 수정할 수 있습니다.
           {snapshot.submittedAt && (
             <span className="block mt-1">
-              마지막 제출:{' '}
-              {formatKoreanDateTime(snapshot.submittedAt)}
+              마지막 제출: {formatKoreanDateTime(snapshot.submittedAt)}
               {(dirty || snapshot.hasUnsubmittedChanges) &&
                 ' · 수정 내용은 다시 제출해야 공개됩니다.'}
             </span>
@@ -243,6 +242,7 @@ function ResponseEditor({
         </p>
       )}
       <QuestionnairePreview
+        referenceSessionId={published ? snapshot.id : undefined}
         questionnaireId={questionnaireId}
         embedded={embedded}
         submissionIssues={submissionIssues}

@@ -35,7 +35,14 @@ export type QuestionnaireSection = {
   questions: Question[];
 };
 
+export type SubmissionReference = {
+  questionnaireId: string;
+  questionId: string;
+  fieldIds: string[];
+};
+
 export type QuestionnaireNotice = {
+  submissionReference?: SubmissionReference;
   images?: NoticeImage[];
   id: string;
   /** start, end, or the preceding placement ID. */

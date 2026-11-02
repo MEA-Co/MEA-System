@@ -40,6 +40,7 @@ function preview(notices, submittedView = false, questions = ['a', 'b']) {
       },
       swr: { default: () => ({}) },
       '@/lib/utils': { cn: () => '' },
+      './BrandingMaterialSummary': { BRANDING_QUESTIONNAIRE_ID: 'branding', MATERIAL_TABLES: [] },
       './questionnaire-styles': { questionnaireStyles: {} },
     },
   );

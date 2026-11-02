@@ -33,6 +33,7 @@ import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
 
 export function QuestionnairePreview({
+  referenceSessionId,
   embedded = false,
   notices = [],
   questionnaireId,
@@ -51,6 +52,7 @@ export function QuestionnairePreview({
   submissionIssues = [],
 }: {
   submissionIssues?: SubmissionIssue[];
+  referenceSessionId?: string;
   embedded?: boolean;
   notices?: QuestionnaireNotice[];
   questionnaireId?: string;
@@ -152,6 +154,7 @@ export function QuestionnairePreview({
       .map((notice) => (
         <QuestionnaireStartNotice
           key={notice.id}
+          sessionId={referenceSessionId}
           notice={notice}
           questionnaireId={questionnaireId}
           beforeLinkRegistration={beforeLinkRegistration}

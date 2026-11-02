@@ -891,3 +891,8 @@ npx supabase db push --linked --dry-run
 수정 중 초안도 5초 전체 조회를 중지했다. 탭 복귀 재조회·저장 충돌 검사·10초 자동 저장은 유지한다. 로컬 적용이며 DB migration은 없다.
 
 검토 중 상세도 정기 조회를 중지하고 기존 Realtime 알림·탭 복귀·재연결 갱신을 사용한다. 로컬 회귀 39개, 타입 검사 및 변경 파일 린트 통과. 운영 배포와 실제 두 계정 간 알림 전달 측정은 미수행이며 DB migration은 없다.
+
+### 2026-11-02 안내의 이전 제출 답변 참조
+로컬 적용 순서는 20261102055150_prior_submission_reference.sql → 20261102060044_question_admission_reference.sql → 20261102061035_notice_submission_references.sql이다. 앞의 두 migration은 로컬 적용 이력을 보존한다. 마지막 migration이 대학 입시 전용 설정·함수·시험용 참고 사본을 제거하고 일반 안내 설정과 세션별 참고 사본을 도입한다. 기존 제출본은 유지된다. 기존 전용 설정은 안내로 자동 이전하지 않는다. 편집기에서 참조할 질문과 항목을 지정한다.
+
+로컬 published_response_submissions.sql 회귀에서 안내 구성 저장·배포, 잘못된 열 선택 거부, 본인 제출본과 미제출 수정 분리, 다른 응답자 격리, 재제출 뒤 최초 참고 내용 보존을 확인했다. 운영 반영은 대기다. 운영 migration 이력과 dry-run 목록을 검토하고 DB 적용 후 앱을 배포한다.

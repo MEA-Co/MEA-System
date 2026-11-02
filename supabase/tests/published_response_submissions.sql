@@ -94,7 +94,17 @@ do $$ declare vid uuid; qid uuid; retry uuid:=gen_random_uuid(); result jsonb; b
  if (select publication_locked_at from public.questions where id=qid) is null then raise exception 'Question not locked'; end if;
  if (select status from public.questionnaires where id=vid)<>'published' then raise exception 'Not published'; end if;
  -- A second questionnaire can reuse an already locked original.
- perform public.change_questionnaire_status((select (doc->>'questionnaireId')::uuid from second_review_doc),2,'in_review',null,'published',gen_random_uuid(),2);
+ update second_review_doc set doc=doc||jsonb_build_object('notices',jsonb_build_array(jsonb_build_object(
+   'id','ff010000-0000-4000-8000-000000000001','position','start','title','이전 답변','body','','buttonLabel','',
+   'submissionReference',jsonb_build_object('questionnaireId',vid,'questionId',qid,'fieldIds',
+      jsonb_build_array((select fields->0->'id' from public.questions where id=qid))))));
+ if jsonb_array_length(public.notice_reference_sources((select (doc->>'questionnaireId')::uuid from second_review_doc),vid))<>1 then raise exception 'Missing reference source'; end if;
+ begin
+   perform public.save_questionnaire_draft((select jsonb_set(doc,'{notices,0,submissionReference,fieldIds,0}',to_jsonb(gen_random_uuid())) from second_review_doc),2,gen_random_uuid());
+   raise exception 'Unrelated field accepted';
+ exception when invalid_parameter_value then null; end;
+ perform public.save_questionnaire_draft((select doc from second_review_doc),2,gen_random_uuid());
+ perform public.change_questionnaire_status((select (doc->>'questionnaireId')::uuid from second_review_doc),3,'in_review',null,'published',gen_random_uuid(),2);
 end $$;
 reset role;
 -- Trigger enforcement also protects privileged writers and descriptions.
@@ -138,7 +148,10 @@ do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_doc
  if exists(select 1 from public.response_submissions where session_id=(x->>'id')::uuid) then raise exception 'Draft in_review'; end if;
  insert into submitted_fixture values((x->>'id')::uuid,payload,gen_random_uuid(),x->>'definitionToken');
  begin perform public.list_submitted_questionnaire_responses(qid);raise exception 'Consultant read staff submissions';exception when insufficient_privilege then null;end;
- begin perform public.save_published_question_response_session(qid,payload,0,gen_random_uuid(),true,x->>'definitionToken');raise exception 'Stale save accepted';exception when serialization_failure then null;end;
+ begin perform public.save_published_question_response_session(qid,payload,0,gen_random_uuid(),true,x->>'definitionToken');raise exception 'Stale save accepted';
+ exception when sqlstate 'PGRST' then
+   if sqlerrm::jsonb->>'code' is distinct from '40001' then raise; end if;
+ end;
  begin perform public.save_published_question_response_session(qid,'{}',(x->>'revision')::int,gen_random_uuid(),true,x->>'definitionToken');raise exception 'Incomplete submission accepted';exception when invalid_parameter_value then null;end;
 end $$;
 reset role;
@@ -160,6 +173,9 @@ do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_doc
  update submitted_fixture set payload=replace(payload::text,'최초 제출 답변','비공개 수정 답변')::jsonb;
  x:=public.save_published_question_response_session(qid,(select payload from submitted_fixture),(x->>'revision')::int,gen_random_uuid(),false,f.token);
  if x->>'status'<>'submitted' or not (x->>'hasUnsubmittedChanges')::boolean or x::text not like '%비공개 수정 답변%' then raise exception 'Submitted answer not editable';end if;
+ perform public.open_published_question_response_session((select (doc->>'questionnaireId')::uuid from second_review_doc));
+ again:=public.my_notice_reference((select (doc->>'questionnaireId')::uuid from second_review_doc),'ff010000-0000-4000-8000-000000000001');
+ if again is null or again::text not like '%최초 제출 답변%' or again::text like '%비공개 수정 답변%' then raise exception 'Notice must show submitted rows';end if;
  if (select answers::text from public.response_submissions where session_id=f.sid) like '%비공개 수정 답변%' then raise exception 'Private edit in_review';end if;
  begin update public.response_submissions set answers='{}' where session_id=f.sid;raise exception 'Direct submission write allowed';exception when insufficient_privilege then null;end;
 end $$;
@@ -177,6 +193,7 @@ set local role authenticated;
 do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb; begin
  x:=public.read_published_question_response_session(qid);
  perform public.save_published_question_response_session(qid,(select payload from submitted_fixture),(x->>'revision')::int,gen_random_uuid(),true,x->>'definitionToken');
+ if public.my_notice_reference((select (doc->>'questionnaireId')::uuid from second_review_doc),'ff010000-0000-4000-8000-000000000001')::text not like '%최초 제출 답변%' then raise exception 'Reference changed after resubmission';end if;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub',(select id::text from publish_users where role='consultant_lead'),true);
@@ -184,6 +201,8 @@ set local role authenticated;
 do $$ declare qid uuid:=(select (doc->>'questionnaireId')::uuid from publish_docs);x jsonb; begin
  x:=public.list_submitted_questionnaire_responses(qid);
  if x::text not like '%비공개 수정 답변%' or x::text like '%최초 제출 답변%' then raise exception 'Resubmission failed';end if;
+ perform public.open_published_question_response_session((select (doc->>'questionnaireId')::uuid from second_review_doc));
+ if public.my_notice_reference((select (doc->>'questionnaireId')::uuid from second_review_doc),'ff010000-0000-4000-8000-000000000001') is not null then raise exception 'Foreign submission leaked through notice';end if;
  begin perform public.change_questionnaire_status(qid,3,'published',null,'in_review',gen_random_uuid(),2);raise exception 'Answered publication withdrawn';exception when object_not_in_prerequisite_state then null;end;
 end $$;
 reset role;
