@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -70,11 +70,11 @@ DB 함수·자동 저장·polling·인증 경로 변경 전 [사용량 사고와
 
 - 대시보드 화면은 `_views/{profile,students,consultants,consulting,questions,exploration}/`별로 모으고 각 화면 폴더 바로 아래에 `ProfileView.tsx`, `StudentsView.tsx`, `ConsultantsView.tsx`, `ConsultingView.tsx`, `QuestionsView.tsx`, `ExplorationView.tsx`를 진입 컴포넌트로 둔다. 보조 컴포넌트는 `components/`, 전용 코드는 `lib/`, `hooks/`, `actions/`에 둔다. 역할 공통 `Dashboard`의 레이아웃·사이드바·역할 전환은 `_components/`, 공통 페이지 접근 설정은 `_lib/`에 둔다.
 
-- 대시보드 역할별 접근 페이지·사이드바 노출 여부(`DASHBOARD_ROLES`)와 메뉴명·그룹(`DASHBOARD_PAGES`)은 `app/(private)/dashboard/_lib/dashboard-access.ts`에서 관리한다. `page.tsx`는 서버 전용 `_lib/render-dashboard.tsx`의 `renderDashboard`만 호출한다. 이 함수가 인증·표시 역할·조회·공통 Dashboard 조립을 담당하고 `_lib/dashboard-views.tsx`의 `renderDashboardView`가 역할 접근 검사 후 뷰 컴포넌트를 반환한다. `resolveDashboardView`를 페이지 진입/본문 렌더링에, `getDashboardNavigation`을 사이드바에 사용한다. view가 없거나 허용되지 않으면 `DASHBOARD_DEFAULT_VIEWS`의 역할별 기본 화면으로 처리한다(학생: 컨설팅, 컨설턴트: 질문지 관리, 리드·관리자: 컨설턴트 관리). 표시 역할에 따른 UI 정책이며 서버 액션/DB는 실제 계정 권한을 별도로 검증한다.
+- 대시보드 역할별 접근 페이지·사이드바 노출 여부(`DASHBOARD_ROLES`)와 메뉴명·그룹(`DASHBOARD_PAGES`)은 `app/(private)/dashboard/_lib/dashboard-access.ts`에서 관리한다. `page.tsx`는 서버 전용 `_lib/render-dashboard.tsx`의 `renderDashboard`만 호출한다. 이 함수가 인증·표시 역할·조회·공통 Dashboard 조립을 담당하고 `_lib/dashboard-views.tsx`의 `renderDashboardView`가 역할 접근 검사 후 뷰 컴포넌트를 반환한다. `resolveDashboardView`를 페이지 진입/본문 렌더링에, `getDashboardNavigation`을 사이드바에 사용한다. view가 없거나 허용되지 않으면 `DASHBOARD_DEFAULT_VIEWS`의 역할별 기본 화면으로 처리한다(학생: 멘토라운드 홈, 컨설턴트: 질문지 관리, 리드·관리자: 컨설턴트 관리). 표시 역할에 따른 UI 정책이며 서버 액션/DB는 실제 계정 권한을 별도로 검증한다.
 
 - 관리자 공통 함수(`getViewRole`, `setAdminView`, `updateConsultantRole`)와 관련 타입은 서버 전용 `lib/admin.ts`에 모은다. 대시보드 공통 `_actions/`와 화면별 `_views/<화면>/actions/`는 클라이언트에서 호출할 수 있는 얇은 서버 액션 연결층이다.
 - `consultant_lead`는 컨설턴트 기능과 컨설턴트 관리 목록 조회 권한을 가진다. 리드는 학생·관리자 프로필을 조회하거나 회원 유형을 변경할 수 없다.
-- 모든 역할은 `DashboardShell`의 사이드바·사용자 정보·로그아웃·모바일 메뉴와 `DashboardNavigation`을 공유한다. view가 없는 대시보드는 학생에게 컨설팅 목록, 컨설턴트에게 질문지 관리, 리드·관리자에게 질문 관리를 표시한다. 모든 역할은 공통 `Dashboard`를 사용하며 학생·컨설턴트는 사이드바에 내 정보를 표시한다. 컨설턴트 기본 화면은 질문지 관리이며 컨설팅 목록의 대시보드 접근은 제거했다. 내 정보는 `?view=profile`에서 이름·회원 유형·학생 학년/학기를 보여주고 컨설팅 목록과 분리한다. 사이드바 MEA 로고는 기본 대시보드로 연결한다. 리드도 같은 `Dashboard`를 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
+- 모든 역할은 `DashboardShell`의 사이드바·사용자 정보·로그아웃·모바일 메뉴와 `DashboardNavigation`을 공유한다. view가 없는 대시보드는 학생에게 멘토라운드 홈, 컨설턴트에게 질문지 관리, 리드·관리자에게 질문 관리를 표시한다. 모든 역할은 공통 `Dashboard`를 사용하며 학생·컨설턴트는 사이드바에 내 정보를 표시한다. 컨설턴트 기본 화면은 질문지 관리이며 컨설팅 목록의 대시보드 접근은 제거했다. 내 정보는 `?view=profile`에서 이름·회원 유형·학생 학년/학기를 보여주고 컨설팅 목록과 분리한다. 사이드바 MEA 로고는 기본 대시보드로 연결한다. 리드도 같은 `Dashboard`를 사용하며 사이드바에는 컨설턴트 관리·컨설팅 관리가 표시된다. 회원 화면 미리보기는 제거했다. 관리자는 대시보드·컨설팅 우측 상단 `AdminRoleTabs`에서 학생·컨설턴트·컨설턴트 리드·관리자 화면으로 전환한다. 서버에서 관리자 여부를 확인한 뒤 `mea-admin-view` 세션 쿠키에 표시 역할을 저장하며, `lib/admin.ts`는 실제 관리자가 아닌 계정의 쿠키를 무시한다. 실제 `getUserAccess().role`과 DB 권한은 바꾸지 않는다. 학생 화면으로 체험하는 관리자는 재료함 완료 결과를 학생 데이터로 저장하지 않는다.
 - 가입 화면에서는 학생·컨설턴트만 선택한다. 관리자는 대시보드의 컨설턴트 관리 화면에서 컨설턴트와 컨설턴트 리드 사이를 변경할 수 있다.
 - 역할 변경은 `public.update_consultant_role` RPC가 관리자 여부, 대상의 현재 역할, 새 역할을 검증한다. 일반 사용자는 `profiles.role` 열을 직접 수정할 수 없다.
 - 역할 선택 UI는 변경할 때만 저장·취소 버튼을 표시하고 저장 중에는 중복 입력을 막는다. 서버에서 갱신된 직책을 선택값에 반영한다. 저장 중·성공·실패는 `components/ui/toast.tsx`의 shadcn Base UI Toast 하나를 갱신해 안내하며, 공통 Toaster는 루트 레이아웃에 둔다.

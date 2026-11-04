@@ -3,6 +3,7 @@
 import {
   BriefcaseBusiness,
   GraduationCap,
+  House,
   Megaphone,
   MessagesSquare,
   UserRound,
@@ -35,6 +36,8 @@ import type { MemberRole } from '@/lib/profile';
 import { useQuestionnaireNotifications } from '../_views/questions/components/questionnaire/QuestionnaireNotifications';
 
 const icons = {
+  home: House,
+  'student-preview': GraduationCap,
   announcements: Megaphone,
   profile: UserRound,
   students: GraduationCap,

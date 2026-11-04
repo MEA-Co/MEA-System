@@ -5,10 +5,6 @@ import {
   type DashboardView,
   resolveDashboardView,
 } from '@/app/(private)/dashboard/_lib/dashboard-access';
-import {
-  TEMP_STUDENT_CONSULTING_RESULTS_TABLE,
-  type TempStudentConsultingResultRow,
-} from '@/features/consulting/completion';
 import type { ManagedMember } from '@/lib/admin';
 import { getViewRole } from '@/lib/admin';
 import { requireUserAccess } from '@/lib/auth';
@@ -84,7 +80,6 @@ async function DashboardData({
 }) {
   const { profile, user } = access;
   let members: ManagedMember[] = [];
-  let completedConsultingIds: string[] = [];
 
   if (role === 'admin' || role === 'consultant_lead') {
     const supabase = createClient(await cookies());
@@ -105,28 +100,6 @@ async function DashboardData({
     }
 
     members = memberResult.data ?? [];
-  }
-
-  if (role === 'student' && view === 'consulting') {
-    const supabase = createClient(await cookies());
-    const completionResult = await supabase
-      .from(TEMP_STUDENT_CONSULTING_RESULTS_TABLE)
-      .select('consulting_id')
-      .eq('student_id', user.id)
-      .overrideTypes<
-        Pick<TempStudentConsultingResultRow, 'consulting_id'>[],
-        { merge: false }
-      >();
-
-    if (completionResult.error) {
-      throw new Error('Failed to load completed consulting results.', {
-        cause: completionResult.error,
-      });
-    }
-
-    completedConsultingIds = (completionResult.data ?? []).map(
-      (completion) => completion.consulting_id,
-    );
   }
 
   return (
@@ -150,7 +123,6 @@ async function DashboardData({
         role={role}
         studentPeriod={profile.student_period}
         members={members}
-        completedConsultingIds={completedConsultingIds}
         view={view}
         headerActions={roleTabs}
         questionnaireId={typeof draft === 'string' ? draft : undefined}

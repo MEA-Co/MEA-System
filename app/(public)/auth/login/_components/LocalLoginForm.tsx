@@ -1,38 +1,18 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
+
+import { localLogin } from '../local-login';
 
 export function LocalLoginForm({ next }: { next: string }) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-
+  const [error, action, pending] = useActionState(
+    localLogin.bind(null, next),
+    '',
+  );
   return (
-    <form
-      className="mt-6 space-y-3 border-t pt-5"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setPending(true);
-        setError('');
-        const data = new FormData(event.currentTarget);
-        try {
-          const result = await createClient().auth.signInWithPassword({
-            email: String(data.get('email')),
-            password: String(data.get('password')),
-          });
-          if (result.error) throw result.error;
-          router.replace(next);
-          router.refresh();
-        } catch {
-          setError('로컬 계정의 이메일과 비밀번호를 확인해 주세요.');
-          setPending(false);
-        }
-      }}
-    >
+    <form className="mt-6 space-y-3 border-t pt-5" action={action}>
       <p className="text-sm font-medium">로컬 테스트 계정</p>
       <label className="block text-sm">
         이메일
@@ -41,7 +21,7 @@ export function LocalLoginForm({ next }: { next: string }) {
           name="email"
           type="email"
           autoComplete="username"
-          defaultValue="codex-consultant@example.test"
+          placeholder="name@example.test"
           required
         />
       </label>

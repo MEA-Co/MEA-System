@@ -22,9 +22,10 @@ const { getDashboardNavigation, resolveDashboardView } = exports;
 
 test('each role can open its menus and forbidden direct URLs fall back to the role home', () => {
   const expected = {
-    student: ['profile'],
+    student: ['home', 'profile'],
     consultant: ['profile', 'questions', 'exploration', 'study'],
     consultant_lead: [
+      'student-preview',
       'consultants',
       'questions',
       'exploration',
@@ -42,7 +43,7 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
     ],
   };
   const homes = {
-    student: 'consulting',
+    student: 'home',
     consultant: 'questions',
     consultant_lead: 'questions',
     admin: 'questions',
@@ -53,6 +54,8 @@ test('each role can open its menus and forbidden direct URLs fall back to the ro
       views,
     );
     for (const view of [
+      'home',
+      'student-preview',
       'announcements',
       'profile',
       'students',

@@ -8,6 +8,8 @@ export const DASHBOARD_GROUPS = [
 ] as const;
 
 export const DASHBOARD_PAGES = {
+  home: { label: '홈', group: 'personal' },
+  'student-preview': { label: '학생 화면 체험하기', group: 'personal' },
   announcements: { label: '서비스 공지', group: 'other' },
   profile: { label: '내 정보', group: 'personal' },
   students: { label: '학생 관리', group: 'members' },
@@ -26,8 +28,8 @@ type RolePages = Partial<Record<DashboardView, { sidebar: boolean }>>;
 // This is display policy; server actions and RLS authorize the actual account.
 export const DASHBOARD_ROLES = {
   student: {
+    home: { sidebar: true },
     profile: { sidebar: true },
-    consulting: { sidebar: false },
   },
   consultant: {
     profile: { sidebar: true },
@@ -36,6 +38,7 @@ export const DASHBOARD_ROLES = {
     study: { sidebar: true },
   },
   consultant_lead: {
+    'student-preview': { sidebar: true },
     consultants: { sidebar: true },
     questions: { sidebar: true },
     exploration: { sidebar: true },
@@ -54,7 +57,7 @@ export const DASHBOARD_ROLES = {
 } as const satisfies Record<MemberRole, RolePages>;
 
 export const DASHBOARD_DEFAULT_VIEWS = {
-  student: 'consulting',
+  student: 'home',
   consultant: 'questions',
   consultant_lead: 'questions',
   admin: 'questions',

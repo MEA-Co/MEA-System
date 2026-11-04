@@ -7,6 +7,7 @@ import { AnnouncementsView } from '../_views/announcements/AnnouncementsView';
 import { ConsultantsView } from '../_views/consultants/ConsultantsView';
 import { ConsultingView } from '../_views/consulting/ConsultingView';
 import { ExplorationView } from '../_views/exploration/ExplorationView';
+import { MentorRoundView } from '../_views/mentor-round/MentorRoundView';
 import { ProfileView } from '../_views/profile/ProfileView';
 import { QuestionsView } from '../_views/questions/QuestionsView';
 import { StudentsView } from '../_views/students/StudentsView';
@@ -30,6 +31,10 @@ type ViewContext = {
 
 // Keep server view imports out of the policy shared with client navigation.
 const DASHBOARD_VIEWS = {
+  home: ({ userId }) => <MentorRoundView key={userId} userId={userId} />,
+  'student-preview': ({ userId }) => (
+    <MentorRoundView key={'lead-preview:' + userId} userId={userId} preview />
+  ),
   announcements: () => <AnnouncementsView />,
   profile: ({ name, role, studentPeriod }) => (
     <ProfileView name={name} role={role} studentPeriod={studentPeriod} />

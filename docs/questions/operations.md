@@ -896,3 +896,9 @@ npx supabase db push --linked --dry-run
 로컬 적용 순서는 20261102055150_prior_submission_reference.sql → 20261102060044_question_admission_reference.sql → 20261102061035_notice_submission_references.sql이다. 앞의 두 migration은 로컬 적용 이력을 보존한다. 마지막 migration이 대학 입시 전용 설정·함수·시험용 참고 사본을 제거하고 일반 안내 설정과 세션별 참고 사본을 도입한다. 기존 제출본은 유지된다. 기존 전용 설정은 안내로 자동 이전하지 않는다. 편집기에서 참조할 질문과 항목을 지정한다.
 
 로컬 published_response_submissions.sql 회귀에서 안내 구성 저장·배포, 잘못된 열 선택 거부, 본인 제출본과 미제출 수정 분리, 다른 응답자 격리, 재제출 뒤 최초 참고 내용 보존을 확인했다. 운영 반영은 대기다. 운영 migration 이력과 dry-run 목록을 검토하고 DB 적용 후 앱을 배포한다.
+
+멘토라운드 원문 근거는 기존 제출 테이블의 읽기 전용 경로를 사용한다. 스키마·RLS migration 없음. 서버에 기존 SUPABASE_SECRET_KEY와 NEXT_PUBLIC_SUPABASE_URL이 필요하다. 로컬 개발 DB(127.0.0.1:54321)에 해당 제출 행이 없으면 개발 모드에서만 git 제외 data/system/mentor-round-quote-fixture.json의 검증된 발췌 사본을 사용한다. 사본 파일도 없으면 평가 미완료로 처리한다. 운영에서는 사본으로 대체하지 않는다. 1인 평가당 고정 멘토의 1~3개 구간을 한 번에 조회하며 polling은 없다. 로컬 적용, 운영 앱 배포 대기.
+
+질문 원문은 근거 목록을 구성할 때 추출한 questions.prompt 스냅샷을 사용한다. 경험 근거 추가 시 멘토·세션·질문·발췌 해시와 질문 본문을 함께 검증한다. 새 DB 객체 및 migration은 없다.
+
+리드 체험 메뉴는 기존 멘토라운드 API를 공유하며 역할 검사만 확장한다. DB migration 없음. 로컬 적용, 운영 배포 대기.

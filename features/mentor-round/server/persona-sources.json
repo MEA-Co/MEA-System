@@ -1,0 +1,710 @@
+[
+  {
+    "owner": "0678ab7d-27f7-4e63-8233-e0cc5133685d",
+    "sources": [
+      {
+        "summary": "기본 개념은 혼자 익히고 어려운 개념이나 고난도 풀이는 강의로 보완할 수 있다.",
+        "session": "b82b9c5c-5bc7-4cf9-88aa-25a7ae8138de",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 663,
+        "length": 92,
+        "digest": "c68517c1d136d4427d5bcec0d1e2841d6e6363c4b2e438c111f8cade5585d4cc"
+      },
+      {
+        "summary": "배운 개념을 문제에 적용해 이해가 부족한 곳을 찾았다.",
+        "session": "b82b9c5c-5bc7-4cf9-88aa-25a7ae8138de",
+        "questionId": "99bb3108-2b10-4c35-b333-e4c2ba310f00",
+        "start": 323,
+        "length": 54,
+        "digest": "2f144ba6279bbf331520f3202b390abb597e8430682e154b0b82e0bda0ec26f0"
+      },
+      {
+        "summary": "학교 시험 경향을 파악하기 어려우면 학교별 대비 경험이 있는 학원을 고려한다.",
+        "session": "b82b9c5c-5bc7-4cf9-88aa-25a7ae8138de",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 807,
+        "length": 92,
+        "digest": "a768059426eeb7dacbdf8ebdec9023c418e1f65715d9458c351d91de36f4351c"
+      }
+    ]
+  },
+  {
+    "owner": "cb731395-b709-4924-94f4-559b8d7e0c44",
+    "sources": [
+      {
+        "summary": "실기와 공부의 비중을 시기별로 바꿨다.",
+        "session": "2880c7f3-7069-4a78-99d6-b0935efdfe5b",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 113,
+        "length": 85,
+        "digest": "11b57a23f9637a3cf2cc6b1a4de4a69b11da640b3f9a618b57c9016eb72883a1"
+      },
+      {
+        "summary": "시험이나 실기 과제가 몰리면 다른 과업 분량을 줄였다.",
+        "session": "1d687e7a-ac4d-42a5-95b5-518fc84d7cda",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 492,
+        "length": 55,
+        "digest": "3ff2bfe803d07f317c55eea1e202eaa9636a4920aa6ae4c5f0f447e2419fce8e"
+      },
+      {
+        "summary": "평일에 복습과 실기를 하고 주말에 부족한 부분을 채웠다.",
+        "session": "1d687e7a-ac4d-42a5-95b5-518fc84d7cda",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 418,
+        "length": 72,
+        "digest": "6848a11ba63df75a14d58ac0e3d1ed4768d51127ba91b53525abd859817cff55"
+      }
+    ]
+  },
+  {
+    "owner": "ebb6aab7-d35d-496c-9668-68d102f4721a",
+    "sources": [
+      {
+        "summary": "암기와 이해 중심 풀이 등 여러 방법을 시도해 자신에게 맞는 방식을 찾는다.",
+        "session": "62c5e20e-c11a-4f7c-b3c4-456eca815037",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 1022,
+        "length": 112,
+        "digest": "3bb54dd89b8f29f9481b228de0e2c7af5d5bb355a2990d208f10a8b67eb4355f"
+      },
+      {
+        "summary": "개념을 왜 배우는지 알아보려고 관련 수학 개념을 찾아봤다.",
+        "session": "37ed6c24-5344-4fef-93d7-1d2cb22e1af3",
+        "questionId": "d105c4ad-79ec-4e13-a1ee-2c5bf7fec3af",
+        "start": 3056,
+        "length": 85,
+        "digest": "dfa998167097d897a118320f8088582648cadc3b5b763eede6c9fd5615a648c5"
+      },
+      {
+        "summary": "정보를 얻은 뒤 조사와 독서를 거쳐 발표나 보고서로 정리했다.",
+        "session": "c24fd80b-1b57-49a6-b0ab-dfc1bb9a26b9",
+        "questionId": "dc6d4de1-94a9-4b04-838e-22e0837eec6f",
+        "start": 4184,
+        "length": 93,
+        "digest": "ebffb71881e4e1e9e7f5f2a719470f568d9a369d39f8ff523f553653c3b5cea5"
+      }
+    ]
+  },
+  {
+    "owner": "b0db2cdf-83f0-4e73-99a6-df7a453d2273",
+    "sources": [
+      {
+        "summary": "학교 선생님에게 쉬는 시간에도 모르는 문제와 공부 방법을 질문했다.",
+        "session": "44907f27-fcc6-4970-8c48-848ad0178387",
+        "questionId": "e53b4d06-ecb8-4a97-aff7-e693f21ccc98",
+        "start": 81,
+        "length": 143,
+        "digest": "decca9f402aa72dead28d5129aeaa85ff97459d012a4b3847304ab54a53e1618"
+      },
+      {
+        "summary": "수업을 듣는 것만으로는 공부가 충분하지 않다.",
+        "session": "05ddbb49-3dbc-440e-881c-ed85e4ed663e",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 76,
+        "length": 51,
+        "digest": "34f91f7225a06b1ea13eef523404a37e9feebb8bea4f793aff4b1a45fde2e34a"
+      }
+    ]
+  },
+  {
+    "owner": "e1aa1558-aa0b-46f8-98e6-c6b6b35396de",
+    "sources": [
+      {
+        "summary": "동아리 구성원에게 탐구 방법을 알려주고 다른 동아리와 협력했다.",
+        "session": "bf0e8a0a-ae85-4dae-adb9-8f600de8b6e3",
+        "questionId": "11b8d62c-83e6-48c8-b83a-a85d8b3f4243",
+        "start": 409,
+        "length": 96,
+        "digest": "66ea2f864c200e366913975a1bf7da12958969322e302a835ebf848db136253f"
+      },
+      {
+        "summary": "내신과 학생부 기록을 함께 관리하는 것을 중시했다.",
+        "session": "1420799b-16e3-411e-9b04-d4bb1ce7eaef",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 938,
+        "length": 33,
+        "digest": "4def264aa5774ddcc72a480e50dd5a8bee54ff1beece3503e681c826697e8915"
+      },
+      {
+        "summary": "탐구 주제를 진로와 연결해 후속 활동을 제안했다.",
+        "session": "c5913ad6-0903-4522-8420-f031a4b30c6e",
+        "questionId": "bbf755ee-9b60-4698-ae52-57daede85f56",
+        "start": 136,
+        "length": 41,
+        "digest": "d00b5bf566ba8d1146766bf296b30854696cf6b827c4462651894938172cb1ef"
+      }
+    ]
+  },
+  {
+    "owner": "806dbf87-da4c-4fd2-81b4-970ceb4d5a65",
+    "sources": [
+      {
+        "summary": "후속 탐구에서 이전 내용 중 무엇을 이어받아 구체화했는지 보여준다.",
+        "session": "9b3ea8ab-93f0-4db6-9eda-8b69b1d0ff80",
+        "questionId": "96cd4974-c95c-43a0-9d3c-051a47256e90",
+        "start": 1489,
+        "length": 77,
+        "digest": "43968bc485bd87767dbd0895fd6c08b2bce85a238b4a505945c4b28f24fb89ae"
+      },
+      {
+        "summary": "여러 과목을 고루 접하며 모의고사 풀이와 다른 과목 오답 점검을 병행했다.",
+        "session": "022447b0-af65-495b-b362-021d598639ec",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 647,
+        "length": 74,
+        "digest": "0e809102b75671b7a158c0a177c78b2ee95d647eaf5bc8353de738e028057a90"
+      }
+    ]
+  },
+  {
+    "owner": "bd4dcd84-2e6e-4ea0-97fd-32a87b1b2794",
+    "sources": [
+      {
+        "summary": "선배의 사례와 내 기록을 비교해 더 탐구할 주제를 찾는다.",
+        "session": "12a7deea-dd36-4e4f-902d-a04037982d3f",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 294,
+        "length": 58,
+        "digest": "8f70a10e1a008e0963830f111a4855dd910c8f0df5d8d9e6fa35574f92eca452"
+      },
+      {
+        "summary": "분량이 밀린 원인을 기록하고 남은 일정을 조정했다.",
+        "session": "adc50927-a8a7-48f5-b0d5-a5bd5007029c",
+        "questionId": "99bb3108-2b10-4c35-b333-e4c2ba310f00",
+        "start": 677,
+        "length": 36,
+        "digest": "8823291c74157523c5eb95930c44f346c0f57ceb9979e15ed159f9cc2de38439"
+      },
+      {
+        "summary": "수학 개념을 실제 문제에 적용할 수 있는지 확인한 뒤 심화로 넘어갔다.",
+        "session": "adc50927-a8a7-48f5-b0d5-a5bd5007029c",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 106,
+        "length": 82,
+        "digest": "ed977fb11922102d78e3a92b7fc216a71753ce296b7da08e0eab3fa3b4d8768a"
+      }
+    ]
+  },
+  {
+    "owner": "acbae393-3725-464e-92d8-b8b3866ffa2d",
+    "sources": [
+      {
+        "summary": "수학에 개인 공부 시간을 더 쓰고 혼자 진도를 나간 뒤 질문했다.",
+        "session": "d2dab61c-4229-4274-b23c-6c437be2d682",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 176,
+        "length": 81,
+        "digest": "d177d0d5e2cc26385de18055c6341bf1430d3c1b245a06b6cdc5a43e754bebf9"
+      },
+      {
+        "summary": "초반에는 여러 주제를 탐색하고 고학년에서 관심 분야를 좁혀 심화한다.",
+        "session": "219965f1-a951-460c-bb67-d304fc5fc80a",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 34,
+        "length": 106,
+        "digest": "aae9b8163a7ae1e4dbb47e010e7f029372a65bc083b6f044b97b16e6930ecbf0"
+      }
+    ]
+  },
+  {
+    "owner": "6dc1151b-d24c-4b75-a253-acf2310cf406",
+    "sources": [
+      {
+        "summary": "내신 기간에는 시중 문제집을, 그 밖의 기간에는 기출을 풀며 적용이 어려운 개념을 찾았다.",
+        "session": "24c7b5ee-f417-4f1c-ba75-8f1fd2dc305d",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 368,
+        "length": 92,
+        "digest": "1759aa98708b51689a9e76e7e89f1679d75c80edace8f8cfcbd9b2f7746bd84a"
+      }
+    ]
+  },
+  {
+    "owner": "6177e35c-6e11-4e59-ace0-dc9ad2a3f52f",
+    "sources": [
+      {
+        "summary": "갈등 상황에서는 시간을 두고 정중히 이야기하고 필요하면 믿을 만한 어른과 상의한다.",
+        "session": "b7eb85f3-2d17-44ad-88b8-ba8b9d8e55a6",
+        "questionId": "e53b4d06-ecb8-4a97-aff7-e693f21ccc98",
+        "start": 401,
+        "length": 93,
+        "digest": "be5a4e137f34fe123c91a94f2ece94476280fe30991b6793ed1868005432c25a"
+      },
+      {
+        "summary": "탐구에 관심을 갖게 된 계기와 고민의 과정을 기록한다.",
+        "session": "71d4806c-79d5-4fb4-97c7-00d483b60dc2",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 640,
+        "length": 129,
+        "digest": "d769c27e164cb8bab141877434369395a1fc145419713c3aba7da2597dedda73"
+      },
+      {
+        "summary": "세부 분야에 대한 호기심을 탐구 과정과 연결한다.",
+        "session": "71d4806c-79d5-4fb4-97c7-00d483b60dc2",
+        "questionId": "bb70107d-56f4-486a-807d-328d9535bd8f",
+        "start": 277,
+        "length": 70,
+        "digest": "4ed31ea96dd375c622d43701ee21a069acba1fc98154275d674bb84e64979ccb"
+      }
+    ]
+  },
+  {
+    "owner": "ee5e0217-d9de-42aa-85f3-f3aeb4118835",
+    "sources": [
+      {
+        "summary": "주말에 계획 달성 정도와 미달 원인을 보고 다음 주 학습량과 과목 비중을 조절했다.",
+        "session": "91926abb-e866-44f4-9486-845c2272fb2e",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 529,
+        "length": 79,
+        "digest": "4c09a4afccea788cb4790897274cd53d118d4389f7d870eeebb2d21eea396f43"
+      },
+      {
+        "summary": "처음에는 넓게 검색하고 대상이나 원인 등의 단어를 더해 좁혀 간다.",
+        "session": "cb90efec-8560-4255-8feb-371f05218a5c",
+        "questionId": "42ad4dac-a13b-4531-9c92-317ab428b63e",
+        "start": 192,
+        "length": 92,
+        "digest": "27eb3e64e0e5bc7f20522099548148fccfc0b4bbc7cc86b39c375263aa2b2380"
+      },
+      {
+        "summary": "탐구 동기로 진로의 세부 분야에 대한 관심을 드러낸다.",
+        "session": "5b8144e9-fb33-4252-8401-030117fa2611",
+        "questionId": "96cd4974-c95c-43a0-9d3c-051a47256e90",
+        "start": 295,
+        "length": 47,
+        "digest": "32169ff466a27a23964f536a7f73165e3a9bbef2c9279e5a04cd4de49d7fefd0"
+      }
+    ]
+  },
+  {
+    "owner": "afa596d9-cc0f-46ef-bf66-7fc4f00767c1",
+    "sources": [
+      {
+        "summary": "여러 공부법을 비교해 기억과 성적에 어떤 도움이 있는지 살폈다.",
+        "session": "204ef52f-2916-448c-9a0c-ebeca49af5fc",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 131,
+        "length": 77,
+        "digest": "0a0494cb9bd4c42e02c7aeaae8ed79cd4f684030f53ff54f0070047483627e24"
+      },
+      {
+        "summary": "이미 아는 해설 시간은 오답에 쓰고 모르는 문제의 설명에 집중했다.",
+        "session": "204ef52f-2916-448c-9a0c-ebeca49af5fc",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 367,
+        "length": 135,
+        "digest": "be47491d85b712057bb67f25d63c2e60fe448e9d6de1e00abe5fe6e8e736cf62"
+      }
+    ]
+  },
+  {
+    "owner": "2f9e0758-bbe1-4670-8dd7-7fc399e78e69",
+    "sources": [
+      {
+        "summary": "교과 밖의 추가 학습이 필요한 탐구는 미리 허락을 구한다.",
+        "session": "3f46997b-27ab-42fe-90d2-ce82802b0e7d",
+        "questionId": "e79f16a1-113d-4b94-97c1-ef7a0dc8745d",
+        "start": 288,
+        "length": 55,
+        "digest": "58122adfec565e25019b9116e68143b36a45c0b88066c21612970462898c6e7b"
+      },
+      {
+        "summary": "지역 언론을 참고해 지역의 관점을 탐구에 담았다.",
+        "session": "317244d3-3d42-4917-979f-c8ffd6d45c7f",
+        "questionId": "5d604e15-5b52-4281-842d-0eb5293d74d0",
+        "start": 1202,
+        "length": 50,
+        "digest": "e3e480a38ce5a6692da7adbdc1c8528420c10c354900348e09edb17b967e90ac"
+      }
+    ]
+  },
+  {
+    "owner": "31d7175a-3650-4f4f-83c9-66ed10a73ebf",
+    "sources": [
+      {
+        "summary": "주제를 찾다가 기존 탐구와 자연스럽게 연결되는 지점이 있으면 이어 간다.",
+        "session": "56b54a5e-4392-4135-9863-75536b46496f",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 576,
+        "length": 64,
+        "digest": "76dd971b0e5ce1fb1868841dea3cf5850e9d55bbac5c36e2df3dc0082a9f2916"
+      },
+      {
+        "summary": "자료를 검색하며 적절한 탐구 주제를 골랐다.",
+        "session": "56b54a5e-4392-4135-9863-75536b46496f",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 298,
+        "length": 38,
+        "digest": "d196a65558a6868be1a7547925ae206725e529fc077a15945f160bb7ef8e85fd"
+      }
+    ]
+  },
+  {
+    "owner": "a169ce03-c5d6-420a-b28c-5407edf7fb5a",
+    "sources": [
+      {
+        "summary": "실험에서 노출 시간과 거리를 변수로 삼았다.",
+        "session": "8f75b522-6efc-4af5-9bd7-0be7526652c3",
+        "questionId": "59eac053-2376-4d8f-9537-f2bbcd124a42",
+        "start": 466,
+        "length": 40,
+        "digest": "7f80d0a6e0640e2271919f37788f04d5200377ce2eb5e07e29eb4fe206148a23"
+      },
+      {
+        "summary": "의료 접근성에 대한 관심을 인문학 탐구로 확장했다.",
+        "session": "8f75b522-6efc-4af5-9bd7-0be7526652c3",
+        "questionId": "6b7457f4-c6b6-4031-a28a-c54a7e8048f3",
+        "start": 447,
+        "length": 93,
+        "digest": "fe9c1b4e6d7f27ef943a30d58f4e1d3a37561d79b7a456cd2373e5506f40616d"
+      },
+      {
+        "summary": "내신 준비에서는 자료가 많은 곳을 활용해 기출 위주로 학습했다.",
+        "session": "d7554809-1106-45eb-ba02-d8f8cef46acd",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 85,
+        "length": 57,
+        "digest": "70b5a29b9a6a2844660b2b24422e98fee82155d75d9ce319bf218975558a93d1"
+      }
+    ]
+  },
+  {
+    "owner": "9b0d465d-459c-49b2-93a5-55e455a6a4a5",
+    "sources": [
+      {
+        "summary": "독학만 해 봤다면 공부 시간 일부를 강의에 써 보기를 권했다.",
+        "session": "ecbf581a-e98d-4719-b90c-dc7544003d33",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 941,
+        "length": 59,
+        "digest": "822628368f80f87fe7da4d3218555be9d756e54003b30e9172d6dadc8e8ecd47"
+      },
+      {
+        "summary": "강의를 병행하면서 효율적인 사고방식을 배웠다.",
+        "session": "ecbf581a-e98d-4719-b90c-dc7544003d33",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 862,
+        "length": 77,
+        "digest": "3aa7cad55ce88a1366e5c345b89f2a30cea81f10624b999926b83afb428b574c"
+      }
+    ]
+  },
+  {
+    "owner": "988dcd01-8022-47f8-a9f4-15cae044cf66",
+    "sources": [
+      {
+        "summary": "수학과 영어의 기본 시간을 확보하고 나머지는 범위와 분량에 맞게 바꿨다.",
+        "session": "b8a704d1-b046-425a-aee8-a64f5a051e85",
+        "questionId": "99bb3108-2b10-4c35-b333-e4c2ba310f00",
+        "start": 336,
+        "length": 59,
+        "digest": "83456e37c335551124fcd225f87b8bcc47da2dae4cb15502df801fc13a0a63bc"
+      },
+      {
+        "summary": "시험 초반에 학습 자료를 꼼꼼히 만들고 이후 변형 문제로 연습했다.",
+        "session": "b8a704d1-b046-425a-aee8-a64f5a051e85",
+        "questionId": "99bb3108-2b10-4c35-b333-e4c2ba310f00",
+        "start": 1279,
+        "length": 104,
+        "digest": "37157372ba986c93fd5b18c3da9c7c5d3dc08231388489b5bcc78c9ba0222789"
+      },
+      {
+        "summary": "여러 관심사를 각각 지속해서 발전시켰다.",
+        "session": "e69522ea-8a27-40da-9912-36fb745c611e",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 113,
+        "length": 79,
+        "digest": "c82715b3bf199913ec7f1d692be1b8c3d2f40891331acffb27a7c15334833d6a"
+      }
+    ]
+  },
+  {
+    "owner": "a1adca6e-e4f8-44b8-9d7b-bb9608a198cd",
+    "sources": [
+      {
+        "summary": "방학에는 개념과 수능 문제를 공부하다 내신 기간에는 잠시 중단하고 이후 재개했다.",
+        "session": "01e5b01c-f050-430c-a288-fa7f92422f6f",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 184,
+        "length": 86,
+        "digest": "e28d976e13efa6701a66fcb5169b32d977ab2dc8f542fe9d455f5efff7e51d34"
+      },
+      {
+        "summary": "주요 모의평가 중 한 번은 집중적으로 준비해 볼 것을 권했다.",
+        "session": "70e97f75-428b-48bd-a62d-7e2e705de1e2",
+        "questionId": "a7a8d1c7-b54e-46a4-90e4-61f4fcd2ac9e",
+        "start": 722,
+        "length": 107,
+        "digest": "5610669e1fcf40344e97fb6162a57c24e58aa0f73e94ec082e1d81b146bbebbc"
+      },
+      {
+        "summary": "내신 영어에서는 암기를 중시했다.",
+        "session": "01e5b01c-f050-430c-a288-fa7f92422f6f",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 940,
+        "length": 40,
+        "digest": "9d74124c852248e18daf6ec0314c52faf39d7d4caeaa1d20227cbb4524575b3b"
+      }
+    ]
+  },
+  {
+    "owner": "2c294a9d-99c4-4f21-b6d4-75ce2b149dcd",
+    "sources": [
+      {
+        "summary": "이전 학년 활동에서 확장할 주제를 골라 다음 학년에 탐구했다.",
+        "session": "3c148cd6-9f1d-4ffb-960e-9393a5225892",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 347,
+        "length": 64,
+        "digest": "064b4ff027cf91630e716174bc080e3dddcf3f67ebc0d5e533e431fe5fd3ad89"
+      },
+      {
+        "summary": "인터뷰나 관찰 등 탐구에서 실제로 기울인 노력을 구체적으로 기록했다.",
+        "session": "dfa54376-6f24-4e32-8e3c-e8b54a3e1a5a",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 528,
+        "length": 91,
+        "digest": "c56a9731dbacf247d73c021ba343b2d7e8d2168d91044d7c33ac15590a6e32db"
+      },
+      {
+        "summary": "AI가 찾아준 자료는 실재 여부를 확인한다.",
+        "session": "dbb60c18-8dbd-4423-9f0e-7fa985baebc3",
+        "questionId": "42ad4dac-a13b-4531-9c92-317ab428b63e",
+        "start": 156,
+        "length": 85,
+        "digest": "1422af6dbd0ee4506e662959e80466e228954ad4ded70b73183f7090951110db"
+      }
+    ]
+  },
+  {
+    "owner": "5da63626-b363-4ac6-a317-12c1073454d9",
+    "sources": [
+      {
+        "summary": "수학의 함수와 그래프를 활용해 과학 현상의 변화를 분석하는 탐구를 제안했다.",
+        "session": "0d78c395-b7cf-42c6-8f52-d760e1ed17ee",
+        "questionId": "b93ab076-9f3c-48f9-9251-1b6717ec648c",
+        "start": 192,
+        "length": 71,
+        "digest": "439c05ff06c4209da1f4705ed071bd8b40a87c522843f91682fdb9f61c7fb4ed"
+      },
+      {
+        "summary": "시험 후 정답과 오답의 근거, 취약 단원과 유형을 정리해 다음 계획에 반영한다.",
+        "session": "eb05573b-498b-4a1d-a79b-ee3c7326b178",
+        "questionId": "b1ec9b98-9838-4695-a211-b5147186b69c",
+        "start": 850,
+        "length": 93,
+        "digest": "c07342cb9d52daf1a62772a41e64a938aa32f291ce1b53631f29bba420537cf8"
+      }
+    ]
+  },
+  {
+    "owner": "ba5e66ea-b936-4f32-adec-fbb13a18bb8a",
+    "sources": [
+      {
+        "summary": "탐구를 곧바로 진로와 연결하기보다 다른 탐구와 이어 관심 계열을 드러낸다.",
+        "session": "d95e83ea-5b3b-4887-9ec7-c9c9548bf803",
+        "questionId": "bbf755ee-9b60-4698-ae52-57daede85f56",
+        "start": 136,
+        "length": 104,
+        "digest": "77d36dbbe3470763559ec91d8746a2e73fd8120b15c64642c2e382576ef32719"
+      },
+      {
+        "summary": "부족한 유형을 찾아 지속해서 보완한다.",
+        "session": "b7127fc1-4396-40f7-9cff-1c9c39506122",
+        "questionId": "b1ec9b98-9838-4695-a211-b5147186b69c",
+        "start": 840,
+        "length": 47,
+        "digest": "77bae8b8ba2b79029e9fad67b8a8ff15405ed812d7c07d86aa751bd88d682f66"
+      },
+      {
+        "summary": "어려운 한 문제를 깊이 생각할 때는 지나치게 세밀한 분량 목표를 피한다.",
+        "session": "b7127fc1-4396-40f7-9cff-1c9c39506122",
+        "questionId": "b459a93a-5b67-4946-b0d1-abca270169b2",
+        "start": 143,
+        "length": 121,
+        "digest": "b31cbe8b47cea68703ddba2e0bb1b341a21691ed8eeb1fdab717131518103c2c"
+      }
+    ]
+  },
+  {
+    "owner": "48332302-bd15-4517-b3b4-02a849b624e9",
+    "sources": [
+      {
+        "summary": "시험에서 약점을 파악한 뒤 학교 자료와 오답 위주로 범위를 좁혔다.",
+        "session": "e193584e-1516-470c-95b4-6272e9aa2346",
+        "questionId": "6342391a-5a33-4294-9753-5cde166736ed",
+        "start": 699,
+        "length": 80,
+        "digest": "51f04e3b0ce4b08edf6fbb91ea29a138fe441d368e1a14a889ffcad9765ee22a"
+      },
+      {
+        "summary": "약한 과목은 며칠씩 비우지 않게 최소 학습량을 정한다.",
+        "session": "e193584e-1516-470c-95b4-6272e9aa2346",
+        "questionId": "6342391a-5a33-4294-9753-5cde166736ed",
+        "start": 2715,
+        "length": 52,
+        "digest": "b79979b50e60b682b647cef3e709b14928e15634315dd6422818463cc167de49"
+      }
+    ]
+  },
+  {
+    "owner": "802dc8ec-82cb-4831-b3e0-717ae1c237f7",
+    "sources": [
+      {
+        "summary": "서술형 시간이 부족해 입장별 답안 틀을 만들고 작성 연습을 했다.",
+        "session": "cbdd4417-1527-40c5-90f4-925cdb5541aa",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 438,
+        "length": 53,
+        "digest": "92513d0b07f26e0bbaf858542f0d0088832ca8aaf10190004d1fcfd8d450bb4c"
+      },
+      {
+        "summary": "이미 준비한 수학은 시험기에 학교 기출로 감각을 유지했다.",
+        "session": "cbdd4417-1527-40c5-90f4-925cdb5541aa",
+        "questionId": "99bb3108-2b10-4c35-b333-e4c2ba310f00",
+        "start": 175,
+        "length": 79,
+        "digest": "47489df43e074243582e2acda71d5b4a68cf35aa48d2e6491b99ca1a847865f1"
+      },
+      {
+        "summary": "고학년에서는 이전 탐구의 한계를 이론으로 다시 설명하는 마무리를 제안했다.",
+        "session": "83352537-440d-4018-932a-79f705badc1e",
+        "questionId": "c4dd53be-6fea-4751-8c3b-780cf9215d69",
+        "start": 2782,
+        "length": 54,
+        "digest": "65ca180e425b065a04e5291dc580076f9b967a9d235fb75c6417a9f1b7bfef06"
+      }
+    ]
+  },
+  {
+    "owner": "53cd287c-c083-430b-8eb6-e81ba8a3d330",
+    "sources": [
+      {
+        "summary": "다른 분야 교재에서 얻은 수학 지식이 이후 탐구에 도움이 됐다.",
+        "session": "0c77120e-94f7-4948-9b23-36edf9bfa707",
+        "questionId": "5267a11b-a000-4a05-b612-ba2249588346",
+        "start": 193,
+        "length": 62,
+        "digest": "3ef47099088501d94f770466dba583d9414246aab46becb83eb47676629b86da"
+      },
+      {
+        "summary": "이전 활동이 다음 학년 활동에 이어지는 과정을 드러냈다.",
+        "session": "aebe0ed2-cca2-4ae7-a669-9cf1b8cab85b",
+        "questionId": "250b9b79-7e4d-4add-afe3-77e1d44ad322",
+        "start": 437,
+        "length": 82,
+        "digest": "1639d4310aea8aded262e4cc67671180576c2248f9512183b7cda14b39b0935d"
+      },
+      {
+        "summary": "기존 결과를 보완해 실제 적용 방안을 탐구했다.",
+        "session": "64fe8d13-a666-477b-8601-28c1529b3f8d",
+        "questionId": "0b518ed4-e7b9-4570-87fe-9d9f90ecac60",
+        "start": 220,
+        "length": 50,
+        "digest": "241e5c66e26a1f89f1c2cc5a562e0b2813cb3f78f534d6b14c0ccac128968ccf"
+      }
+    ]
+  },
+  {
+    "owner": "20354483-e02d-4f1b-b010-48ab56b38ecc",
+    "sources": [
+      {
+        "summary": "탐구 대상을 특정 집단이나 상황으로 좁히기를 제안했다.",
+        "session": "b8299f0b-85c5-4f54-bf6d-b3f62acf152f",
+        "questionId": "59eac053-2376-4d8f-9537-f2bbcd124a42",
+        "start": 272,
+        "length": 59,
+        "digest": "14f11e067de24fea85bddd6fa563fd5a71445a2552055d4c60533965f6da5b78"
+      },
+      {
+        "summary": "동아리에서 이론과 실습을 병행했다.",
+        "session": "ddf3670b-c054-4c31-a4d3-f746fea3e6f7",
+        "questionId": "250b9b79-7e4d-4add-afe3-77e1d44ad322",
+        "start": 69,
+        "length": 69,
+        "digest": "6cef68c4573fb2c6842f35a34c1e2bbe4c1264e037455b028a29eb69cf61ff5c"
+      },
+      {
+        "summary": "같은 활동도 끝난 뒤 무엇을 느꼈는지를 중시했다.",
+        "session": "b8299f0b-85c5-4f54-bf6d-b3f62acf152f",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 186,
+        "length": 47,
+        "digest": "9e9b0a3764282b8ab57387bf6815a3df228bd88b21e85c6b09c582d78ec1e750"
+      }
+    ]
+  },
+  {
+    "owner": "8b628a27-c229-4cb3-9a09-fad799ccd441",
+    "sources": [
+      {
+        "summary": "한 과목에서 탐구한 주제를 다음 과목에서 구체적인 활용 문제로 심화했다.",
+        "session": "ac85a658-70ed-4ddb-8d1a-cc5bbd63ef4e",
+        "questionId": "02350c61-a46b-4b48-abfc-99e67112fd66",
+        "start": 202,
+        "length": 78,
+        "digest": "32666cc773d88420e480d4555de3758baf196d1ebaac6ada65c668393808390a"
+      },
+      {
+        "summary": "암기과목 시험 전날은 새로 쓰기보다 정리해 둔 자료를 훑었다.",
+        "session": "bedf374a-68d9-46e4-ae06-83249c2a34c6",
+        "questionId": "b0291dfc-d7c2-49d9-89bb-968236d7d85f",
+        "start": 158,
+        "length": 74,
+        "digest": "51b417b6860b90ef14f8b245dc6f66a55e30c14008bf0ed4eb0fd2ddfe0b8033"
+      },
+      {
+        "summary": "독학 후 성적이 낮아지자 영어 학원을 다시 이용했다.",
+        "session": "c964ee28-05a5-434c-b35a-a203c72803bc",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 162,
+        "length": 105,
+        "digest": "4bf04f11f16fa3f45436668d036533bd6882c23b262ae9071569e3dd254ce2a2"
+      }
+    ]
+  },
+  {
+    "owner": "695818ca-d486-4fad-8412-ac53646d27d4",
+    "sources": [
+      {
+        "summary": "고학년으로 갈수록 수능 최저에 필요한 과목에 더 많은 시간을 썼다.",
+        "session": "c146ce3a-2d41-416d-a44d-6af5b967c633",
+        "questionId": "933b246f-2d08-46c4-a4a8-e9beb0779d69",
+        "start": 96,
+        "length": 75,
+        "digest": "5ed42f96a962087527cb00db7ac67f45194160515bc973b63899cb2970c8a076"
+      },
+      {
+        "summary": "낮은 점수를 보완할 과목을 찾는 신호로 삼는다.",
+        "session": "c146ce3a-2d41-416d-a44d-6af5b967c633",
+        "questionId": "b1ec9b98-9838-4695-a211-b5147186b69c",
+        "start": 163,
+        "length": 81,
+        "digest": "4deb1b95ade58eef6708d29765508e17a2a08acf67625401d457e702d4af87cd"
+      },
+      {
+        "summary": "학교의 교과서와 기출 출제 경향을 보고 부족한 부분을 판단했다.",
+        "session": "c146ce3a-2d41-416d-a44d-6af5b967c633",
+        "questionId": "1ecf19a9-1da1-4be8-9181-123923ebf09c",
+        "start": 349,
+        "length": 81,
+        "digest": "b2793d988c8b74d42de18a2690c670b27de8d4a792fd3db50df17ada2b8ab37e"
+      }
+    ]
+  },
+  {
+    "owner": "29759ac2-e32a-4e16-9e1c-47550af37e26",
+    "sources": [
+      {
+        "summary": "학습 자료를 직접 만드는 활동을 제안했다.",
+        "session": "a190d777-00d3-46b5-8c11-63d3683e7739",
+        "questionId": "a6df57d0-c213-4b44-bef9-d7195927e793",
+        "start": 785,
+        "length": 40,
+        "digest": "4de138a4cd92c3bd731dec416f24a13ece0eb95d1f64e86271c6e6eaf97149f4"
+      }
+    ]
+  }
+]
