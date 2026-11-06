@@ -4,12 +4,63 @@ import { legacy, legacyVote } from '@/features/mentor-round/client/legacy.mjs';
 export const panelId = 'mea28-v1';
 export type Topic = { week: string; theme: string; question: string };
 export type Draft = { q: string; opts: string[] };
-export type SourcePair = { summary: string; question: string; quote: string };
+export type SourcePair = {
+  id?: string;
+  summary: string;
+  question: string;
+  quote: string;
+};
+export type PersonaComponent = {
+  id: string;
+  version: string;
+  kind: 'strategy' | 'skill' | 'experience';
+  label: string;
+  statement: string;
+  sourceRefs: string[];
+  provenance: { personaId: string; componentId: string; version: string };
+  status: 'reviewed-summary';
+};
+export type PersonaSnapshot = {
+  id: string;
+  version: string;
+  kind: 'source-based';
+  displayName: string;
+  components: PersonaComponent[];
+  limitations: string[];
+};
 export type Ballot = {
   state: 'waiting' | 'loading' | 'done' | 'failed';
   choice?: number;
   reason?: string;
-  applied?: { kind: string; label: string; evidence: string }[];
+  applied?: {
+    id?: string;
+    kind: string;
+    label: string;
+    evidence: string;
+    sourceRefs?: string[];
+  }[];
+  persona?: PersonaSnapshot;
+  confidence?: {
+    status: 'assessed' | 'unavailable';
+    label: string;
+    sourceCoverage: { verified: number; total: number };
+    appliedCoverage: { verified: number; total: number };
+    limitations: string[];
+  };
+  explanation?: {
+    version: '1' | '2' | '3';
+    context: string;
+    criteria: {
+      componentId: string;
+      label: string;
+      application: string;
+      sourceRefs: string[];
+    }[];
+    alternatives: { choice: number; tradeoff: string }[];
+    conclusion: string;
+    caveats: string[];
+    disclosure: string;
+  };
   sources?: SourcePair[];
   support?: {
     sources?: SourcePair[];

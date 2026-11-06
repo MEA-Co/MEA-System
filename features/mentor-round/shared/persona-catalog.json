@@ -1,0 +1,1857 @@
+[
+  {
+    "id": "mea-mentor-01",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 01",
+    "components": [
+      {
+        "id": "mea-mentor-01-c68517c1d136d442",
+        "version": "1",
+        "kind": "strategy",
+        "label": "난도별 학습 수단 선택",
+        "statement": "기본 개념은 혼자 익히고 어려운 개념이나 고난도 풀이는 강의로 보완할 수 있다.",
+        "sourceRefs": [
+          "evidence-c68517c1d136d4427d5bcec0d1e2841d6e6363c4b2e438c111f8cade5585d4cc"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-01",
+          "componentId": "mea-mentor-01-c68517c1d136d442",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-01-2f144ba6279bbf33",
+        "version": "1",
+        "kind": "skill",
+        "label": "문제로 개념 진단",
+        "statement": "배운 개념을 문제에 적용해 이해가 부족한 곳을 찾았다.",
+        "sourceRefs": [
+          "evidence-2f144ba6279bbf331520f3202b390abb597e8430682e154b0b82e0bda0ec26f0"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-01",
+          "componentId": "mea-mentor-01-2f144ba6279bbf33",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-01-a768059426eeb7da",
+        "version": "1",
+        "kind": "strategy",
+        "label": "학교 시험 맞춤 대비",
+        "statement": "학교 시험 경향을 파악하기 어려우면 학교별 대비 경험이 있는 학원을 고려한다.",
+        "sourceRefs": [
+          "evidence-a768059426eeb7dacbdf8ebdec9023c418e1f65715d9458c351d91de36f4351c"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-01",
+          "componentId": "mea-mentor-01-a768059426eeb7da",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-02",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 02",
+    "components": [
+      {
+        "id": "mea-mentor-02-11b57a23f9637a3c",
+        "version": "1",
+        "kind": "strategy",
+        "label": "시기별 실기·공부 배분",
+        "statement": "실기와 공부의 비중을 시기별로 바꿨다.",
+        "sourceRefs": [
+          "evidence-11b57a23f9637a3cf2cc6b1a4de4a69b11da640b3f9a618b57c9016eb72883a1"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-02",
+          "componentId": "mea-mentor-02-11b57a23f9637a3c",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-02-3ff2bfe803d07f31",
+        "version": "1",
+        "kind": "strategy",
+        "label": "과업 집중기 분량 조절",
+        "statement": "시험이나 실기 과제가 몰리면 다른 과업 분량을 줄였다.",
+        "sourceRefs": [
+          "evidence-3ff2bfe803d07f317c55eea1e202eaa9636a4920aa6ae4c5f0f447e2419fce8e"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-02",
+          "componentId": "mea-mentor-02-3ff2bfe803d07f31",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-02-6848a11ba63df75a",
+        "version": "1",
+        "kind": "skill",
+        "label": "주말 취약점 보완",
+        "statement": "평일에 복습과 실기를 하고 주말에 부족한 부분을 채웠다.",
+        "sourceRefs": [
+          "evidence-6848a11ba63df75a14d58ac0e3d1ed4768d51127ba91b53525abd859817cff55"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-02",
+          "componentId": "mea-mentor-02-6848a11ba63df75a",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-03",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 03",
+    "components": [
+      {
+        "id": "mea-mentor-03-3bb54dd89b8f29f9",
+        "version": "1",
+        "kind": "strategy",
+        "label": "공부법 비교 실험",
+        "statement": "암기와 이해 중심 풀이 등 여러 방법을 시도해 자신에게 맞는 방식을 찾는다.",
+        "sourceRefs": [
+          "evidence-3bb54dd89b8f29f9481b228de0e2c7af5d5bb355a2990d208f10a8b67eb4355f"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-03",
+          "componentId": "mea-mentor-03-3bb54dd89b8f29f9",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-03-dfa998167097d897",
+        "version": "1",
+        "kind": "skill",
+        "label": "관련 개념 탐색",
+        "statement": "개념을 왜 배우는지 알아보려고 관련 수학 개념을 찾아봤다.",
+        "sourceRefs": [
+          "evidence-dfa998167097d897a118320f8088582648cadc3b5b763eede6c9fd5615a648c5"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-03",
+          "componentId": "mea-mentor-03-dfa998167097d897",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-03-ebffb71881e4e1e9",
+        "version": "1",
+        "kind": "skill",
+        "label": "조사·독서 후 산출물 정리",
+        "statement": "정보를 얻은 뒤 조사와 독서를 거쳐 발표나 보고서로 정리했다.",
+        "sourceRefs": [
+          "evidence-ebffb71881e4e1e9e7f5f2a719470f568d9a369d39f8ff523f553653c3b5cea5"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-03",
+          "componentId": "mea-mentor-03-ebffb71881e4e1e9",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-04",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 04",
+    "components": [
+      {
+        "id": "mea-mentor-04-decca9f402aa72de",
+        "version": "1",
+        "kind": "skill",
+        "label": "선생님께 질문하기",
+        "statement": "학교 선생님에게 쉬는 시간에도 모르는 문제와 공부 방법을 질문했다.",
+        "sourceRefs": [
+          "evidence-decca9f402aa72dead28d5129aeaa85ff97459d012a4b3847304ab54a53e1618"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-04",
+          "componentId": "mea-mentor-04-decca9f402aa72de",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-04-34f91f7225a06b1e",
+        "version": "1",
+        "kind": "strategy",
+        "label": "수업 밖 자기 학습",
+        "statement": "수업을 듣는 것만으로는 공부가 충분하지 않다.",
+        "sourceRefs": [
+          "evidence-34f91f7225a06b1ea13eef523404a37e9feebb8bea4f793aff4b1a45fde2e34a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-04",
+          "componentId": "mea-mentor-04-34f91f7225a06b1e",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-05",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 05",
+    "components": [
+      {
+        "id": "mea-mentor-05-66ea2f864c200e36",
+        "version": "1",
+        "kind": "experience",
+        "label": "동아리 간 협력",
+        "statement": "동아리 구성원에게 탐구 방법을 알려주고 다른 동아리와 협력했다.",
+        "sourceRefs": [
+          "evidence-66ea2f864c200e366913975a1bf7da12958969322e302a835ebf848db136253f"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-05",
+          "componentId": "mea-mentor-05-66ea2f864c200e36",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-05-4def264aa5774ddc",
+        "version": "1",
+        "kind": "strategy",
+        "label": "내신·학생부 병행",
+        "statement": "내신과 학생부 기록을 함께 관리하는 것을 중시했다.",
+        "sourceRefs": [
+          "evidence-4def264aa5774ddcc72a480e50dd5a8bee54ff1beece3503e681c826697e8915"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-05",
+          "componentId": "mea-mentor-05-4def264aa5774ddc",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-05-d00b5bf566ba8d11",
+        "version": "1",
+        "kind": "strategy",
+        "label": "진로 연계 후속 탐구",
+        "statement": "탐구 주제를 진로와 연결해 후속 활동을 제안했다.",
+        "sourceRefs": [
+          "evidence-d00b5bf566ba8d1146766bf296b30854696cf6b827c4462651894938172cb1ef"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-05",
+          "componentId": "mea-mentor-05-d00b5bf566ba8d11",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-06",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 06",
+    "components": [
+      {
+        "id": "mea-mentor-06-43968bc485bd8776",
+        "version": "1",
+        "kind": "skill",
+        "label": "후속 탐구 연결 명시",
+        "statement": "후속 탐구에서 이전 내용 중 무엇을 이어받아 구체화했는지 보여준다.",
+        "sourceRefs": [
+          "evidence-43968bc485bd87767dbd0895fd6c08b2bce85a238b4a505945c4b28f24fb89ae"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-06",
+          "componentId": "mea-mentor-06-43968bc485bd8776",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-06-0e809102b75671b7",
+        "version": "1",
+        "kind": "strategy",
+        "label": "과목 균형과 오답 점검",
+        "statement": "여러 과목을 고루 접하며 모의고사 풀이와 다른 과목 오답 점검을 병행했다.",
+        "sourceRefs": [
+          "evidence-0e809102b75671b7a158c0a177c78b2ee95d647eaf5bc8353de738e028057a90"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-06",
+          "componentId": "mea-mentor-06-0e809102b75671b7",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-07",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 07",
+    "components": [
+      {
+        "id": "mea-mentor-07-8f70a10e1a008e09",
+        "version": "1",
+        "kind": "skill",
+        "label": "사례와 내 기록 비교",
+        "statement": "선배의 사례와 내 기록을 비교해 더 탐구할 주제를 찾는다.",
+        "sourceRefs": [
+          "evidence-8f70a10e1a008e0963830f111a4855dd910c8f0df5d8d9e6fa35574f92eca452"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-07",
+          "componentId": "mea-mentor-07-8f70a10e1a008e09",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-07-8823291c74157523",
+        "version": "1",
+        "kind": "skill",
+        "label": "계획 지연 원인 기록",
+        "statement": "분량이 밀린 원인을 기록하고 남은 일정을 조정했다.",
+        "sourceRefs": [
+          "evidence-8823291c74157523c5eb95930c44f346c0f57ceb9979e15ed159f9cc2de38439"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-07",
+          "componentId": "mea-mentor-07-8823291c74157523",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-07-ed977fb11922102d",
+        "version": "1",
+        "kind": "strategy",
+        "label": "개념 적용 확인 후 심화",
+        "statement": "수학 개념을 실제 문제에 적용할 수 있는지 확인한 뒤 심화로 넘어갔다.",
+        "sourceRefs": [
+          "evidence-ed977fb11922102d78e3a92b7fc216a71753ce296b7da08e0eab3fa3b4d8768a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-07",
+          "componentId": "mea-mentor-07-ed977fb11922102d",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-08",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 08",
+    "components": [
+      {
+        "id": "mea-mentor-08-d177d0d5e2cc2638",
+        "version": "1",
+        "kind": "strategy",
+        "label": "자기 학습 후 질문",
+        "statement": "수학에 개인 공부 시간을 더 쓰고 혼자 진도를 나간 뒤 질문했다.",
+        "sourceRefs": [
+          "evidence-d177d0d5e2cc26385de18055c6341bf1430d3c1b245a06b6cdc5a43e754bebf9"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-08",
+          "componentId": "mea-mentor-08-d177d0d5e2cc2638",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-08-aae9b8163a7ae1e4",
+        "version": "1",
+        "kind": "strategy",
+        "label": "탐색 후 관심 분야 심화",
+        "statement": "초반에는 여러 주제를 탐색하고 고학년에서 관심 분야를 좁혀 심화한다.",
+        "sourceRefs": [
+          "evidence-aae9b8163a7ae1e4dbb47e010e7f029372a65bc083b6f044b97b16e6930ecbf0"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-08",
+          "componentId": "mea-mentor-08-aae9b8163a7ae1e4",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-09",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 09",
+    "components": [
+      {
+        "id": "mea-mentor-09-1759aa98708b5168",
+        "version": "1",
+        "kind": "strategy",
+        "label": "시기별 문제집·기출 활용",
+        "statement": "내신 기간에는 시중 문제집을, 그 밖의 기간에는 기출을 풀며 적용이 어려운 개념을 찾았다.",
+        "sourceRefs": [
+          "evidence-1759aa98708b51689a9e76e7e89f1679d75c80edace8f8cfcbd9b2f7746bd84a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-09",
+          "componentId": "mea-mentor-09-1759aa98708b5168",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-10",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 10",
+    "components": [
+      {
+        "id": "mea-mentor-10-be5a4e137f34fe12",
+        "version": "1",
+        "kind": "strategy",
+        "label": "갈등 대화와 도움 요청",
+        "statement": "갈등 상황에서는 시간을 두고 정중히 이야기하고 필요하면 믿을 만한 어른과 상의한다.",
+        "sourceRefs": [
+          "evidence-be5a4e137f34fe123c91a94f2ece94476280fe30991b6793ed1868005432c25a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-10",
+          "componentId": "mea-mentor-10-be5a4e137f34fe12",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-10-d769c27e164cb8ba",
+        "version": "1",
+        "kind": "skill",
+        "label": "탐구 계기·고민 기록",
+        "statement": "탐구에 관심을 갖게 된 계기와 고민의 과정을 기록한다.",
+        "sourceRefs": [
+          "evidence-d769c27e164cb8bab141877434369395a1fc145419713c3aba7da2597dedda73"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-10",
+          "componentId": "mea-mentor-10-d769c27e164cb8ba",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-10-4ed31ea96dd375c6",
+        "version": "1",
+        "kind": "strategy",
+        "label": "호기심과 탐구 연결",
+        "statement": "세부 분야에 대한 호기심을 탐구 과정과 연결한다.",
+        "sourceRefs": [
+          "evidence-4ed31ea96dd375c622d43701ee21a069acba1fc98154275d674bb84e64979ccb"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-10",
+          "componentId": "mea-mentor-10-4ed31ea96dd375c6",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-11",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 11",
+    "components": [
+      {
+        "id": "mea-mentor-11-4c09a4afccea788c",
+        "version": "1",
+        "kind": "skill",
+        "label": "주간 계획 회고",
+        "statement": "주말에 계획 달성 정도와 미달 원인을 보고 다음 주 학습량과 과목 비중을 조절했다.",
+        "sourceRefs": [
+          "evidence-4c09a4afccea788cb4790897274cd53d118d4389f7d870eeebb2d21eea396f43"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-11",
+          "componentId": "mea-mentor-11-4c09a4afccea788c",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-11-27eb3e64e0e5bc7f",
+        "version": "1",
+        "kind": "skill",
+        "label": "검색 범위 좁히기",
+        "statement": "처음에는 넓게 검색하고 대상이나 원인 등의 단어를 더해 좁혀 간다.",
+        "sourceRefs": [
+          "evidence-27eb3e64e0e5bc7f20522099548148fccfc0b4bbc7cc86b39c375263aa2b2380"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-11",
+          "componentId": "mea-mentor-11-27eb3e64e0e5bc7f",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-11-32169ff466a27a23",
+        "version": "1",
+        "kind": "strategy",
+        "label": "관심 분야를 탐구 동기로",
+        "statement": "탐구 동기로 진로의 세부 분야에 대한 관심을 드러낸다.",
+        "sourceRefs": [
+          "evidence-32169ff466a27a23964f536a7f73165e3a9bbef2c9279e5a04cd4de49d7fefd0"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-11",
+          "componentId": "mea-mentor-11-32169ff466a27a23",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-12",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 12",
+    "components": [
+      {
+        "id": "mea-mentor-12-0a0494cb9bd4c42e",
+        "version": "1",
+        "kind": "strategy",
+        "label": "학습 효과 비교",
+        "statement": "여러 공부법을 비교해 기억과 성적에 어떤 도움이 있는지 살폈다.",
+        "sourceRefs": [
+          "evidence-0a0494cb9bd4c42e02c7aeaae8ed79cd4f684030f53ff54f0070047483627e24"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-12",
+          "componentId": "mea-mentor-12-0a0494cb9bd4c42e",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-12-be47491d85b71205",
+        "version": "1",
+        "kind": "strategy",
+        "label": "모르는 해설에 시간 집중",
+        "statement": "이미 아는 해설 시간은 오답에 쓰고 모르는 문제의 설명에 집중했다.",
+        "sourceRefs": [
+          "evidence-be47491d85b712057bb67f25d63c2e60fe448e9d6de1e00abe5fe6e8e736cf62"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-12",
+          "componentId": "mea-mentor-12-be47491d85b71205",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-13",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 13",
+    "components": [
+      {
+        "id": "mea-mentor-13-58122adfec565e25",
+        "version": "1",
+        "kind": "strategy",
+        "label": "교과 밖 탐구 사전 협의",
+        "statement": "교과 밖의 추가 학습이 필요한 탐구는 미리 허락을 구한다.",
+        "sourceRefs": [
+          "evidence-58122adfec565e25019b9116e68143b36a45c0b88066c21612970462898c6e7b"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-13",
+          "componentId": "mea-mentor-13-58122adfec565e25",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-13-e3e480a38ce5a669",
+        "version": "1",
+        "kind": "skill",
+        "label": "지역 관점 자료 활용",
+        "statement": "지역 언론을 참고해 지역의 관점을 탐구에 담았다.",
+        "sourceRefs": [
+          "evidence-e3e480a38ce5a6692da7adbdc1c8528420c10c354900348e09edb17b967e90ac"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-13",
+          "componentId": "mea-mentor-13-e3e480a38ce5a669",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-14",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 14",
+    "components": [
+      {
+        "id": "mea-mentor-14-76dd971b0e5ce1fb",
+        "version": "1",
+        "kind": "strategy",
+        "label": "자연스러운 후속 탐구",
+        "statement": "주제를 찾다가 기존 탐구와 자연스럽게 연결되는 지점이 있으면 이어 간다.",
+        "sourceRefs": [
+          "evidence-76dd971b0e5ce1fb1868841dea3cf5850e9d55bbac5c36e2df3dc0082a9f2916"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-14",
+          "componentId": "mea-mentor-14-76dd971b0e5ce1fb",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-14-d196a65558a6868b",
+        "version": "1",
+        "kind": "skill",
+        "label": "검색하며 주제 고르기",
+        "statement": "자료를 검색하며 적절한 탐구 주제를 골랐다.",
+        "sourceRefs": [
+          "evidence-d196a65558a6868be1a7547925ae206725e529fc077a15945f160bb7ef8e85fd"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-14",
+          "componentId": "mea-mentor-14-d196a65558a6868b",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-15",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 15",
+    "components": [
+      {
+        "id": "mea-mentor-15-7f80d0a6e0640e22",
+        "version": "1",
+        "kind": "skill",
+        "label": "실험 변수 설정",
+        "statement": "실험에서 노출 시간과 거리를 변수로 삼았다.",
+        "sourceRefs": [
+          "evidence-7f80d0a6e0640e2271919f37788f04d5200377ce2eb5e07e29eb4fe206148a23"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-15",
+          "componentId": "mea-mentor-15-7f80d0a6e0640e22",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-15-fe9c1b4e6d7f27ef",
+        "version": "1",
+        "kind": "experience",
+        "label": "의료 접근성의 인문학적 확장",
+        "statement": "의료 접근성에 대한 관심을 인문학 탐구로 확장했다.",
+        "sourceRefs": [
+          "evidence-fe9c1b4e6d7f27ef943a30d58f4e1d3a37561d79b7a456cd2373e5506f40616d"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-15",
+          "componentId": "mea-mentor-15-fe9c1b4e6d7f27ef",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-15-70b5a29b9a6a2844",
+        "version": "1",
+        "kind": "strategy",
+        "label": "기출 중심 내신 준비",
+        "statement": "내신 준비에서는 자료가 많은 곳을 활용해 기출 위주로 학습했다.",
+        "sourceRefs": [
+          "evidence-70b5a29b9a6a2844660b2b24422e98fee82155d75d9ce319bf218975558a93d1"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-15",
+          "componentId": "mea-mentor-15-70b5a29b9a6a2844",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-16",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 16",
+    "components": [
+      {
+        "id": "mea-mentor-16-822628368f80f87f",
+        "version": "1",
+        "kind": "strategy",
+        "label": "독학과 강의 비교",
+        "statement": "독학만 해 봤다면 공부 시간 일부를 강의에 써 보기를 권했다.",
+        "sourceRefs": [
+          "evidence-822628368f80f87fe7da4d3218555be9d756e54003b30e9172d6dadc8e8ecd47"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-16",
+          "componentId": "mea-mentor-16-822628368f80f87f",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-16-3aa7cad55ce88a13",
+        "version": "1",
+        "kind": "experience",
+        "label": "강의를 통한 사고방식 학습",
+        "statement": "강의를 병행하면서 효율적인 사고방식을 배웠다.",
+        "sourceRefs": [
+          "evidence-3aa7cad55ce88a1366e5c345b89f2a30cea81f10624b999926b83afb428b574c"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-16",
+          "componentId": "mea-mentor-16-3aa7cad55ce88a13",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-17",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 17",
+    "components": [
+      {
+        "id": "mea-mentor-17-83456e37c3355511",
+        "version": "1",
+        "kind": "strategy",
+        "label": "기본 시간 확보 후 조절",
+        "statement": "수학과 영어의 기본 시간을 확보하고 나머지는 범위와 분량에 맞게 바꿨다.",
+        "sourceRefs": [
+          "evidence-83456e37c335551124fcd225f87b8bcc47da2dae4cb15502df801fc13a0a63bc"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-17",
+          "componentId": "mea-mentor-17-83456e37c3355511",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-17-37157372ba986c93",
+        "version": "1",
+        "kind": "skill",
+        "label": "학습 자료와 변형 문제",
+        "statement": "시험 초반에 학습 자료를 꼼꼼히 만들고 이후 변형 문제로 연습했다.",
+        "sourceRefs": [
+          "evidence-37157372ba986c93fd5b18c3da9c7c5d3dc08231388489b5bcc78c9ba0222789"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-17",
+          "componentId": "mea-mentor-17-37157372ba986c93",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-17-c82715b3bf199913",
+        "version": "1",
+        "kind": "strategy",
+        "label": "여러 관심사 지속 발전",
+        "statement": "여러 관심사를 각각 지속해서 발전시켰다.",
+        "sourceRefs": [
+          "evidence-c82715b3bf199913ec7f1d692be1b8c3d2f40891331acffb27a7c15334833d6a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-17",
+          "componentId": "mea-mentor-17-c82715b3bf199913",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-18",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 18",
+    "components": [
+      {
+        "id": "mea-mentor-18-e28d976e13efa670",
+        "version": "1",
+        "kind": "strategy",
+        "label": "내신·수능 학습 전환",
+        "statement": "방학에는 개념과 수능 문제를 공부하다 내신 기간에는 잠시 중단하고 이후 재개했다.",
+        "sourceRefs": [
+          "evidence-e28d976e13efa6701a66fcb5169b32d977ab2dc8f542fe9d455f5efff7e51d34"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-18",
+          "componentId": "mea-mentor-18-e28d976e13efa670",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-18-5610669e1fcf4034",
+        "version": "1",
+        "kind": "strategy",
+        "label": "주요 모의평가 집중 준비",
+        "statement": "주요 모의평가 중 한 번은 집중적으로 준비해 볼 것을 권했다.",
+        "sourceRefs": [
+          "evidence-5610669e1fcf40344e97fb6162a57c24e58aa0f73e94ec082e1d81b146bbebbc"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-18",
+          "componentId": "mea-mentor-18-5610669e1fcf4034",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-18-9d74124c852248e1",
+        "version": "1",
+        "kind": "strategy",
+        "label": "내신 영어 암기",
+        "statement": "내신 영어에서는 암기를 중시했다.",
+        "sourceRefs": [
+          "evidence-9d74124c852248e18daf6ec0314c52faf39d7d4caeaa1d20227cbb4524575b3b"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-18",
+          "componentId": "mea-mentor-18-9d74124c852248e1",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-19",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 19",
+    "components": [
+      {
+        "id": "mea-mentor-19-064b4ff027cf9163",
+        "version": "1",
+        "kind": "strategy",
+        "label": "학년 간 탐구 확장",
+        "statement": "이전 학년 활동에서 확장할 주제를 골라 다음 학년에 탐구했다.",
+        "sourceRefs": [
+          "evidence-064b4ff027cf91630e716174bc080e3dddcf3f67ebc0d5e533e431fe5fd3ad89"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-19",
+          "componentId": "mea-mentor-19-064b4ff027cf9163",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-19-c56a9731dbacf247",
+        "version": "1",
+        "kind": "skill",
+        "label": "실제 탐구 노력 기록",
+        "statement": "인터뷰나 관찰 등 탐구에서 실제로 기울인 노력을 구체적으로 기록했다.",
+        "sourceRefs": [
+          "evidence-c56a9731dbacf247d73c021ba343b2d7e8d2168d91044d7c33ac15590a6e32db"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-19",
+          "componentId": "mea-mentor-19-c56a9731dbacf247",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-19-1422af6dbd0ee450",
+        "version": "1",
+        "kind": "skill",
+        "label": "AI 자료 실재 확인",
+        "statement": "AI가 찾아준 자료는 실재 여부를 확인한다.",
+        "sourceRefs": [
+          "evidence-1422af6dbd0ee4506e662959e80466e228954ad4ded70b73183f7090951110db"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-19",
+          "componentId": "mea-mentor-19-1422af6dbd0ee450",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-20",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 20",
+    "components": [
+      {
+        "id": "mea-mentor-20-439c05ff06c4209d",
+        "version": "1",
+        "kind": "skill",
+        "label": "함수·그래프로 현상 분석",
+        "statement": "수학의 함수와 그래프를 활용해 과학 현상의 변화를 분석하는 탐구를 제안했다.",
+        "sourceRefs": [
+          "evidence-439c05ff06c4209da1f4705ed071bd8b40a87c522843f91682fdb9f61c7fb4ed"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-20",
+          "componentId": "mea-mentor-20-439c05ff06c4209d",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-20-c07342cb9d52daf1",
+        "version": "1",
+        "kind": "skill",
+        "label": "시험 근거·약점 정리",
+        "statement": "시험 후 정답과 오답의 근거, 취약 단원과 유형을 정리해 다음 계획에 반영한다.",
+        "sourceRefs": [
+          "evidence-c07342cb9d52daf1a62772a41e64a938aa32f291ce1b53631f29bba420537cf8"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-20",
+          "componentId": "mea-mentor-20-c07342cb9d52daf1",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-21",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 21",
+    "components": [
+      {
+        "id": "mea-mentor-21-77d36dbbe3470763",
+        "version": "1",
+        "kind": "strategy",
+        "label": "탐구 간 연결로 관심 표현",
+        "statement": "탐구를 곧바로 진로와 연결하기보다 다른 탐구와 이어 관심 계열을 드러낸다.",
+        "sourceRefs": [
+          "evidence-77d36dbbe3470763559ec91d8746a2e73fd8120b15c64642c2e382576ef32719"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-21",
+          "componentId": "mea-mentor-21-77d36dbbe3470763",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-21-77bae8b8ba2b7902",
+        "version": "1",
+        "kind": "skill",
+        "label": "취약 유형 지속 보완",
+        "statement": "부족한 유형을 찾아 지속해서 보완한다.",
+        "sourceRefs": [
+          "evidence-77bae8b8ba2b79029e9fad67b8a8ff15405ed812d7c07d86aa751bd88d682f66"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-21",
+          "componentId": "mea-mentor-21-77bae8b8ba2b7902",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-21-b31cbe8b47cea687",
+        "version": "1",
+        "kind": "strategy",
+        "label": "깊은 사고 시간 확보",
+        "statement": "어려운 한 문제를 깊이 생각할 때는 지나치게 세밀한 분량 목표를 피한다.",
+        "sourceRefs": [
+          "evidence-b31cbe8b47cea68703ddba2e0bb1b341a21691ed8eeb1fdab717131518103c2c"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-21",
+          "componentId": "mea-mentor-21-b31cbe8b47cea687",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-22",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 22",
+    "components": [
+      {
+        "id": "mea-mentor-22-51f04e3b0ce4b08e",
+        "version": "1",
+        "kind": "strategy",
+        "label": "약점 중심 학습 범위 축소",
+        "statement": "시험에서 약점을 파악한 뒤 학교 자료와 오답 위주로 범위를 좁혔다.",
+        "sourceRefs": [
+          "evidence-51f04e3b0ce4b08edf6fbb91ea29a138fe441d368e1a14a889ffcad9765ee22a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-22",
+          "componentId": "mea-mentor-22-51f04e3b0ce4b08e",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-22-b79979b50e60b682",
+        "version": "1",
+        "kind": "strategy",
+        "label": "취약 과목 최소 학습량",
+        "statement": "약한 과목은 며칠씩 비우지 않게 최소 학습량을 정한다.",
+        "sourceRefs": [
+          "evidence-b79979b50e60b682b647cef3e709b14928e15634315dd6422818463cc167de49"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-22",
+          "componentId": "mea-mentor-22-b79979b50e60b682",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-23",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 23",
+    "components": [
+      {
+        "id": "mea-mentor-23-92513d0b07f26e0b",
+        "version": "1",
+        "kind": "skill",
+        "label": "서술형 답안 틀 연습",
+        "statement": "서술형 시간이 부족해 입장별 답안 틀을 만들고 작성 연습을 했다.",
+        "sourceRefs": [
+          "evidence-92513d0b07f26e0bbaf858542f0d0088832ca8aaf10190004d1fcfd8d450bb4c"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-23",
+          "componentId": "mea-mentor-23-92513d0b07f26e0b",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-23-47489df43e074243",
+        "version": "1",
+        "kind": "strategy",
+        "label": "학교 기출로 감각 유지",
+        "statement": "이미 준비한 수학은 시험기에 학교 기출로 감각을 유지했다.",
+        "sourceRefs": [
+          "evidence-47489df43e074243582e2acda71d5b4a68cf35aa48d2e6491b99ca1a847865f1"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-23",
+          "componentId": "mea-mentor-23-47489df43e074243",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-23-65ca180e425b065a",
+        "version": "1",
+        "kind": "strategy",
+        "label": "기존 탐구 한계 재설명",
+        "statement": "고학년에서는 이전 탐구의 한계를 이론으로 다시 설명하는 마무리를 제안했다.",
+        "sourceRefs": [
+          "evidence-65ca180e425b065a04e5291dc580076f9b967a9d235fb75c6417a9f1b7bfef06"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-23",
+          "componentId": "mea-mentor-23-65ca180e425b065a",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-24",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 24",
+    "components": [
+      {
+        "id": "mea-mentor-24-3ef47099088501d9",
+        "version": "1",
+        "kind": "experience",
+        "label": "다른 분야 지식 활용",
+        "statement": "다른 분야 교재에서 얻은 수학 지식이 이후 탐구에 도움이 됐다.",
+        "sourceRefs": [
+          "evidence-3ef47099088501d94f770466dba583d9414246aab46becb83eb47676629b86da"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-24",
+          "componentId": "mea-mentor-24-3ef47099088501d9",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-24-1639d4310aea8ade",
+        "version": "1",
+        "kind": "skill",
+        "label": "학년 간 활동 연결 기록",
+        "statement": "이전 활동이 다음 학년 활동에 이어지는 과정을 드러냈다.",
+        "sourceRefs": [
+          "evidence-1639d4310aea8aded262e4cc67671180576c2248f9512183b7cda14b39b0935d"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-24",
+          "componentId": "mea-mentor-24-1639d4310aea8ade",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-24-241e5c66e26a1f89",
+        "version": "1",
+        "kind": "strategy",
+        "label": "기존 결과의 실제 적용",
+        "statement": "기존 결과를 보완해 실제 적용 방안을 탐구했다.",
+        "sourceRefs": [
+          "evidence-241e5c66e26a1f89f1c2cc5a562e0b2813cb3f78f534d6b14c0ccac128968ccf"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-24",
+          "componentId": "mea-mentor-24-241e5c66e26a1f89",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-25",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 25",
+    "components": [
+      {
+        "id": "mea-mentor-25-14f11e067de24fea",
+        "version": "1",
+        "kind": "skill",
+        "label": "탐구 대상·상황 좁히기",
+        "statement": "탐구 대상을 특정 집단이나 상황으로 좁히기를 제안했다.",
+        "sourceRefs": [
+          "evidence-14f11e067de24fea85bddd6fa563fd5a71445a2552055d4c60533965f6da5b78"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-25",
+          "componentId": "mea-mentor-25-14f11e067de24fea",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-25-6cef68c4573fb2c6",
+        "version": "1",
+        "kind": "experience",
+        "label": "동아리 이론·실습 병행",
+        "statement": "동아리에서 이론과 실습을 병행했다.",
+        "sourceRefs": [
+          "evidence-6cef68c4573fb2c6842f35a34c1e2bbe4c1264e037455b028a29eb69cf61ff5c"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-25",
+          "componentId": "mea-mentor-25-6cef68c4573fb2c6",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-25-9e9b0a3764282b8a",
+        "version": "1",
+        "kind": "strategy",
+        "label": "활동 후 성찰",
+        "statement": "같은 활동도 끝난 뒤 무엇을 느꼈는지를 중시했다.",
+        "sourceRefs": [
+          "evidence-9e9b0a3764282b8ab57387bf6815a3df228bd88b21e85c6b09c582d78ec1e750"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-25",
+          "componentId": "mea-mentor-25-9e9b0a3764282b8a",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-26",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 26",
+    "components": [
+      {
+        "id": "mea-mentor-26-32666cc773d88420",
+        "version": "1",
+        "kind": "strategy",
+        "label": "과목 간 활용 문제 심화",
+        "statement": "한 과목에서 탐구한 주제를 다음 과목에서 구체적인 활용 문제로 심화했다.",
+        "sourceRefs": [
+          "evidence-32666cc773d88420e480d4555de3758baf196d1ebaac6ada65c668393808390a"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-26",
+          "componentId": "mea-mentor-26-32666cc773d88420",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-26-51b417b6860b90ef",
+        "version": "1",
+        "kind": "strategy",
+        "label": "시험 전 정리 자료 회독",
+        "statement": "암기과목 시험 전날은 새로 쓰기보다 정리해 둔 자료를 훑었다.",
+        "sourceRefs": [
+          "evidence-51b417b6860b90ef14f8b245dc6f66a55e30c14008bf0ed4eb0fd2ddfe0b8033"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-26",
+          "componentId": "mea-mentor-26-51b417b6860b90ef",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-26-4bf04f11f16fa3f4",
+        "version": "1",
+        "kind": "experience",
+        "label": "성적 변화 후 학습 수단 조정",
+        "statement": "독학 후 성적이 낮아지자 영어 학원을 다시 이용했다.",
+        "sourceRefs": [
+          "evidence-4bf04f11f16fa3f45436668d036533bd6882c23b262ae9071569e3dd254ce2a2"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-26",
+          "componentId": "mea-mentor-26-4bf04f11f16fa3f4",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-27",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 27",
+    "components": [
+      {
+        "id": "mea-mentor-27-5ed42f96a9620875",
+        "version": "1",
+        "kind": "strategy",
+        "label": "수능 최저 과목 집중",
+        "statement": "고학년으로 갈수록 수능 최저에 필요한 과목에 더 많은 시간을 썼다.",
+        "sourceRefs": [
+          "evidence-5ed42f96a962087527cb00db7ac67f45194160515bc973b63899cb2970c8a076"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-27",
+          "componentId": "mea-mentor-27-5ed42f96a9620875",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-27-4deb1b95ade58eef",
+        "version": "1",
+        "kind": "strategy",
+        "label": "낮은 점수로 보완 과목 파악",
+        "statement": "낮은 점수를 보완할 과목을 찾는 신호로 삼는다.",
+        "sourceRefs": [
+          "evidence-4deb1b95ade58eef6708d29765508e17a2a08acf67625401d457e702d4af87cd"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-27",
+          "componentId": "mea-mentor-27-4deb1b95ade58eef",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      },
+      {
+        "id": "mea-mentor-27-b2793d988c8b74d4",
+        "version": "1",
+        "kind": "skill",
+        "label": "학교 출제 경향 점검",
+        "statement": "학교의 교과서와 기출 출제 경향을 보고 부족한 부분을 판단했다.",
+        "sourceRefs": [
+          "evidence-b2793d988c8b74d42de18a2690c670b27de8d4a792fd3db50df17ada2b8ab37e"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-27",
+          "componentId": "mea-mentor-27-b2793d988c8b74d4",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  },
+  {
+    "id": "mea-mentor-28",
+    "version": "1",
+    "kind": "source-based",
+    "displayName": "프로필 28",
+    "components": [
+      {
+        "id": "mea-mentor-28-4de138a4cd92c3bd",
+        "version": "1",
+        "kind": "skill",
+        "label": "학습 자료 직접 만들기",
+        "statement": "학습 자료를 직접 만드는 활동을 제안했다.",
+        "sourceRefs": [
+          "evidence-4de138a4cd92c3bd731dec416f24a13ece0eb95d1f64e86271c6e6eaf97149f4"
+        ],
+        "provenance": {
+          "personaId": "mea-mentor-28",
+          "componentId": "mea-mentor-28-4de138a4cd92c3bd",
+          "version": "1"
+        },
+        "status": "reviewed-summary",
+        "applicability": {
+          "conditions": [],
+          "exceptions": [],
+          "status": "not-collected"
+        }
+      }
+    ],
+    "limitations": [
+      "기존에 정리된 제출 답변 요약을 구조화했습니다. 원문 일치 여부는 응답 시 별도로 확인합니다.",
+      "적용 조건·예외는 아직 체계적으로 수집하지 않았습니다.",
+      "대학 소속이나 합격 여부는 조언의 정확성·적합성을 보장하지 않습니다."
+    ]
+  }
+]

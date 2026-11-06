@@ -82,7 +82,11 @@ export function MentorRoundView({
         { q: r.q, opts: r.opts, mentor: index, panel: panelId },
         signal,
       );
-      if (!Number.isInteger(b.choice) || !r.opts[b.choice] || !b.reason)
+      if (
+        !Number.isInteger(b.choice) ||
+        (b.choice !== -1 && !r.opts[b.choice]) ||
+        !b.reason
+      )
         throw Error('응답을 확인할 수 없습니다.');
       if (!signal.aborted) update(r.id, index, { ...b, state: 'done' });
     } catch (e) {
@@ -93,10 +97,10 @@ export function MentorRoundView({
         });
     }
   }
-  function start(d: Draft) {
+  function start(d: Draft, topic?: Topic) {
     const signal = life.current?.signal;
     if (!signal) return;
-    const r = newRound(d, editor?.topic);
+    const r = newRound(d, topic ?? editor?.topic);
     save([r, ...records.current]);
     setEditor(null);
     setSelected(r.id);
@@ -117,7 +121,7 @@ export function MentorRoundView({
         description={
           preview
             ? '학생과 같은 멘토라운드를 체험합니다. 만든 질문과 투표 결과는 이 브라우저의 내 체험 질문함에 저장됩니다.'
-            : '중심 질문을 골라 28명의 멘토 자료에 기반한 AI 투표를 비교하세요.'
+            : '28명의 멘토 경험을 바탕으로 내 고민에 맞는 선택을 찾아보세요.'
         }
         action={
           <Button onClick={() => setEditor({})}>
@@ -128,9 +132,9 @@ export function MentorRoundView({
       <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
         <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="home">주차별 테마</TabsTrigger>
-          <TabsTrigger value="mentors">멘토 패널</TabsTrigger>
+          <TabsTrigger value="mentors">멘토 소개</TabsTrigger>
           <TabsTrigger value="history">내 질문함</TabsTrigger>
-          {round && <TabsTrigger value="result">개표 결과</TabsTrigger>}
+          {round && <TabsTrigger value="result">투표 결과</TabsTrigger>}
         </TabsList>
         <TabsContent value="home">
           <WeeklyThemes onQuestion={(topic) => setEditor({ topic })} />
@@ -139,6 +143,10 @@ export function MentorRoundView({
           <MentorPanel />
         </TabsContent>
         <TabsContent value="history">
+          <p className="mb-4 text-sm leading-6 text-muted-foreground">
+            질문과 결과는 지금 사용하는 브라우저에 저장돼요. 다른 기기에서는
+            보이지 않아요.
+          </p>
           {rounds.length ? (
             <div className="space-y-2">
               {rounds.map((r) => (
@@ -165,7 +173,7 @@ export function MentorRoundView({
             <CollectionEmptyState
               icon={<Inbox />}
               title="저장된 질문이 없습니다"
-              description="첫 질문을 만들면 이 브라우저의 질문함에 응답이 저장됩니다."
+              description="주차별 질문을 고르거나 새 질문을 만들어 보세요."
             />
           )}
         </TabsContent>
@@ -174,6 +182,9 @@ export function MentorRoundView({
             <RoundResults
               key={round.id}
               round={round}
+              onRepeat={() =>
+                start({ q: round.q, opts: round.opts }, round.topic)
+              }
               onRecheck={async (i) => {
                 const ballot = round.ballots?.[i],
                   signal = life.current?.signal;

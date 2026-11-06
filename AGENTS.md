@@ -17,6 +17,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 | 범주 | 먼저 읽을 기준 문서 | 보조 문서 |
 | --- | --- | --- |
+| 멘토라운드 | [페르소나·출처·설명·운영](docs/mentor-round/README.md) | [제출 원문 접근](docs/questions/data-api.md) |
 | 서비스 공지 | [문서 목록](docs/announcements/README.md), [데이터·API·권한](docs/announcements/data-api.md) | [UI](docs/announcements/ui.md), [운영](docs/announcements/operations.md) |
 | 학습법 | [데이터·API·권한](docs/study/data-api.md) | [입력/UI](docs/study/ui.md), [운영](docs/study/operations.md) |
 | 탐구활동 | [데이터·API·권한](docs/exploration/data-api.md) | [입력/UI](docs/exploration/ui.md), [운영](docs/exploration/operations.md) |

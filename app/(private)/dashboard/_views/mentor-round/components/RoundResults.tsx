@@ -1,14 +1,16 @@
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  CircleAlert,
+  Clock3,
+  LoaderCircle,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -18,19 +20,29 @@ import {
 } from '@/components/ui/select';
 import { cards } from '@/features/mentor-round/client/cards.mjs';
 import { legacy } from '@/features/mentor-round/client/legacy.mjs';
-import { methods } from '@/features/mentor-round/shared/mentor-methods.mjs';
-import { data } from '@/features/mentor-round/shared/mentors.mjs';
+import { personas } from '@/features/mentor-round/shared/personas.mjs';
 
 import {
-  type Ballot,
-  ballotsFor,
-  panelId,
-  type Round,
-  type SourcePair,
-} from '../lib/rounds';
+  answerParagraphs,
+  choiceColors,
+  choiceLabelStyle,
+  choiceLetter,
+  confidenceDescription,
+  referencedSummaries,
+  strategyApplications,
+  strategyLabel,
+} from '../lib/presentation';
+import { type Ballot, ballotsFor, panelId, type Round } from '../lib/rounds';
 
-const palette = ['#228463', '#c68b2e', '#627ebb', '#985789', '#798646'];
+import { MentorEvidenceDialog } from './MentorEvidenceDialog';
+import { PersonaDetails } from './PersonaEvidenceDetails';
+
 const schools = ['서울대', '고려대', '연세대', 'KAIST'];
+function mentorName(index: number, modern: boolean) {
+  return modern
+    ? (cards[index]?.name ?? '멘토 ' + (index + 1))
+    : String(legacy[index]?.[0] ?? '멘토 ' + (index + 1));
+}
 function MentorIdentity({
   index,
   modern = true,
@@ -41,173 +53,87 @@ function MentorIdentity({
   const m = cards[index],
     old = legacy[index];
   return (
-    <CardHeader>
-      <CardTitle>{modern ? m.name : old[0]} 멘토</CardTitle>
-      <CardDescription>
-        {modern
-          ? m.affiliation + ' · ' + m.year + '학번'
-          : schools[Math.floor(index / 3)] + ' · ' + old[1]}
-      </CardDescription>
-    </CardHeader>
+    <div className="flex items-start gap-3">
+      <div
+        aria-hidden
+        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold"
+      >
+        {mentorName(index, modern).slice(0, 1)}
+      </div>
+      <div className="min-w-0 space-y-1">
+        <h3 className="font-semibold leading-6">
+          {mentorName(index, modern)} 멘토
+        </h3>
+        <p className="break-keep text-xs leading-5 text-muted-foreground">
+          {modern
+            ? m
+              ? m.affiliation + ' · ' + m.year + '학번'
+              : '멘토 정보 없음'
+            : schools[Math.floor(index / 3)] + ' · ' + (old?.[1] ?? '')}
+        </p>
+      </div>
+    </div>
   );
 }
+
 export function MentorPanel() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {cards.map((_, i) => (
-        <Card key={i} size="sm">
-          <MentorIdentity index={i} />
-          <CardContent className="space-y-3">
-            <Badge variant="highlight">{data[i][2]}</Badge>
-            <p className="leading-relaxed">{data[i][4]}</p>
-            <div className="flex flex-wrap gap-1">
-              {methods[i].map((t) => (
-                <Badge
-                  key={t.label}
-                  variant={t.kind === '전략' ? 'highlight' : 'subtle'}
-                >
-                  {t.kind} · {t.label}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-function RecheckSource({ onRecheck }: { onRecheck: () => Promise<void> }) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  async function run() {
-    setBusy(true);
-    setError('');
-    try {
-      await onRecheck();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '원문 대조에 실패했습니다.');
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div>
-      <Button variant="outline" size="sm" disabled={busy} onClick={run}>
-        {busy ? '원문 대조 중…' : '원문으로 신뢰도 다시 평가'}
-      </Button>
-      {error && (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
+    <section className="space-y-5">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">
+          서로 다른 경험, 다양한 선택의 기준
+        </h2>
+        <p className="text-sm leading-7 text-muted-foreground">
+          멘토가 직접 작성한 답변에서 공부·탐구 경험을 정리했어요. 이 경험을
+          바탕으로 내 질문에 대한 조언을 만나볼 수 있어요.
         </p>
-      )}
-    </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {cards.map((_, i) => (
+          <Card key={i}>
+            <CardContent className="space-y-5">
+              <MentorIdentity index={i} />
+              <PersonaDetails persona={personas[i]} />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
   );
 }
-function SourcePairs({ sources }: { sources: SourcePair[] }) {
-  return (
-    <div className="mt-3 space-y-3">
-      {sources.map(({ summary, question, quote }) => (
-        <dl
-          key={question + quote}
-          className="space-y-1 border-l-2 border-brand pl-3 text-sm leading-relaxed"
-        >
-          <dt className="text-xs font-medium text-muted-foreground">
-            페르소나 경험 요약
-          </dt>
-          <dd>{summary}</dd>
-          <dt className="pt-1 text-xs font-medium text-muted-foreground">
-            제출 질문지의 질문 원문
-          </dt>
-          <dd className="whitespace-pre-line">{question}</dd>
-          <dt className="pt-1 text-xs font-medium text-muted-foreground">
-            멘토의 답변 원문 · 관련 구절
-          </dt>
-          <dd>
-            <blockquote className="whitespace-pre-line">{quote}</blockquote>
-          </dd>
-        </dl>
-      ))}
-    </div>
-  );
-}
-function Confidence({ support }: { support: Ballot['support'] }) {
-  if (support === undefined) return null;
-  if (!support)
-    return (
-      <p className="text-xs text-muted-foreground">
-        답변 근거 신뢰도 · 평가 미완료
-      </p>
-    );
-  const levels = {
-    상: {
-      n: 3,
-      color: 'bg-emerald-600',
-      label: '핵심 조언 대부분을 직접 언급',
-    },
-    중: { n: 2, color: 'bg-amber-400', label: '일부 조언을 직접 언급' },
-    하: { n: 1, color: 'bg-red-600', label: '직접 근거 미확인 · 추론 중심' },
-  };
-  const level = levels[support.level];
-  if (!level) return null;
-  return (
-    <details className="text-xs">
-      <summary className="cursor-pointer">
-        답변 근거 신뢰도 <b>{support.level}</b>{' '}
-        <span aria-hidden className="inline-flex gap-0.5 align-middle">
-          {[1, 2, 3].map((n) => (
-            <i
-              key={n}
-              className={
-                'h-1.5 w-4 rounded-sm ' +
-                (n <= level.n ? level.color : 'bg-muted')
-              }
-            />
-          ))}
-        </span>
-        {Boolean(support.sources?.length || support.quotes?.length) && (
-          <span className="ml-2 underline">
-            원문 {support.sources?.length ?? support.quotes?.length}개 보기
-          </span>
-        )}
-      </summary>
-      <p className="mt-2 text-muted-foreground">
-        {level.label}. 해당 멘토의 제출 답변에서 정리한 근거와 대조한
-        결과입니다.
-      </p>
-      {support.sources?.length ? (
-        <SourcePairs sources={support.sources} />
-      ) : support.quotes?.length ? (
-        <div className="mt-3 space-y-2">
-          <p className="font-medium">멘토 제출 답변 · 원문 발췌</p>
-          {support.quotes.map((quote) => (
-            <blockquote
-              key={quote}
-              className="border-l-2 border-brand pl-3 text-sm leading-relaxed"
-            >
-              {quote}
-            </blockquote>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-2 text-muted-foreground">
-          {support.sources || support.quotes
-            ? '대조한 제출 답변에서 이 코멘트를 직접 뒷받침하는 구절을 찾지 못했습니다.'
-            : '이전 판정에는 원문 근거가 저장되지 않았습니다.'}
-        </p>
-      )}
-    </details>
-  );
-}
+
 function SeatChart({ ballots }: { ballots: Ballot[] }) {
   let i = 0;
+  const rows =
+    ballots.length === 28 ? [6, 9, 13] : ballots.length === 12 ? [5, 7] : null;
+  if (!rows)
+    return (
+      <div
+        role="img"
+        aria-label={ballots.length + '명의 멘토 응답 분포'}
+        className="mx-auto flex max-w-56 flex-wrap justify-center gap-2"
+      >
+        {ballots.map((b, index) => (
+          <span
+            key={index}
+            className="size-4 rounded-sm bg-muted-foreground/25"
+            style={
+              b.state === 'done'
+                ? { background: choiceColors[b.choice ?? -1] ?? '#888' }
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    );
   return (
     <svg
       viewBox="0 0 252 140"
       role="img"
       aria-label={ballots.length + '명의 멘토 의석 분포'}
-      className="mx-auto w-full max-w-72"
+      className="mx-auto w-full max-w-56"
     >
-      {(ballots.length === 28 ? [6, 9, 13] : [5, 7]).map((count, row) =>
+      {rows.map((count, row) =>
         Array.from({ length: count }, (_, c) => {
           const idx = i++,
             b = ballots[idx],
@@ -221,13 +147,9 @@ function SeatChart({ ballots }: { ballots: Ballot[] }) {
               y={114 - r * Math.sin(a)}
               width="16"
               height="16"
-              rx="2"
-              className={
-                b?.state === 'done' && choice >= 0
-                  ? ''
-                  : 'fill-muted-foreground/25'
-              }
-              fill={palette[choice]}
+              rx="3"
+              className={b?.state === 'done' ? '' : 'fill-muted-foreground/25'}
+              fill={choiceColors[choice] ?? '#888'}
             >
               <title>
                 {'멘토 ' +
@@ -235,11 +157,13 @@ function SeatChart({ ballots }: { ballots: Ballot[] }) {
                   ' · ' +
                   (b?.state === 'done'
                     ? choice >= 0
-                      ? '선택지 ' + String.fromCharCode(65 + choice)
+                      ? '선택지 ' + choiceLetter(choice)
                       : '판단 보류'
                     : b?.state === 'failed'
                       ? '응답 실패'
-                      : '대기 중')}
+                      : b?.state === 'loading'
+                        ? '응답 중'
+                        : '대기 중')}
               </title>
             </rect>
           );
@@ -248,12 +172,183 @@ function SeatChart({ ballots }: { ballots: Ballot[] }) {
     </svg>
   );
 }
+
+function MentorAnswer({
+  ballot: b,
+  index,
+  round,
+  modern,
+  onRetry,
+  onRecheck,
+}: {
+  ballot: Ballot;
+  index: number;
+  round: Round;
+  modern: boolean;
+  onRetry: () => void;
+  onRecheck: () => Promise<void>;
+}) {
+  const applications = strategyApplications(b);
+  const summaries =
+    b.explanation?.version === '2' ? referencedSummaries(b) : [];
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [evidenceTag, setEvidenceTag] =
+    useState<NonNullable<Ballot['applied']>[number]>();
+  const choice = b.choice ?? -1;
+  return (
+    <Card className="gap-0" size="sm">
+      <CardContent className="grid gap-5 py-2 md:grid-cols-[11rem_minmax(0,1fr)] md:gap-7 md:py-3">
+        <MentorIdentity index={index} modern={modern} />
+        <div className="min-w-0 space-y-4">
+          {b.state === 'done' ? (
+            <>
+              <div className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+                  style={choiceLabelStyle(choice)}
+                >
+                  {choiceLetter(choice)}
+                </span>
+                <h4 className="min-w-0 break-keep text-[15px] font-semibold leading-7">
+                  {round.opts[choice] ?? '선택을 보류했어요'}
+                </h4>
+              </div>
+              <div className="max-w-[70ch] space-y-3 break-words text-[16px] leading-8">
+                {answerParagraphs(b).map((text, i) => (
+                  <p key={i} className="whitespace-pre-wrap">
+                    {text}
+                  </p>
+                ))}
+                {summaries.length > 0 && (
+                  <ul className="list-disc space-y-2 pl-5 text-[15px] leading-7">
+                    {summaries.map((summary) => (
+                      <li key={summary}>{summary}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {modern && (
+                <>
+                  {Boolean(b.applied?.length) && (
+                    <div className="space-y-3 border-l-2 border-brand pl-4">
+                      <p className="text-xs text-muted-foreground">
+                        참고한 전략·방법 · 누르면 실제 답변을 볼 수 있어요
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {b.applied!.map((tag, i) => (
+                          <Button
+                            key={tag.label + i}
+                            variant="outline"
+                            size="sm"
+                            className="h-auto max-w-full whitespace-normal px-2.5 py-1 text-xs leading-5"
+                            aria-label={
+                              strategyLabel(tag.label) + ' · 멘토 답변 보기'
+                            }
+                            aria-haspopup="dialog"
+                            onClick={() => {
+                              setEvidenceTag(tag);
+                              setEvidenceOpen(true);
+                            }}
+                          >
+                            #{strategyLabel(tag.label)}
+                          </Button>
+                        ))}
+                      </div>
+                      {applications.length > 0 && (
+                        <div className="max-w-[70ch] space-y-2 text-sm leading-7 text-muted-foreground">
+                          {applications.map((text, i) => (
+                            <p
+                              className="whitespace-pre-wrap break-words"
+                              key={i}
+                            >
+                              {text}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2"
+                      aria-haspopup="dialog"
+                      onClick={() => {
+                        setEvidenceTag(undefined);
+                        setEvidenceOpen(true);
+                      }}
+                    >
+                      <BookOpen />
+                      멘토의 실제 답변 보기
+                    </Button>
+                    {(!b.explanation || b.explanation.version === '1') && (
+                      <span className="text-xs leading-5 text-muted-foreground">
+                        {b.support
+                          ? '원문 근거 ' + b.support.level + ' · '
+                          : ''}
+                        {confidenceDescription(b.support)}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="space-y-3 py-1">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                {b.state === 'failed' ? (
+                  <CircleAlert className="size-4 text-destructive" />
+                ) : b.state === 'loading' ? (
+                  <LoaderCircle className="size-4 motion-safe:animate-spin" />
+                ) : (
+                  <Clock3 className="size-4 text-muted-foreground" />
+                )}
+                {b.state === 'failed'
+                  ? '응답을 받지 못했어요'
+                  : b.state === 'loading'
+                    ? '질문에 대한 의견을 정리하고 있어요'
+                    : '차례를 기다리고 있어요'}
+              </p>
+              {b.reason && (
+                <p className="text-sm leading-7 text-muted-foreground">
+                  {b.reason}
+                </p>
+              )}
+              {modern && b.state === 'failed' && (
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                  이 멘토만 다시 요청
+                  <ArrowRight />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+      {modern && b.state === 'done' && (
+        <MentorEvidenceDialog
+          open={evidenceOpen}
+          onOpenChange={setEvidenceOpen}
+          tag={evidenceTag}
+          name={mentorName(index, modern)}
+          ballot={b}
+          choices={round.opts}
+          onRecheck={onRecheck}
+        />
+      )}
+    </Card>
+  );
+}
+
 export function RoundResults({
   round,
+  onRepeat,
   onRetry,
   onRecheck,
 }: {
   round: Round;
+  onRepeat: () => void;
   onRetry: (index: number) => void;
   onRecheck: (index: number) => Promise<void>;
 }) {
@@ -261,8 +356,9 @@ export function RoundResults({
     [school, setSchool] = useState('all');
   const ballots = ballotsFor(round),
     done = ballots.filter((b) => b.state === 'done'),
+    failed = ballots.filter((b) => b.state === 'failed').length,
     modern = round.panel === panelId;
-  const choices = round.opts.map((label, i) => ({ label, id: i }));
+  const choices = round.opts.map((label, id) => ({ label, id }));
   if (done.some((b) => b.choice === -1))
     choices.push({ label: '판단 보류', id: -1 });
   const visible = ballots
@@ -274,161 +370,212 @@ export function RoundResults({
         (modern || school === 'all' || schools[Math.floor(i / 3)] === school),
     );
   return (
-    <section className="space-y-5">
-      <Card variant="accent">
-        <CardHeader variant="emphasis">
-          <CardDescription>
-            {round.topic
-              ? round.topic.week + ' · ' + round.topic.theme
-              : modern
-                ? '내 질문'
-                : '이전 12인 패널'}
-          </CardDescription>
-          <CardTitle className="text-lg">{round.q}</CardTitle>
-          {round.topic && (
-            <CardDescription>
-              중심 질문 · {round.topic.question}
-            </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="grid items-center gap-5 sm:grid-cols-2">
-          <div>
-            <SeatChart ballots={ballots} />
-            <p aria-live="polite" className="text-center text-sm font-medium">
-              {done.length} / {ballots.length}명 응답
-            </p>
+    <section className="space-y-8">
+      <Card className="gap-0">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="highlight">
+                {round.topic?.week ?? (modern ? '내 질문' : '이전 12인 패널')}
+              </Badge>
+              {round.topic && (
+                <span className="text-xs text-muted-foreground">
+                  {round.topic.theme}
+                </span>
+              )}
+            </div>
+            <h2 className="max-w-4xl break-keep text-xl font-semibold leading-relaxed sm:text-2xl">
+              {round.q}
+            </h2>
+            {round.topic && round.topic.question !== round.q && (
+              <p className="text-xs leading-6 text-muted-foreground">
+                처음 고른 질문 · {round.topic.question}
+              </p>
+            )}
           </div>
-          <ul className="space-y-3">
-            {choices.map(({ id, label }) => {
-              const n = done.filter((b) => b.choice === id).length;
-              return (
-                <li key={id} className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="size-3 shrink-0 rounded-sm"
-                    style={{ background: palette[id] ?? '#999' }}
-                  />
-                  <span className="flex-1">{label}</span>
-                  <span className="whitespace-nowrap tabular-nums">
-                    {n}명 ·{' '}
-                    {done.length ? +((100 * n) / done.length).toFixed(1) : 0}%
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="grid items-center gap-6 border-t pt-5 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-8">
+            <div className="space-y-2">
+              <SeatChart ballots={ballots} />
+              <p aria-live="polite" className="text-center text-sm">
+                <strong className="tabular-nums">{done.length}</strong> /{' '}
+                {ballots.length}명 응답
+              </p>
+              {modern && failed > 0 && (
+                <p className="text-center text-xs text-muted-foreground">
+                  {failed}명은 다시 요청할 수 있어요
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <p className="mb-3 text-xs text-muted-foreground">
+                선택지를 누르면 해당 의견을 모아 볼 수 있어요. 비율은 응답한
+                멘토 기준이에요.
+              </p>
+              {choices.map(({ id, label }) => {
+                const count = done.filter((b) => b.choice === id).length,
+                  percent = done.length
+                    ? +((100 * count) / done.length).toFixed(1)
+                    : 0;
+                return (
+                  <Button
+                    key={id}
+                    variant="ghost"
+                    aria-pressed={filter === String(id)}
+                    aria-label={`${choiceLetter(id)} · ${label} · ${count}명, ${percent}% 응답 보기`}
+                    onClick={() =>
+                      setFilter(filter === String(id) ? 'all' : String(id))
+                    }
+                    className={
+                      'h-auto w-full flex-col items-stretch gap-2 whitespace-normal rounded-lg border p-3 text-left ' +
+                      (filter === String(id)
+                        ? 'border-foreground/35 bg-muted/50'
+                        : 'border-transparent')
+                    }
+                  >
+                    <span className="flex w-full items-start gap-2.5">
+                      <span
+                        className="flex size-6 shrink-0 items-center justify-center rounded text-xs font-bold text-white"
+                        style={choiceLabelStyle(id)}
+                      >
+                        {choiceLetter(id)}
+                      </span>
+                      <span className="min-w-0 flex-1 break-keep text-sm leading-6">
+                        {label}
+                      </span>
+                      <span className="shrink-0 text-right text-sm leading-6 tabular-nums">
+                        {count}명{' '}
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          {percent}%
+                        </span>
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className="ml-8 h-1.5 overflow-hidden rounded-full bg-muted"
+                    >
+                      <span
+                        className="block h-full rounded-full"
+                        style={{
+                          width: percent + '%',
+                          background: choiceColors[id] ?? '#777',
+                        }}
+                      />
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="border-t pt-4 text-xs leading-6 text-muted-foreground">
+            {modern
+              ? '멘토의 과거 경험을 바탕으로 정리한 조언이에요. 멘토가 이번 질문에 직접 답한 내용은 아니에요.'
+              : '이전 12인 패널의 저장된 응답입니다. 현재 28인 패널의 원문 대조 정보와는 구분됩니다.'}
+          </p>
+          {modern && done.some((b) => b.explanation?.version === '2') && (
+            <Button variant="outline" onClick={onRepeat}>
+              이 질문으로 새 조언 받기
+              <ArrowRight />
+            </Button>
+          )}
         </CardContent>
       </Card>
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto text-lg font-semibold">멘토별 응답</h2>
-        {!modern && (
-          <Select value={school} onValueChange={(v) => setSchool(v ?? 'all')}>
-            <SelectTrigger aria-label="대학 필터">
-              <SelectValue>
-                {school === 'all' ? '모든 대학' : school}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {['all', ...schools].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s === 'all' ? '모든 대학' : s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select value={filter} onValueChange={(v) => setFilter(v ?? 'all')}>
-          <SelectTrigger aria-label="선택지 필터" className="max-w-full">
-            <SelectValue>
-              {filter === 'all'
-                ? '전체 선택지'
-                : choices.find((c) => String(c.id) === filter)?.label}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 선택지</SelectItem>
-            {choices.map((c) => (
-              <SelectItem key={c.id} value={String(c.id)}>
-                {c.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {visible.map(({ b, i }) => (
-          <Card key={i} size="sm">
-            <MentorIdentity index={i} modern={modern} />
-            <CardContent className="space-y-3">
-              <Badge
-                variant={
-                  b.state === 'failed'
-                    ? 'destructive'
-                    : b.state === 'done'
-                      ? 'highlight'
-                      : 'subtle'
-                }
-                className="h-auto whitespace-normal"
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="mr-auto space-y-1">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              멘토별 의견 <Badge variant="count">{visible.length}</Badge>
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              선택과 함께 참고한 경험을 읽고, 내 상황과 비교해 보세요.
+            </p>
+          </div>
+          <div className="flex max-w-full flex-wrap gap-2">
+            {!modern && (
+              <Select
+                value={school}
+                onValueChange={(v) => setSchool(v ?? 'all')}
               >
-                {b.state === 'done'
-                  ? (round.opts[b.choice ?? -1] ?? '판단 보류')
-                  : b.state === 'failed'
-                    ? '응답 실패'
-                    : b.state === 'loading'
-                      ? '응답 중'
-                      : '대기 중'}
-              </Badge>
-              {b.reason && <p className="leading-relaxed">{b.reason}</p>}
-              {modern && b.state === 'done' && (
-                <>
-                  {b.sources?.length ? (
-                    <details className="text-sm">
-                      <summary className="cursor-pointer font-medium">
-                        이 선택에 사용한 경험 · 원문 Q&A {b.sources.length}개
-                      </summary>
-                      <SourcePairs sources={b.sources} />
-                    </details>
-                  ) : (
-                    b.sources && (
-                      <p className="text-xs text-muted-foreground">
-                        이번 선택에 직접 적용한 원문 Q&A가 없습니다.
-                      </p>
-                    )
-                  )}
-                  <Confidence support={b.support} />
-                  {!b.support?.sources && (
-                    <RecheckSource onRecheck={() => onRecheck(i)} />
-                  )}
-                  {b.applied?.map((t) => (
-                    <details key={t.label} className="text-xs">
-                      <summary className="cursor-pointer">
-                        <Badge
-                          variant={t.kind === '전략' ? 'highlight' : 'subtle'}
-                        >
-                          {t.kind} · {t.label}
-                        </Badge>
-                      </summary>
-                      <blockquote className="mt-2 border-l-2 pl-3 text-muted-foreground">
-                        {t.evidence}
-                      </blockquote>
-                    </details>
+                <SelectTrigger aria-label="대학 필터">
+                  <SelectValue>
+                    {school === 'all' ? '모든 대학' : school}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {['all', ...schools].map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s === 'all' ? '모든 대학' : s}
+                    </SelectItem>
                   ))}
-                </>
-              )}
-              {modern && b.state === 'failed' && (
-                <Button variant="outline" size="sm" onClick={() => onRetry(i)}>
-                  다시 요청
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={filter} onValueChange={(v) => setFilter(v ?? 'all')}>
+              <SelectTrigger aria-label="선택지 필터">
+                <SelectValue>
+                  {filter === 'all'
+                    ? '전체 선택지'
+                    : Number(filter) < 0
+                      ? '판단 보류'
+                      : '선택지 ' + choiceLetter(Number(filter))}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 선택지</SelectItem>
+                {choices.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <span className="max-w-72 whitespace-normal break-words">
+                      {choiceLetter(c.id)} · {c.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {filter !== 'all' && (
+          <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
+            <Check className="mt-0.5 size-4 shrink-0" />
+            <p className="min-w-0 flex-1 break-keep leading-6">
+              {choices.find((c) => String(c.id) === filter)?.label}
+            </p>
+            <Button size="sm" variant="ghost" onClick={() => setFilter('all')}>
+              전체 보기
+            </Button>
+          </div>
+        )}
+        <div className="space-y-4">
+          {visible.map(({ b, i }) => (
+            <MentorAnswer
+              key={i}
+              ballot={b}
+              index={i}
+              round={round}
+              modern={modern}
+              onRetry={() => onRetry(i)}
+              onRecheck={() => onRecheck(i)}
+            />
+          ))}
+        </div>
+        {!visible.length && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="font-medium">아직 이 조건의 응답이 없어요</p>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              다른 선택지를 보거나 전체 의견을 비교해 보세요.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                setFilter('all');
+                setSchool('all');
+              }}
+            >
+              전체 응답 보기
+            </Button>
+          </div>
+        )}
       </div>
-      {!visible.length && (
-        <p className="text-sm text-muted-foreground">
-          해당하는 응답이 없습니다.
-        </p>
-      )}
     </section>
   );
 }

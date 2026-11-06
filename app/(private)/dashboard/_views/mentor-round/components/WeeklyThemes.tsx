@@ -81,7 +81,7 @@ export function WeeklyThemes({
     <div className="space-y-2">
       {' '}
       <p className="text-sm text-muted-foreground">
-        중심 질문을 골라 MEA의 선택지 초안을 확인하세요.
+        질문을 고르면 MEA가 비교할 선택지를 만들어 드려요.
       </p>
       {current.questions.map((question, i) => (
         <Button
@@ -112,7 +112,7 @@ export function WeeklyThemes({
         <TableHeader>
           <TableRow>
             <TableHead className="w-24">주차</TableHead>
-            <TableHead>메인 테마</TableHead>
+            <TableHead>주제</TableHead>
             <TableHead className="w-20">상태</TableHead>
           </TableRow>
         </TableHeader>
@@ -137,12 +137,12 @@ export function WeeklyThemes({
                     {!w.questions.length ? (
                       <>
                         <LockKeyhole />
-                        잠김
+                        예정
                       </>
                     ) : index === i ? (
                       '선택됨'
                     ) : (
-                      '열림'
+                      '공개'
                     )}
                   </Badge>
                 </TableCell>
@@ -158,7 +158,9 @@ export function WeeklyThemes({
       </CollectionTable>
       <Card variant="accent" className="hidden lg:flex">
         <CardHeader variant="emphasis">
-          <CardDescription>{current.week} · 메인 테마</CardDescription>
+          <CardDescription>
+            {current.week} · 함께 생각해 볼 주제
+          </CardDescription>
           <CardTitle>{current.theme}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">{questions}</CardContent>

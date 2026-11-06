@@ -16,7 +16,12 @@ export function matchPassages(mentor, extract) {
     )
       return [];
     return [
-      { summary: span.summary, question: questions[span.questionId], quote },
+      {
+        id: `evidence-${span.digest}`,
+        summary: span.summary,
+        question: questions[span.questionId],
+        quote,
+      },
     ];
   });
 }

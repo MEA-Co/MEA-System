@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -85,20 +86,22 @@ export function QuestionEditor({
       }}
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+        <DialogHeader className="pr-8">
           <DialogTitle>
-            {draft ? '투표 질문 검토' : '새 질문 만들기'}
+            {draft ? '질문과 선택지를 확인해 주세요' : '멘토에게 질문하기'}
           </DialogTitle>
           <DialogDescription>
             {topic
               ? topic.week + ' · ' + topic.theme
-              : '내 고민으로 멘토라운드를 시작하세요.'}
+              : draft
+                ? '질문과 선택지는 자유롭게 수정할 수 있어요.'
+                : '고민을 적으면 MEA가 비교하기 쉬운 질문과 선택지로 정리해 드려요.'}
           </DialogDescription>
         </DialogHeader>
         {draft ? (
           <>
             <div className="space-y-2">
-              <Label htmlFor="round-question">투표할 질문</Label>
+              <Label htmlFor="round-question">멘토에게 물어볼 질문</Label>
               <Textarea
                 id="round-question"
                 maxLength={180}
@@ -164,18 +167,30 @@ export function QuestionEditor({
             <Textarea
               id="round-raw"
               maxLength={1200}
+              placeholder="예: 수학 개념은 이해되는데 문제를 풀 때 막혀요. 강의를 다시 들을지, 틀린 문제를 분석할지 고민이에요."
+              className="min-h-32"
               readOnly={busy}
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              고민을 OpenAI에 보내 질문과 선택지 초안을 만듭니다.
+              학년, 목표, 지금 어려운 점을 함께 적으면 더 구체적으로 비교할 수
+              있어요.
             </p>
           </div>
         )}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}
+          </p>
+        )}
+        {busy && (
+          <p
+            role="status"
+            className="flex items-center gap-2 text-sm leading-6"
+          >
+            <LoaderCircle className="size-4 shrink-0 motion-safe:animate-spin" />
+            MEA의 전략을 적용하는 중입니다
           </p>
         )}
         <DialogFooter>
@@ -188,9 +203,9 @@ export function QuestionEditor({
                   setError('');
                 }}
               >
-                고민 입력으로
+                고민 다시 쓰기
               </Button>
-              <Button onClick={submit}>28명 투표 시작</Button>
+              <Button onClick={submit}>멘토 투표 시작하기</Button>
             </>
           ) : (
             <>
@@ -203,12 +218,10 @@ export function QuestionEditor({
                   setDraft({ q: raw.slice(0, 180), opts: ['', ''] });
                 }}
               >
-                직접 작성하기
+                선택지 직접 쓰기
               </Button>
               <Button disabled={busy} onClick={() => generate(raw)}>
-                {busy
-                  ? 'MEA의 전략을 적용하는 중입니다'
-                  : '질문과 선택지 만들기'}
+                {busy ? '질문을 정리하고 있어요…' : '질문과 선택지 만들기'}
               </Button>
             </>
           )}
