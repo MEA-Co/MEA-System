@@ -1,5 +1,4 @@
 'use client';
-
 import { ChevronDown, CircleAlert, Plus, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 
@@ -44,6 +43,11 @@ import {
 } from '../../lib/responses/field-validation';
 import { richTextPlainText } from '../../lib/rich-text';
 import { submittedRowLabel } from '../../lib/submitted-row-label';
+
+import {
+  SubmittedAnswerField,
+  SubmittedAnswerGroup,
+} from './SubmittedAnswerLayout';
 
 function answerSummary(field: QuestionBlockField, value: string): string {
   if (!value) return '';
@@ -520,38 +524,31 @@ function QuestionBlockResponsePreview({
           visibleRows.length ? (
             <div className="space-y-6">
               {visibleRows.map((row, index) => (
-                <section
+                <SubmittedAnswerGroup
                   key={row.id}
-                  className="overflow-hidden rounded-lg border border-border bg-background"
-                >
-                  {(repeated || visibleRows.length > 1) && (
-                    <h4 className="border-b border-border bg-muted px-4 py-3 text-sm font-bold text-foreground">
-                      {flow
+                  title={
+                    repeated || visibleRows.length > 1
+                      ? flow
                         ? flowRowLabel(row, document.rowLabels)
                         : submittedRowLabel(
                             row,
                             index,
                             visibleRows.length,
                             document.rowLabels,
-                          )}
-                    </h4>
-                  )}
-                  <dl className="space-y-4 p-4">
-                    {document.fields.map((field, fieldIndex) => (
-                      <div
-                        key={field.id}
-                        className={`grid min-w-0 items-start gap-2 ${document.fields.length > 1 ? 'sm:grid-cols-[minmax(10rem,28%)_minmax(0,1fr)] sm:gap-6' : ''}`}
-                      >
-                        <dt className="text-sm font-semibold break-keep wrap-anywhere">
-                          {field.label || `답변 ${fieldIndex + 1}`}
-                        </dt>
-                        <DetailValue className="px-4 py-3 wrap-anywhere">
-                          {renderField(row, field, fieldIndex)}
-                        </DetailValue>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
+                          )
+                      : undefined
+                  }
+                >
+                  {document.fields.map((field, fieldIndex) => (
+                    <SubmittedAnswerField
+                      key={field.id}
+                      label={field.label || `답변 ${fieldIndex + 1}`}
+                      multiple={document.fields.length > 1}
+                    >
+                      {renderField(row, field, fieldIndex)}
+                    </SubmittedAnswerField>
+                  ))}
+                </SubmittedAnswerGroup>
               ))}
             </div>
           ) : (

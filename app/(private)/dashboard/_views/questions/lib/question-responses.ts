@@ -34,11 +34,18 @@ export type QuestionResponseSave = {
   complete: boolean;
   definitionToken: string;
 };
-export function snapshotRows(snapshot: QuestionResponseSnapshot) {
+export function snapshotRows(
+  snapshot: QuestionResponseSnapshot,
+  initializeChecklistRows = false,
+) {
   return Object.fromEntries(
     snapshot.questions.map((q) => [
       q.definition.id,
-      q.definition.purpose === 'study_registration' ? [] : q.rows,
+      q.definition.purpose === 'study_registration'
+        ? []
+        : initializeChecklistRows && !q.rows.length
+          ? [{ id: 1, answers: {} }]
+          : q.rows,
     ]),
   );
 }

@@ -23,6 +23,7 @@ import {
   QUESTIONNAIRE_API,
   QuestionnaireApiError,
 } from '../../lib/questionnaire/api-client';
+import { WEEK_SIX_ID } from '../../lib/questionnaire/week-six';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
 import {
   requestQuestionResponse,
@@ -47,7 +48,9 @@ export function useQuestionResponseEditor({
     questionId: string;
   } | null>(null);
   const { mutate } = useSWRConfig();
-  const [rows, setRows] = useState(() => snapshotRows(initial));
+  const [rows, setRows] = useState(() =>
+    snapshotRows(initial, questionnaireId === WEEK_SIX_ID),
+  );
   const [snapshot, setSnapshot] = useState(initial);
   const hasResponseQuestions = snapshot.questions.some(
     (question) => question.definition.purpose !== 'study_registration',
@@ -58,7 +61,7 @@ export function useQuestionResponseEditor({
   const [error, setError] = useState('');
   const [blocked, setBlocked] = useState(false);
   const [saved, setSaved] = useState(() =>
-    JSON.stringify(snapshotRows(initial)),
+    JSON.stringify(snapshotRows(initial, questionnaireId === WEEK_SIX_ID)),
   );
   const mounted = useRef(false);
   const session = useRef({
@@ -257,7 +260,7 @@ export function useQuestionResponseEditor({
         return;
       }
       session.current.revision = next.revision;
-      const remoteRows = snapshotRows(next);
+      const remoteRows = snapshotRows(next, questionnaireId === WEEK_SIX_ID);
       setSaved(JSON.stringify(remoteRows));
       setRows((current) =>
         dirty ? mergeGuideResponseRows(current, snapshot, next) : remoteRows,
@@ -280,8 +283,10 @@ export function useQuestionResponseEditor({
       // Reinitialize local row inputs only when adopting answers from elsewhere.
       // Saving our own answers must preserve expanded rows and editor focus.
       setRemoteAnswerVersion((version) => version + 1);
-      setRows(snapshotRows(next));
-      setSaved(JSON.stringify(snapshotRows(next)));
+      setRows(snapshotRows(next, questionnaireId === WEEK_SIX_ID));
+      setSaved(
+        JSON.stringify(snapshotRows(next, questionnaireId === WEEK_SIX_ID)),
+      );
       setSavedAt(next.savedAt);
     }
     setSnapshot(next);

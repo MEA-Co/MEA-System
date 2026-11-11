@@ -16,6 +16,7 @@ import type {
   QuestionnaireNotice,
   QuestionnaireSection,
 } from '../../lib/questionnaire/types';
+import { WEEK_SIX_ID } from '../../lib/questionnaire/week-six';
 import type { PreviewAnswerRow } from '../../lib/reference-rows';
 import type { SubmissionIssue } from '../../lib/responses/submission-validation';
 import { questionCanvasClass } from '../question/question-styles';
@@ -31,8 +32,25 @@ import { questionnaireStyles } from './questionnaire-styles';
 import { QuestionnaireStartNotice } from './QuestionnaireStartNotice';
 import { QuestionTextAnswerPreview } from './QuestionTextAnswerPreview';
 import { RichTextContent } from './RichTextContent';
+import { WeekSixChecklist } from './WeekSixChecklist';
 
-export function QuestionnairePreview({
+export function QuestionnairePreview(
+  props: Parameters<typeof StandardPreview>[0],
+) {
+  if (props.questionnaireId === WEEK_SIX_ID && !props.submittedView)
+    return (
+      <WeekSixChecklist
+        review={!props.published}
+        title={props.title}
+        sections={props.sections}
+        library={props.library ?? []}
+        response={props.response}
+      />
+    );
+  return <StandardPreview {...props} />;
+}
+
+function StandardPreview({
   referenceSessionId,
   embedded = false,
   notices = [],

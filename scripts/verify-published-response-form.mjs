@@ -102,6 +102,8 @@ function mount(published = true, empty = false, registration = false) {
       jsxs: (type, props) => ({ type, props }),
     },
     swr: { useSWRConfig: () => ({ mutate: async () => {} }) },
+    '@/lib/date-time': { formatKoreanDateTime: (value) => String(value) },
+    '../../lib/questionnaire/week-six': { WEEK_SIX_ID: 'ffc36b8c-73b7-4664-975b-2263b064b066' },
     '@/components/ui/button': { Button: 'Button' },
     '../../lib/responses/submission-navigation': { focusResponseQuestion() {} },
     '@/components/ui/toast': { toast: { add() {} } },

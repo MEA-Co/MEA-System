@@ -21,6 +21,7 @@ import {
   transitionQuestionnaireDraft,
 } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/server';
 import { loadUnreadQuestionnaireUpdates } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/update-notifications';
+import { WEEK_SIX_ID } from '@/app/(private)/dashboard/_views/questions/lib/questionnaire/week-six';
 import { getViewRole } from '@/lib/admin';
 import { type AuthorizedUserAccess, getUserAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -59,6 +60,22 @@ async function handle(request: Request, context: Context) {
     const [id, resource] = path;
     const method = request.method;
     if (method === 'GET') {
+      if (
+        id === WEEK_SIX_ID &&
+        resource === 'prior-answers' &&
+        path.length === 2
+      ) {
+        const client = createClient(await cookies());
+        const { data, error } = await client.rpc('week_six_answers', {
+          staff_view: staff,
+        });
+        return error
+          ? json(
+              { error: '이전 답변을 읽지 못했어요.' },
+              error.code === '42501' ? 403 : 503,
+            )
+          : json(data);
+      }
       if (
         resource === 'reference-sources' &&
         path.length === 2 &&
